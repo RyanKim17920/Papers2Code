@@ -1,0 +1,107 @@
+/* src/components/ProgressTracker.css */
+
+.progress-tracker {
+    margin-top: 35px;
+    padding-top: 25px;
+    border-top: 1px solid var(--border-color);
+  }
+  
+  .progress-tracker h4 {
+    margin-bottom: 25px;
+    color: var(--text-heading-color);
+    font-size: 1.5em;
+    font-weight: 600;
+  }
+  
+  .progress-tracker ul {
+    list-style: none;
+    padding: 0;
+  }
+  
+  .step-item {
+    padding: 18px 20px; /* Adjust padding */
+    margin-bottom: 15px; /* More space between steps */
+    border-radius: var(--border-radius-md); /* Consistent radius */
+    border: 1px solid var(--border-color);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    background-color: var(--card-background-color);
+    transition: background-color 0.2s ease, border-left-color 0.3s ease, box-shadow 0.2s ease;
+    gap: 20px;
+    box-shadow: var(--box-shadow-sm);
+  }
+  .step-item:hover {
+      box-shadow: 0 3px 6px rgba(0,0,0,0.06); /* Subtle hover shadow */
+  }
+  
+  .step-item .step-name {
+    font-weight: 600;
+    flex-basis: 22%; /* Adjust basis */
+    flex-shrink: 0;
+    color: var(--text-color);
+  }
+  
+  .step-item .step-description {
+      flex-grow: 1;
+      font-size: 0.9em;
+      color: var(--text-muted-color);
+      line-height: 1.6;
+  }
+  
+  .step-status-button {
+      padding: 7px 14px; /* Adjust button padding */
+      border: none;
+      border-radius: var(--border-radius-md); /* Consistent radius */
+      cursor: pointer;
+      font-size: 0.87em; /* Consistent small font */
+      font-weight: 500;
+      min-width: 105px; /* Ensure buttons have similar width */
+      text-align: center;
+      transition: background-color 0.2s ease, color 0.2s ease, box-shadow 0.2s ease;
+      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+      text-transform: capitalize; /* Show status like "In Progress" */
+  }
+  .step-status-button:hover {
+      box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  }
+  
+  /* Status-specific styling - Using new theme colors */
+  .step-item.status-pending { border-left: 5px solid var(--text-muted-color); }
+  .step-item.status-pending .step-status-button { background-color: var(--text-muted-color); color: white; }
+  
+  .step-item.status-in-progress { border-left: 5px solid var(--warning-color); background-color: #fffbeb; }
+  .step-item.status-in-progress .step-status-button { background-color: var(--warning-color); color: #333; }
+  
+  .step-item.status-completed { border-left: 5px solid var(--success-color); background-color: #eafaf1; } /* Lighter green bg */
+  .step-item.status-completed .step-status-button { background-color: var(--success-color); color: white; }
+  
+  .step-item.status-skipped { border-left: 5px solid #adb5bd; background-color: #f8f9fa; } /* Use lighter gray for skipped */
+  .step-item.status-skipped .step-status-button { background-color: #adb5bd; color: white; }
+  
+  .step-item.status-skipped .step-name,
+  .step-item.status-skipped .step-description {
+      text-decoration: line-through;
+      color: #999;
+      opacity: 0.7; /* Further dim skipped items */
+  }
+  
+  /* Responsive adjustment for tracker items (keep previous logic) */
+  @media (max-width: 768px) {
+      .step-item {
+          flex-direction: column;
+          align-items: flex-start;
+      }
+      .step-item .step-name {
+          flex-basis: auto;
+          width: 100%;
+          margin-bottom: 8px; /* Adjust spacing */
+      }
+       .step-item .step-description {
+          width: 100%;
+          margin-bottom: 12px; /* Adjust spacing */
+      }
+       .step-item .step-status-button {
+           align-self: flex-end;
+       }
+  }

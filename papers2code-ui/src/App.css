@@ -1,0 +1,158 @@
+/* src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'); /* Example Font */
+*{
+  overflow-x: hidden;
+}
+
+/* New Color Palette & Variables */
+:root {
+  /* --- Primary Palette (Teal/Green focus) --- */
+  --primary-color: #197c9a; /* Teal */
+  --primary-hover-color: #044085; /* Darker Teal */
+  --primary-light-color: #e6f9f3; /* Very Light Teal for backgrounds */
+
+  /* --- Neutrals --- */
+  --background-color: #fdfdfe; /* Slightly off-white */
+  --card-background-color: #ffffff;
+  --header-footer-bg: #ffffff;
+  --border-color: #e9ecef; /* Lighter border */
+  --light-gray-bg: #f1f3f5;
+
+  /* --- Text --- */
+  --text-color: #212529; /* Dark Gray/Soft Black */
+  --text-muted-color: #6c757d; /* Medium Gray */
+  --text-heading-color: #1a3a3a; /* Dark Teal/Gray for headings */
+
+  /* --- Status/Accent Colors (Keep or Adjust) --- */
+  --success-color: #28a745;
+  --warning-color: #ffc107;
+  --info-color: #17a2b8;
+  --danger-color: #dc3545;
+
+  /* --- Shadows & Radii --- */
+  --box-shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --box-shadow-md: 0 5px 10px rgba(0,0,0,0.07);
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+}
+
+body {
+  margin: 0;
+  /* font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', */
+    /* 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', */
+    /* sans-serif; */
+  font-family: 'Poppins', sans-serif; /* Use imported font */
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  background-color: var(--background-color);
+  color: var(--text-color);
+  line-height: 1.65; /* Slightly more line height */
+}
+
+/* Keep code styling */
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+  background-color: var(--light-gray-bg);
+  padding: 0.2em 0.4em;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9em;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+a:hover {
+    color: var(--primary-hover-color);
+    text-decoration: none; /* Remove underline on hover for cleaner look */
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%; /* Ensure full width */
+  max-width: 100%; /* Prevent overflow */
+  box-sizing: border-box;
+}
+
+.app-header {
+  background-color: var(--header-footer-bg);
+  padding: 12px 35px; /* Adjust padding slightly */
+  box-shadow: var(--box-shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100%;
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border-color); /* Add subtle bottom border */
+}
+
+.app-header .logo-link {
+    display: flex; /* Align items if needed */
+    align-items: center;
+    text-decoration: none;
+}
+
+.app-logo { /* Style the logo */
+    height: 45px; /* Adjust size as needed */
+    width: auto;
+    display: block; /* Remove extra space below image */
+}
+
+.app-header nav a {
+    margin-left: 25px;
+    text-decoration: none;
+    color: var(--text-muted-color); /* Muted color for nav links */
+    font-weight: 500;
+    transition: color 0.2s ease;
+}
+.app-header nav a:hover {
+    color: var(--primary-color); /* Highlight on hover */
+}
+
+.app-main {
+  flex-grow: 1;
+  padding: 40px 35px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center; /* Center children horizontally */
+  justify-content: flex-start;
+}
+
+.app-footer {
+  background-color: var(--light-gray-bg);
+  color: var(--text-muted-color);
+  text-align: center;
+  padding: 25px 35px;
+  margin-top: auto;
+  font-size: 0.9em;
+  border-top: 1px solid var(--border-color);
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Global Error Message Style (adjust colors) */
+.error-message {
+    color: var(--danger-color);
+    text-align: center;
+    margin: 20px auto;
+    padding: 12px 15px;
+    border: 1px solid #f5c6cb; /* Corresponds to danger bg */
+    background-color: #f8d7da; /* Corresponds to danger */
+    border-radius: var(--border-radius-md);
+    max-width: 800px;
+}
+.error-message a {
+    color: var(--danger-color);
+    font-weight: 500; /* Use font weight instead of bold tag */
+    text-decoration: underline; /* Add underline for clarity */
+}
+.error-message a:hover {
+    color: #a71d2a; /* Darker danger color on hover */
+}

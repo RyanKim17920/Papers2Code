@@ -1,0 +1,118 @@
+.paper-detail-page {
+    max-width: 1100px; /* Keep max-width for readability */
+    margin: 0 auto;
+    padding: 35px 45px; /* Adjust padding */
+    background-color: var(--card-background-color);
+    border-radius: var(--border-radius-lg); /* More rounded */
+    box-shadow: var(--box-shadow-md); /* Defined medium shadow */
+    border: 1px solid var(--border-color);
+ }
+ 
+ .back-link {
+   display: inline-block;
+   margin-bottom: 30px; /* More space below */
+   color: var(--primary-color);
+   text-decoration: none;
+   font-weight: 500;
+ }
+ .back-link:hover {
+   color: var(--primary-hover-color);
+ }
+ .back-link::before { /* Add arrow visually */
+     content: '← ';
+ }
+ 
+ .paper-detail-page h2 {
+   margin-top: 0;
+   margin-bottom: 25px;
+   color: var(--text-heading-color); /* Use heading color */
+   border-bottom: 1px solid var(--border-color);
+   padding-bottom: 20px;
+   font-size: 2.2em; /* Larger title */
+   font-weight: 600;
+   line-height: 1.3;
+ }
+ 
+ .paper-meta {
+   margin-bottom: 30px;
+   font-size: 0.95em;
+   line-height: 1.7;
+   color: var(--text-muted-color);
+   background-color: var(--primary-light-color); /* Use light primary bg */
+   padding: 20px 25px;
+   border-radius: var(--border-radius-md);
+   border: 1px solid #d1f3e9; /* Border matching light bg */
+ }
+ 
+ .paper-meta p {
+   margin-bottom: 10px;
+ }
+ .paper-meta p:last-child {
+     margin-bottom: 0;
+ }
+ 
+ .paper-meta strong {
+     color: var(--text-color);
+     margin-right: 8px; /* More space after strong tag */
+     font-weight: 500;
+ }
+ 
+ .paper-meta a {
+   color: var(--primary-color);
+   text-decoration: none;
+   font-weight: 500;
+ }
+ .paper-meta a:hover {
+   text-decoration: underline; /* Underline links in meta for clarity */
+   color: var(--primary-hover-color);
+ }
+ 
+ .paper-abstract {
+   margin-top: 30px;
+   margin-bottom: 35px;
+   line-height: 1.75; /* More line height for abstract */
+   color: var(--text-color);
+ }
+ .paper-abstract h3 {
+     margin-bottom: 15px;
+     color: var(--text-heading-color);
+     font-size: 1.5em; /* Adjust size */
+     font-weight: 600;
+ }
+ 
+ .paper-actions {
+     margin-top: 35px;
+     padding-top: 30px;
+     border-top: 1px solid var(--border-color);
+     display: flex;
+     gap: 20px;
+ }
+ 
+ /* Keep flag button yellow or change if desired */
+ .flag-button {
+     padding: 10px 20px;
+     background-color: var(--warning-color);
+     color: #333;
+     border: none;
+     border-radius: var(--border-radius-md); /* Consistent radius */
+     cursor: pointer;
+     font-size: 0.95em;
+     font-weight: 500;
+     transition: background-color 0.2s ease, box-shadow 0.2s ease;
+     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+ }
+ .flag-button:hover {
+     background-color: #e0a800;
+     box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+ }
+ 
+ /* Notice styling */
+ .not-implementable-notice {
+     background-color: #fff3cd;
+     border: 1px solid #ffeeba;
+     color: #856404;
+     padding: 15px 20px;
+     border-radius: var(--border-radius-md);
+     margin-bottom: 30px;
+     font-size: 0.95em;
+ }

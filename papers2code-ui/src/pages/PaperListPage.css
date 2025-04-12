@@ -1,0 +1,64 @@
+.paper-list-page {
+    margin: 0 auto;
+    padding: 0;
+    width: 100%; /* Ensure full width */
+  }
+  
+  .paper-list-page h2 {
+      text-align: left;
+      margin-bottom: 25px; /* Maintain space */
+      font-size: 2em; /* Larger heading */
+      font-weight: 600;
+      color: var(--text-heading-color); /* Use heading color */
+      border-bottom: 1px solid var(--border-color);
+      padding-bottom: 15px;
+      width: 100%; 
+  }
+  
+  /* Container for the cards */
+  .paper-list {
+      width: 100%; 
+      margin-top: 25px;
+      display: flex;
+      flex-wrap: wrap;
+      gap: 30px; /* Slightly larger gap for visual separation */
+      justify-content: flex-start;
+  }
+  
+  /* Styling for when no papers are found */
+  .paper-list > p { /* Target direct p child */
+      width: 100%;
+      text-align: center;
+      color: var(--text-muted-color);
+      font-size: 1.1em;
+      padding: 50px 0; /* More padding */
+  }
+
+  .list-content-area {
+    /* This container will hold either the spinner, error, or the list */
+    min-height: 40vh; /* Still good to have a minimum */
+    display: flex;
+    flex-direction: column;
+    /* --- ADD THIS --- */
+    flex-grow: 1; /* Make this container expand vertically */
+    /* Default alignment (when list is shown) */
+    justify-content: center;
+    align-items: stretch;
+  }
+  
+  .list-content-area.loading {
+    width: 100vw; /* Force full viewport width */
+    max-width: 100%;
+    margin-left: 10px;
+  }
+  /* Optional: Style loading spinner if needed globally */
+  /* Moved spinner style to its own CSS, ensure it looks okay */
+  /* .loading-spinner { ... } */
+  
+  /* Ensure error message is not overly constrained by flex centering */
+  .list-content-area .error-message {
+      /* Keep global styles, but ensure it doesn't shrink in flex context */
+      max-width: 800px;
+      width: 90%; /* Allow some flexibility */
+      margin: 20px auto; /* Center error message itself */
+  }
