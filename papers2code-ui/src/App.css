@@ -156,3 +156,67 @@ a:hover {
 .error-message a:hover {
     color: #a71d2a; /* Darker danger color on hover */
 }
+
+.main-nav {
+  flex-grow: 1; /* Allow nav to take up space if needed */
+  text-align: center; /* Example alignment */
+}
+
+.auth-section {
+display: flex;
+align-items: center;
+gap: 10px; /* Space between items if user is logged in */
+}
+
+.auth-loading {
+font-style: italic;
+color: var(--text-muted-color);
+}
+
+.user-info {
+display: flex;
+align-items: center;
+gap: 10px;
+}
+
+.user-avatar {
+width: 32px;
+height: 32px;
+border-radius: 50%;
+border: 1px solid var(--border-color);
+}
+
+.username {
+font-weight: 500;
+color: var(--text-color);
+}
+
+/* General Auth Button Style */
+.auth-button {
+padding: 8px 16px;
+border: none;
+border-radius: var(--border-radius-md);
+cursor: pointer;
+font-size: 0.9em;
+font-weight: 500;
+transition: background-color 0.2s ease, box-shadow 0.2s ease;
+}
+
+.connect-button {
+background-color: #333; /* GitHub-like color */
+color: white;
+}
+.connect-button:hover {
+background-color: #555;
+box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.logout-button {
+background-color: var(--light-gray-bg);
+color: var(--text-muted-color);
+border: 1px solid var(--border-color);
+}
+.logout-button:hover {
+background-color: #e2e6ea; /* Slightly darker gray */
+border-color: #dae0e5;
+}

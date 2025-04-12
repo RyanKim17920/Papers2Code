@@ -1,26 +1,36 @@
-# app.py
 import os
 import re
-from flask import Flask, jsonify, request
+import requests # <-- Import requests
+import uuid # <-- Import uuid for state generation
+from flask import Flask, jsonify, request, redirect, url_for, session # <-- Add redirect, url_for, session
 from flask_cors import CORS
 from pymongo import MongoClient
-from bson import ObjectId  # For converting string ID to ObjectId
-from bson.errors import InvalidId # For handling invalid ID formats
+from bson import ObjectId
+from bson.errors import InvalidId
 from dotenv import load_dotenv
-from datetime import datetime # For date formatting
+from datetime import datetime
 
-load_dotenv()  # Load environment variables from .env file
+load_dotenv()
 
 app = Flask(__name__)
 
 # --- Configuration ---
 MONGO_URI = os.getenv('MONGO_URI')
-if not MONGO_URI:
-    raise ValueError("No MONGO_URI found in environment variables. Did you create a .env file?")
+GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID') # <-- Load GitHub ID
+GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET') # <-- Load GitHub Secret
+FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY') # <-- Load Flask Secret Key
 
+if not MONGO_URI:
+    raise ValueError("No MONGO_URI found")
+if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET:
+    raise ValueError("GitHub Client ID or Secret not found in .env")
+if not FLASK_SECRET_KEY:
+    raise ValueError("FLASK_SECRET_KEY not found in .env. Generate one.")
+
+app.secret_key = FLASK_SECRET_KEY
 # Enable CORS for requests from your React app's origin
 # Replace 'http://localhost:5173' with your frontend's actual origin if different
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}})
+CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
 
 # --- MongoDB Connection ---
 try:
@@ -167,8 +177,127 @@ def get_paper_by_id(paper_id):
         print(f"Error in /api/papers/{paper_id}: {e}")
         return jsonify({"error": "An internal server error occurred"}), 500
 
+
+GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"
+GITHUB_ACCESS_TOKEN_URL = "https://github.com/login/oauth/access_token"
+GITHUB_API_USER_URL = "https://api.github.com/user"
+# Define the scope needed - read:user is basic profile info
+GITHUB_SCOPE = "read:user"
+# Define where frontend runs - This MUST match the actual frontend URL in production
+FRONTEND_URL = os.getenv('FRONTEND_URL', 'http://localhost:5173')
+
+
+@app.route('/api/auth/github/login')
+def github_login():
+    """Redirects the user to GitHub for authorization."""
+    state = str(uuid.uuid4()) # Generate a random state
+    session['oauth_state'] = state # Store state in session for later verification
+
+    auth_url = (
+        f"{GITHUB_AUTHORIZE_URL}?"
+        f"client_id={GITHUB_CLIENT_ID}&"
+        f"redirect_uri={url_for('github_callback', _external=True)}&" # Use url_for for correctness
+        f"scope={GITHUB_SCOPE}&"
+        f"state={state}"
+    )
+    return redirect(auth_url)
+
+
+@app.route('/api/auth/github/callback')
+def github_callback():
+    """Handles the callback from GitHub after user authorization."""
+    code = request.args.get('code')
+    state = request.args.get('state')
+
+    # --- Security Check: Verify State ---
+    expected_state = session.pop('oauth_state', None)
+    if not expected_state or state != expected_state:
+        print("Error: Invalid OAuth state")
+        # Redirect to frontend with an error indicator (optional)
+        return redirect(f"{FRONTEND_URL}/?login_error=state_mismatch")
+
+    if not code:
+        print("Error: No code provided by GitHub")
+        return redirect(f"{FRONTEND_URL}/?login_error=no_code")
+
+    # --- Exchange Code for Access Token ---
+    try:
+        token_response = requests.post(
+            GITHUB_ACCESS_TOKEN_URL,
+            headers={'Accept': 'application/json'}, # Request JSON response
+            data={
+                'client_id': GITHUB_CLIENT_ID,
+                'client_secret': GITHUB_CLIENT_SECRET,
+                'code': code,
+                'redirect_uri': url_for('github_callback', _external=True),
+            },
+            timeout=10 # Add a timeout
+        )
+        token_response.raise_for_status() # Raise HTTPError for bad responses (4xx or 5xx)
+        token_data = token_response.json()
+        access_token = token_data.get('access_token')
+
+        if not access_token:
+            print(f"Error getting access token: {token_data.get('error_description', 'No access token')}")
+            return redirect(f"{FRONTEND_URL}/?login_error=token_exchange_failed")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error requesting access token: {e}")
+        return redirect(f"{FRONTEND_URL}/?login_error=token_request_error")
+
+    # --- Fetch User Info from GitHub API ---
+    try:
+        user_response = requests.get(
+            GITHUB_API_USER_URL,
+            headers={
+                'Authorization': f'token {access_token}',
+                'Accept': 'application/vnd.github.v3+json',
+            },
+            timeout=10
+        )
+        user_response.raise_for_status()
+        user_data = user_response.json()
+
+        # --- Store User Info in Session ---
+        # Store relevant info. Don't store the access token long-term unless needed.
+        session['user'] = {
+            'id': user_data.get('id'),
+            'username': user_data.get('login'),
+            'avatar_url': user_data.get('avatar_url'),
+            'name': user_data.get('name')
+        }
+        print(f"User '{user_data.get('login')}' logged in successfully.")
+
+    except requests.exceptions.RequestException as e:
+        print(f"Error fetching user info from GitHub: {e}")
+        return redirect(f"{FRONTEND_URL}/?login_error=user_fetch_failed")
+
+    # --- Redirect back to the Frontend Homepage ---
+    return redirect(FRONTEND_URL) # User is now logged in via session cookie
+
+@app.route('/api/auth/me')
+def get_current_user():
+    """Checks if a user is logged in via session and returns their info."""
+    user = session.get('user')
+    if user:
+        return jsonify(user)
+    else:
+        # Use 401 Unauthorized if not logged in
+        return jsonify({"error": "Not authenticated"}), 401
+
+@app.route('/api/auth/logout', methods=['POST']) # Use POST for actions like logout
+def logout():
+    """Logs the user out by clearing the session."""
+    session.pop('user', None) # Clear specific user key
+    # Or session.clear() # Clear entire session
+    return jsonify({"message": "Logged out successfully"})
+
+
+
 # --- Run the App ---
 if __name__ == '__main__':
     # Use 0.0.0.0 to make it accessible on your network if needed
     # Debug=True is helpful during development but should be False in production
     app.run(host='0.0.0.0', port=5000, debug=True)
+
+
