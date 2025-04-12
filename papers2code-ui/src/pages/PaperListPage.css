@@ -62,3 +62,67 @@
       width: 90%; /* Allow some flexibility */
       margin: 20px auto; /* Center error message itself */
   }
+
+
+  .list-header {
+    /* Optional: Add styling if needed, like bottom border */
+    margin-bottom: 20px; /* Space below header section */
+  }
+  
+  .list-header h2 {
+    /* Keep existing h2 styles */
+    text-align: left;
+    margin-bottom: 25px;
+    font-size: 2em;
+    font-weight: 600;
+    color: var(--text-heading-color);
+    border-bottom: 1px solid var(--border-color);
+    padding-bottom: 15px;
+  }
+  
+  .list-controls {
+    display: flex;
+    gap: 20px; /* Space between search and sort */
+    align-items: center; /* Vertically align items */
+    flex-wrap: wrap; /* Allow controls to wrap on smaller screens */
+    margin-bottom: 25px; /* Space below controls */
+  }
+  
+  /* Give search bar flexible width */
+  .list-controls .search-bar-container {
+    flex: 1 1 400px; /* Allow grow, shrink, base width */
+    margin-bottom: 0; /* Remove margin if handled by gap */
+    min-width: 250px; /* Prevent excessive shrinking */
+  }
+  
+  .sort-control {
+    display: flex;
+    align-items: center;
+    gap: 8px; /* Space between label and select */
+    flex-shrink: 0; /* Prevent sort control from shrinking */
+  }
+  
+  .sort-control label {
+    font-size: 0.95em;
+    color: var(--text-muted-color);
+    font-weight: 500;
+    white-space: nowrap; /* Prevent label wrap */
+  }
+  
+  .sort-control select {
+    padding: 8px 12px;
+    font-size: 0.95em;
+    font-family: inherit;
+    color: var(--text-color);
+    background-color: var(--card-background-color);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    cursor: pointer;
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  }
+  
+  .sort-control select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 25, 124, 154), 0.2);
+  }

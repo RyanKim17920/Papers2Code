@@ -1,85 +1,120 @@
 // src/pages/PaperListPage.tsx
-import React, { useState, useEffect, useCallback } from 'react'; // Added useCallback
+import React, { useState, useEffect, useMemo, useCallback } from 'react'; // Added useMemo back
 import { fetchPapersFromApi } from '../services/api';
 import { Paper } from '../types/paper';
 import PaperCard from '../components/PaperCard';
 import LoadingSpinner from '../components/LoadingSpinner';
 import SearchBar from '../components/SearchBar';
-import './PaperListPage.css';
+import './PaperListPage.css'; // Ensure CSS is imported
 
-const DEBOUNCE_DELAY = 500; // Delay in ms (e.g., 500ms)
+const DEBOUNCE_DELAY = 500;
+
+type SortOrder = 'newest' | 'oldest' | 'relevance'; // Add 'relevance' for search
 
 const PaperListPage: React.FC = () => {
   const [papers, setPapers] = useState<Paper[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Tracks initial load & search loading
+  const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>(''); // Value in the search input
-  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>(''); // Value used for API query
-  const initialLoadLimit = 12;
+  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
+  // --- Add State for Sorting ---
+  const [sortOrder, setSortOrder] = useState<SortOrder>('relevance'); // Default to relevance (backend order) or newest?
+  const initialLoadLimit = 50; // Load a decent amount for sorting/searching
 
-  // --- Debouncing Logic ---
+  // --- Debouncing Logic (Keep as is) ---
   useEffect(() => {
-    // Set up a timer whenever searchTerm changes
-    const timerId = setTimeout(() => {
-      setDebouncedSearchTerm(searchTerm); // Update debounced term after delay
-    }, DEBOUNCE_DELAY);
+    const timerId = setTimeout(() => { setDebouncedSearchTerm(searchTerm); }, DEBOUNCE_DELAY);
+    return () => { clearTimeout(timerId); };
+  }, [searchTerm]);
 
-    // Clear the previous timer if searchTerm changes again before delay finishes
-    return () => {
-      clearTimeout(timerId);
-    };
-  }, [searchTerm]); // Effect runs when searchTerm changes
-
-  // --- API Fetching Logic ---
-  // Use useCallback to memoize this function
+  // --- API Fetching Logic (Keep as is) ---
   const loadPapers = useCallback(async (searchQuery: string) => {
-    setIsLoading(true); // Show loading spinner during fetch
+    setIsLoading(true);
     setError(null);
-    console.log(`Executing fetch with search: "${searchQuery}"`); // Debug log
+    console.log(`Executing fetch with search: "${searchQuery}"`);
     try {
-      // Pass the debounced search term to the API
+      // Backend handles search relevance sorting if searchQuery exists
       const fetchedPapers = await fetchPapersFromApi(initialLoadLimit, searchQuery);
       setPapers(fetchedPapers);
+      // Set default sort order based on search
+      setSortOrder(searchQuery ? 'relevance' : 'newest'); // Default to newest if no search, relevance if search
     } catch (err) {
       console.error("Failed to fetch papers:", err);
       setError(err instanceof Error ? err.message : "Failed to load papers. Is the backend running?");
-      setPapers([]); // Clear papers on error
+      setPapers([]);
     } finally {
       setIsLoading(false);
     }
-  }, [initialLoadLimit]); // Dependency: initialLoadLimit (though it's constant here)
+  }, [initialLoadLimit]); // useCallback dependency
 
-  // --- Effect to Trigger Fetch based on Debounced Term ---
+  // --- Effect to Trigger Fetch (Keep as is) ---
   useEffect(() => {
-    // Trigger the API call when the debouncedSearchTerm changes
-    // This includes the initial load (debouncedSearchTerm starts as '')
     loadPapers(debouncedSearchTerm);
-  }, [debouncedSearchTerm, loadPapers]); // Dependencies: debounced term and the memoized load function
+  }, [debouncedSearchTerm, loadPapers]);
 
-  // --- Handler for Search Input ---
+  // --- Handler for Search Input (Keep as is) ---
   const handleSearchChange = (newSearchTerm: string) => {
-    setSearchTerm(newSearchTerm); // Update the input value immediately
-    // Do NOT trigger fetch here directly, wait for debounce effect
+    setSearchTerm(newSearchTerm);
   };
+
+  // --- Handler for Sort Dropdown ---
+  const handleSortChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
+    setSortOrder(event.target.value as SortOrder); // Update sort state
+  };
+
+  // --- Sorting Logic using useMemo ---
+  const sortedAndFilteredPapers = useMemo(() => {
+    // Start with the papers fetched from the API (already potentially filtered by search term on backend)
+    let papersToSort = [...papers]; // Create a shallow copy to sort
+
+    // Apply frontend sorting based on sortOrder state
+    switch (sortOrder) {
+      case 'newest':
+        papersToSort.sort((a, b) => b.date.localeCompare(a.date)); // YYYY-MM-DD sorts correctly lexicographically
+        break;
+      case 'oldest':
+        papersToSort.sort((a, b) => a.date.localeCompare(b.date));
+        break;
+      case 'relevance':
+      default:
+        // If 'relevance', we assume the backend already sorted by relevance (if search term provided)
+        // or returned in its default order. So, no additional frontend sorting needed here.
+        break;
+    }
+    return papersToSort; // Return the sorted (or original order) array
+  }, [papers, sortOrder]); // Re-run sorting only if papers or sortOrder changes
 
   return (
     <div className="paper-list-page">
-      <h2>Papers Seeking Implementation</h2>
+      <div className="list-header"> {/* Wrap heading and controls */}
+        <h2>Papers Seeking Implementation</h2>
+        <div className="list-controls">
+          <SearchBar
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            placeholder="Search by title, abstract, or author..."
+          />
+          {/* --- Add Sort Dropdown --- */}
+          <div className="sort-control">
+            <label htmlFor="sort-order">Sort by:</label>
+            <select id="sort-order" value={sortOrder} onChange={handleSortChange}>
+              {/* Show relevance only if a search term exists */}
+              {debouncedSearchTerm && <option value="relevance">Relevance</option>}
+              <option value="newest">Newest First</option>
+              <option value="oldest">Oldest First</option>
+            </select>
+          </div>
+        </div>
+      </div>
 
-      <SearchBar
-        searchTerm={searchTerm} // Controlled component using immediate search term
-        onSearchChange={handleSearchChange}
-        placeholder="Search by title, abstract, or author..."
-      />
-
-      {/* Display area uses isLoading state */}
+      {/* --- Display Area (use sortedAndFilteredPapers) --- */}
       <div className={`list-content-area ${isLoading ? 'loading' : ''}`}>
         {isLoading && <LoadingSpinner />}
         {error && <p className="error-message">Error loading papers: {error}</p>}
         {!isLoading && !error && (
           <div className="paper-list">
-            {papers.length > 0 ? (
-              papers.map((paper) => ( // Render papers directly from state
+            {sortedAndFilteredPapers.length > 0 ? (
+              sortedAndFilteredPapers.map((paper) => ( // Use the sorted array
                 <PaperCard key={paper.id} paper={{
                   id: paper.id,
                   pwcUrl: paper.pwcUrl,
@@ -91,7 +126,6 @@ const PaperListPage: React.FC = () => {
                 }} />
               ))
             ) : (
-              // Updated 'no results' message logic
               <p style={{'width':'100vw'}}>
                 {debouncedSearchTerm
                   ? `No papers found matching "${debouncedSearchTerm}".`
