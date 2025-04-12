@@ -92,7 +92,7 @@ const PaperListPage: React.FC = () => {
               ))
             ) : (
               // Updated 'no results' message logic
-              <p>
+              <p style={{'width':'100vw'}}>
                 {debouncedSearchTerm
                   ? `No papers found matching "${debouncedSearchTerm}".`
                   : "No implementable papers found."}
