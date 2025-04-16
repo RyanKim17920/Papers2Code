@@ -11,42 +11,38 @@ const API_BASE_URL = 'http://localhost:5000/api';
  * @returns A promise that resolves to an array of Paper objects.
  */
 export const fetchPapersFromApi = async (
+    page: number = 1,
     limit: number = 10,
     searchTerm?: string,
-    sort?: 'newest' | 'oldest' // <-- Add sort parameter type
-): Promise<Paper[]> => {
-    // Construct the query parameters string
+    sort?: 'newest' | 'oldest'
+  ): Promise<{ papers: Paper[]; totalPages: number }> => {
+    // Build query parameters
     const params = new URLSearchParams();
     params.append('limit', String(limit));
+    params.append('page', String(page));
     if (searchTerm && searchTerm.trim()) {
-        params.append('search', searchTerm.trim());
+      params.append('search', searchTerm.trim());
     }
-    // --- Add sort parameter if provided ---
     if (sort) {
-        params.append('sort', sort); // <-- Add sort to params
+      params.append('sort', sort);
     }
-    // -------------------------------------
-
-    // Build the final URL
     const url = `${API_BASE_URL}/papers?${params.toString()}`;
-    console.log("Fetching from API:", url); // Log the URL including sort
-
+    console.log("Fetching from API:", url);
     const response = await fetch(url);
-
     if (!response.ok) {
-        let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-        try {
-            const errorData = await response.json();
-            if(errorData && errorData.error) {
-                errorMsg = `API Error: ${errorData.error}`;
-            }
-        } catch (e) { /* Ignore if response body is not JSON */ }
-        throw new Error(errorMsg);
+      let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+      try {
+        const errorData = await response.json();
+        if (errorData && errorData.error) {
+          errorMsg = `API Error: ${errorData.error}`;
+        }
+      } catch (e) { }
+      throw new Error(errorMsg);
     }
-
-    const data: Paper[] = await response.json();
+    // Expecting the backend to return an object with 'papers' and 'totalPages'
+    const data = await response.json();
     return data;
-};
+  };
 
 // --- fetchPaperByIdFromApi (keep as is) ---
 export const fetchPaperByIdFromApi = async (id: string): Promise<Paper | undefined> => {

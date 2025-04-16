@@ -126,3 +126,115 @@
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 25, 124, 154), 0.2);
   }
+
+
+/* Container that holds all pagination controls (prev, pages, next, go-to) */
+.pagination-container {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 1rem;
+  margin-top: 2rem;
+  justify-content: center; /* center horizontally */
+}
+
+/* Generic style for prev/next buttons */
+.nav-button {
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 0.45rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 1rem;
+  font-weight: 1000;
+}
+input {
+  background-color: var(--primary-light-color);
+  border-color: var(--primary-hover-color);
+  color: var(--primary-color);
+  width:50px;
+}
+.nav-button:hover:not(:disabled) {
+  background-color: var(--primary-light-color);
+  border-color: var(--primary-hover-color);
+}
+.nav-button:disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+/* The container for numeric pages, so we can style them consistently */
+.page-buttons {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+/* Each page button */
+.page-btn {
+  background-color: #fff;
+  color: #333;
+  border: 1px solid #ddd;
+  padding: 0.45rem 0.8rem;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+  font-size: 0.9rem;
+}
+
+/* Hover effect */
+.page-btn:hover {
+  background-color: var(--primary-light-color);
+  border-color: var(--primary-hover-color);
+}
+
+/* Active (current) page uses a bold accent color */
+.page-btn.active {
+  background-color: var(--primary-hover-color); /* <-- Replace with your accent color */
+  border-color: var(--primary-hover-color);
+  color: #fff;
+  font-weight: 600;
+}
+
+/* Ellipsis between pages */
+.page-ellipsis {
+  padding: 0.45rem 0.8rem;
+  color: #999;
+  user-select: none;
+  font-size: 0.9rem;
+}
+
+/* "Go to page" container */
+.go-to-page {
+  display: flex;
+  align-items: center;
+  gap: 0.4rem;
+  font-size: 0.9rem;
+}
+
+/* The numeric input for user to type a page */
+.go-to-page input {
+  width: 60px;
+  border: 1px solid #ddd;
+  border-radius: 4px;
+  padding: 0.3rem 0.5rem;
+  font-size: 0.9rem;
+}
+
+/* The "Go" button */
+.go-btn {
+  background-color: var(--primary-color); /* or any secondary color you'd like */
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  padding: 0.45rem 0.75rem;
+  font-size: 0.9rem;
+  cursor: pointer;
+  transition: background-color 0.2s ease;
+}
+
+.go-btn:hover {
+  background-color: var(--primary-hover-color); /* or any secondary hover color you'd like */
+}

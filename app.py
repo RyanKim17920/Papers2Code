@@ -117,10 +117,9 @@ def transform_paper(paper_doc):
 @app.route('/api/papers', methods=['GET'])
 @limiter.limit("100 per minute")
 def get_papers():
-    """Fetches papers, supporting search, sorting, filtering, and limiting."""
     try:
-        # --- Get Query Parameters ---
         limit_str = request.args.get('limit', '10')
+        page_str = request.args.get('page', '1')
         search_term = request.args.get('search', '').strip()
         sort_param = request.args.get('sort', 'newest').lower()
 
@@ -130,63 +129,53 @@ def get_papers():
         except ValueError:
             return jsonify({"error": "Invalid limit parameter"}), 400
 
-        # --- Define Base Filter (Can be adjusted) ---
-        # Example: Only show papers needing code by default when not searching
-        # base_filter = {"status": "Needs Code"} if not search_term else {}
-        base_filter = {} # Or start empty to show all statuses by default
+        try:
+            page = int(page_str)
+            if page < 1: page = 1
+        except ValueError:
+            return jsonify({"error": "Invalid page parameter"}), 400
 
-        # --- Execute Query: Branch based on search_term ---
+        # Compute the number of documents to skip
+        skip = (page - 1) * limit
+
+        base_filter = {}  # kept or modify your filter as needed
+
         papers_cursor = None
 
         if search_term:
-            # --- Text Search Path (Use Aggregation) ---
             print(f"Executing AGGREGATION for search: '{search_term}'")
             query_filter = {"$text": {"$search": search_term}}
-            if base_filter: # Combine with base filter if it exists
-                 query_filter = {"$and": [base_filter, query_filter]}
-
-            sort_criteria = {"score": {"$meta": "textScore"}} # Sort by relevance
-
+            if base_filter:
+                query_filter = {"$and": [base_filter, query_filter]}
+            sort_criteria = {"score": {"$meta": "textScore"}}
             pipeline = [
                 {"$match": query_filter},
                 {"$sort": sort_criteria},
+                {"$skip": skip},
                 {"$limit": limit}
             ]
             print(f"Pipeline: {pipeline}")
             papers_cursor = papers_collection.aggregate(pipeline)
-
         else:
-            # --- No Search Path (Use Find with Sort) ---
             print(f"Executing FIND with sort: '{sort_param}'")
-            query_filter = base_filter # Use only the base filter
-
-            # Determine sort direction for publication_date
+            query_filter = base_filter
             if sort_param == 'oldest':
                 sort_direction = ASCENDING
                 print("Sorting by publication_date ASCENDING")
-            else: # Default to newest if 'newest' or invalid param
+            else:
                 sort_direction = DESCENDING
                 print("Sorting by publication_date DESCENDING")
-
             sort_criteria = [("publication_date", sort_direction)]
+            papers_cursor = papers_collection.find(query_filter).sort(sort_criteria).skip(skip).limit(limit)
 
-            # Execute find().sort().limit()
-            papers_cursor = papers_collection.find(query_filter).sort(sort_criteria).limit(limit)
-
-
-        # --- Process Results ---
-        if papers_cursor is None:
-             # Should not happen with current logic, but as a safeguard
-             return jsonify({"error": "Failed to execute query"}), 500
+        # Count total documents matching the filter (for pagination info)
+        total_count = papers_collection.count_documents(query_filter)
+        total_pages = (total_count + limit - 1) // limit
 
         papers_list = [transform_paper(paper) for paper in papers_cursor]
-        return jsonify(papers_list)
-
+        return jsonify({"papers": papers_list, "totalPages": total_pages})
     except Exception as e:
         print(f"Error in /api/papers: {e}")
-        # Log the exception traceback in development/staging for more details
-        # import traceback
-        # print(traceback.format_exc())
         return jsonify({"error": "An internal server error occurred"}), 500
 
 

@@ -5,6 +5,7 @@ import { Paper } from '../types/paper';
 import PaperCard from '../components/PaperCard'; // Assuming component path
 import LoadingSpinner from '../components/LoadingSpinner'; // Assuming component path
 import SearchBar from '../components/SearchBar'; // Assuming component path
+import getVisiblePages from '../functions/getVisiblePages'; // Assuming this is a utility function for pagination
 import './PaperListPage.css';
 
 const DEBOUNCE_DELAY = 500;
@@ -22,6 +23,20 @@ const PaperListPage: React.FC = () => {
   const [dateSortPreference, setDateSortPreference] = useState<DateSortPreference>('newest');
   const initialLoadLimit = 50;
 
+  const [currentPage, setCurrentPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [pageInput, setPageInput] = useState(currentPage.toString());
+  const itemsPerPage = 3; // Load 10 items per page
+
+  useEffect(() => {
+    setPageInput(currentPage.toString());
+  }, [currentPage]);
+
+  // Reset currentPage on search or sort changes:
+  useEffect(() => {
+    setCurrentPage(1);
+  }, [debouncedSearchTerm, dateSortPreference]);
+
   // --- Debouncing Logic (Keep as is) ---
   useEffect(() => {
     const timerId = setTimeout(() => { setDebouncedSearchTerm(searchTerm); }, DEBOUNCE_DELAY);
@@ -33,37 +48,57 @@ const PaperListPage: React.FC = () => {
     const loadPapers = async () => {
       setIsLoading(true);
       setError(null);
-
-      // Determine the sort parameter to send to the backend
-      // If there's a search term, backend handles relevance sort, so send nothing.
-      // Otherwise, send the user's date sort preference.
       const sortParamToSend = debouncedSearchTerm ? undefined : dateSortPreference;
-
-      console.log(`Workspaceing papers with search: "${debouncedSearchTerm}", sort: ${sortParamToSend || 'relevance (defaulted by backend)'}`);
-
+      console.log(
+        `Fetching page ${currentPage} with search: "${debouncedSearchTerm}", sort: ${sortParamToSend || 'relevance (backend default)'}`
+      );
       try {
-        const fetchedPapers = await fetchPapersFromApi(
-            initialLoadLimit,
-            debouncedSearchTerm, // Send debounced search term
-            sortParamToSend      // Send 'newest', 'oldest', or undefined
+        // Updated API call: pass currentPage and itemsPerPage.
+        const response = await fetchPapersFromApi(
+          currentPage,
+          itemsPerPage,
+          debouncedSearchTerm,
+          sortParamToSend
         );
-        setPapers(fetchedPapers); // Set papers directly, backend handles sorting
+        // Set papers and pagination metadata
+        setPapers(response.papers);
+        setTotalPages(response.totalPages);
       } catch (err) {
         console.error("Failed to fetch papers:", err);
-        setError(err instanceof Error ? err.message : "Failed to load papers. Is the backend running?");
-        setPapers([]); // Clear papers on error
+        setError(err instanceof Error ? err.message : "Failed to load papers.");
+        setPapers([]);
       } finally {
         setIsLoading(false);
       }
     };
-
+  
     loadPapers();
-    // Re-run this effect whenever the search term OR the date sort preference changes
-  }, [debouncedSearchTerm, dateSortPreference, initialLoadLimit]); // Add dateSortPreference
+  }, [debouncedSearchTerm, dateSortPreference, currentPage]);
 
   // --- Handler for Search Input (Keep as is) ---
   const handleSearchChange = (newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
+  };
+
+  const handleGoToPage = () => {
+    const numericValue = parseInt(pageInput, 10);
+    if (!isNaN(numericValue) && numericValue >= 1 && numericValue <= totalPages) {
+      setCurrentPage(numericValue);
+    } else {
+      alert('Please enter a valid page number between 1 and ' + totalPages);
+    }
+  };
+
+  const handlePrev = () => {
+    if (currentPage > 1) {
+      setCurrentPage(currentPage - 1);
+    }
+  };
+
+  const handleNext = () => {
+    if (currentPage < totalPages) {
+      setCurrentPage(currentPage + 1);
+    }
   };
 
   // --- Handler for Sort Dropdown ---
@@ -104,11 +139,9 @@ const PaperListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* --- Display Area (uses 'papers' state directly) --- */}
-      <div className={`list-content-area ${isLoading ? 'loading' : ''}`}>
-        {isLoading && <LoadingSpinner />}
-        {error && <p className="error-message">Error loading papers: {error}</p>}
-        {!isLoading && !error && (
+
+      {!isLoading && !error && (
+        <>
           <div className="paper-list">
             {/* Use 'papers' directly as it's already sorted by backend */}
             {papers.length > 0 ? (
@@ -133,9 +166,63 @@ const PaperListPage: React.FC = () => {
               </p>
             )}
           </div>
-        )}
+          {!isLoading && !error && totalPages > 1 && (
+      <div className="pagination-container">
+        {/* PREV Button */}
+        <button
+          className="nav-button"
+          onClick={handlePrev}
+          disabled={currentPage === 1}
+        >
+          ←
+        </button>
+
+        {/* Page Numbers */}
+        <div className="page-buttons">
+          {getVisiblePages(currentPage, totalPages, 2).map((item, idx) => {
+            if (item === "…") {
+              return <span key={`ellipsis-${idx}`} className="page-ellipsis">…</span>;
+            } else {
+              const pageNumber = item as number;
+              return (
+                <button
+                  key={pageNumber}
+                  className={`page-btn ${currentPage === pageNumber ? 'active' : ''}`}
+                  onClick={() => setCurrentPage(pageNumber)}
+                >
+                  {pageNumber}
+                </button>
+              );
+            }
+          })}
+        </div>
+
+        {/* NEXT Button */}
+        <button
+          className="nav-button"
+          onClick={handleNext}
+          disabled={currentPage === totalPages}
+        >
+          →
+        </button>
+
+        {/* Go to Page */}
+        <div className="go-to-page">
+          <span>Go to:</span>
+          <input
+            type="number"
+            min="1"
+            max={totalPages}
+            value={pageInput}
+            onChange={(e) => setPageInput(e.target.value)}
+          />
+          <button className="go-btn" onClick={handleGoToPage}>Go</button>
+        </div>
       </div>
-    </div>
+    )}
+        </>
+      )}
+      </div>
   );
 };
 
