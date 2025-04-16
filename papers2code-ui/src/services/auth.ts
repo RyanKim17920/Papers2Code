@@ -4,7 +4,7 @@
 export interface UserProfile {
     id: number;
     username: string;
-    avatar_url?: string | null;
+    avatarUrl?: string | null;
     name?: string | null;
 }
 

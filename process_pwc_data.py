@@ -113,7 +113,7 @@ def save_lazyframe_to_mongodb_batched(
     try:
         start_collect = time.time()
         # Removed .unique() - rely on MongoDB index + upsert
-        df = lazy_df.collect(streaming=True)
+        df = lazy_df.collect(engine="streaming")
         logging.info("Collected DataFrame (streaming) in %.2fs. Shape: %s",
                      time.time() - start_collect, df.shape)
     except Exception as e:
@@ -238,6 +238,8 @@ def find_papers_without_code_polars_lazy(
 
     abstracts_lf = (
         pl.LazyFrame(papers_with_abstracts_data)
+        .filter(pl.col("title").is_not_null() & (pl.col("title") != "")) # Title must exist and not be empty
+        .filter(pl.col("authors").is_not_null() & pl.col("authors").list.len() > 0) # Authors must exist and list not empty
         .select([
             pl.col("paper_url"),
             pl.col("paper_url").alias("pwc_url"),
@@ -251,6 +253,7 @@ def find_papers_without_code_polars_lazy(
             pl.col("proceeding").alias("venue").fill_null("").cast(pl.Utf8),
             pl.col("tasks").cast(pl.List(pl.Utf8), strict=False).fill_null([])
         ])
+        .filter(pl.col("publication_date").is_not_null())
     )
 
     if links_data:

@@ -1,4 +1,3 @@
-// src/components/PaperCard.tsx
 import React from 'react';
 import { Link } from 'react-router-dom';
 import { PaperSummary } from '../types/paper';
@@ -13,21 +12,28 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper }) => {
 
   return (
     <div className="paper-card">
-      {/* Title remains directly inside */}
+      {/* Title with fixed height */}
       <h3>
         <Link to={`/paper/${paper.id}`}>{paper.title}</Link>
       </h3>
 
-      {/* Wrap metadata in a div */}
+      {/* Restructured meta content with top and bottom sections */}
       <div className="card-meta-content">
+        {/* Authors at the top */}
+        <div className="card-meta-top">
           <p className="authors">Authors: {authors}</p>
+        </div>
+        
+        {/* Date and status at the bottom */}
+        <div className="card-meta-bottom">
           <p className="date">Date: {new Date(paper.date).toLocaleDateString()}</p>
           <p className="status">Status: {paper.implementationStatus}</p>
+        </div>
       </div>
 
-      {/* Button remains directly inside, will be pushed down */}
+      {/* Button at the bottom */}
       <Link to={`/paper/${paper.id}`} className="details-link">
-          View Details & Progress
+        View Details & Progress
       </Link>
     </div>
   );

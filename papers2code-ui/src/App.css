@@ -1,16 +1,23 @@
 /* src/App.css */
-@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap'); /* Example Font */
-*{
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+
+* {
   overflow-x: hidden;
 }
 
-/* New Color Palette & Variables */
+/* Enhanced Color Palette & Variables */
 :root {
   /* --- Primary Palette (Teal/Green focus) --- */
   --primary-color: #197c9a; /* Teal */
   --primary-hover-color: #044085; /* Darker Teal */
   --primary-light-color: #e6f9f3; /* Very Light Teal for backgrounds */
-
+  
+  /* --- Gradient Colors --- */
+  --gradient-start: #f9fdfe; /* Very light blue-white */
+  --gradient-middle: #f5fbfd; /* Light blue-white */
+  --gradient-end: #f0f9fa; /* Subtle teal tint */
+  --gradient-accent: rgba(25, 124, 154, 0.03); /* Very transparent teal for accent */
+  
   /* --- Neutrals --- */
   --background-color: #fdfdfe; /* Slightly off-white */
   --card-background-color: #ffffff;
@@ -23,7 +30,7 @@
   --text-muted-color: #6c757d; /* Medium Gray */
   --text-heading-color: #1a3a3a; /* Dark Teal/Gray for headings */
 
-  /* --- Status/Accent Colors (Keep or Adjust) --- */
+  /* --- Status/Accent Colors --- */
   --success-color: #28a745;
   --warning-color: #ffc107;
   --info-color: #17a2b8;
@@ -37,20 +44,55 @@
   --border-radius-lg: 12px;
 }
 
-body {
-  margin: 0;
-  /* font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', 'Oxygen', */
-    /* 'Ubuntu', 'Cantarell', 'Fira Sans', 'Droid Sans', 'Helvetica Neue', */
-    /* sans-serif; */
-  font-family: 'Poppins', sans-serif; /* Use imported font */
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  background-color: var(--background-color);
-  color: var(--text-color);
-  line-height: 1.65; /* Slightly more line height */
+/* Dynamic background animation */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
 }
 
-/* Keep code styling */
+body {
+  margin: 0;
+  font-family: 'Poppins', sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
+  line-height: 1.65;
+  
+  /* Create subtle gradient background */
+  background: linear-gradient(135deg, 
+    var(--gradient-start) 0%, 
+    var(--gradient-middle) 50%,
+    var(--gradient-end) 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+}
+
+/* Add subtle pattern overlay */
+.app-container::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: 
+    radial-gradient(var(--gradient-accent) 1px, transparent 1px),
+    radial-gradient(var(--gradient-accent) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+  z-index: -1;
+}
+
+/* Code styling */
 code {
   font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
     monospace;
@@ -66,52 +108,58 @@ a {
   transition: color 0.2s ease;
 }
 a:hover {
-    color: var(--primary-hover-color);
-    text-decoration: none; /* Remove underline on hover for cleaner look */
+  color: var(--primary-hover-color);
+  text-decoration: none;
 }
 
 .app-container {
   display: flex;
   flex-direction: column;
   min-height: 100vh;
-  width: 100%; /* Ensure full width */
-  max-width: 100%; /* Prevent overflow */
+  width: 100%;
+  max-width: 100%;
   box-sizing: border-box;
+  position: relative; /* For the pseudo-element positioning */
 }
 
 .app-header {
-  background-color: var(--header-footer-bg);
-  padding: 12px 35px; /* Adjust padding slightly */
+  background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent */
+  padding: 12px 35px;
   box-shadow: var(--box-shadow-sm);
   display: flex;
   justify-content: space-between;
   align-items: center;
   width: 100%;
   box-sizing: border-box;
-  border-bottom: 1px solid var(--border-color); /* Add subtle bottom border */
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(5px); /* Adds a modern frosted glass effect */
+  -webkit-backdrop-filter: blur(5px); /* For Safari support */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
 }
 
 .app-header .logo-link {
-    display: flex; /* Align items if needed */
-    align-items: center;
-    text-decoration: none;
+  display: flex;
+  align-items: center;
+  text-decoration: none;
 }
 
-.app-logo { /* Style the logo */
-    height: 45px; /* Adjust size as needed */
-    width: auto;
-    display: block; /* Remove extra space below image */
+.app-logo {
+  height: 45px;
+  width: auto;
+  display: block;
 }
 
 .app-header nav a {
-    margin-left: 25px;
-    text-decoration: none;
-    color: var(--text-muted-color); /* Muted color for nav links */
-    font-weight: 500;
-    transition: color 0.2s ease;
+  margin-left: 25px;
+  text-decoration: none;
+  color: var(--text-muted-color);
+  font-weight: 500;
+  transition: color 0.2s ease;
 }
 .app-header nav a:hover {
-    color: var(--primary-color); /* Highlight on hover */
+  color: var(--primary-color);
 }
 
 .app-main {
@@ -121,12 +169,28 @@ a:hover {
   box-sizing: border-box;
   display: flex;
   flex-direction: column;
-  align-items: center; /* Center children horizontally */
+  align-items: center;
   justify-content: flex-start;
+  position: relative; /* For potential overlays */
+}
+
+/* Add subtle accent gradient to main content area */
+.app-main::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200px; /* Gradient fades out after this height */
+  background: linear-gradient(180deg, 
+    rgba(25, 124, 154, 0.03) 0%,
+    rgba(25, 124, 154, 0) 100%);
+  z-index: -1;
+  pointer-events: none;
 }
 
 .app-footer {
-  background-color: var(--light-gray-bg);
+  background-color: rgba(241, 243, 245, 0.8);
   color: var(--text-muted-color);
   text-align: center;
   padding: 25px 35px;
@@ -135,88 +199,112 @@ a:hover {
   border-top: 1px solid var(--border-color);
   width: 100%;
   box-sizing: border-box;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
 }
 
-/* Global Error Message Style (adjust colors) */
+/* Global Error Message Style */
 .error-message {
-    color: var(--danger-color);
-    text-align: center;
-    margin: 20px auto;
-    padding: 12px 15px;
-    border: 1px solid #f5c6cb; /* Corresponds to danger bg */
-    background-color: #f8d7da; /* Corresponds to danger */
-    border-radius: var(--border-radius-md);
-    max-width: 800px;
+  color: var(--danger-color);
+  text-align: center;
+  margin: 20px auto;
+  padding: 12px 15px;
+  border: 1px solid #f5c6cb;
+  background-color: #f8d7da;
+  border-radius: var(--border-radius-md);
+  max-width: 800px;
+  box-shadow: 0 3px 6px rgba(220, 53, 69, 0.1);
 }
 .error-message a {
-    color: var(--danger-color);
-    font-weight: 500; /* Use font weight instead of bold tag */
-    text-decoration: underline; /* Add underline for clarity */
+  color: var(--danger-color);
+  font-weight: 500;
+  text-decoration: underline;
 }
 .error-message a:hover {
-    color: #a71d2a; /* Darker danger color on hover */
+  color: #a71d2a;
 }
 
 .main-nav {
-  flex-grow: 1; /* Allow nav to take up space if needed */
-  text-align: center; /* Example alignment */
+  flex-grow: 1;
+  text-align: center;
 }
 
+
+
 .auth-section {
-display: flex;
-align-items: center;
-gap: 10px; /* Space between items if user is logged in */
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .auth-loading {
-font-style: italic;
-color: var(--text-muted-color);
+  font-style: italic;
+  color: var(--text-muted-color);
 }
 
 .user-info {
-display: flex;
-align-items: center;
-gap: 10px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .user-avatar {
-width: 32px;
-height: 32px;
-border-radius: 50%;
-border: 1px solid var(--border-color);
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  border: 1px solid var(--border-color);
+  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
 }
 
 .username {
-font-weight: 500;
-color: var(--text-color);
+  font-weight: 500;
+  color: var(--text-color);
 }
 
 /* General Auth Button Style */
 .auth-button {
-padding: 8px 16px;
-border: none;
-border-radius: var(--border-radius-md);
-cursor: pointer;
-font-size: 0.9em;
-font-weight: 500;
-transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  padding: 8px 16px;
+  border: none;
+  border-radius: var(--border-radius-md);
+  cursor: pointer;
+  font-size: 0.9em;
+  font-weight: 500;
+  transition: all 0.2s ease;
 }
 
 .connect-button {
-background-color: #333; /* GitHub-like color */
-color: white;
+  background-color: #333;
+  color: white;
+  background-image: linear-gradient(to right, #333 0%, #444 100%);
 }
 .connect-button:hover {
-background-color: #555;
-box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+  background-image: linear-gradient(to right, #444 0%, #555 100%);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
+  transform: translateY(-1px);
 }
 
 .logout-button {
-background-color: var(--light-gray-bg);
-color: var(--text-muted-color);
-border: 1px solid var(--border-color);
+  background-color: var(--light-gray-bg);
+  color: var(--text-muted-color);
+  border: 1px solid var(--border-color);
 }
 .logout-button:hover {
-background-color: #e2e6ea; /* Slightly darker gray */
-border-color: #dae0e5;
+  background-color: #e2e6ea;
+  border-color: #dae0e5;
+  transform: translateY(-1px);
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 10px 20px;
+  }
+  
+  .app-main {
+    padding: 30px 20px;
+  }
+  
+  .app-main::before {
+    height: 100px; /* Smaller gradient area on mobile */
+  }
 }

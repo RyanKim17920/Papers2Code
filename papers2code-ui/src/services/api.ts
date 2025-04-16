@@ -7,36 +7,40 @@ const API_BASE_URL = 'http://localhost:5000/api';
  * Fetches papers from the backend API.
  * @param limit - The maximum number of papers to fetch.
  * @param searchTerm - Optional search term to filter results on the backend.
+ * @param sort - Optional sort order ('newest' or 'oldest'). // <-- Add sort parameter
  * @returns A promise that resolves to an array of Paper objects.
  */
 export const fetchPapersFromApi = async (
     limit: number = 10,
-    searchTerm?: string // Add optional searchTerm parameter
+    searchTerm?: string,
+    sort?: 'newest' | 'oldest' // <-- Add sort parameter type
 ): Promise<Paper[]> => {
     // Construct the query parameters string
     const params = new URLSearchParams();
     params.append('limit', String(limit));
-    if (searchTerm && searchTerm.trim()) { // Only add search param if it's not empty
+    if (searchTerm && searchTerm.trim()) {
         params.append('search', searchTerm.trim());
     }
+    // --- Add sort parameter if provided ---
+    if (sort) {
+        params.append('sort', sort); // <-- Add sort to params
+    }
+    // -------------------------------------
 
     // Build the final URL
     const url = `${API_BASE_URL}/papers?${params.toString()}`;
-    console.log("Fetching from API:", url); // Log the URL for debugging
+    console.log("Fetching from API:", url); // Log the URL including sort
 
     const response = await fetch(url);
 
     if (!response.ok) {
-        // Try to get error message from backend response body
         let errorMsg = `API Error: ${response.status} ${response.statusText}`;
         try {
             const errorData = await response.json();
             if(errorData && errorData.error) {
                 errorMsg = `API Error: ${errorData.error}`;
             }
-        } catch (e) {
-            // Ignore if response body is not JSON
-        }
+        } catch (e) { /* Ignore if response body is not JSON */ }
         throw new Error(errorMsg);
     }
 

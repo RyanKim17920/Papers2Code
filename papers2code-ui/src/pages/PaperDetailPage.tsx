@@ -128,35 +128,36 @@ const PaperDetailPage: React.FC = () => {
 
     return (
         <div className="paper-detail-page">
-            <Link to="/" className="back-link">Back to List</Link>
+            <div className="paper-content">
+                <Link to="/" className="back-link">Back to List</Link>
 
-            {/* Display update error if it occurs during simulation (e.g., step not found) */}
-            {updateError && <p className="error-message update-error">Update Error: {updateError}</p>}
+                {/* Display update error if it occurs during simulation (e.g., step not found) */}
+                {updateError && <p className="error-message update-error">Update Error: {updateError}</p>}
 
-            <h2>{paper.title}</h2>
+                <h2>{paper.title}</h2>
 
-            {/* ... (rest of meta, abstract rendering - no changes) ... */}
-            {!paper.isImplementable && (<p className="not-implementable-notice">This paper has been marked as likely not suitable for implementation (e.g., theoretical, survey).</p>)}
-            <div className="paper-meta"><p><strong>Authors:</strong> {authors}</p><p><strong>Date:</strong> {paper.date}</p> {paper.proceeding && <p><strong>Venue:</strong> {paper.proceeding}</p>} {paper.arxivId && <p><strong>ArXiv ID:</strong> {paper.arxivId}</p>}<p><strong>Links:</strong>{' '} {paper.urlAbs && <><a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">Abstract</a> |</>} {paper.urlPdf && <><a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">PDF</a> |</>} {paper.pwcUrl && <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">PapersWithCode Page</a>}</p> {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}</div>
-            {paper.abstract && (<div className="paper-abstract"><h3>Abstract</h3><p>{paper.abstract}</p></div>)}
+                {/* ... (rest of meta, abstract rendering - no changes) ... */}
+                {!paper.isImplementable && (<p className="not-implementable-notice">This paper has been marked as likely not suitable for implementation (e.g., theoretical, survey).</p>)}
+                <div className="paper-meta"><p><strong>Authors:</strong> {authors}</p><p><strong>Date:</strong> {paper.date}</p> {paper.proceeding && <p><strong>Venue:</strong> {paper.proceeding}</p>} {paper.arxivId && <p><strong>ArXiv ID:</strong> {paper.arxivId}</p>}<p><strong>Links:</strong>{' '} {paper.urlAbs && <><a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">Abstract</a> |</>} {paper.urlPdf && <><a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">PDF</a> |</>} {paper.pwcUrl && <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">PapersWithCode Page</a>}</p> {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}</div>
+                {paper.abstract && (<div className="paper-abstract"><h3>Abstract</h3><p>{paper.abstract}</p></div>)}
 
-            {paper.isImplementable ? (
-                <ProgressTracker
-                    steps={paper.implementationSteps}
-                    paperId={paper.id}
-                    onStepUpdate={handleStepUpdate} // Uses the modified local handler
-                />
-            ) : (
-                <p>Implementation tracking is disabled as this paper is marked as not implementable.</p>
-            )}
+                {paper.isImplementable ? (
+                    <ProgressTracker
+                        steps={paper.implementationSteps}
+                        paperId={paper.id}
+                        onStepUpdate={handleStepUpdate} // Uses the modified local handler
+                    />
+                ) : (
+                    <p>Implementation tracking is disabled as this paper is marked as not implementable.</p>
+                )}
 
-            <div className="paper-actions">
-                {/* Also simulate the implementability toggle */}
-                <button onClick={handleToggleImplementability} className="flag-button">
-                    {paper.isImplementable ? 'Flag as Not Implementable' : 'Mark as Potentially Implementable'}
-                </button>
+                <div className="paper-actions">
+                    {/* Also simulate the implementability toggle */}
+                    <button onClick={handleToggleImplementability} className="flag-button">
+                        {paper.isImplementable ? 'Flag as Not Implementable' : 'Mark as Potentially Implementable'}
+                    </button>
+                </div>
             </div>
-
         </div>
     );
 };

@@ -28,7 +28,6 @@ function App() {
     await logoutUser(); // Call API to clear backend session
     setCurrentUser(null); // Clear frontend state
   };
-
   return (
     <Router>
       <div className="app-container">
@@ -45,9 +44,9 @@ function App() {
             ) : currentUser ? (
               // Logged In State
               <div className="user-info">
-                {currentUser.avatar_url && (
+                {currentUser.avatarUrl && (
                   <img
-                    src={currentUser.avatar_url}
+                    src={currentUser.avatarUrl}
                     alt={`${currentUser.username}'s avatar`}
                     className="user-avatar"
                   />

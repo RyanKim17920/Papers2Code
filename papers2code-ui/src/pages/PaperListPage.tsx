@@ -1,15 +1,16 @@
 // src/pages/PaperListPage.tsx
-import React, { useState, useEffect, useMemo, useCallback } from 'react'; // Added useMemo back
-import { fetchPapersFromApi } from '../services/api';
+import React, { useState, useEffect, useCallback } from 'react'; // Removed useMemo
+import { fetchPapersFromApi } from '../services/api'; // Ensure this uses the updated version
 import { Paper } from '../types/paper';
-import PaperCard from '../components/PaperCard';
-import LoadingSpinner from '../components/LoadingSpinner';
-import SearchBar from '../components/SearchBar';
-import './PaperListPage.css'; // Ensure CSS is imported
+import PaperCard from '../components/PaperCard'; // Assuming component path
+import LoadingSpinner from '../components/LoadingSpinner'; // Assuming component path
+import SearchBar from '../components/SearchBar'; // Assuming component path
+import './PaperListPage.css';
 
 const DEBOUNCE_DELAY = 500;
 
-type SortOrder = 'newest' | 'oldest' | 'relevance'; // Add 'relevance' for search
+// Keep track of the user's desired date sort preference separately
+type DateSortPreference = 'newest' | 'oldest';
 
 const PaperListPage: React.FC = () => {
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -17,9 +18,9 @@ const PaperListPage: React.FC = () => {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const [debouncedSearchTerm, setDebouncedSearchTerm] = useState<string>('');
-  // --- Add State for Sorting ---
-  const [sortOrder, setSortOrder] = useState<SortOrder>('relevance'); // Default to relevance (backend order) or newest?
-  const initialLoadLimit = 50; // Load a decent amount for sorting/searching
+  // State for the user's preferred date sorting
+  const [dateSortPreference, setDateSortPreference] = useState<DateSortPreference>('newest');
+  const initialLoadLimit = 50;
 
   // --- Debouncing Logic (Keep as is) ---
   useEffect(() => {
@@ -27,30 +28,38 @@ const PaperListPage: React.FC = () => {
     return () => { clearTimeout(timerId); };
   }, [searchTerm]);
 
-  // --- API Fetching Logic (Keep as is) ---
-  const loadPapers = useCallback(async (searchQuery: string) => {
-    setIsLoading(true);
-    setError(null);
-    console.log(`Executing fetch with search: "${searchQuery}"`);
-    try {
-      // Backend handles search relevance sorting if searchQuery exists
-      const fetchedPapers = await fetchPapersFromApi(initialLoadLimit, searchQuery);
-      setPapers(fetchedPapers);
-      // Set default sort order based on search
-      setSortOrder(searchQuery ? 'relevance' : 'newest'); // Default to newest if no search, relevance if search
-    } catch (err) {
-      console.error("Failed to fetch papers:", err);
-      setError(err instanceof Error ? err.message : "Failed to load papers. Is the backend running?");
-      setPapers([]);
-    } finally {
-      setIsLoading(false);
-    }
-  }, [initialLoadLimit]); // useCallback dependency
-
-  // --- Effect to Trigger Fetch (Keep as is) ---
+  // --- Combined API Fetching Logic ---
   useEffect(() => {
-    loadPapers(debouncedSearchTerm);
-  }, [debouncedSearchTerm, loadPapers]);
+    const loadPapers = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      // Determine the sort parameter to send to the backend
+      // If there's a search term, backend handles relevance sort, so send nothing.
+      // Otherwise, send the user's date sort preference.
+      const sortParamToSend = debouncedSearchTerm ? undefined : dateSortPreference;
+
+      console.log(`Workspaceing papers with search: "${debouncedSearchTerm}", sort: ${sortParamToSend || 'relevance (defaulted by backend)'}`);
+
+      try {
+        const fetchedPapers = await fetchPapersFromApi(
+            initialLoadLimit,
+            debouncedSearchTerm, // Send debounced search term
+            sortParamToSend      // Send 'newest', 'oldest', or undefined
+        );
+        setPapers(fetchedPapers); // Set papers directly, backend handles sorting
+      } catch (err) {
+        console.error("Failed to fetch papers:", err);
+        setError(err instanceof Error ? err.message : "Failed to load papers. Is the backend running?");
+        setPapers([]); // Clear papers on error
+      } finally {
+        setIsLoading(false);
+      }
+    };
+
+    loadPapers();
+    // Re-run this effect whenever the search term OR the date sort preference changes
+  }, [debouncedSearchTerm, dateSortPreference, initialLoadLimit]); // Add dateSortPreference
 
   // --- Handler for Search Input (Keep as is) ---
   const handleSearchChange = (newSearchTerm: string) => {
@@ -59,47 +68,35 @@ const PaperListPage: React.FC = () => {
 
   // --- Handler for Sort Dropdown ---
   const handleSortChange = (event: React.ChangeEvent<HTMLSelectElement>) => {
-    setSortOrder(event.target.value as SortOrder); // Update sort state
+    // Update only the date sort preference state
+    setDateSortPreference(event.target.value as DateSortPreference);
   };
 
-  // --- Sorting Logic using useMemo ---
-  const sortedAndFilteredPapers = useMemo(() => {
-    // Start with the papers fetched from the API (already potentially filtered by search term on backend)
-    let papersToSort = [...papers]; // Create a shallow copy to sort
+  // --- No more frontend sorting needed ---
+  // const sortedAndFilteredPapers = useMemo(() => { ... }); // REMOVED
 
-    // Apply frontend sorting based on sortOrder state
-    switch (sortOrder) {
-      case 'newest':
-        papersToSort.sort((a, b) => b.date.localeCompare(a.date)); // YYYY-MM-DD sorts correctly lexicographically
-        break;
-      case 'oldest':
-        papersToSort.sort((a, b) => a.date.localeCompare(b.date));
-        break;
-      case 'relevance':
-      default:
-        // If 'relevance', we assume the backend already sorted by relevance (if search term provided)
-        // or returned in its default order. So, no additional frontend sorting needed here.
-        break;
-    }
-    return papersToSort; // Return the sorted (or original order) array
-  }, [papers, sortOrder]); // Re-run sorting only if papers or sortOrder changes
+  // Determine which sort option is effectively active for the dropdown UI
+  const activeSortDisplay = debouncedSearchTerm ? 'relevance' : dateSortPreference;
 
   return (
     <div className="paper-list-page">
-      <div className="list-header"> {/* Wrap heading and controls */}
+      <div className="list-header">
         <h2>Papers Seeking Implementation</h2>
         <div className="list-controls">
           <SearchBar
-            searchTerm={searchTerm}
-            onSearchChange={handleSearchChange}
-            placeholder="Search by title, abstract, or author..."
+             // Assuming SearchBar takes these props - adjust if needed
+             searchTerm={searchTerm} // Pass current (non-debounced) term for responsiveness
+             onSearchChange={handleSearchChange} // Use consistent handler name maybe?
+             placeholder="Search by title, abstract, or author..."
           />
-          {/* --- Add Sort Dropdown --- */}
+          {/* --- Sort Dropdown --- */}
           <div className="sort-control">
             <label htmlFor="sort-order">Sort by:</label>
-            <select id="sort-order" value={sortOrder} onChange={handleSortChange}>
-              {/* Show relevance only if a search term exists */}
+            {/* The value should reflect the effectively active sort */}
+            <select id="sort-order" value={activeSortDisplay} onChange={handleSortChange}>
+              {/* Show relevance option *only if* searching */}
               {debouncedSearchTerm && <option value="relevance">Relevance</option>}
+              {/* Always show date options, but disable if searching? Or just let selection change dateSortPreference state */}
               <option value="newest">Newest First</option>
               <option value="oldest">Oldest First</option>
             </select>
@@ -107,29 +104,32 @@ const PaperListPage: React.FC = () => {
         </div>
       </div>
 
-      {/* --- Display Area (use sortedAndFilteredPapers) --- */}
+      {/* --- Display Area (uses 'papers' state directly) --- */}
       <div className={`list-content-area ${isLoading ? 'loading' : ''}`}>
         {isLoading && <LoadingSpinner />}
         {error && <p className="error-message">Error loading papers: {error}</p>}
         {!isLoading && !error && (
           <div className="paper-list">
-            {sortedAndFilteredPapers.length > 0 ? (
-              sortedAndFilteredPapers.map((paper) => ( // Use the sorted array
+            {/* Use 'papers' directly as it's already sorted by backend */}
+            {papers.length > 0 ? (
+              papers.map((paper) => (
+                // Assuming PaperCard takes a summary object prop like 'paperSummary'
                 <PaperCard key={paper.id} paper={{
-                  id: paper.id,
-                  pwcUrl: paper.pwcUrl,
-                  title: paper.title,
-                  authors: paper.authors,
-                  date: paper.date,
-                  implementationStatus: paper.implementationStatus,
-                  isImplementable: paper.isImplementable
+                    id: paper.id,
+                    pwcUrl: paper.pwcUrl,
+                    title: paper.title,
+                    authors: paper.authors,
+                    date: paper.date,
+                    implementationStatus: paper.implementationStatus,
+                    isImplementable: paper.isImplementable
                 }} />
               ))
             ) : (
-              <p style={{'width':'100vw'}}>
+              <p style={{width:'100vw'}}> {/* Consider adjusting width styling */}
                 {debouncedSearchTerm
                   ? `No papers found matching "${debouncedSearchTerm}".`
-                  : "No implementable papers found."}
+                  : "No implementable papers found." // Or a more general message
+                }
               </p>
             )}
           </div>

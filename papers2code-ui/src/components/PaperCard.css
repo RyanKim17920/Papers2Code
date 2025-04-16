@@ -1,116 +1,131 @@
 .paper-card {
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-lg);
-    padding: 20px 25px;
-    background-color: var(--card-background-color);
-    box-shadow: var(--box-shadow-sm);
-    transition: box-shadow 0.25s ease-in-out, transform 0.25s ease-in-out;
-    /* Ensure card uses flex column layout */
-    display: flex;
-    flex-direction: column;
-    /* Keep flex basis for horizontal wrapping */
-    flex-basis: calc(33.333% - 20px);
-    flex-grow: 0;
-    flex-shrink: 0;
-    min-width: 300px;
-    box-sizing: border-box;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 20px 25px;
+  background: linear-gradient(
+    to bottom right,
+    rgb(0, 72, 90, .01) 0%,
+    rgba(0, 72, 90, 0.15) 100%
+  );
+  box-shadow: var(--box-shadow-sm);
+  transition: box-shadow 0.25s ease-in-out, transform 0.25s ease-in-out;
+  /* Set up flex layout for consistent spacing */
+  display: flex;
+  flex-direction: column;
+  /* Set consistent height for all cards */
+  height: 280px;
+  /* Keep flex basis for horizontal wrapping */
+  flex-basis: calc(33.333% - 20px);
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 300px;
+  box-sizing: border-box;
+}
+/* Card hover effect with gradient */
+.paper-card:hover {
+  box-shadow: var(--box-shadow-md);
+  transform: translateY(-4px);
+  border-color: rgba(25, 124, 154, 0.2);
+}
+
+
+/* Title area with fixed height */
+.paper-card h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.15em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-heading-color);
+  /* Fixed height for title - allows for 2 lines */
+  height: 4.2em;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.paper-card h3 a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.paper-card h3 a:hover {
+  color: var(--primary-color);
+}
+
+/* Meta content section with fixed positioning */
+.card-meta-content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1;
+  justify-content: space-between;
+}
+
+/* Top meta section - contains authors */
+.card-meta-top {
+  margin-bottom: 10px;
+}
+
+/* Bottom meta section - contains date and status */
+.card-meta-bottom {
+  margin-bottom: 15px;
+}
+
+.paper-card .authors,
+.paper-card .date,
+.paper-card .status {
+  font-size: 0.87em;
+  color: var(--text-muted-color);
+  margin: 0 0 5px 0;
+  line-height: 1.5;
+}
+
+.paper-card .authors {
+  font-weight: 400;
+  /* If authors text is too long, add ellipsis */
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.paper-card .date,
+.paper-card .status {
+  font-weight: 500;
+}
+
+.paper-card .details-link {
+  display: block;
+  width:90%;
+  margin: 0 auto; /* Center the button */
+  padding: 9px 18px;
+  background-color: var(--primary-color);
+  color: white;
+  text-decoration: none;
+  border-radius: var(--border-radius-md);
+  font-size: 0.9em;
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  margin-top: auto;
+}
+
+.paper-card .details-link:hover {
+  background-color: var(--primary-hover-color);
+  text-decoration: none;
+  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+}
+
+/* Responsive Adjustments */
+@media (max-width: 1100px) {
+  .paper-card {
+    flex-basis: calc(50% - 15px);
   }
-  
-  .paper-card:hover {
-      box-shadow: var(--box-shadow-md);
-      transform: translateY(-4px);
+}
+
+@media (max-width: 680px) {
+  .paper-card {
+    flex-basis: 100%;
+    min-width: unset;
   }
-  
-  .paper-card h3 {
-    margin-top: 0;
-    margin-bottom: 8px;
-    font-size: 1.15em;
-    font-weight: 600;
-    line-height: 1.4; /* Used for min-height calculation */
-    color: var(--text-heading-color);
-    /* --- Ensure consistent title height --- */
-    /* Calculate based on line-height * number of lines (e.g., 2) */
-    /* 1.4 * 2 = 2.8em */
-    min-height: 2.8em;
-    /* Optional: Add display/overflow settings if you want ellipses for very long titles */
-    /* display: -webkit-box; */
-    /* -webkit-line-clamp: 2; */
-    /* -webkit-box-orient: vertical; */
-    /* overflow: hidden; */
-    /* text-overflow: ellipsis; */
-  }
-  
-  .paper-card h3 a {
-    text-decoration: none;
-    color: inherit;
-  }
-  .paper-card h3 a:hover {
-    color: var(--primary-color);
-  }
-  
-  /* This div will grow to push the button down */
-  .card-meta-content {
-      flex-grow: 1; /* Makes this section fill available space */
-      margin-bottom: 15px; /* Add space between meta and button */
-  }
-  
-  .paper-card .authors,
-  .paper-card .date,
-  .paper-card .status {
-    font-size: 0.87em;
-    color: var(--text-muted-color);
-    margin-bottom: 5px;
-    line-height: 1.5;
-  }
-  .paper-card .authors:last-child, /* Reduce margin on last item */
-  .paper-card .date:last-child,
-  .paper-card .status:last-child {
-      margin-bottom: 0;
-  }
-  
-  
-  .paper-card .authors {
-      font-weight: 400;
-  }
-  
-  .paper-card .status {
-      font-weight: 500;
-      margin-top: 2px;
-  }
-  
-  .paper-card .details-link {
-      display: inline-block;
-      /* margin-top: auto; NO LONGER NEEDED due to flex-grow on meta */
-      padding: 9px 18px;
-      background-color: var(--primary-color);
-      color: white;
-      text-decoration: none;
-      border-radius: var(--border-radius-md);
-      font-size: 0.9em;
-      font-weight: 500;
-      text-align: center;
-      transition: background-color 0.2s ease, box-shadow 0.2s ease;
-      box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-      /* Ensure button doesn't shrink if card width is constrained */
-      flex-shrink: 0;
-  }
-  
-  .paper-card .details-link:hover {
-      background-color: var(--primary-hover-color);
-      text-decoration: none;
-      box-shadow: 0 3px 6px rgba(0,0,0,0.1);
-  }
-  
-  /* Responsive Adjustments (keep as is) */
-  @media (max-width: 1100px) {
-    .paper-card {
-      flex-basis: calc(50% - 15px);
-    }
-  }
-  
-  @media (max-width: 680px) {
-    .paper-card {
-      flex-basis: 100%;
-      min-width: unset;
-    }
-  }
+}

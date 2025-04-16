@@ -1,12 +1,15 @@
 .paper-detail-page {
-    max-width: 1100px; /* Keep max-width for readability */
-    margin: 0 auto;
-    padding: 35px 45px; /* Adjust padding */
-    background-color: var(--card-background-color);
-    border-radius: var(--border-radius-lg); /* More rounded */
-    box-shadow: var(--box-shadow-md); /* Defined medium shadow */
-    border: 1px solid var(--border-color);
- }
+  width: 100%;          /* Make container fill full width */
+  min-height: 100vh;      /* Optional: fill vertical space */
+  padding: 35px 45px;     /* You can adjust these as needed */
+  background-color: var(--card-background-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--box-shadow-md);
+  border: 1px solid var(--border-color);
+  margin: 0;             /* Remove auto margins to prevent centering */
+  text-align: justify;
+  text-justify: inter-word;
+}
  
  .back-link {
    display: inline-block;
