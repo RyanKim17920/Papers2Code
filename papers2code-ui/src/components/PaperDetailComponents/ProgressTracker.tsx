@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImplementationStep } from '../types/paper';
+import { ImplementationStep } from '../../types/paper';
 import './ProgressTracker.css'; // Add styles
 
 interface ProgressTrackerProps {

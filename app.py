@@ -4,9 +4,11 @@ import os
 import re
 import requests
 import uuid
-from flask import Flask, jsonify, request, redirect, url_for, session
+from flask import Flask, jsonify, request, redirect, url_for, session, abort
 from flask_cors import CORS
 from flask_limiter import Limiter
+from flask_wtf import CSRFProtect
+from flask_talisman import Talisman
 from flask_limiter.util import get_remote_address
 from pymongo import MongoClient, ReturnDocument, DESCENDING, ASCENDING # <-- Import sort directions
 from bson import ObjectId
@@ -38,14 +40,32 @@ if not MONGO_URI: raise ValueError("No MONGO_URI found")
 if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET: raise ValueError("GitHub Client ID or Secret not found")
 if not FLASK_SECRET_KEY: raise ValueError("FLASK_SECRET_KEY not found")
 
+csp = {
+    "default-src": ["'self'"],
+    "script-src": ["'self'", "https://cdnjs.cloudflare.com"],
+    "style-src":  ["'self'", "https://fonts.googleapis.com"],
+    # etc…
+}
+Talisman(app,
+    content_security_policy=csp,
+    force_https=True,
+    strict_transport_security=True,
+    strict_transport_security_max_age=31536000
+)
+
+app.config['WTF_CSRF_TIME_LIMIT'] = None
+csrf = CSRFProtect(app)
+
 app.secret_key = FLASK_SECRET_KEY
 app.config.update(
     SESSION_COOKIE_SECURE=True,
     SESSION_COOKIE_HTTPONLY=True,
     SESSION_COOKIE_SAMESITE='Lax',
 )
-CORS(app, resources={r"/api/*": {"origins": "http://localhost:5173"}}, supports_credentials=True)
-
+CORS(app,
+    resources={r"/api/*": {"origins": os.getenv('FRONTEND_URL')}},
+    supports_credentials=True
+)
 # --- Rate Limiter Initialization ---
 limiter = Limiter(
     get_remote_address,
@@ -118,22 +138,19 @@ def transform_paper(paper_doc):
 @limiter.limit("100 per minute")
 def get_papers():
     try:
-        limit_str = request.args.get('limit', '10')
-        page_str = request.args.get('page', '1')
-        search_term = request.args.get('search', '').strip()
-        sort_param = request.args.get('sort', 'newest').lower()
-
         try:
-            limit = int(limit_str)
-            if limit <= 0: limit = 10
+            limit = max(1, min(int(request.args.get('limit', 10)), 100))
+            page  = max(1, int(request.args.get('page', 1)))
         except ValueError:
-            return jsonify({"error": "Invalid limit parameter"}), 400
+            return jsonify(error="Invalid pagination parameters"), 400
 
-        try:
-            page = int(page_str)
-            if page < 1: page = 1
-        except ValueError:
-            return jsonify({"error": "Invalid page parameter"}), 400
+        search = request.args.get('search', '').strip()
+        if len(search) > 100:  # avoid extremely long searches
+            return jsonify(error="Search term too long"), 400
+
+        sort = request.args.get('sort', 'newest').lower()
+        if sort not in ('newest','oldest'):
+            return jsonify(error="Invalid sort parameter"), 400
 
         # Compute the number of documents to skip
         skip = (page - 1) * limit
@@ -178,6 +195,10 @@ def get_papers():
         print(f"Error in /api/papers: {e}")
         return jsonify({"error": "An internal server error occurred"}), 500
 
+@app.route('/api/csrf-token', methods=['GET'])
+def get_csrf_token():
+    token = csrf.generate_csrf()
+    return jsonify(csrfToken=token)
 
 
 # Keep /api/papers/<id> endpoint as is
@@ -289,6 +310,7 @@ def get_current_user():
 
 @app.route('/api/auth/logout', methods=['POST'])
 @limiter.limit("10 per minute")
+@csrf.exempt
 @login_required
 def logout():
     """Logs the user out by clearing the session."""

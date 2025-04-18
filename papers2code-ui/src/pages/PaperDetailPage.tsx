@@ -4,7 +4,7 @@ import { useParams, Link } from 'react-router-dom'; // Removed useNavigate as it
 import { fetchPaperByIdFromApi /* Remove updateStepStatusInApi if only simulating */ } from '../services/api'; // Removed unused API imports for clarity
 import { Paper, ImplementationStep } from '../types/paper';
 import LoadingSpinner from '../components/LoadingSpinner';
-import ProgressTracker from '../components/ProgressTracker';
+import ProgressTracker from '../components/PaperDetailComponents/ProgressTracker';
 import './PaperDetailPage.css';
 
 const PaperDetailPage: React.FC = () => {

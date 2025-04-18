@@ -9,32 +9,43 @@
 :root {
   /* --- Primary Palette (Teal/Green focus) --- */
   --primary-color: #197c9a; /* Teal */
-  --primary-hover-color: #044085; /* Darker Teal */
-  --primary-light-color: #e6f9f3; /* Very Light Teal for backgrounds */
-  
+  --primary-hover-color: #13687E; /* Darker Teal - ADJUSTED */
+  --primary-light-color: #e8f7fa; /* Very Light Teal/Blue - Slightly adjusted for better harmony */
+  --primary-rgb: 25, 124, 154; /* Added for rgba() usage */
+
   /* --- Gradient Colors --- */
   --gradient-start: #f9fdfe; /* Very light blue-white */
   --gradient-middle: #f5fbfd; /* Light blue-white */
   --gradient-end: #f0f9fa; /* Subtle teal tint */
-  --gradient-accent: rgba(25, 124, 154, 0.03); /* Very transparent teal for accent */
-  
+  --gradient-accent: rgba(var(--primary-rgb), 0.03); /* Use RGB variable */
+
   /* --- Neutrals --- */
   --background-color: #fdfdfe; /* Slightly off-white */
   --card-background-color: #ffffff;
   --header-footer-bg: #ffffff;
   --border-color: #e9ecef; /* Lighter border */
   --light-gray-bg: #f1f3f5;
+  --dark-color: #343a40; /* Added for dark elements */
 
   /* --- Text --- */
   --text-color: #212529; /* Dark Gray/Soft Black */
   --text-muted-color: #6c757d; /* Medium Gray */
   --text-heading-color: #1a3a3a; /* Dark Teal/Gray for headings */
+  --text-on-primary: #ffffff; /* Text color for on primary background */
+  --text-on-dark: #ffffff; /* Text color for on dark background */
 
   /* --- Status/Accent Colors --- */
   --success-color: #28a745;
+  --success-light-color: #eafaf1; /* Added */
   --warning-color: #ffc107;
+  --warning-light-color: #fffbeb; /* Added */
+  --warning-text-color: #5d4a00; /* Darker text for yellow bg */
   --info-color: #17a2b8;
+  --info-light-color: #e7f6f8;   /* Added */
   --danger-color: #dc3545;
+  --danger-light-color: #f8d7da;  /* Added */
+  --skipped-color: #adb5bd;      /* Added (Neutral/Skipped) */
+  --skipped-light-color: #f8f9fa; /* Added */
 
   /* --- Shadows & Radii --- */
   --box-shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
@@ -205,15 +216,15 @@ a:hover {
 
 /* Global Error Message Style */
 .error-message {
-  color: var(--danger-color);
+  color: var(--danger-color); /* Use variable */
   text-align: center;
   margin: 20px auto;
   padding: 12px 15px;
-  border: 1px solid #f5c6cb;
-  background-color: #f8d7da;
+  border: 1px solid var(--danger-color); /* Use variable */
+  background-color: var(--danger-light-color); /* Use variable */
   border-radius: var(--border-radius-md);
   max-width: 800px;
-  box-shadow: 0 3px 6px rgba(220, 53, 69, 0.1);
+  box-shadow: 0 3px 6px rgba(var(--danger-rgb, 220, 53, 69), 0.1); /* Define --danger-rgb if needed */
 }
 .error-message a {
   color: var(--danger-color);
@@ -273,11 +284,13 @@ a:hover {
 }
 
 .connect-button {
-  background-color: #333;
-  color: white;
+  background-color: var(--dark-color); /* Use dark variable */
+  color: var(--text-on-dark);
+  /* Optional: Keep gradient or simplify */
   background-image: linear-gradient(to right, #333 0%, #444 100%);
 }
 .connect-button:hover {
+  background-color: #495057; /* Slightly lighter dark */
   background-image: linear-gradient(to right, #444 0%, #555 100%);
   box-shadow: 0 2px 4px rgba(0,0,0,0.2);
   transform: translateY(-1px);
@@ -289,7 +302,7 @@ a:hover {
   border: 1px solid var(--border-color);
 }
 .logout-button:hover {
-  background-color: #e2e6ea;
+  background-color: #e2e6ea; /* Keep existing or use a variable like --border-color */
   border-color: #dae0e5;
   transform: translateY(-1px);
 }

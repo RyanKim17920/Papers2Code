@@ -1,6 +1,6 @@
 import React from 'react';
 import { Link } from 'react-router-dom';
-import { PaperSummary } from '../types/paper';
+import { PaperSummary } from '../../types/paper';
 import './PaperCard.css';
 
 interface PaperCardProps {

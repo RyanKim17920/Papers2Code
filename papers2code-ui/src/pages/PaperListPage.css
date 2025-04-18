@@ -124,7 +124,7 @@
   .sort-control select:focus {
     outline: none;
     border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 25, 124, 154), 0.2);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2); /* Use RGB variable */
   }
 
 
@@ -140,15 +140,15 @@
 
 /* Generic style for prev/next buttons */
 .nav-button {
-  background-color: #fff;
-  color: #333;
-  border: 1px solid #ddd;
+  background-color: var(--card-background-color); /* Use variable */
+  color: var(--text-color); /* Use variable */
+  border: 1px solid var(--border-color); /* Use variable */
   padding: 0.45rem 0.8rem;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm); /* Use variable */
   cursor: pointer;
-  transition: background-color 0.2s ease;
-  font-size: 1rem;
-  font-weight: 1000;
+  transition: background-color 0.2s ease, border-color 0.2s ease; /* Added border transition */
+  font-size: 0.9rem; /* Adjusted size */
+  font-weight: 500; /* Adjusted weight */
 }
 input {
   background-color: var(--primary-light-color);
@@ -158,7 +158,8 @@ input {
 }
 .nav-button:hover:not(:disabled) {
   background-color: var(--primary-light-color);
-  border-color: var(--primary-hover-color);
+  border-color: var(--primary-color); /* Use primary color for border on hover */
+  color: var(--primary-color);
 }
 .nav-button:disabled {
   opacity: 0.5;
@@ -174,34 +175,34 @@ input {
 
 /* Each page button */
 .page-btn {
-  background-color: #fff;
-  color: #333;
-  border: 1px solid #ddd;
+  background-color: var(--card-background-color); /* Use variable */
+  color: var(--text-color); /* Use variable */
+  border: 1px solid var(--border-color); /* Use variable */
   padding: 0.45rem 0.8rem;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm); /* Use variable */
   cursor: pointer;
-  transition: background-color 0.2s ease;
+  transition: background-color 0.2s ease, border-color 0.2s ease, color 0.2s ease; /* Added transitions */
   font-size: 0.9rem;
 }
 
 /* Hover effect */
 .page-btn:hover {
   background-color: var(--primary-light-color);
-  border-color: var(--primary-hover-color);
+  border-color: var(--primary-color); /* Use primary color */
+  color: var(--primary-color);
 }
-
 /* Active (current) page uses a bold accent color */
 .page-btn.active {
-  background-color: var(--primary-hover-color); /* <-- Replace with your accent color */
-  border-color: var(--primary-hover-color);
-  color: #fff;
+  background-color: var(--primary-color); /* Use primary color */
+  border-color: var(--primary-color); /* Use primary color */
+  color: var(--text-on-primary); /* Use text-on-primary */
   font-weight: 600;
 }
 
 /* Ellipsis between pages */
 .page-ellipsis {
   padding: 0.45rem 0.8rem;
-  color: #999;
+  color: var(--text-muted-color); /* Use variable */
   user-select: none;
   font-size: 0.9rem;
 }
@@ -217,18 +218,26 @@ input {
 /* The numeric input for user to type a page */
 .go-to-page input {
   width: 60px;
-  border: 1px solid #ddd;
-  border-radius: 4px;
+  border: 1px solid var(--border-color); /* Use variable */
+  border-radius: var(--border-radius-sm); /* Use variable */
   padding: 0.3rem 0.5rem;
   font-size: 0.9rem;
+  background-color: var(--card-background-color); /* Use variable */
+  color: var(--text-color); /* Use variable */
+}
+
+.go-to-page input:focus {
+  border-color: var(--primary-color);
+  outline: none;
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
 }
 
 /* The "Go" button */
 .go-btn {
-  background-color: var(--primary-color); /* or any secondary color you'd like */
-  color: #fff;
+  background-color: var(--primary-color);
+  color: var(--text-on-primary); /* Use variable */
   border: none;
-  border-radius: 4px;
+  border-radius: var(--border-radius-sm); /* Use variable */
   padding: 0.45rem 0.75rem;
   font-size: 0.9rem;
   cursor: pointer;

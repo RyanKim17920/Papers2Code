@@ -93,29 +93,29 @@
  
  /* Keep flag button yellow or change if desired */
  .flag-button {
-     padding: 10px 20px;
-     background-color: var(--warning-color);
-     color: #333;
-     border: none;
-     border-radius: var(--border-radius-md); /* Consistent radius */
-     cursor: pointer;
-     font-size: 0.95em;
-     font-weight: 500;
-     transition: background-color 0.2s ease, box-shadow 0.2s ease;
-     box-shadow: 0 1px 2px rgba(0,0,0,0.05);
- }
- .flag-button:hover {
-     background-color: #e0a800;
-     box-shadow: 0 3px 6px rgba(0,0,0,0.1);
- }
+  padding: 10px 20px;
+  background-color: var(--warning-color);
+  color: var(--warning-text-color); /* Use specific text color */
+  border: none;
+  border-radius: var(--border-radius-md); /* Consistent radius */
+  cursor: pointer;
+  font-size: 0.95em;
+  font-weight: 500;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease;
+  box-shadow: var(--box-shadow-sm); /* Use variable */
+}
+.flag-button:hover {
+  background-color: #e0a800; /* Keep darker yellow or derive */
+  box-shadow: var(--box-shadow-md); /* Use variable */
+}
  
  /* Notice styling */
  .not-implementable-notice {
-     background-color: #fff3cd;
-     border: 1px solid #ffeeba;
-     color: #856404;
-     padding: 15px 20px;
-     border-radius: var(--border-radius-md);
-     margin-bottom: 30px;
-     font-size: 0.95em;
- }
+  background-color: var(--warning-light-color); /* Use variable */
+  border: 1px solid var(--warning-color); /* Use variable */
+  color: var(--warning-text-color); /* Use variable */
+  padding: 15px 20px;
+  border-radius: var(--border-radius-md);
+  margin-bottom: 30px;
+  font-size: 0.95em;
+}
