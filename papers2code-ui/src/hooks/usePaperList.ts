@@ -4,7 +4,7 @@ import { Paper } from '../types/paper';
 import useDebounce from './useDebounce'; // Import the debounce hook
 
 const DEBOUNCE_DELAY = 500;
-const ITEMS_PER_PAGE = 10; // Define items per page here
+const ITEMS_PER_PAGE = 12; // Define items per page here
 
 export type DateSortPreference = 'newest' | 'oldest';
 
