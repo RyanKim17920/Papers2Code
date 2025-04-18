@@ -12,7 +12,7 @@ const API_BASE_URL = 'http://localhost:5000/api';
  */
 export const fetchPapersFromApi = async (
     page: number = 1,
-    limit: number = 10,
+    limit: number = 12,
     searchTerm?: string,
     sort?: 'newest' | 'oldest'
   ): Promise<{ papers: Paper[]; totalPages: number }> => {

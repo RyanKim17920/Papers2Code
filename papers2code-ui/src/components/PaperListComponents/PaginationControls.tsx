@@ -24,7 +24,7 @@ const PaginationControls: React.FC<PaginationControlsProps> = ({
   }, [currentPage]);
 
   const handleGoToPage = () => {
-    const numericValue = parseInt(pageInput, 10);
+    const numericValue = parseInt(pageInput, 12);
     if (!isNaN(numericValue) && numericValue >= 1 && numericValue <= totalPages) {
       onPageChange(numericValue);
     } else {
