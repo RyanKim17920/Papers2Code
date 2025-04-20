@@ -1,19 +1,32 @@
 // src/pages/PaperDetailPage.tsx
 import React, { useState, useEffect } from 'react';
-import { useParams, Link } from 'react-router-dom'; // Removed useNavigate as it wasn't used here
-import { fetchPaperByIdFromApi /* Remove updateStepStatusInApi if only simulating */ } from '../services/api'; // Removed unused API imports for clarity
+// Import useNavigate for redirection after delete
+import { useParams, Link, useNavigate } from 'react-router-dom'; 
+// Import the remove function and fetch function
+import { fetchPaperByIdFromApi, removePaperFromApi } from '../services/api'; 
 import { Paper, ImplementationStep } from '../types/paper';
+// Import UserProfile type
+import { UserProfile } from '../services/auth'; 
 import LoadingSpinner from '../components/LoadingSpinner';
-import ProgressTracker from '../components/PaperDetailComponents/ProgressTracker';
+// Assuming ProgressTracker is in this location based on current code
+import ProgressTracker from '../components/PaperDetailComponents/ProgressTracker'; 
 import './PaperDetailPage.css';
 
-const PaperDetailPage: React.FC = () => {
+// Define props to include currentUser
+interface PaperDetailPageProps {
+    currentUser: UserProfile | null;
+}
+
+// Update component definition to accept props
+const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const { paperId } = useParams<{ paperId: string }>();
-    // const navigate = useNavigate(); // Keep if needed elsewhere, otherwise remove
+    const navigate = useNavigate(); // Hook for navigation after delete
     const [paper, setPaper] = useState<Paper | null>(null);
     const [isLoading, setIsLoading] = useState<boolean>(true);
     const [error, setError] = useState<string | null>(null);
-    const [updateError, setUpdateError] = useState<string | null>(null); // Keep for potential future use
+    const [updateError, setUpdateError] = useState<string | null>(null); 
+    // Add state for removal process
+    const [isRemoving, setIsRemoving] = useState<boolean>(false); 
 
     // --- Load Paper Logic (Keep as is) ---
     const loadPaper = async () => {
@@ -25,6 +38,7 @@ const PaperDetailPage: React.FC = () => {
         setIsLoading(true);
         setError(null);
         setUpdateError(null);
+        setIsRemoving(false); // Reset removal state on load
         try {
             const fetchedPaper = await fetchPaperByIdFromApi(paperId);
             if (fetchedPaper) {
@@ -44,85 +58,85 @@ const PaperDetailPage: React.FC = () => {
         loadPaper();
     }, [paperId]);
 
-    // --- MODIFIED: handleStepUpdate for LOCAL state change only ---
-    const handleStepUpdate = ( // No longer async
+    // --- handleStepUpdate (Keep simulated version) ---
+    const handleStepUpdate = ( 
         pId: string,
         stepId: number,
         newStatus: ImplementationStep['status']
     ) => {
-        // --- Simulate Frontend Update Only ---
-        setUpdateError(null); // Clear any previous errors
-
+        setUpdateError(null); 
         if (!paper || paper.id !== pId) {
             console.warn("Attempted step update but paper state is null or ID mismatch");
-            // Optionally set an error: setUpdateError("Cannot update: Paper data not loaded correctly.");
             return;
         }
-
-        // Find the index of the step to update immutably
         const stepIndex = paper.implementationSteps.findIndex(step => step.id === stepId);
-
         if (stepIndex === -1) {
             console.warn(`Step with ID ${stepId} not found in current paper state.`);
-            // Optionally set an error: setUpdateError(`Cannot update: Step ${stepId} not found.`);
-            return; // Step not found, do nothing
+            return; 
         }
-
-        // Create the updated step object immutably
         const updatedStep = {
-            ...paper.implementationSteps[stepIndex], // Copy existing properties
-            status: newStatus,                     // Set the new status
-            // Add simulated attribution fields for visual feedback
-            lastUpdatedAt: new Date().toISOString(), // Simulate a timestamp
-            lastUpdatedBy: "(Local Change)"          // Indicate it's local
+            ...paper.implementationSteps[stepIndex], 
+            status: newStatus,                     
+            lastUpdatedAt: new Date().toISOString(), 
+            lastUpdatedBy: "(Local Change)"          
         };
-
-        // Create the new steps array immutably
         const newSteps = paper.implementationSteps.map(step =>
-            step.id === stepId ? updatedStep : step // Replace the specific step
+            step.id === stepId ? updatedStep : step 
         );
-
-        // Create the new paper object immutably
         const updatedPaper = {
-            ...paper, // Copy existing paper properties
-            implementationSteps: newSteps // Use the new steps array
-            // --- Optional: Update overall paper status based on newSteps ---
-            // This logic would depend on your rules (e.g., if all complete -> 'Completed')
-            // implementationStatus: calculateOverallStatus(newSteps),
+            ...paper, 
+            implementationSteps: newSteps 
         };
-
-        // Update the local state to re-render the component
         setPaper(updatedPaper);
-
         console.log(`Simulated LOCAL update for paper ${pId}, step ${stepId} to ${newStatus}`);
-
-        // --- Backend API call is intentionally skipped ---
     };
 
-    // --- handleToggleImplementability (Keep disabled/simulated if needed) ---
-    const handleToggleImplementability = () => { // Removed async
+    // --- handleToggleImplementability (Keep simulated version) ---
+    const handleToggleImplementability = () => { 
         if (!paper) return;
-
-        // Simulate frontend update only
         setUpdateError(null);
         const newImplementability = !paper.isImplementable;
         setPaper({
             ...paper,
             isImplementable: newImplementability
-            // Maybe reset steps if marking as not implementable?
-            // implementationSteps: newImplementability ? paper.implementationSteps : paper.implementationSteps.map(s => ({...s, status: 'skipped'}))
         });
         console.log(`Simulated LOCAL toggle implementability to ${newImplementability}`);
-        // alert("Updating implementability via API is not implemented yet.");
     };
+
+    // --- NEW: Handle Paper Removal ---
+    const handleRemovePaper = async () => {
+        if (!paper || !paperId || !currentUser?.isOwner) {
+            console.warn("Remove paper called without necessary permissions or paper data.");
+            setUpdateError("Cannot remove paper: Missing permissions or data.");
+            return;
+        }
+
+        if (!window.confirm(`Are you sure you want to permanently remove the paper "${paper.title}"? This action cannot be undone.`)) {
+            return;
+        }
+
+        setIsRemoving(true);
+        setUpdateError(null);
+        setError(null);
+
+        try {
+            await removePaperFromApi(paperId);
+            console.log(`Paper ${paperId} successfully removed.`);
+            // Navigate away after successful removal
+            navigate('/', { replace: true, state: { message: 'Paper removed successfully.' } });
+        } catch (err) {
+            console.error(`Failed to remove paper ${paperId}:`, err);
+            setUpdateError(err instanceof Error ? err.message : "Failed to remove paper. Please try again.");
+            setIsRemoving(false); // Only reset if removal fails
+        }
+    };
+
 
     // --- Render Logic ---
     if (isLoading && !paper) return <LoadingSpinner />;
     if (error) return <p className="error-message">Error: {error} <Link to="/">Go back to list</Link></p>;
-    // Added check for finished loading but paper still null
     if (!paper && !isLoading) return <p>Paper data could not be loaded or was not found.</p>;
-    // If paper is still null after checks (shouldn't happen often) show loading
-    if (!paper) return <LoadingSpinner />;
+    if (!paper) return <LoadingSpinner />; // Fallback if still loading or null
 
     const authors = paper.authors.map(a => a.name).join(', ');
 
@@ -131,32 +145,59 @@ const PaperDetailPage: React.FC = () => {
             <div className="paper-content">
                 <Link to="/" className="back-link">Back to List</Link>
 
-                {/* Display update error if it occurs during simulation (e.g., step not found) */}
-                {updateError && <p className="error-message update-error">Update Error: {updateError}</p>}
+                {/* Display update/removal errors */}
+                {updateError && <p className="error-message update-error">Error: {updateError}</p>}
+                {isRemoving && <p className="loading-message">Removing paper...</p>}
 
                 <h2>{paper.title}</h2>
 
-                {/* ... (rest of meta, abstract rendering - no changes) ... */}
                 {!paper.isImplementable && (<p className="not-implementable-notice">This paper has been marked as likely not suitable for implementation (e.g., theoretical, survey).</p>)}
-                <div className="paper-meta"><p><strong>Authors:</strong> {authors}</p><p><strong>Date:</strong> {paper.date}</p> {paper.proceeding && <p><strong>Venue:</strong> {paper.proceeding}</p>} {paper.arxivId && <p><strong>ArXiv ID:</strong> {paper.arxivId}</p>}<p><strong>Links:</strong>{' '} {paper.urlAbs && <><a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">Abstract</a> |</>} {paper.urlPdf && <><a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">PDF</a> |</>} {paper.pwcUrl && <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">PapersWithCode Page</a>}</p> {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}</div>
+                <div className="paper-meta">
+                    <p><strong>Authors:</strong> {authors}</p>
+                    <p><strong>Date:</strong> {paper.date}</p> 
+                    {paper.proceeding && <p><strong>Venue:</strong> {paper.proceeding}</p>} 
+                    {paper.arxivId && <p><strong>ArXiv ID:</strong> {paper.arxivId}</p>}
+                    <p><strong>Links:</strong>{' '} 
+                        {paper.urlAbs && <><a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">Abstract</a> |</>} 
+                        {paper.urlPdf && <><a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">PDF</a> |</>} 
+                        {paper.pwcUrl && <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">PapersWithCode Page</a>}
+                    </p> 
+                    {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}
+                </div>
                 {paper.abstract && (<div className="paper-abstract"><h3>Abstract</h3><p>{paper.abstract}</p></div>)}
 
                 {paper.isImplementable ? (
                     <ProgressTracker
                         steps={paper.implementationSteps}
                         paperId={paper.id}
-                        onStepUpdate={handleStepUpdate} // Uses the modified local handler
+                        onStepUpdate={handleStepUpdate} 
                     />
                 ) : (
                     <p>Implementation tracking is disabled as this paper is marked as not implementable.</p>
                 )}
 
                 <div className="paper-actions">
-                    {/* Also simulate the implementability toggle */}
                     <button onClick={handleToggleImplementability} className="flag-button">
                         {paper.isImplementable ? 'Flag as Not Implementable' : 'Mark as Potentially Implementable'}
                     </button>
                 </div>
+
+                {/* --- NEW: Owner Actions Section --- */}
+                {currentUser?.isOwner && (
+                    <div className="owner-actions">
+                        <h3>Owner Actions</h3>
+                        <button
+                            onClick={handleRemovePaper}
+                            disabled={isRemoving} // Disable button while removal is in progress
+                            className="button-danger remove-button" // Add appropriate classes for styling
+                        >
+                            {isRemoving ? 'Removing...' : 'Remove Paper Permanently'}
+                        </button>
+                        <p className="warning-text">
+                            Warning: Removing a paper moves it to a separate collection and removes it from public view. This action cannot be easily undone.
+                        </p>
+                    </div>
+                )}
             </div>
         </div>
     );

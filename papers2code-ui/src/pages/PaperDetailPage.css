@@ -1,5 +1,5 @@
 .paper-detail-page {
-  width: 100%;          /* Make container fill full width */
+  width: 90%;          /* Make container fill full width */
   min-height: 100vh;      /* Optional: fill vertical space */
   padding: 35px 45px;     /* You can adjust these as needed */
   background-color: var(--card-background-color);
@@ -9,6 +9,9 @@
   margin: 0;             /* Remove auto margins to prevent centering */
   text-align: justify;
   text-justify: inter-word;
+  max-width: 1400px;
+  margin-left:5%;
+  margin-right:5%;
 }
  
  .back-link {

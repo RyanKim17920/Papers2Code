@@ -68,7 +68,11 @@ function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<PaperListPage />} />
-            <Route path="/paper/:paperId" element={<PaperDetailPage />} />
+            {/* Pass currentUser to PaperDetailPage */}
+            <Route 
+              path="/paper/:paperId" 
+              element={<PaperDetailPage currentUser={currentUser} />} 
+            />
             {/* Note: No /auth/callback route needed on frontend if backend redirects home */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
@@ -86,7 +90,7 @@ function App() {
 const NotFoundPage: React.FC = () => {
     // ... (no changes) ...
     return (
-        <div style={{ textAlign: 'center', marginTop: '50px' }}>
+        <div style={{ textAlign: 'center', marginTop: '50px', width: '100vw' }}>
             <h2>404 - Page Not Found</h2>
             <p>Sorry, the page you are looking for does not exist.</p>
             <Link to="/">Go back to the homepage</Link>

@@ -6,6 +6,7 @@ export interface UserProfile {
     username: string;
     avatarUrl?: string | null;
     name?: string | null;
+    isOwner?: boolean; // <-- Add this line
 }
 
 const API_BASE_URL = 'http://localhost:5000/api'; // Ensure this matches

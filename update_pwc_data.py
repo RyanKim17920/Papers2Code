@@ -25,6 +25,7 @@ DB_NAME = "papers2code"
 # It might be better named 'papers' if it will eventually hold papers *with* code too.
 # We'll use the existing name for now.
 COLLECTION_NAME = "papers_without_code"
+REMOVED_COLLECTION_NAME = "removed_papers"
 MONGO_WRITE_BATCH_SIZE = 10000  # Adjust batch size as needed
 POLARS_PROCESSING_BATCH_SIZE = 10000 # How many rows Polars processes at once for new papers
 
@@ -183,8 +184,8 @@ def insert_new_papers_batched(
 def main_update():
     """
     Downloads latest PWC data and updates the MongoDB collection:
-    1. Updates status of existing papers that now have code.
-    2. Inserts new papers that don't have code and are not yet in the DB.
+    1. Updates status of existing papers that now have code (excluding removed ones).
+    2. Inserts new papers that don't have code and are not yet in the DB or removed list.
     """
     start_total_time = time.time()
     logging.info("Starting the PapersWithCode data UPDATE job.")
@@ -196,13 +197,28 @@ def main_update():
 
     db = mongo_client[DB_NAME]
     papers_collection = db[COLLECTION_NAME]
+    removed_papers_collection = db[REMOVED_COLLECTION_NAME] # <-- Get removed collection
 
     # Ensure essential indexes exist (especially pwc_url)
     try:
         papers_collection.create_index([("pwc_url", 1)], unique=True, background=True)
         logging.info("Index on 'pwc_url' ensured.")
+        # Ensure index on removed collection's URL field
+        removed_papers_collection.create_index([("original_pwc_url", 1)], background=True)
+        logging.info("Index on 'original_pwc_url' in removed_papers ensured.")
     except Exception as e:
-        logging.warning("Could not ensure index on 'pwc_url': %s.", e)
+        logging.warning("Could not ensure indexes: %s.", e)
+
+    # --- Get Removed Paper URLs ---
+    start_removed_check = time.time()
+    try:
+        removed_urls_cursor = removed_papers_collection.find({}, {"original_pwc_url": 1, "_id": 0})
+        # Use original_pwc_url as this is what we store during removal
+        removed_paper_urls: Set[str] = {doc['original_pwc_url'] for doc in removed_urls_cursor if doc.get('original_pwc_url')}
+        logging.info(f"Found {len(removed_paper_urls)} removed paper URLs in {time.time()-start_removed_check:.2f}s.")
+    except Exception as e:
+        logging.error(f"Failed to fetch removed paper URLs: {e}. Proceeding without exclusion.")
+        removed_paper_urls = set() # Continue without removed list if fetch fails
 
     # --- Download latest data ---
     t1 = time.time()
@@ -222,8 +238,12 @@ def main_update():
     papers_with_code_urls: Set[str] = {link['paper_url'] for link in links_data if link.get('paper_url')}
     logging.info(f"Found {len(papers_with_code_urls)} papers with code links in the latest data.")
 
+    # Find papers currently marked as needing code, excluding those already removed
     papers_needing_code_in_db_cursor = papers_collection.find(
-        {"status": "Needs Code"}, # Find papers currently marked as needing code
+        {
+            "status": "Needs Code",
+            "pwc_url": {"$nin": list(removed_paper_urls)} # <-- Exclude removed URLs
+        },
         {"_id": 1, "pwc_url": 1}  # Only fetch necessary fields
     )
 
@@ -234,37 +254,37 @@ def main_update():
 
     for paper in papers_needing_code_in_db_cursor:
         check_count += 1
-        if paper.get('pwc_url') in papers_with_code_urls:
-            logging.debug(f"Paper {paper['pwc_url']} now has code. Preparing update.")
+        paper_url = paper.get('pwc_url')
+        # Double check it's not in removed set (already filtered in query, but belt-and-suspenders)
+        if paper_url and paper_url not in removed_paper_urls and paper_url in papers_with_code_urls:
+            logging.debug(f"Paper {paper_url} now has code. Preparing update.")
             ids_to_update.append(paper['_id'])
             update_op = UpdateOne(
                 {"_id": paper['_id']},
                 {"$set": {
                     "status": "Code Available", # Or your preferred status
                     "lastUpdated": datetime.utcnow()
-                    # Consider adding "$unset": {"is_implementable": ""} if needed
-                    # We don't get the actual code URL from links_data, so can't add it here easily
                  }
                 }
             )
             update_operations.append(update_op)
 
-    logging.info(f"Checked {check_count} papers marked 'Needs Code' in DB in {time.time()-start_update_check:.2f}s.")
+    logging.info(f"Checked {check_count} non-removed papers marked 'Needs Code' in DB in {time.time()-start_update_check:.2f}s.")
     if update_operations:
         logging.info(f"Found {len(update_operations)} papers to update to 'Code Available'.")
         batch_mongo_updates(papers_collection, update_operations, MONGO_WRITE_BATCH_SIZE)
     else:
-        logging.info("No existing papers needed status updates.")
+        logging.info("No existing, non-removed papers needed status updates.")
 
 
     # --- Step 2: Add new papers without code ---
     logging.info("Step 2: Identifying and adding new papers without code...")
 
-    # Get all pwc_urls already in the database for efficient filtering
+    # Get all pwc_urls already in the main database for efficient filtering
     start_existing_check = time.time()
     existing_db_urls_cursor = papers_collection.find({}, {"pwc_url": 1, "_id": 0})
     existing_db_urls: Set[str] = {doc['pwc_url'] for doc in existing_db_urls_cursor if doc.get('pwc_url')}
-    logging.info(f"Found {len(existing_db_urls)} existing paper URLs in DB in {time.time()-start_existing_check:.2f}s.")
+    logging.info(f"Found {len(existing_db_urls)} existing paper URLs in main DB in {time.time()-start_existing_check:.2f}s.")
 
     # Use Polars to find new papers without code
     try:
@@ -273,14 +293,16 @@ def main_update():
         # Filter conditions:
         # 1. Must have a paper_url
         # 2. paper_url must NOT be in the set of papers that have code
-        # 3. paper_url must NOT be in the set of papers already in our DB
+        # 3. paper_url must NOT be in the set of papers already in our main DB
+        # 4. paper_url must NOT be in the set of removed papers <-- NEW
         new_papers_lf = (
             abstracts_lf
             .filter(pl.col("title").is_not_null() & (pl.col("title") != "")) # Title must exist and not be empty
             .filter(pl.col("authors").is_not_null() & pl.col("authors").list.len() > 0) # Authors must exist and list not empty
             .filter(pl.col("paper_url").is_not_null()) # Ensure paper_url exists
             .filter(~pl.col("paper_url").is_in(papers_with_code_urls)) # Not in links (no code)
-            .filter(~pl.col("paper_url").is_in(existing_db_urls)) # Not already in DB
+            .filter(~pl.col("paper_url").is_in(existing_db_urls)) # Not already in main DB
+            .filter(~pl.col("paper_url").is_in(removed_paper_urls)) # <-- Exclude removed URLs
             # --- Apply transformations similar to find_papers_without_code_polars_lazy ---
             .select([
                 pl.col("paper_url").alias("pwc_url"), # Keep pwc_url
@@ -300,7 +322,7 @@ def main_update():
                 pl.lit(datetime.utcnow()).alias("createdAt"), # Add creation timestamp
                 pl.lit(datetime.utcnow()).alias("lastUpdated")
             ])
-            .filter(pl.col("publication_date").is_not_null()) 
+            .filter(pl.col("publication_date").is_not_null())
         )
 
         # Insert the newly identified papers

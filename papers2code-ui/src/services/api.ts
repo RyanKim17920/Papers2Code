@@ -72,3 +72,41 @@ export const flagPaperImplementabilityInApi = async (
     console.warn('flagPaperImplementabilityInApi: Backend endpoint not implemented yet.');
     throw new Error("Backend update not implemented");
 };
+
+// --- NEW: Function to remove a paper (Owner only) ---
+export const removePaperFromApi = async (paperId: string): Promise<void> => {
+    const url = `${API_BASE_URL}/papers/${paperId}`;
+    console.log("Attempting to remove paper:", url);
+
+    const response = await fetch(url, {
+        method: 'DELETE',
+        credentials: 'include', // Important for session/owner check
+        // Add CSRF token header if your backend requires it for DELETE
+        // headers: {
+        //     'X-CSRF-Token': getCsrfToken(), // You'd need a function to get the token
+        // },
+    });
+
+    if (!response.ok) {
+        let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.error) {
+                errorMsg = `API Error (${response.status}): ${errorData.error}`;
+            }
+        } catch (e) { /* Ignore if response is not JSON */ }
+        console.error("Failed to remove paper:", errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    // Check for 200 OK or 204 No Content (or even 207 if backend uses it)
+    if (response.status === 200 || response.status === 204 || response.status === 207) {
+        console.log(`Paper ${paperId} removed successfully.`);
+        // No content to return, resolve the promise
+        return;
+    } else {
+        // Handle unexpected success status codes if necessary
+        console.warn(`Unexpected success status code ${response.status} during paper removal.`);
+        throw new Error(`Unexpected status code ${response.status} after removing paper.`);
+    }
+};

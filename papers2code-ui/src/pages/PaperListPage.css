@@ -2,6 +2,7 @@
     margin: 0 auto;
     padding: 0;
     width: 100%; /* Ensure full width */
+    max-width: 1400px;
   }
   
   .paper-list-page h2 {
@@ -17,13 +18,16 @@
   
   /* Container for the cards */
   .paper-list {
-      width: 100%; 
-      margin-top: 25px;
-      display: flex;
-      flex-wrap: wrap;
-      gap: 30px; /* Slightly larger gap for visual separation */
-      justify-content: flex-start;
-  }
+    width: 100%; 
+    max-width: 1400px; /* <-- Add max-width (adjust value as needed) */
+    margin-left: auto;  /* <-- Add auto margin for centering */
+    margin-right: auto; /* <-- Add auto margin for centering */
+    margin-top: 25px;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 30px; /* Slightly larger gap for visual separation */
+    justify-content: flex-start; /* Keep items aligned left within the container */
+}
   
   /* Styling for when no papers are found */
   .paper-list > p { /* Target direct p child */
