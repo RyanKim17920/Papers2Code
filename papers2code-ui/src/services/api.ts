@@ -11,47 +11,51 @@ const API_BASE_URL = 'http://localhost:5000/api';
  * @returns A promise that resolves to an array of Paper objects.
  */
 export const fetchPapersFromApi = async (
-    page: number = 1,
-    limit: number = 12,
-    searchTerm?: string,
-    sort?: 'newest' | 'oldest'
-  ): Promise<{ papers: Paper[]; totalPages: number }> => {
-    // Build query parameters
-    const params = new URLSearchParams();
-    params.append('limit', String(limit));
-    params.append('page', String(page));
-    if (searchTerm && searchTerm.trim()) {
-      params.append('search', searchTerm.trim());
-    }
-    if (sort) {
-      params.append('sort', sort);
-    }
-    const url = `${API_BASE_URL}/papers?${params.toString()}`;
-    console.log("Fetching from API:", url);
-    const response = await fetch(url);
-    if (!response.ok) {
-      let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-      try {
-        const errorData = await response.json();
-        if (errorData && errorData.error) {
-          errorMsg = `API Error: ${errorData.error}`;
-        }
-      } catch (e) { }
-      throw new Error(errorMsg);
-    }
-    // Expecting the backend to return an object with 'papers' and 'totalPages'
-    const data = await response.json();
-    return data;
-  };
+  page: number = 1,
+  limit: number = 12,
+  searchTerm?: string,
+  sort?: 'newest' | 'oldest' | 'upvotes' // <-- Add 'upvotes'
+): Promise<{ papers: Paper[]; totalPages: number }> => {
+  // Build query parameters
+  const params = new URLSearchParams();
+  params.append('limit', String(limit));
+  params.append('page', String(page));
+  if (searchTerm && searchTerm.trim()) {
+    params.append('search', searchTerm.trim());
+  }
+  if (sort) {
+    params.append('sort', sort); // Pass sort param to backend
+  }
+  const url = `${API_BASE_URL}/papers?${params.toString()}`;
+  console.log("Fetching from API:", url);
+  const response = await fetch(url, { credentials: 'include' }); // Include credentials for user vote status
+  if (!response.ok) {
+    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData && errorData.error) {
+        errorMsg = `API Error: ${errorData.error}`;
+      }
+    } catch (e) { console.log(e)}
+    throw new Error(errorMsg);
+  }
+  // Expecting the backend to return an object with 'papers' and 'totalPages'
+  const data = await response.json();
+  // Ensure the returned data matches the expected structure
+  if (!data || !Array.isArray(data.papers) || typeof data.totalPages !== 'number') {
+      console.error("Unexpected API response structure:", data);
+      throw new Error("Invalid data structure received from API");
+  }
+  return data;
+};
 
-// --- fetchPaperByIdFromApi (keep as is) ---
+// --- fetchPaperByIdFromApi ---
 export const fetchPaperByIdFromApi = async (id: string): Promise<Paper | undefined> => {
-    // ... (no changes needed here) ...
-     const response = await fetch(`${API_BASE_URL}/papers/${id}`);
-     if (response.status === 404) return undefined;
-     if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
-     const data: Paper = await response.json();
-     return data;
+   const response = await fetch(`${API_BASE_URL}/papers/${id}`, { credentials: 'include' }); // Include credentials for user vote status
+   if (response.status === 404) return undefined;
+   if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+   const data: Paper = await response.json();
+   return data;
 };
 
 
@@ -73,7 +77,43 @@ export const flagPaperImplementabilityInApi = async (
     throw new Error("Backend update not implemented");
 };
 
-// --- NEW: Function to remove a paper (Owner only) ---
+export const voteOnPaperInApi = async (
+  paperId: string,
+  voteType: 'up' | 'none' // Currently only supporting upvote or removing vote
+): Promise<Paper> => {
+  const url = `${API_BASE_URL}/papers/${paperId}/vote`;
+  console.log(`Attempting to ${voteType}vote paper:`, url);
+
+  const response = await fetch(url, {
+      method: 'POST',
+      headers: {
+          'Content-Type': 'application/json',
+          // Include CSRF token header if needed by backend (Flask-WTF might require it)
+          // 'X-CSRFToken': getCsrfToken(), // Example: You'd need a function to get this
+      },
+      body: JSON.stringify({ voteType }), // Send 'up' or 'none'
+      credentials: 'include', // Crucial for sending session cookie
+  });
+
+  if (!response.ok) {
+      let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+      try {
+          const errorData = await response.json();
+          if (errorData && errorData.error) {
+              errorMsg = `API Error (${response.status}): ${errorData.error}`;
+          }
+      } catch (e) { /* Ignore if response is not JSON */ }
+      console.error("Failed to vote on paper:", errorMsg);
+      throw new Error(errorMsg);
+  }
+
+  // Expect the updated paper object in the response
+  const updatedPaper: Paper = await response.json();
+  console.log(`Vote successful for paper ${paperId}. New count: ${updatedPaper.upvoteCount}, Your vote: ${updatedPaper.currentUserVote}`);
+  return updatedPaper;
+};
+
+// --- Function to remove a paper (Owner only) ---
 export const removePaperFromApi = async (paperId: string): Promise<void> => {
     const url = `${API_BASE_URL}/papers/${paperId}`;
     console.log("Attempting to remove paper:", url);

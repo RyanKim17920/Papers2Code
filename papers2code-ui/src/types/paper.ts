@@ -27,20 +27,22 @@ export interface ImplementationStep {
 }
 
 export interface Paper {
-  id: string; // Stringified _id from MongoDB
-  pwcUrl?: string | null; // Mark optional if they might be missing
-  arxivId?: string | null;
+  id: string; // MongoDB ObjectId as string
+  pwcUrl?: string; // PapersWithCode URL
+  arxivId?: string; // arXiv ID (e.g., '2310.12345')
   title: string;
-  abstract?: string | null;
+  abstract: string;
   authors: Author[];
-  urlAbs?: string | null; // Make sure these match optionality from backend
-  urlPdf?: string | null;
-  date: string; // Backend sends string 'YYYY-MM-DD'
-  proceeding?: string | null; // Mapped from 'venue'
-  tasks?: string[] | null;
-  isImplementable: boolean;
-  implementationStatus: ImplementationStatus | string; // Allow string for flexibility if DB has other statuses
+  urlAbs?: string; // URL to abstract page (e.g., arXiv page)
+  urlPdf?: string; // URL to PDF
+  date: string; // Publication date (YYYY-MM-DD)
+  proceeding?: string; // Conference or journal name
+  tasks?: string[]; // Associated ML tasks
+  isImplementable: boolean; // Flag set by owner
+  implementationStatus: 'Not Started' | 'In Progress' | 'Completed' | 'Blocked';
   implementationSteps: ImplementationStep[];
+  upvoteCount: number; // Add upvote count
+  currentUserVote: 'up' | 'none'; // Add current user's vote status ('down' can be added later)
 }
 
 export interface PaperSummary {

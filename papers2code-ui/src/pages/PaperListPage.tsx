@@ -1,10 +1,10 @@
 import React from 'react';
-import { usePaperList } from '../hooks/usePaperList'; // Import the main hook
+import { usePaperList } from '../hooks/usePaperList';
 import LoadingSpinner from '../components/LoadingSpinner';
-import ListControls from '../components/PaperListComponents/ListControls'; // Import new component
-import PaperListDisplay from '../components/PaperListComponents/PaperListDisplay'; // Import new component
-import PaginationControls from '../components/PaperListComponents/PaginationControls'; // Import new component
-import './PaperListPage.css'; // Keep page-specific styles
+import ListControls from '../components/PaperListComponents/ListControls';
+import PaperListDisplay from '../components/PaperListComponents/PaperListDisplay';
+import PaginationControls from '../components/PaperListComponents/PaginationControls';
+import './PaperListPage.css';
 
 const PaperListPage: React.FC = () => {
   const {
@@ -21,7 +21,8 @@ const PaperListPage: React.FC = () => {
     handlePageChange,
     handlePrev,
     handleNext,
-  } = usePaperList(); // Use the custom hook
+    handleVote, // Get the vote handler from the hook
+  } = usePaperList();
 
   return (
     <div className="paper-list-page">
@@ -32,7 +33,7 @@ const PaperListPage: React.FC = () => {
           onSearchChange={handleSearchChange}
           activeSortDisplay={activeSortDisplay}
           onSortChange={handleSortChange}
-          isSearchActive={!!debouncedSearchTerm} // Pass boolean indicating if search is active
+          isSearchActive={!!debouncedSearchTerm}
         />
       </div>
 
@@ -46,7 +47,9 @@ const PaperListPage: React.FC = () => {
             <PaperListDisplay
               papers={papers}
               debouncedSearchTerm={debouncedSearchTerm}
+              onVote={handleVote} // Pass the vote handler down
             />
+            {/* ... PaginationControls ... */}
             <PaginationControls
               currentPage={currentPage}
               totalPages={totalPages}

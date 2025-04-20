@@ -16,6 +16,7 @@ from bson.errors import InvalidId
 from dotenv import load_dotenv
 from datetime import datetime
 from functools import wraps
+import traceback  # Add traceback for better error logging
 
 # --- Decorators ---
 def login_required(f):
@@ -90,6 +91,7 @@ try:
     papers_collection = db.papers_without_code
     users_collection = db.users
     removed_papers_collection = db.removed_papers
+    user_votes_collection = db.user_action_votes  # New collection for votes
     print("Available collections:", db.list_collection_names())
     try:
         papers_collection.drop_index("title_text_abstract_text_authors_text")
@@ -107,10 +109,16 @@ try:
     print("Ensured unique index on 'githubId' in users collection.")
     papers_collection.create_index([("publication_date", DESCENDING)], background=True)
     print("Ensured index on 'publication_date' in papers collection.")
+    papers_collection.create_index([("upvoteCount", DESCENDING)], background=True, sparse=True)
+    print("Ensured index on 'upvoteCount' in papers collection.")
     removed_papers_collection.create_index([("removedAt", DESCENDING)], background=True)
     print("Ensured index on 'removedAt' in removed_papers collection.")
     removed_papers_collection.create_index([("original_pwc_url", 1)], background=True)
     print("Ensured index on 'original_pwc_url' in removed_papers collection.")
+    user_votes_collection.create_index([("userId", 1), ("paperId", 1)], unique=True, background=True)
+    print("Ensured unique compound index on 'userId' and 'paperId' in user_votes collection.")
+    user_votes_collection.create_index([("paperId", 1)], background=True)
+    print("Ensured index on 'paperId' in user_votes collection.")
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
@@ -118,7 +126,7 @@ except Exception as e:
     exit()
 
 # --- Helper Function ---
-def transform_paper(paper_doc):
+def transform_paper(paper_doc, current_user_id=None):  # Add current_user_id
     default_steps = [
         {"id": 1, "name": 'Contact Author', "description": 'Email first author about open-sourcing.', "status": 'pending'},
         {"id": 2, "name": 'Define Requirements', "description": 'Outline key components, data, and metrics.', "status": 'pending'},
@@ -129,6 +137,14 @@ def transform_paper(paper_doc):
     authors_list = [{"name": author_name} for author_name in paper_doc.get("authors", [])]
     publication_date = paper_doc.get("publication_date")
     date_str = publication_date.strftime('%Y-%m-%d') if isinstance(publication_date, datetime) else str(publication_date)
+
+    # Determine current user's vote status
+    current_user_vote = 'none'
+    if current_user_id:
+        vote_doc = user_votes_collection.find_one({"userId": ObjectId(current_user_id), "paperId": paper_doc["_id"]})
+        if vote_doc:
+            current_user_vote = 'up'  # Assuming only upvotes for now
+
     return {
         "id": str(paper_doc["_id"]), "pwcUrl": paper_doc.get("pwc_url"),
         "arxivId": paper_doc.get("arxiv_id"), "title": paper_doc.get("title"),
@@ -138,7 +154,8 @@ def transform_paper(paper_doc):
         "tasks": paper_doc.get("tasks", []), "isImplementable": paper_doc.get("is_implementable", True),
         "implementationStatus": paper_doc.get("status", "Not Started"),
         "implementationSteps": paper_doc.get("implementationSteps", default_steps),
-        "upvoteCount": paper_doc.get("upvoteCount", 0)
+        "upvoteCount": paper_doc.get("upvoteCount", 0),
+        "currentUserVote": current_user_vote  # Add current user's vote status
     }
 
 # --- API Endpoints ---
@@ -165,16 +182,17 @@ def get_papers():
             return jsonify({"error": "Invalid page parameter"}), 400
 
         skip = (page - 1) * limit
-
         base_filter = {}
-
         papers_cursor = None
+        query_filter = base_filter
+
+        # Determine current user ID for vote status
+        current_user_id = session.get('user', {}).get('id')
 
         if search_term:
             print(f"Executing AGGREGATION for search: '{search_term}'")
-            query_filter = {"$text": {"$search": search_term}}
-            if base_filter:
-                query_filter = {"$and": [base_filter, query_filter]}
+            search_filter = {"$text": {"$search": search_term}}
+            query_filter = {"$and": [base_filter, search_filter]} if base_filter else search_filter
             sort_criteria = {"score": {"$meta": "textScore"}}
             pipeline = [
                 {"$match": query_filter},
@@ -184,25 +202,30 @@ def get_papers():
             ]
             print(f"Pipeline: {pipeline}")
             papers_cursor = papers_collection.aggregate(pipeline)
+            total_count = papers_collection.count_documents(query_filter)
+
         else:
             print(f"Executing FIND with sort: '{sort_param}'")
-            query_filter = base_filter
             if sort_param == 'oldest':
-                sort_direction = ASCENDING
+                sort_criteria = [("publication_date", ASCENDING)]
                 print("Sorting by publication_date ASCENDING")
+            elif sort_param == 'upvotes':
+                sort_criteria = [("upvoteCount", DESCENDING), ("publication_date", DESCENDING)]
+                print("Sorting by upvoteCount DESCENDING, then publication_date DESCENDING")
             else:
-                sort_direction = DESCENDING
+                sort_criteria = [("publication_date", DESCENDING)]
                 print("Sorting by publication_date DESCENDING")
-            sort_criteria = [("publication_date", sort_direction)]
-            papers_cursor = papers_collection.find(query_filter).sort(sort_criteria).skip(skip).limit(limit)
 
-        total_count = papers_collection.count_documents(query_filter)
+            papers_cursor = papers_collection.find(query_filter).sort(sort_criteria).skip(skip).limit(limit)
+            total_count = papers_collection.count_documents(query_filter)
+
         total_pages = (total_count + limit - 1) // limit
 
-        papers_list = [transform_paper(paper) for paper in papers_cursor]
+        papers_list = [transform_paper(paper, current_user_id) for paper in papers_cursor]
         return jsonify({"papers": papers_list, "totalPages": total_pages})
     except Exception as e:
         print(f"Error in /api/papers: {e}")
+        traceback.print_exc()
         return jsonify({"error": "An internal server error occurred"}), 500
 
 @app.route('/api/papers/<string:paper_id>', methods=['GET'])
@@ -211,12 +234,89 @@ def get_paper_by_id(paper_id):
     try:
         try: obj_id = ObjectId(paper_id)
         except InvalidId: return jsonify({"error": "Invalid paper ID format"}), 400
+
         paper_doc = papers_collection.find_one({"_id": obj_id})
-        if paper_doc: return jsonify(transform_paper(paper_doc))
+        if paper_doc:
+            current_user_id = session.get('user', {}).get('id')
+            return jsonify(transform_paper(paper_doc, current_user_id))
         else: return jsonify({"error": "Paper not found"}), 404
     except Exception as e:
         print(f"Error in /api/papers/{paper_id}: {e}")
+        traceback.print_exc()
         return jsonify({"error": "An internal server error occurred"}), 500
+
+@app.route('/api/papers/<string:paper_id>/vote', methods=['POST'])
+@limiter.limit("60 per minute")
+@login_required
+@csrf.exempt
+def vote_on_paper(paper_id):
+    try:
+        user_id_str = session['user'].get('id')
+        if not user_id_str:
+            return jsonify({"error": "User ID not found in session"}), 401
+
+        try:
+            user_obj_id = ObjectId(user_id_str)
+            paper_obj_id = ObjectId(paper_id)
+        except InvalidId:
+            return jsonify({"error": "Invalid paper or user ID format"}), 400
+
+        paper_exists = papers_collection.count_documents({"_id": paper_obj_id}) > 0
+        if not paper_exists:
+            return jsonify({"error": "Paper not found"}), 404
+
+        data = request.get_json()
+        vote_type = data.get('voteType')
+
+        if vote_type not in ['up', 'none']:
+            return jsonify({"error": "Invalid vote type. Must be 'up' or 'none'."}), 400
+
+        existing_vote = user_votes_collection.find_one({"userId": user_obj_id, "paperId": paper_obj_id})
+
+        updated_paper = None
+
+        if vote_type == 'up':
+            if not existing_vote:
+                user_votes_collection.insert_one({
+                    "userId": user_obj_id,
+                    "paperId": paper_obj_id,
+                    "createdAt": datetime.utcnow()
+                })
+                updated_paper = papers_collection.find_one_and_update(
+                    {"_id": paper_obj_id},
+                    {"$inc": {"upvoteCount": 1}},
+                    return_document=ReturnDocument.AFTER
+                )
+                print(f"User {user_id_str} upvoted paper {paper_id}")
+            else:
+                updated_paper = papers_collection.find_one({"_id": paper_obj_id})
+                print(f"User {user_id_str} tried to upvote paper {paper_id} again.")
+
+        elif vote_type == 'none':
+            if existing_vote:
+                user_votes_collection.delete_one({"_id": existing_vote["_id"]})
+                updated_paper = papers_collection.find_one_and_update(
+                    {"_id": paper_obj_id},
+                    {"$inc": {"upvoteCount": -1}},
+                    return_document=ReturnDocument.AFTER
+                )
+                if updated_paper and updated_paper.get("upvoteCount", 0) < 0:
+                    papers_collection.update_one({"_id": paper_obj_id}, {"$set": {"upvoteCount": 0}})
+                    updated_paper["upvoteCount"] = 0
+                print(f"User {user_id_str} removed vote from paper {paper_id}")
+            else:
+                updated_paper = papers_collection.find_one({"_id": paper_obj_id})
+                print(f"User {user_id_str} tried to remove non-existent vote from paper {paper_id}.")
+
+        if updated_paper:
+            return jsonify(transform_paper(updated_paper, user_id_str))
+        else:
+            return jsonify({"error": "Failed to update paper vote status"}), 500
+
+    except Exception as e:
+        print(f"Error voting on paper {paper_id}: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "An internal server error occurred during voting"}), 500
 
 @app.route('/api/papers/<string:paper_id>', methods=['DELETE'])
 @limiter.limit("30 per minute")
@@ -356,6 +456,7 @@ def get_current_user():
 @app.route('/api/auth/logout', methods=['POST'])
 @limiter.limit("10 per minute")
 @login_required
+@csrf.exempt
 def logout():
     user = session.pop('user', None)
     if user: print(f"User '{user.get('username')}' logged out.")

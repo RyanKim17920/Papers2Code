@@ -9,17 +9,16 @@
   );
   box-shadow: var(--box-shadow-sm);
   transition: box-shadow 0.25s ease-in-out, transform 0.25s ease-in-out;
-  /* Set up flex layout for consistent spacing */
   display: flex;
   flex-direction: column;
-  /* Set consistent height for all cards */
-  height: 280px;
-  /* Keep flex basis for horizontal wrapping */
+  /* Adjust height slightly if needed, or keep fixed */
+  height: 300px; /* Increased height slightly for actions */
   flex-basis: calc(33.333% - 20px);
   flex-grow: 0;
   flex-shrink: 0;
   min-width: 300px;
   box-sizing: border-box;
+  overflow-y:hidden;
 }
 /* Card hover effect with gradient */
 .paper-card:hover {
@@ -57,8 +56,8 @@
 .card-meta-content {
   display: flex;
   flex-direction: column;
-  flex-grow: 1;
-  justify-content: space-between;
+  flex-grow: 1; /* Allows this section to push actions down */
+  justify-content: flex-start; /* Align items top */
 }
 
 /* Top meta section - contains authors */
@@ -94,38 +93,120 @@
 }
 
 .paper-card .details-link {
-  display: block;
-  width:90%;
-  margin: 0 auto; /* Center the button */
-  padding: 9px 18px;
-  background-color: var(--primary-color);
-  color: white;
+  /* display: block; */ /* No longer block */
+  /* width: auto; */ /* No longer fixed width */
+  /* margin: 0; */ /* No longer centered */
+  padding: 6px 12px; /* Slightly smaller padding */
+  background-color: var(--primary-light-color); /* Lighter background */
+  color: var(--primary-color); /* Primary text color */
   text-decoration: none;
   border-radius: var(--border-radius-md);
-  font-size: 0.9em;
+  font-size: 0.85em; /* Slightly smaller font */
   font-weight: 500;
   text-align: center;
-  transition: background-color 0.2s ease, box-shadow 0.2s ease;
-  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
-  margin-top: auto;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  border: 1px solid var(--primary-color); /* Add border */
+  /* margin-top: 0; */ /* No longer needed */
 }
 
 .paper-card .details-link:hover {
-  background-color: var(--primary-hover-color);
+  background-color: var(--primary-color); /* Darker on hover */
+  color: var(--text-on-primary); /* White text on hover */
   text-decoration: none;
-  box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
 }
 
+.card-actions {
+  display: flex;
+  justify-content: space-between; /* Space out votes and details link */
+  align-items: center;
+  margin-top: auto; /* Pushes actions to the bottom */
+  padding-top: 10px; /* Add a little space above actions */
+  border-top: 1px solid var(--border-color); /* Separator line */
+}
+.vote-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative; /* For error tooltip positioning */
+}
+
+.vote-button {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  color: var(--text-muted-color); /* Default icon color */
+  transition: color 0.2s ease, transform 0.1s ease;
+  display: flex; /* Align icon properly */
+  align-items: center;
+  justify-content: center;
+}
+
+.vote-button:focus {
+  outline: none;
+  box-shadow: none; /* Also remove any potential focus box-shadow if needed */
+}
+
+.vote-button:hover:not(:disabled) {
+  color: var(--primary-color); /* Hover color */
+}
+
+.vote-button.active {
+  color: var(--primary-color); /* Active color */
+}
+
+.vote-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.vote-button svg {
+  display: block; /* Prevent extra space below icon */
+}
+
+.upvote-count {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text-color);
+  min-width: 20px; /* Ensure space for count */
+  text-align: left;
+}
+
+/* Simple tooltip for vote errors */
+.vote-error-tooltip {
+    position: absolute;
+    bottom: 110%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--danger-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8em;
+    white-space: nowrap;
+    z-index: 10;
+    opacity: 0.9;
+}
 /* Responsive Adjustments */
 @media (max-width: 1100px) {
   .paper-card {
     flex-basis: calc(50% - 15px);
   }
 }
-
 @media (max-width: 680px) {
   .paper-card {
     flex-basis: 100%;
     min-width: unset;
+    height: auto; /* Allow height to adjust on mobile */
+  }
+  .card-actions {
+      flex-direction: column; /* Stack actions vertically */
+      align-items: flex-start; /* Align left */
+      gap: 10px; /* Add gap between stacked items */
+  }
+  .paper-card .details-link {
+      align-self: stretch; /* Make button full width */
+      text-align: center;
   }
 }

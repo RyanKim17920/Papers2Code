@@ -1,13 +1,13 @@
 import React from 'react';
-import SearchBar from './SearchBar'; // Assuming path
-import { DateSortPreference } from '../../hooks/usePaperList'; // Import type
+import SearchBar from './SearchBar';
+import { SortPreference } from '../../hooks/usePaperList'; // Import updated type
 
 interface ListControlsProps {
   searchTerm: string;
   onSearchChange: (term: string) => void;
-  activeSortDisplay: 'relevance' | DateSortPreference;
+  activeSortDisplay: 'relevance' | SortPreference; // Use updated type
   onSortChange: (event: React.ChangeEvent<HTMLSelectElement>) => void;
-  isSearchActive: boolean; // To conditionally render relevance option
+  isSearchActive: boolean;
 }
 
 const ListControls: React.FC<ListControlsProps> = ({
@@ -30,6 +30,7 @@ const ListControls: React.FC<ListControlsProps> = ({
           {isSearchActive && <option value="relevance">Relevance</option>}
           <option value="newest">Newest First</option>
           <option value="oldest">Oldest First</option>
+          <option value="upvotes">Most Upvoted</option> {/* Add Upvotes option */}
         </select>
       </div>
     </div>
