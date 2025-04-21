@@ -9,6 +9,8 @@
 :root {
   /* --- Primary Palette (Teal/Green focus) --- */
   --primary-color: #197c9a; /* Teal */
+  --primary-dark-color: #0f4c6e; /* Dark Teal - ADJUSTED */
+  --primary-accent-color: #3ab0ff; /* Light Teal/Blue - ADJUSTED */
   --primary-hover-color: #13687E; /* Darker Teal - ADJUSTED */
   --primary-light-color: #e8f7fa; /* Very Light Teal/Blue - Slightly adjusted for better harmony */
   --primary-rgb: 25, 124, 154; /* Added for rgba() usage */

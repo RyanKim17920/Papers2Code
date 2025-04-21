@@ -219,6 +219,13 @@ input {
   font-size: 0.9rem;
 }
 
+.go-to-input-wrapper {
+  position: relative; /* Needed for absolute positioning of error */
+  display: flex;
+  align-items: center;
+  gap: 0.3rem; /* Small gap between input and button */
+}
+
 /* The numeric input for user to type a page */
 .go-to-page input {
   width: 60px;
@@ -226,8 +233,20 @@ input {
   border-radius: var(--border-radius-sm); /* Use variable */
   padding: 0.3rem 0.5rem;
   font-size: 0.9rem;
-  background-color: var(--card-background-color); /* Use variable */
-  color: var(--text-color); /* Use variable */
+  text-align: center; /* Center the number */
+  /* Remove browser default arrows for number input if desired */
+  -moz-appearance: textfield;
+}
+
+.go-to-page input::-webkit-outer-spin-button,
+.go-to-page input::-webkit-inner-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.go-to-page input[aria-invalid="true"] {
+  border-color: var(--danger-color);
+  box-shadow: 0 0 0 1px var(--danger-color);
 }
 
 .go-to-page input:focus {
@@ -238,16 +257,34 @@ input {
 
 /* The "Go" button */
 .go-btn {
-  background-color: var(--primary-color);
-  color: var(--text-on-primary); /* Use variable */
-  border: none;
-  border-radius: var(--border-radius-sm); /* Use variable */
-  padding: 0.45rem 0.75rem;
+  padding: 0.3rem 0.7rem;
   font-size: 0.9rem;
+  background-color: var(--primary-color);
+  color: var(--text-on-primary);
+  border: none;
+  border-radius: var(--border-radius-sm);
   cursor: pointer;
   transition: background-color 0.2s ease;
 }
-
 .go-btn:hover {
-  background-color: var(--primary-hover-color); /* or any secondary hover color you'd like */
+  background-color: var(--primary-dark-color); /* Use the darker primary color */
+  /* Remove color: white; if text-on-primary is already white */
+}
+
+
+.page-input-error {
+  position: absolute;
+  bottom: calc(100% + 5px); /* Position above the input with slightly more space */
+  left: 0; /* Align with the left of the input */
+  width: max-content; /* Adjust width to content */
+  max-width: 220px; /* Slightly wider max */
+  background-color: var(--danger-color);
+  color: white; /* Ensure text is white */
+  font-size: 0.8em;
+  font-weight: 500; /* Slightly bolder */
+  padding: 4px 8px; /* Slightly more padding */
+  border-radius: var(--border-radius-sm);
+  z-index: 10;
+  opacity: 1; /* Ensure full opacity */
+  pointer-events: none; 
 }
