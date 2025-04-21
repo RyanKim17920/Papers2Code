@@ -91,38 +91,96 @@ try:
     papers_collection = db.papers_without_code
     users_collection = db.users
     removed_papers_collection = db.removed_papers
-    user_votes_collection = db.user_action_votes  # New collection for votes
+    user_votes_collection = db.user_action_votes
     print("Available collections:", db.list_collection_names())
-    try:
-        papers_collection.drop_index("title_text_abstract_text_authors_text")
-        print("Dropped old text index on papers collection.")
-    except Exception as e:
-        print(f"Could not drop old text index (might not exist): {e}")
-    papers_collection.create_index(
-        [("title", "text"), ("abstract", "text"), ("authors", "text")],
-        weights={"title": 10, "abstract": 5, "authors": 1},
-        name="title_text_abstract_text_authors_text", background=True )
-    print("Ensured text index on papers collection.")
-    papers_collection.create_index([("pwc_url", 1)], unique=True, background=True)
-    print("Ensured unique index on 'pwc_url' in papers collection.")
-    users_collection.create_index([("githubId", 1)], unique=True, background=True)
-    print("Ensured unique index on 'githubId' in users collection.")
-    papers_collection.create_index([("publication_date", DESCENDING)], background=True)
-    print("Ensured index on 'publication_date' in papers collection.")
-    papers_collection.create_index([("upvoteCount", DESCENDING)], background=True, sparse=True)
-    print("Ensured index on 'upvoteCount' in papers collection.")
-    removed_papers_collection.create_index([("removedAt", DESCENDING)], background=True)
-    print("Ensured index on 'removedAt' in removed_papers collection.")
-    removed_papers_collection.create_index([("original_pwc_url", 1)], background=True)
-    print("Ensured index on 'original_pwc_url' in removed_papers collection.")
-    user_votes_collection.create_index([("userId", 1), ("paperId", 1)], unique=True, background=True)
-    print("Ensured unique compound index on 'userId' and 'paperId' in user_votes collection.")
-    user_votes_collection.create_index([("paperId", 1)], background=True)
-    print("Ensured index on 'paperId' in user_votes collection.")
+
+    # --- Get existing index names --- 
+    papers_indexes = papers_collection.index_information()
+    users_indexes = users_collection.index_information()
+    removed_papers_indexes = removed_papers_collection.index_information()
+    user_votes_indexes = user_votes_collection.index_information()
+    print("Existing indexes fetched.")
+
+    # --- Ensure Indexes --- 
+    # Papers Collection
+    text_index_name = "title_text_abstract_text_authors_text"
+
+    if text_index_name not in papers_indexes:
+         # If the index somehow got dropped, recreate it (adjust weights if needed)
+         print(f"Recreating missing text index: {text_index_name}...")
+         papers_collection.create_index(
+             [("title", "text"), ("abstract", "text"), ("authors", "text")],
+             weights={"title": 200, "abstract": 2, "authors": 5}, # Keep weights for initial match
+             name=text_index_name, background=True )
+         print(f"Index '{text_index_name}' created.")
+    else:
+         print(f"Index exists: {text_index_name}")
+
+    pwc_url_index_name = "pwc_url_1"
+    if pwc_url_index_name not in papers_indexes:
+        papers_collection.create_index([("pwc_url", 1)], name=pwc_url_index_name, unique=True, background=True)
+        print(f"Creating index: {pwc_url_index_name}")
+    else:
+        print(f"Index exists: {pwc_url_index_name}")
+
+    pub_date_index_name = "publication_date_-1"
+    if pub_date_index_name not in papers_indexes:
+        papers_collection.create_index([("publication_date", DESCENDING)], name=pub_date_index_name, background=True)
+        print(f"Creating index: {pub_date_index_name}")
+    else:
+        print(f"Index exists: {pub_date_index_name}")
+
+    upvote_index_name = "upvoteCount_-1"
+    if upvote_index_name not in papers_indexes:
+        papers_collection.create_index([("upvoteCount", DESCENDING)], name=upvote_index_name, background=True, sparse=True)
+        print(f"Creating index: {upvote_index_name}")
+    else:
+        print(f"Index exists: {upvote_index_name}")
+
+    # Users Collection
+    github_id_index_name = "githubId_1"
+    if github_id_index_name not in users_indexes:
+        users_collection.create_index([("githubId", 1)], name=github_id_index_name, unique=True, background=True)
+        print(f"Creating index: {github_id_index_name}")
+    else:
+        print(f"Index exists: {github_id_index_name}")
+
+    # Removed Papers Collection
+    removed_at_index_name = "removedAt_-1"
+    if removed_at_index_name not in removed_papers_indexes:
+        removed_papers_collection.create_index([("removedAt", DESCENDING)], name=removed_at_index_name, background=True)
+        print(f"Creating index: {removed_at_index_name}")
+    else:
+        print(f"Index exists: {removed_at_index_name}")
+
+    original_pwc_url_index_name = "original_pwc_url_1"
+    if original_pwc_url_index_name not in removed_papers_indexes:
+        removed_papers_collection.create_index([("original_pwc_url", 1)], name=original_pwc_url_index_name, background=True)
+        print(f"Creating index: {original_pwc_url_index_name}")
+    else:
+        print(f"Index exists: {original_pwc_url_index_name}")
+
+    # User Votes Collection
+    user_paper_vote_index_name = "userId_1_paperId_1"
+    if user_paper_vote_index_name not in user_votes_indexes:
+        user_votes_collection.create_index([("userId", 1), ("paperId", 1)], name=user_paper_vote_index_name, unique=True, background=True)
+        print(f"Creating index: {user_paper_vote_index_name}")
+    else:
+        print(f"Index exists: {user_paper_vote_index_name}")
+
+    paper_vote_lookup_index_name = "paperId_1"
+    if paper_vote_lookup_index_name not in user_votes_indexes:
+        user_votes_collection.create_index([("paperId", 1)], name=paper_vote_lookup_index_name, background=True)
+        print(f"Creating index: {paper_vote_lookup_index_name}")
+    else:
+        print(f"Index exists: {paper_vote_lookup_index_name}")
+
+    print("Index check complete.")
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
 except Exception as e:
     print(f"Error connecting to MongoDB or creating indexes: {e}")
+    traceback.print_exc() # Print traceback on error
     exit()
 
 # --- Helper Function ---
@@ -190,39 +248,72 @@ def get_papers():
         current_user_id = session.get('user', {}).get('id')
 
         if search_term:
-            print(f"Executing AGGREGATION for search: '{search_term}'")
+            print(f"Executing COMPLEX AGGREGATION for search: '{search_term}'")
+            # Initial match using the text index
             search_filter = {"$text": {"$search": search_term}}
             query_filter = {"$and": [base_filter, search_filter]} if base_filter else search_filter
-            sort_criteria = {"score": {"$meta": "textScore"}}
+
+            # Escape search term for safe use in regex
+            search_term_regex = re.escape(search_term)
+
             pipeline = [
                 {"$match": query_filter},
-                {"$sort": sort_criteria},
+                {"$addFields": {
+                    # Check if title matches (case-insensitive)
+                    "titleMatch": {
+                        "$regexMatch": { "input": "$title", "regex": search_term_regex, "options": "i" }
+                    },
+                    # Check if abstract matches (case-insensitive)
+                    "abstractMatch": {
+                        "$regexMatch": { "input": "$abstract", "regex": search_term_regex, "options": "i" }
+                    },
+                    # Check if the *first* author matches (case-insensitive)
+                    # Safely access first element only if 'authors' is a non-empty array
+                    "firstAuthorMatch": {
+                         "$cond": {
+                             "if": { "$and": [ { "$isArray": "$authors" }, { "$gt": [ { "$size": "$authors" }, 0 ] } ] },
+                             "then": { "$regexMatch": { "input": { "$arrayElemAt": ["$authors", 0] }, "regex": search_term_regex, "options": "i" } },
+                             "else": False # No match if no authors or not an array
+                         }
+                    },
+                    # Keep the original text score for tie-breaking among similar matches
+                    "originalScore": { "$meta": "textScore" }
+                }},
+                # Sort by the new fields in priority order
+                {"$sort": {
+                    "titleMatch": DESCENDING,       # Title match = true comes first
+                    "abstractMatch": DESCENDING,    # Abstract match = true comes second
+                    "firstAuthorMatch": DESCENDING, # First author match = true comes third
+                    "originalScore": DESCENDING,    # Higher original text score comes fourth
+                    "publication_date": DESCENDING  # Newest date comes last as final tie-breaker
+                }},
                 {"$skip": skip},
                 {"$limit": limit}
             ]
-            print(f"Pipeline: {pipeline}")
+            print(f"Pipeline: {pipeline}") # Log the complex pipeline
             papers_cursor = papers_collection.aggregate(pipeline)
+            # Count still uses the initial $match filter
             total_count = papers_collection.count_documents(query_filter)
 
         else:
+            # --- Non-search logic remains the same ---
             print(f"Executing FIND with sort: '{sort_param}'")
+            # ... (existing sort logic for 'newest', 'oldest', 'upvotes') ...
             if sort_param == 'oldest':
                 sort_criteria = [("publication_date", ASCENDING)]
-                print("Sorting by publication_date ASCENDING")
             elif sort_param == 'upvotes':
                 sort_criteria = [("upvoteCount", DESCENDING), ("publication_date", DESCENDING)]
-                print("Sorting by upvoteCount DESCENDING, then publication_date DESCENDING")
-            else:
+            else: # Default to newest
                 sort_criteria = [("publication_date", DESCENDING)]
-                print("Sorting by publication_date DESCENDING")
 
             papers_cursor = papers_collection.find(query_filter).sort(sort_criteria).skip(skip).limit(limit)
             total_count = papers_collection.count_documents(query_filter)
+            # --- End Non-search logic ---
 
         total_pages = (total_count + limit - 1) // limit
-
         papers_list = [transform_paper(paper, current_user_id) for paper in papers_cursor]
         return jsonify({"papers": papers_list, "totalPages": total_pages})
+
     except Exception as e:
         print(f"Error in /api/papers: {e}")
         traceback.print_exc()
@@ -470,4 +561,7 @@ def ratelimit_handler(e):
 
 # --- Run the App ---
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', port=5000, debug=False)
+    from waitress import serve
+    print("Starting server with Waitress on http://0.0.0.0:5000")
+    serve(app, host='0.0.0.0', port=5000)
+    # app.run(host='0.0.0.0', port=5000, debug=False) # Keep debug=False
