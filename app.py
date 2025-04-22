@@ -222,11 +222,13 @@ def transform_paper(paper_doc, current_user_id=None):  # Add current_user_id
 @limiter.limit("100 per minute")
 def get_papers():
     try:
+        # ... (parameter parsing: limit, page, search_term, sort_param) ...
         limit_str = request.args.get('limit', '12')
         page_str = request.args.get('page', '1')
         search_term = request.args.get('search', '').strip()
         sort_param = request.args.get('sort', 'newest').lower()
 
+        # ... (limit, page validation) ...
         try:
             limit = int(limit_str)
             if limit <= 0: limit = 12
@@ -243,56 +245,144 @@ def get_papers():
         base_filter = {}
         papers_cursor = None
         query_filter = base_filter
-
-        # Determine current user ID for vote status
         current_user_id = session.get('user', {}).get('id')
 
         if search_term:
-            print(f"Executing COMPLEX AGGREGATION for search: '{search_term}'")
-            # Initial match using the text index
+            print(f"Executing GRANULAR SCORING AGGREGATION for search: '{search_term}'")
+            # Initial match using the text index (still useful for filtering)
             search_filter = {"$text": {"$search": search_term}}
             query_filter = {"$and": [base_filter, search_filter]} if base_filter else search_filter
 
-            # Escape search term for safe use in regex
-            search_term_regex = re.escape(search_term)
+            # Split search term into individual words for granular checking
+            search_terms_list = search_term.split()
+            search_terms_regex = [re.escape(term) for term in search_terms_list]
+
+            # Escape full phrase for phrase boost check
+            full_phrase_regex = re.escape(search_term)
 
             pipeline = [
                 {"$match": query_filter},
+                # --- Stage 1: Calculate Granular & Phrase Scores ---
                 {"$addFields": {
-                    # Check if title matches (case-insensitive)
-                    "titleMatch": {
-                        "$regexMatch": { "input": "$title", "regex": search_term_regex, "options": "i" }
+                    "originalScore": { "$meta": "textScore" }, # Keep for potential minor influence
+
+                    # --- Granular Term Scores ---
+                    "titleScore": {
+                        "$reduce": {
+                            "input": search_terms_regex,
+                            "initialValue": 0,
+                            "in": {
+                                "$add": [
+                                    "$$value",
+                                    { "$cond": [ { "$regexMatch": { "input": "$title", "regex": "$$this", "options": "i" } }, 100, 0 ] } # High score per term in title
+                                ]
+                            }
+                        }
                     },
-                    # Check if abstract matches (case-insensitive)
-                    "abstractMatch": {
-                        "$regexMatch": { "input": "$abstract", "regex": search_term_regex, "options": "i" }
-                    },
-                    # Check if the *first* author matches (case-insensitive)
-                    # Safely access first element only if 'authors' is a non-empty array
-                    "firstAuthorMatch": {
-                         "$cond": {
+                    "firstAuthorScore": {
+                         "$cond": { # Check if authors exist and is array
                              "if": { "$and": [ { "$isArray": "$authors" }, { "$gt": [ { "$size": "$authors" }, 0 ] } ] },
-                             "then": { "$regexMatch": { "input": { "$arrayElemAt": ["$authors", 0] }, "regex": search_term_regex, "options": "i" } },
-                             "else": False # No match if no authors or not an array
+                             "then": {
+                                 "$reduce": {
+                                     "input": search_terms_regex,
+                                     "initialValue": 0,
+                                     "in": {
+                                         "$add": [
+                                             "$$value",
+                                             { "$cond": [ { "$regexMatch": { "input": { "$arrayElemAt": ["$authors", 0] }, "regex": "$$this", "options": "i" } }, 50, 0 ] } # Medium score per term in first author
+                                         ]
+                                     }
+                                 }
+                             },
+                             "else": 0
                          }
                     },
-                    # Keep the original text score for tie-breaking among similar matches
-                    "originalScore": { "$meta": "textScore" }
+                    "otherAuthorsScore": {
+                         "$cond": { # Check if authors exist and is array > 1 element
+                             "if": { "$and": [ { "$isArray": "$authors" }, { "$gt": [ { "$size": "$authors" }, 1 ] } ] },
+                             "then": {
+                                 "$reduce": { # Iterate through terms
+                                     "input": search_terms_regex,
+                                     "initialValue": 0,
+                                     "in": {
+                                         "$add": [
+                                             "$$value",
+                                             { # Check if term matches any author *other than* the first
+                                               "$cond": [
+                                                   { "$gt": [
+                                                       { "$size": {
+                                                           "$filter": {
+                                                               "input": { "$slice": ["$authors", 1, { "$size": "$authors" }] }, # Get authors from index 1 onwards
+                                                               "as": "author",
+                                                               "cond": { "$regexMatch": { "input": "$$author", "regex": "$$this", "options": "i" } }
+                                                           }
+                                                       }},
+                                                       0 # If any match found in other authors
+                                                   ]},
+                                                   20, # Lower score per term in other authors
+                                                   0
+                                               ]}
+                                         ]
+                                     }
+                                 }
+                             },
+                             "else": 0
+                         }
+                    },
+                    "abstractScore": {
+                        "$reduce": {
+                            "input": search_terms_regex,
+                            "initialValue": 0,
+                            "in": {
+                                "$add": [
+                                    "$$value",
+                                    { "$cond": [ { "$regexMatch": { "input": "$abstract", "regex": "$$this", "options": "i" } }, 5, 0 ] } # Low score per term in abstract
+                                ]
+                            }
+                        }
+                    },
+
+                    # --- Phrase Boost ---
+                    "phraseBoost": {
+                        "$cond": {
+                            "if": { "$or": [
+                                # Phrase in title?
+                                { "$regexMatch": { "input": "$title", "regex": full_phrase_regex, "options": "i" } },
+                                # Phrase in first author?
+                                { "$and": [ { "$isArray": "$authors" }, { "$gt": [ { "$size": "$authors" }, 0 ] },
+                                           { "$regexMatch": { "input": { "$arrayElemAt": ["$authors", 0] }, "regex": full_phrase_regex, "options": "i" } } ] }
+                            ]},
+                            "then": 3.0, # Large multiplicative boost if full phrase in title or first author
+                            "else": 1.0
+                        }
+                    }
                 }},
-                # Sort by the new fields in priority order
+                # --- Stage 2: Calculate Final Score ---
+                {"$addFields": {
+                    "finalScore": {
+                        # Combine granular scores additively, then apply phrase boost multiplicatively
+                        # Add a small fraction of original score to retain some TF-IDF influence
+                        "$add": [
+                           { "$multiply": [
+                               { "$add": [ "$titleScore", "$firstAuthorScore", "$otherAuthorsScore", "$abstractScore" ] },
+                               "$phraseBoost"
+                           ]},
+                           { "$multiply": [ "$originalScore", 0.1 ] } # Add 10% of original text score
+                        ]
+                    }
+                }},
+                # --- Stage 3: Sort ---
                 {"$sort": {
-                    "titleMatch": DESCENDING,       # Title match = true comes first
-                    "abstractMatch": DESCENDING,    # Abstract match = true comes second
-                    "firstAuthorMatch": DESCENDING, # First author match = true comes third
-                    "originalScore": DESCENDING,    # Higher original text score comes fourth
-                    "publication_date": DESCENDING  # Newest date comes last as final tie-breaker
+                    "finalScore": DESCENDING,       # Primary sort: custom combined score
+                    "publication_date": DESCENDING  # Secondary sort: date
                 }},
+                # --- Stage 4: Paginate ---
                 {"$skip": skip},
                 {"$limit": limit}
             ]
-            print(f"Pipeline: {pipeline}") # Log the complex pipeline
-            papers_cursor = papers_collection.aggregate(pipeline)
-            # Count still uses the initial $match filter
+            # print(f"Pipeline: {pipeline}") # Optional: Log the full pipeline for debugging
+            papers_cursor = papers_collection.aggregate(pipeline, allowDiskUse=True)
+            # Count still uses the initial $match filter for total pages calculation
             total_count = papers_collection.count_documents(query_filter)
 
         else:
@@ -318,6 +408,7 @@ def get_papers():
         print(f"Error in /api/papers: {e}")
         traceback.print_exc()
         return jsonify({"error": "An internal server error occurred"}), 500
+
 
 @app.route('/api/papers/<string:paper_id>', methods=['GET'])
 @limiter.limit("100 per minute")
