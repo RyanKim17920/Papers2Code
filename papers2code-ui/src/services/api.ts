@@ -3,6 +3,12 @@ import { Paper } from '../types/paper';
 
 const API_BASE_URL = 'http://localhost:5000/api';
 
+export interface AdvancedPaperFilters {
+  startDate?: string; // Expecting YYYY-MM-DD string format
+  endDate?: string;   // Expecting YYYY-MM-DD string format
+  searchAuthors?: string;
+}
+
 /**
  * Fetches papers from the backend API.
  * @param limit - The maximum number of papers to fetch.
@@ -14,7 +20,8 @@ export const fetchPapersFromApi = async (
   page: number = 1,
   limit: number = 12,
   searchTerm?: string,
-  sort?: 'newest' | 'oldest' | 'upvotes' // <-- Add 'upvotes'
+  sort?: 'newest' | 'oldest' | 'upvotes',
+  advancedFilters?: AdvancedPaperFilters // <-- Add advanced filters parameter
 ): Promise<{ papers: Paper[]; totalPages: number }> => {
   // Build query parameters
   const params = new URLSearchParams();
@@ -24,11 +31,27 @@ export const fetchPapersFromApi = async (
     params.append('search', searchTerm.trim());
   }
   if (sort) {
-    params.append('sort', sort); // Pass sort param to backend
+    params.append('sort', sort);
   }
+
+  // --- NEW: Add advanced filter params ---
+  if (advancedFilters) {
+    if (advancedFilters.startDate) {
+      params.append('startDate', advancedFilters.startDate);
+    }
+    if (advancedFilters.endDate) {
+      params.append('endDate', advancedFilters.endDate);
+    }
+    if (advancedFilters.searchAuthors && advancedFilters.searchAuthors.trim()) {
+      params.append('searchAuthors', advancedFilters.searchAuthors.trim());
+    }
+  }
+  // --- End NEW ---
+
   const url = `${API_BASE_URL}/papers?${params.toString()}`;
-  console.log("Fetching from API:", url);
-  const response = await fetch(url, { credentials: 'include' }); // Include credentials for user vote status
+  console.log("Fetching from API:", url); // Log includes new params now
+  const response = await fetch(url, { credentials: 'include' });
+  // ... rest of the function remains the same ...
   if (!response.ok) {
     let errorMsg = `API Error: ${response.status} ${response.statusText}`;
     try {
@@ -39,9 +62,7 @@ export const fetchPapersFromApi = async (
     } catch (e) { console.log(e)}
     throw new Error(errorMsg);
   }
-  // Expecting the backend to return an object with 'papers' and 'totalPages'
   const data = await response.json();
-  // Ensure the returned data matches the expected structure
   if (!data || !Array.isArray(data.papers) || typeof data.totalPages !== 'number') {
       console.error("Unexpected API response structure:", data);
       throw new Error("Invalid data structure received from API");

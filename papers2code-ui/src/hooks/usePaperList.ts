@@ -8,6 +8,12 @@ const ITEMS_PER_PAGE = 12;
 
 export type SortPreference = 'newest' | 'oldest' | 'upvotes'; // Update sort type
 
+const initialAdvancedFilters: AdvancedPaperFilters = {
+  startDate: '',
+  endDate: '',
+  searchAuthors: '',
+};
+
 export function usePaperList() {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
@@ -17,6 +23,15 @@ export function usePaperList() {
   const [sortPreference, setSortPreference] = useState<SortPreference>('newest'); // Use updated type
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+
+  // --- NEW: State for advanced filters and visibility ---
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(initialAdvancedFilters);
+  const [showAdvancedSearch, setShowAdvancedSearch] = useState<boolean>(false);
+  // Use a separate state to "apply" filters, avoiding fetches on every keystroke in advanced fields
+  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState<AdvancedPaperFilters>(initialAdvancedFilters);
+  // --- End NEW ---
+
 
   // Reset currentPage when search or sort changes
   useEffect(() => {
@@ -29,11 +44,21 @@ export function usePaperList() {
       setIsLoading(true);
       setError(null);
 
-      // Determine sort param: use preference only if no search term exists
-      // If search term exists, backend defaults to relevance. If 'upvotes' is selected without search, use it.
-      const sortParamToSend = debouncedSearchTerm ? undefined : sortPreference;
+      // Determine if any search (basic or advanced) is active
+      const isSearchActive = !!debouncedSearchTerm ||
+                             !!appliedAdvancedFilters.startDate ||
+                             !!appliedAdvancedFilters.endDate ||
+                             !!appliedAdvancedFilters.searchAuthors;
+
+      // Sort param: Use preference only if no search term *and* no advanced filters are active.
+      // Backend defaults to relevance if any search criteria is present.
+      const sortParamToSend = isSearchActive ? undefined : sortPreference;
+
       console.log(
-        `Fetching page ${currentPage} with search: "${debouncedSearchTerm}", sort: ${sortParamToSend || 'relevance (search active)'}`
+        `Fetching page ${currentPage} with:`,
+        `Term="${debouncedSearchTerm}",`,
+        `Sort=${sortParamToSend || 'relevance (search active)'},`,
+        `Filters=${JSON.stringify(appliedAdvancedFilters)}`
       );
 
       try {
@@ -41,7 +66,8 @@ export function usePaperList() {
           currentPage,
           ITEMS_PER_PAGE,
           debouncedSearchTerm,
-          sortParamToSend // Pass the determined sort param
+          sortParamToSend,
+          appliedAdvancedFilters // <-- Pass applied filters
         );
         setPapers(response.papers);
         setTotalPages(response.totalPages);
@@ -56,7 +82,8 @@ export function usePaperList() {
     };
 
     loadPapers();
-  }, [debouncedSearchTerm, sortPreference, currentPage]); // Dependencies for fetching
+    // Dependencies: include appliedAdvancedFilters
+  }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters]);
 
   // Handlers
   const handleSearchChange = useCallback((newSearchTerm: string) => {
@@ -64,17 +91,42 @@ export function usePaperList() {
   }, []);
 
   const handleSortChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    // Allow 'relevance' from dropdown if search is active, otherwise handle date/upvotes sort
     const value = event.target.value;
-     if (value === 'relevance' && debouncedSearchTerm) {
-         // While 'relevance' is selected, the actual sort param sent depends on search term presence
-         // We don't set sortPreference to 'relevance', keep the underlying date/upvote preference
-         // The UI display logic handles showing 'Relevance' correctly.
-         console.log("Relevance selected with search term active.");
-     } else {
+    const isAnySearchActive = !!debouncedSearchTerm ||
+                              !!appliedAdvancedFilters.startDate ||
+                              !!appliedAdvancedFilters.endDate ||
+                              !!appliedAdvancedFilters.searchAuthors;
+
+     if (value === 'relevance' && isAnySearchActive) {
+         console.log("Relevance selected with search criteria active.");
+         // Keep underlying sort preference, backend handles relevance
+     } else if (value !== 'relevance') {
          setSortPreference(value as SortPreference);
      }
-  }, [debouncedSearchTerm]); // Add debouncedSearchTerm dependency
+  }, [debouncedSearchTerm, appliedAdvancedFilters]); // Depend on applied filters too
+
+
+  const toggleAdvancedSearch = useCallback(() => {
+    setShowAdvancedSearch(prev => !prev);
+  }, []);
+
+  const handleAdvancedFilterChange = useCallback((filterName: keyof AdvancedPaperFilters, value: string) => {
+      setAdvancedFilters(prev => ({ ...prev, [filterName]: value }));
+  }, []);
+
+  const applyAdvancedFilters = useCallback(() => {
+      // Trigger fetch by updating the applied filters state
+      setAppliedAdvancedFilters(advancedFilters);
+      // Optionally close the advanced search form
+      // setShowAdvancedSearch(false);
+  }, [advancedFilters]);
+
+  const clearAdvancedFilters = useCallback(() => {
+      setAdvancedFilters(initialAdvancedFilters);
+      setAppliedAdvancedFilters(initialAdvancedFilters); // Also clear applied filters
+      // Optionally close the advanced search form
+      // setShowAdvancedSearch(false);
+  }, []);
 
   const handlePageChange = useCallback((pageNumber: number) => {
     if (pageNumber >= 1 && pageNumber <= totalPages) {
@@ -118,8 +170,8 @@ export function usePaperList() {
     error,
     searchTerm,
     debouncedSearchTerm,
-    activeSortDisplay, // Use this for the dropdown value
-    sortPreference, // Keep the underlying preference state
+    activeSortDisplay,
+    sortPreference,
     currentPage,
     totalPages,
     handleSearchChange,
@@ -127,6 +179,15 @@ export function usePaperList() {
     handlePageChange,
     handlePrev,
     handleNext,
-    handleVote, // Expose the vote handler
+    handleVote,
+    // --- NEW: Expose advanced search state and handlers ---
+    showAdvancedSearch,
+    advancedFilters, // Current values in the form
+    appliedAdvancedFilters, // Filters used for the last fetch
+    toggleAdvancedSearch,
+    handleAdvancedFilterChange,
+    applyAdvancedFilters,
+    clearAdvancedFilters,
+    // --- End NEW ---
   };
 }

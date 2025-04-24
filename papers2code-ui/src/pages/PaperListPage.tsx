@@ -4,6 +4,7 @@ import LoadingSpinner from '../components/LoadingSpinner';
 import ListControls from '../components/PaperListComponents/ListControls';
 import PaperListDisplay from '../components/PaperListComponents/PaperListDisplay';
 import PaginationControls from '../components/PaperListComponents/PaginationControls';
+import AdvancedSearchForm from '../components/PaperListComponents/AdvancedSearchForm'; // <-- Import Advanced Form
 import './PaperListPage.css';
 
 const PaperListPage: React.FC = () => {
@@ -21,8 +22,23 @@ const PaperListPage: React.FC = () => {
     handlePageChange,
     handlePrev,
     handleNext,
-    handleVote, // Get the vote handler from the hook
+    handleVote,
+    // --- NEW: Destructure advanced search state/handlers ---
+    showAdvancedSearch,
+    advancedFilters,
+    appliedAdvancedFilters, // Needed to determine if search is active
+    toggleAdvancedSearch,
+    handleAdvancedFilterChange,
+    applyAdvancedFilters,
+    clearAdvancedFilters,
+    // --- End NEW ---
   } = usePaperList();
+
+  // Determine if any search criteria is active for the ListControls component
+  const isAnySearchActive = !!debouncedSearchTerm ||
+                           !!appliedAdvancedFilters.startDate ||
+                           !!appliedAdvancedFilters.endDate ||
+                           !!appliedAdvancedFilters.searchAuthors;
 
   return (
     <div className="paper-list-page">
@@ -33,13 +49,26 @@ const PaperListPage: React.FC = () => {
           onSearchChange={handleSearchChange}
           activeSortDisplay={activeSortDisplay}
           onSortChange={handleSortChange}
-          isSearchActive={!!debouncedSearchTerm}
+          isSearchActive={isAnySearchActive} // <-- Use combined check
+          onToggleAdvancedSearch={toggleAdvancedSearch} // <-- Pass handler
+          showAdvancedSearch={showAdvancedSearch}     // <-- Pass state
         />
+        {/* --- NEW: Conditionally render Advanced Search Form --- */}
+        {showAdvancedSearch && (
+          <AdvancedSearchForm
+            filters={advancedFilters}
+            onChange={handleAdvancedFilterChange}
+            onApply={applyAdvancedFilters}
+            onClear={clearAdvancedFilters}
+            onClose={toggleAdvancedSearch} // Use toggle to close
+          />
+        )}
+        {/* --- End NEW --- */}
       </div>
 
       <div className="list-content-area">
         {isLoading && <LoadingSpinner />}
-
+        {/* ... rest of the component ... */}
         {!isLoading && error && <div className="error-message">{error}</div>}
 
         {!isLoading && !error && (
@@ -47,9 +76,8 @@ const PaperListPage: React.FC = () => {
             <PaperListDisplay
               papers={papers}
               debouncedSearchTerm={debouncedSearchTerm}
-              onVote={handleVote} // Pass the vote handler down
+              onVote={handleVote}
             />
-            {/* ... PaginationControls ... */}
             <PaginationControls
               currentPage={currentPage}
               totalPages={totalPages}

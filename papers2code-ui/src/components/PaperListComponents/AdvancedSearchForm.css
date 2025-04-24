@@ -1,0 +1,291 @@
+.advanced-search-form {
+    background-color: var(--card-background-alt, #f8f9fa); /* Slightly different background */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    padding: 20px;
+    margin-top: 15px; /* Space below list controls */
+    margin-bottom: 25px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+  }
+  
+  .advanced-search-form h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 1.1em;
+    font-weight: 600;
+    color: var(--text-heading-color);
+    border-bottom: 1px solid var(--border-color-light);
+    padding-bottom: 8px;
+  }
+  
+  .form-grid {
+    /* display: grid; */ /* Remove grid */
+    /* grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); */ /* Remove grid */
+    display: flex; /* Use Flexbox */
+    flex-wrap: wrap; /* Allow wrapping on smaller screens if needed */
+    gap: 20px; /* Adjust gap between items */
+    margin-bottom: 20px;
+    align-items: flex-end; /* Align items based on their bottom edge (useful if labels are above) */
+  }
+  
+  
+  .form-group {
+    display: flex;
+    flex-direction: column;
+    flex: 1 1 auto; /* Allow items to grow and shrink, base size auto */
+    min-width: 180px; /* Minimum width before wrapping/shrinking */
+  }
+  
+  
+  .form-group-full-width {
+    grid-column: 1 / -1; /* Make author field span full width */
+  }
+  
+  
+  .form-group label {
+    margin-bottom: 5px;
+    font-size: 0.9em;
+    font-weight: 500;
+    color: var(--text-muted-color);
+  }
+  
+  .form-control {
+    padding: 8px 12px;
+    font-size: 0.95em;
+    text-align:center;
+    font-family: inherit;
+    color: var(--text-color);
+    background-color: var(--input-background, #fff);
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-sm);
+    transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    width: 100%; /* Make input take full width of its flex container */
+    box-sizing: border-box; /* Include padding/border in width */
+    overflow-y:hidden;
+  }
+  
+  .form-control:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2);
+  }
+  
+  /* Basic button styling (assuming you might have global button styles) */
+  .form-actions {
+    display: flex;
+    gap: 10px;
+    justify-content: flex-end;
+    flex-wrap: wrap;
+    margin-top: 10px; /* Add some space above buttons */
+  }
+  
+  .btn {
+    padding: 8px 15px;
+    border-radius: var(--border-radius-sm);
+    cursor: pointer;
+    font-size: 0.9em;
+    font-weight: 500;
+    transition: background-color 0.2s ease, border-color 0.2s ease;
+    border: 1px solid transparent;
+  }
+  
+  .btn-primary {
+    background-color: var(--primary-color);
+    color: var(--text-on-primary);
+    border-color: var(--primary-color);
+  }
+  .btn-primary:hover {
+    background-color: var(--primary-dark-color);
+    color: var(--text-on-primary);
+    border-color: var(--primary-dark-color);
+  }
+  
+  .btn-secondary {
+    background-color: var(--secondary-color, #6c757d);
+    color: var(--text-on-secondary, #fff);
+    border-color: var(--secondary-color, #6c757d);
+  }
+  .btn-secondary:hover {
+    background-color: var(--secondary-dark-color, #5a6268);
+    border-color: var(--secondary-dark-color, #5a6268);
+  }
+  
+  .btn-link {
+    background-color: transparent;
+    color: var(--primary-color);
+    border: none;
+    text-decoration: underline;
+  }
+  .btn-link:hover {
+    color: var(--primary-dark-color);
+  }
+
+ .react-datepicker-popper {
+  z-index: 10; /* Adjust if necessary */
+  overflow-y:hidden;
+}
+
+/* Make sure the calendar container is visible */
+.react-datepicker {
+  font-family: inherit; /* Use app font */
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  font-size: 0.9em; /* Slightly smaller font for calendar */
+  overflow-y:hidden;
+}
+
+/* Header styling (contains arrows and month/year) */
+.react-datepicker__header{
+    display:block;           /* overrides the previous flex */
+    padding:4px 0 0;         /* keeps it compact */
+    text-align:center;
+    height:125px;
+    overflow-y:hidden;
+  }
+  .react-datepicker__current-month{ margin: 0; }    /* kill default margin */
+
+  .react-datepicker__month-dropdown-container,
+  .react-datepicker__year-dropdown-container{ margin: 0 4px; }
+  
+  /* make selects visually smaller so the header isn’t so tall */
+  .react-datepicker__month-select,
+  .react-datepicker__year-select{
+    padding: 2px 0px;                              /* was 4px 8px */
+    font-size: .85em;                              /* down from .9em */
+  }
+  
+
+/* Arrow Styling */
+.react-datepicker__navigation{
+    /* kill the square outline you’re seeing */
+    border:none !important;
+    box-shadow:none !important;
+    background:transparent;
+  
+    width:28px;              /* slightly smaller than before */
+    height:28px;
+    top:12px;                /* sits inside the grey bar */
+    cursor:pointer;
+    z-index:3;               /* stays above the header */
+  }
+
+
+  .react-datepicker__navigation::before{
+    content:'';
+    display:block;
+    width:6px;
+    height:6px;
+    margin:auto;
+    border-top:2px solid var(--text-muted-color);
+    border-right:2px solid var(--text-muted-color);
+    transition:border-color .15s ease;
+  }
+  .react-datepicker__navigation--previous::before{ transform: rotate(225deg); }
+  .react-datepicker__navigation--next::before{     transform: rotate( 45deg); }
+  
+  .react-datepicker__navigation:hover::before{
+    border-color: var(--primary-color);            /* hover colour */
+  }
+
+  .react-datepicker__navigation--previous{ left:8px;  }
+.react-datepicker__navigation--next    { right:8px; }
+
+.react-datepicker__navigation--next {
+  border-left-color: var(--text-muted-color); /* Use theme color */
+  right: 12px; /* Adjust horizontal position */
+}
+.react-datepicker__navigation--next:hover {
+  border-left-color: var(--primary-color); /* Hover color */
+}
+
+/* Month/Year Dropdown Styling */
+.react-datepicker__month-dropdown-container,
+.react-datepicker__year-dropdown-container {
+  display: inline-block;
+  margin: 0 5px; /* Space around dropdowns */
+}
+
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  font-family: inherit;
+  font-size: 0.9em;
+  padding: 4px 8px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  background-color: var(--input-background, #fff);
+  color: var(--text-color);
+  cursor: pointer;
+  outline: none;
+}
+.react-datepicker__month-select:focus,
+.react-datepicker__year-select:focus {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 2px rgba(var(--primary-rgb), 0.1);
+}
+
+
+/* Day Styling */
+.react-datepicker__day-names{
+    margin-top:0;
+    padding-top:0;
+  }
+
+.react-datepicker__day {
+  color: var(--text-color);
+  border-radius: 50%; /* Make days circular */
+  transition: background-color 0.2s ease, color 0.2s ease;
+}
+.react-datepicker__day:hover {
+    background-color: var(--primary-light-color, #e0f2f7); /* Use a light primary color */
+    color: var(--primary-dark-color); /* Text color for light hover background */
+    /* Ensure full rounding on hover too */
+    border-radius: 50%;
+  }
+
+.react-datepicker__day--selected,
+.react-datepicker__day--in-selecting-range,
+.react-datepicker__day--in-range {
+  background-color: var(--primary-color);
+  color: var(--text-on-primary);
+  border-radius: 50%;
+}
+.react-datepicker__day--selected:hover,
+.react-datepicker__day--in-selecting-range:hover,
+.react-datepicker__day--in-range:hover {
+  background-color: var(--primary-dark-color);
+  color: var(--text-on-primary); /* Add this line */
+  /* Ensure full rounding */
+  border-radius: 50%;
+}
+
+.react-datepicker__day--keyboard-selected { /* Outline for keyboard nav */
+   background-color: var(--primary-light-color, #e0f2f7);
+   color: var(--primary-dark-color);
+}
+
+.react-datepicker__day--outside-month {
+  color: var(--text-muted-color);
+  opacity: 0.6;
+}
+
+.react-datepicker__day--disabled {
+  color: var(--text-muted-color);
+  opacity: 0.4;
+  cursor: default;
+}
+.react-datepicker__day--disabled:hover {
+  background-color: transparent;
+}
+
+/* Clear button inside input */
+.react-datepicker__close-icon {
+  padding-right: 25px; /* Adjust position if needed */
+}
+.react-datepicker__close-icon::after {
+  background-color: var(--primary-color); /* Style the 'x' */
+  font-size: 1.2em; /* Adjust size */
+  height: 18px; /* Adjust size */
+  width: 18px; /* Adjust size */
+}
+

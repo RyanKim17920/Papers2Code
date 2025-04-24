@@ -3,6 +3,7 @@
 import os
 import re
 import requests
+import shlex
 import uuid
 from flask import Flask, jsonify, request, redirect, url_for, session
 from flask_cors import CORS
@@ -16,6 +17,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 from dotenv import load_dotenv
 from datetime import datetime
+from dateutil.parser import parse as parse_date # For flexible date parsing
+from dateutil.parser._parser import ParserError # Import specific error
 from functools import wraps
 import traceback  # Add traceback for better error logging
 
@@ -223,11 +226,16 @@ def transform_paper(paper_doc, current_user_id=None):  # Add current_user_id
 @limiter.limit("100 per minute")
 def get_papers():
     try:
-        # ... (parameter parsing and validation) ...
+        # --- Parameter Parsing ---
         limit_str = request.args.get('limit', '12')
         page_str = request.args.get('page', '1')
         search_term = request.args.get('search', '').strip()
         sort_param = request.args.get('sort', 'newest').lower()
+        # --- NEW: Advanced Search Params ---
+        start_date_str = request.args.get('startDate', None)
+        end_date_str = request.args.get('endDate', None)
+        search_authors = request.args.get('searchAuthors', '').strip()
+        # --- End NEW ---
 
         # ... (limit, page validation) ...
         try:
@@ -242,88 +250,207 @@ def get_papers():
         except ValueError:
             return jsonify({"error": "Invalid page parameter"}), 400
 
+        # --- NEW: Parse Dates ---
+        start_date = None
+        end_date = None
+        try:
+            if start_date_str:
+                start_date = parse_date(start_date_str).replace(hour=0, minute=0, second=0, microsecond=0) # Start of day
+            if end_date_str:
+                # Add one day and set time to beginning for exclusive upper bound (<)
+                # Or keep same day and set time to end for inclusive upper bound (<=)
+                # Using inclusive upper bound here:
+                end_date = parse_date(end_date_str).replace(hour=23, minute=59, second=59, microsecond=999999) # End of day
+        except ParserError:
+            return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD or similar."}), 400
+        # --- End NEW ---
+
+
         skip = (page - 1) * limit
-        base_filter = {}
         papers_cursor = None
-        query_filter = base_filter
+        total_count = 0
         current_user_id = session.get('user', {}).get('id')
 
-        if search_term:
-            print(f"Executing aggregation for search: '{search_term}'")
+        # --- Determine if Search or Advanced Search is Active ---
+        is_search_active = bool(search_term or start_date or end_date or search_authors)
 
-            if ' ' in search_term:
-                # Split terms, enclose each in double quotes, join back with space
-                mongo_search_term = ' '.join([f'"{term}"' for term in search_term.split()])
-                print(f"Using AND text search for multi-word query: {mongo_search_term}")
-            else:
-                # Single term search remains the same
-                mongo_search_term = search_term
-            print(f"Using standard text search for initial match: {mongo_search_term}")
-            # --- End Refinement ---
+        if is_search_active:
+            print(f"Executing Search with: Term='{search_term}', Start='{start_date}', End='{end_date}', Authors='{search_authors}'")
 
-            # Initial match filter using the text index
-            search_filter = {"$text": {"$search": mongo_search_term}} # Use potentially quoted term
-            query_filter = {"$and": [base_filter, search_filter]} if base_filter else search_filter
+            # --- Atlas Search Pipeline ---
+            atlas_search_index_name = "default"
+            score_threshold = 3 # Keep score threshold if needed, or adjust/remove
+            overall_limit = 240 # Keep overall limit
 
-            # --- Call 1: Get Total Count ---
-            try:
-                print(f"Counting documents with filter: {query_filter}")
-                total_count = papers_collection.count_documents(query_filter)
-                print(f"Total matching documents found: {total_count}")
-            except Exception as count_error:
-                 print(f"Error during count_documents: {count_error}")
-                 traceback.print_exc()
-                 return jsonify({"error": "Failed to count matching documents"}), 500
-            # --- End Call 1 ---
+            # --- Build Search Clauses ---
+            must_clauses = []
+            should_clauses = []
+            filter_clauses = []
 
-            # Proceed only if there are documents to fetch
-            if total_count > 0:
-                # Split original search term (unquoted) for granular checking
-                search_terms_list = search_term.split()
-                search_terms_regex = [re.escape(term) for term in search_terms_list]
-                full_phrase_regex = re.escape(search_term) # Use original term for phrase boost regex
-
-                # --- Call 2: Get Paginated Data ---
-                pipeline = [
-                    {"$match": query_filter}, # Start with the same initial filter
-                    # --- Scoring and Sorting Stages (remain the same) ---
-                    {"$addFields": {
-                        "originalScore": { "$meta": "textScore" },
-                        "titleScore": { "$reduce": { "input": search_terms_regex, "initialValue": 0, "in": { "$add": [ "$$value", { "$cond": [ { "$regexMatch": { "input": "$title", "regex": "$$this", "options": "i" } }, 100, 0 ] } ] } } },
-                        "firstAuthorScore": { "$cond": { "if": { "$and": [ { "$isArray": "$authors" }, { "$gt": [ { "$size": "$authors" }, 0 ] } ] }, "then": { "$reduce": { "input": search_terms_regex, "initialValue": 0, "in": { "$add": [ "$$value", { "$cond": [ { "$regexMatch": { "input": { "$arrayElemAt": ["$authors", 0] }, "regex": "$$this", "options": "i" } }, 50, 0 ] } ] } } }, "else": 0 } },
-                        "otherAuthorsScore": { "$cond": { "if": { "$and": [ { "$isArray": "$authors" }, { "$gt": [ { "$size": "$authors" }, 1 ] } ] }, "then": { "$reduce": { "input": search_terms_regex, "initialValue": 0, "in": { "$add": [ "$$value", { "$cond": [ { "$gt": [ { "$size": { "$filter": { "input": { "$slice": ["$authors", 1, { "$size": "$authors" }] }, "as": "author", "cond": { "$regexMatch": { "input": "$$author", "regex": "$$this", "options": "i" } } } } }, 0 ] }, 20, 0 ] } ] } } }, "else": 0 } },
-                        "abstractScore": { "$reduce": { "input": search_terms_regex, "initialValue": 0, "in": { "$add": [ "$$value", { "$cond": [ { "$regexMatch": { "input": "$abstract", "regex": "$$this", "options": "i" } }, 5, 0 ] } ] } } },
-                        "phraseBoost": { "$cond": { "if": { "$or": [ { "$regexMatch": { "input": "$title", "regex": full_phrase_regex, "options": "i" } }, { "$and": [ { "$isArray": "$authors" }, { "$gt": [ { "$size": "$authors" }, 0 ] }, { "$regexMatch": { "input": { "$arrayElemAt": ["$authors", 0] }, "regex": full_phrase_regex, "options": "i" } } ] } ] }, "then": 3.0, "else": 1.0 } }
-                    }},
-                    {"$addFields": {
-                        "finalScore": { "$add": [ { "$multiply": [ { "$add": [ "$titleScore", "$firstAuthorScore", "$otherAuthorsScore", "$abstractScore" ] }, "$phraseBoost" ] }, { "$multiply": [ "$originalScore", 0.1 ] } ] }
-                    }},
-                    {"$sort": { "finalScore": DESCENDING, "publication_date": DESCENDING }},
-                    # --- End Scoring/Sorting ---
-                    {"$skip": skip},
-                    {"$limit": limit},
-                ]
+            # 1. Main Search Term (Title/Abstract)
+            if search_term:
                 try:
-                    print("Fetching data with pipeline...")
-                    # --- Verify allowDiskUse=True is present ---
-                    papers_cursor = papers_collection.aggregate(pipeline, allowDiskUse=True)
-                    # --- End Verification ---
-                except Exception as agg_error:
-                    print(f"Error during data aggregation: {agg_error}")
-                    traceback.print_exc()
-                    # Ensure the error being returned is specific if possible
-                    if isinstance(agg_error, OperationFailure) and 'QueryExceededMemoryLimit' in agg_error.details.get('codeName', ''):
-                         return jsonify({"error": "Search operation requires too much memory, even with disk use enabled. Try refining your search."}), 500
-                    return jsonify({"error": "Failed to retrieve paper data"}), 500
-                # --- End Call 2 ---
-            else:
-                # If count is 0, create an empty cursor/list
-                papers_cursor = []
+                    terms = shlex.split(search_term)
+                    print(f"Split terms for main search: {terms}")
+                except ValueError:
+                    terms = search_term.split()
+                    print(f"Warning: shlex split failed for main search, using simple split: {terms}")
 
-        else:
-            # --- Non-search logic (remains the same) ---
-            # ... (existing non-search code) ...
-            print(f"Executing FIND with sort: '{sort_param}'")
+                # Add term matching for title/abstract to 'must'
+                must_clauses.extend([
+                    {
+                        "text": {
+                            "query": t,
+                            "path": ["title", "abstract"], # <<< MODIFIED: Only title/abstract
+                            # Optional: Keep fuzzy if desired for main search
+                            "fuzzy": {"maxEdits": 1, "prefixLength": 1}
+                        }
+                    } for t in terms
+                ])
+
+                # Boost exact phrase in title
+                should_clauses.append({
+                    "text": {
+                        "query": search_term,
+                        "path": "title",
+                        "score": {"boost": {"value": 3}}
+                    }
+                })
+
+            # 2. Date Range Filter
+            date_range_query = {}
+            if start_date:
+                date_range_query["gte"] = start_date
+            if end_date:
+                date_range_query["lte"] = end_date # Use lte for inclusive end date
+
+            if date_range_query:
+                filter_clauses.append({
+                    "range": {
+                        "path": "publication_date",
+                        **date_range_query # Unpack gte/lte
+                    }
+                })
+
+            # 3. Author Filter
+            if search_authors:
+                 # Use 'text' query on authors field within filter
+                 # This assumes 'authors' is indexed appropriately (e.g., standard analyzer)
+                 filter_clauses.append({
+                     "text": {
+                         "query": search_authors,
+                         "path": "authors" # Search within the authors field
+                         # Consider 'phrase' if exact author name match is needed:
+                         # "phrase": { "query": search_authors, "path": "authors" }
+                     }
+                 })
+
+
+            # --- Construct the $search stage ---
+            search_operator = {
+                "index": atlas_search_index_name,
+                "compound": {},
+                "highlight": {"path": ["title", "abstract"]}
+            }
+
+            if must_clauses:
+                search_operator["compound"]["must"] = must_clauses
+            if should_clauses:
+                search_operator["compound"]["should"] = should_clauses
+            if filter_clauses:
+                search_operator["compound"]["filter"] = filter_clauses
+
+            # Handle case where only filters are provided (no text search term)
+            # In this case, 'must' and 'should' might be empty.
+            # Atlas Search requires at least one clause (must, should, filter, mustNot).
+            # If only filters are present, the 'compound' structure is sufficient.
+            if not must_clauses and not should_clauses and not filter_clauses:
+                 # This case shouldn't happen due to is_search_active check, but as a safeguard:
+                 print("Warning: Search initiated with no criteria.")
+                 # Fallback to non-search logic or return empty results?
+                 is_search_active = False # Treat as non-search
+            elif not must_clauses and not should_clauses:
+                 # If only filters are present, remove empty must/should
+                 search_operator["compound"].pop("must", None)
+                 search_operator["compound"].pop("should", None)
+
+
+            # --- Build Full Pipeline (Only if search is active) ---
+            if is_search_active:
+                search_pipeline_stages = [
+                    {"$search": search_operator},
+                    {"$addFields": {
+                        "score": {"$meta": "searchScore"},
+                        "highlights": {"$meta": "searchHighlights"}
+                    }},
+                    # Optional: Re-apply score threshold if desired
+                    {"$match": {"score": {"$gt": score_threshold}}},
+                    # Sort primarily by score if text search was involved, otherwise maybe just date?
+                    # If search_term exists, sort by score. Otherwise, sort by date (or upvotes if selected).
+                    {"$sort": {"score": DESCENDING, "publication_date": DESCENDING} if search_term else {"publication_date": DESCENDING}},
+                    {"$limit": overall_limit}
+                ]
+
+                # Use $facet for pagination and total count
+                facet_pipeline = search_pipeline_stages + [
+                    {"$facet": {
+                        "paginatedResults": [
+                            {"$skip": skip},
+                            {"$limit": limit}
+                        ],
+                        "totalCount": [
+                            {"$count": 'count'}
+                        ]
+                    }}
+                ]
+
+                # --- Execute Aggregation ---
+                try:
+                    print("Executing Atlas Search $facet pipeline...")
+                    results = list(papers_collection.aggregate(facet_pipeline, allowDiskUse=True))
+
+                    if results and results[0]:
+                        total_count = results[0]['totalCount'][0]['count'] if results[0]['totalCount'] else 0
+                        papers_cursor = results[0]['paginatedResults']
+                        print(f"Atlas Search found {total_count} total documents matching criteria (capped at {overall_limit}).")
+                        print(f"Returning {len(papers_cursor)} documents for page {page}.")
+                    else:
+                         print("Atlas Search returned no results or unexpected format after filtering/limiting.")
+                         papers_cursor = []
+                         total_count = 0
+
+                except OperationFailure as op_error:
+                     # ... (existing error handling) ...
+                     print(f"Atlas Search OperationFailure: {op_error.details}")
+                     traceback.print_exc()
+                     if "index not found" in str(op_error).lower():
+                          return jsonify({"error": f"Atlas Search index '{atlas_search_index_name}' not found. Please check configuration."}), 500
+                     return jsonify({"error": "Failed during Atlas Search operation"}), 500
+                except Exception as agg_error:
+                    # ... (existing error handling) ...
+                    print(f"Error during Atlas Search aggregation: {agg_error}")
+                    traceback.print_exc()
+                    return jsonify({"error": "Failed to retrieve paper data via Atlas Search"}), 500
+            # --- End Atlas Search Pipeline ---
+
+        # --- Non-search logic (or fallback if is_search_active became false) ---
+        if not is_search_active:
+            print(f"Executing standard FIND with sort: '{sort_param}'")
+            # --- Build Filter for Non-Search (if advanced filters were provided without main term) ---
+            # This part is optional. If you want date/author filters to work *without* a main search term,
+            # you'd build a standard MongoDB filter here. Otherwise, the advanced filters only apply
+            # when combined with Atlas Search. Let's assume advanced filters *require* Atlas Search for now.
+            base_filter = {}
+            # Example if you wanted non-search filters:
+            # if start_date or end_date:
+            #     base_filter["publication_date"] = {}
+            #     if start_date: base_filter["publication_date"]["$gte"] = start_date
+            #     if end_date: base_filter["publication_date"]["$lte"] = end_date
+            # if search_authors:
+            #     # Simple regex for non-search author matching
+            #     base_filter["authors"] = {"$regex": search_authors, "$options": "i"}
+
+            # --- Determine Sort Criteria ---
             if sort_param == 'oldest':
                 sort_criteria = [("publication_date", ASCENDING)]
             elif sort_param == 'upvotes':
@@ -332,31 +459,32 @@ def get_papers():
                 sort_criteria = [("publication_date", DESCENDING)]
 
             try:
-                total_count = papers_collection.count_documents(query_filter)
-                print(f"Total documents (non-search): {total_count}")
+                total_count = papers_collection.count_documents(base_filter) # Use count_documents with filter
+                print(f"Total documents (non-search count): {total_count}")
                 if total_count > 0:
-                     papers_cursor = papers_collection.find(query_filter).sort(sort_criteria).skip(skip).limit(limit)
+                     papers_cursor = papers_collection.find(base_filter).sort(sort_criteria).skip(skip).limit(limit)
                 else:
                      papers_cursor = []
             except Exception as find_error:
+                 # ... (existing error handling) ...
                  print(f"Error during non-search find/count: {find_error}")
                  traceback.print_exc()
                  return jsonify({"error": "Failed to retrieve paper data"}), 500
             # --- End Non-search logic ---
 
-        # Calculate total pages based on the count obtained
+        # --- Process Results & Return ---
+        total_count = int(total_count)
         total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
-
-        # Process the cursor (which might be empty if count was 0)
         papers_list = [transform_paper(paper, current_user_id) for paper in papers_cursor] if papers_cursor else []
 
         return jsonify({"papers": papers_list, "totalPages": total_pages})
 
     except Exception as e:
-        # Catch any other unexpected errors
+        # ... (existing general error handling) ...
         print(f"General Error in /api/papers: {e}")
         traceback.print_exc()
         return jsonify({"error": "An internal server error occurred"}), 500
+
 
 
 @app.route('/api/papers/<string:paper_id>', methods=['GET'])

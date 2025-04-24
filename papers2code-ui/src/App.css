@@ -15,6 +15,14 @@
   --primary-light-color: #e8f7fa; /* Very Light Teal/Blue - Slightly adjusted for better harmony */
   --primary-rgb: 25, 124, 154; /* Added for rgba() usage */
 
+
+  --secondary-dark-color: #5a6268; /* Dark Gray - ADJUSTED */
+  --secondary-color: #6c757d; /* Medium Gray - ADJUSTED */
+  --secondary-light-color: #e9ecef; /* Light Gray - ADJUSTED */
+  --secondary-accent-color: #adb5bd; /* Neutral Gray - ADJUSTED */
+  --secondary-rgb: 108, 117, 125; /* Added for rgba() usage */
+  --secondary-accent-rgb: 173, 181, 189; /* Added for rgba() usage */
+  
   /* --- Gradient Colors --- */
   --gradient-start: #f9fdfe; /* Very light blue-white */
   --gradient-middle: #f5fbfd; /* Light blue-white */
@@ -28,6 +36,7 @@
   --border-color: #e9ecef; /* Lighter border */
   --light-gray-bg: #f1f3f5;
   --dark-color: #343a40; /* Added for dark elements */
+  
 
   /* --- Text --- */
   --text-color: #212529; /* Dark Gray/Soft Black */
@@ -35,6 +44,8 @@
   --text-heading-color: #1a3a3a; /* Dark Teal/Gray for headings */
   --text-on-primary: #ffffff; /* Text color for on primary background */
   --text-on-dark: #ffffff; /* Text color for on dark background */
+  --text-on-secondary: #ffffff; /* Text color for on secondary background */
+
 
   /* --- Status/Accent Colors --- */
   --success-color: #28a745;

@@ -6,8 +6,7 @@
   }
   
   .paper-list-page h2 {
-      text-align: left;
-      margin-bottom: 25px; /* Maintain space */
+      text-align: center;
       font-size: 2em; /* Larger heading */
       font-weight: 600;
       color: var(--text-heading-color); /* Use heading color */
@@ -75,8 +74,7 @@
   
   .list-header h2 {
     /* Keep existing h2 styles */
-    text-align: left;
-    margin-bottom: 25px;
+    text-align: center;
     font-size: 2em;
     font-weight: 600;
     color: var(--text-heading-color);
@@ -84,6 +82,10 @@
     padding-bottom: 15px;
   }
   
+  .list-controls-wrapper {
+    margin-bottom: 10px; /* Reduce margin if advanced form adds its own */
+  }
+
   .list-controls {
     display: flex;
     gap: 20px; /* Space between search and sort */
@@ -99,6 +101,13 @@
     min-width: 250px; /* Prevent excessive shrinking */
   }
   
+  .sort-and-advanced {
+    display: flex;
+    gap: 15px; /* Space between sort and advanced button */
+    align-items: center; /* Vertically align items in this group */
+    flex-shrink: 0; /* Prevent this group from shrinking */
+  }
+
   .sort-control {
     display: flex;
     align-items: center;
@@ -129,8 +138,15 @@
     outline: none;
     border-color: var(--primary-color);
     box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2); /* Use RGB variable */
+    box-sizing: border-box;
   }
 
+  .btn-advanced-toggle {
+    padding: 8px 15px; /* Match select padding */
+    height: 40px; /* Match select height approx */
+    box-sizing: border-box;
+    white-space: nowrap; /* Prevent text wrapping */
+  }
 
 /* Container that holds all pagination controls (prev, pages, next, go-to) */
 .pagination-container {
