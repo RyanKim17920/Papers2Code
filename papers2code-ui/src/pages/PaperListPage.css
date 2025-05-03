@@ -5,7 +5,7 @@
     max-width: 1400px;
   }
   
-  .paper-list-page h2 {
+  .paper-list-page h1 {
       text-align: center;
       font-size: 2em; /* Larger heading */
       font-weight: 600;
@@ -72,10 +72,9 @@
     margin-bottom: 20px; /* Space below header section */
   }
   
-  .list-header h2 {
-    /* Keep existing h2 styles */
+  .list-header h1 {
     text-align: center;
-    font-size: 2em;
+    font-size: 2.5em;
     font-weight: 600;
     color: var(--text-heading-color);
     border-bottom: 1px solid var(--border-color);

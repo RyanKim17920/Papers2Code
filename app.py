@@ -12,7 +12,7 @@ from flask_limiter.util import get_remote_address
 from flask_wtf.csrf import CSRFProtect
 from flask_talisman import Talisman
 from pymongo import MongoClient, ReturnDocument, DESCENDING, ASCENDING
-from pymongo.errors import OperationFailure
+from pymongo.errors import OperationFailure, DuplicateKeyError
 from bson import ObjectId
 from bson.errors import InvalidId
 from dotenv import load_dotenv
@@ -56,6 +56,10 @@ GITHUB_CLIENT_ID = os.getenv('GITHUB_CLIENT_ID')
 GITHUB_CLIENT_SECRET = os.getenv('GITHUB_CLIENT_SECRET')
 FLASK_SECRET_KEY = os.getenv('FLASK_SECRET_KEY')
 OWNER_GITHUB_USERNAME = os.getenv('OWNER_GITHUB_USERNAME')
+NON_IMPLEMENTABLE_CONFIRM_THRESHOLD = int(os.getenv('NON_IMPLEMENTABLE_CONFIRM_THRESHOLD', 3))
+# Define the status string
+STATUS_CONFIRMED_NON_IMPLEMENTABLE = "Confirmed Non-Implementable"
+STATUS_NOT_STARTED = "Not Started" 
 
 if not MONGO_URI: raise ValueError("No MONGO_URI found")
 if not GITHUB_CLIENT_ID or not GITHUB_CLIENT_SECRET: raise ValueError("GitHub Client ID or Secret not found")
@@ -96,6 +100,7 @@ try:
     users_collection = db.users
     removed_papers_collection = db.removed_papers
     user_votes_collection = db.user_action_votes
+    paper_status_votes_collection = db.paper_status_votes
     print("Available collections:", db.list_collection_names())
 
     # --- Get existing index names --- 
@@ -103,6 +108,7 @@ try:
     users_indexes = users_collection.index_information()
     removed_papers_indexes = removed_papers_collection.index_information()
     user_votes_indexes = user_votes_collection.index_information()
+    paper_status_votes_indexes = paper_status_votes_collection.index_information()
     print("Existing indexes fetched.")
 
     # --- Ensure Indexes --- 
@@ -179,6 +185,25 @@ try:
     else:
         print(f"Index exists: {paper_vote_lookup_index_name}")
 
+    status_vote_user_paper_type_index = "userId_1_paperId_1_voteType_1"
+    if status_vote_user_paper_type_index not in paper_status_votes_indexes:
+        paper_status_votes_collection.create_index(
+            [("userId", 1), ("paperId", 1), ("voteType", 1)],
+            name=status_vote_user_paper_type_index, unique=True, background=True
+        )
+        print(f"Creating index: {status_vote_user_paper_type_index}")
+    else:
+        print(f"Index exists: {status_vote_user_paper_type_index}")
+
+    status_vote_paper_lookup_index = "paperId_1"
+    if status_vote_paper_lookup_index not in paper_status_votes_indexes:
+        paper_status_votes_collection.create_index(
+            [("paperId", 1)], name=status_vote_paper_lookup_index, background=True
+        )
+        print(f"Creating index: {status_vote_paper_lookup_index}")
+    else:
+        print(f"Index exists: {status_vote_paper_lookup_index}")
+
     print("Index check complete.")
     client.admin.command('ping')
     print("Pinged your deployment. You successfully connected to MongoDB!")
@@ -207,17 +232,38 @@ def transform_paper(paper_doc, current_user_id=None):  # Add current_user_id
         if vote_doc:
             current_user_vote = 'up'  # Assuming only upvotes for now
 
+    current_user_implementability_vote = 'none'
+    if current_user_id:
+        status_vote_doc = paper_status_votes_collection.find_one({
+            "userId": ObjectId(current_user_id),
+            "paperId": paper_doc["_id"]
+        })
+        if status_vote_doc:
+            if status_vote_doc.get("voteType") == 'confirm_non_implementable':
+                current_user_implementability_vote = 'up' # Map confirm -> up
+            elif status_vote_doc.get("voteType") == 'dispute_non_implementable':
+                current_user_implementability_vote = 'down' # Map dispute -> down
+
+
     return {
         "id": str(paper_doc["_id"]), "pwcUrl": paper_doc.get("pwc_url"),
         "arxivId": paper_doc.get("arxiv_id"), "title": paper_doc.get("title"),
         "abstract": paper_doc.get("abstract"), "authors": authors_list,
         "urlAbs": paper_doc.get("url_abs"), "urlPdf": paper_doc.get("url_pdf"),
         "date": date_str, "proceeding": paper_doc.get("venue"),
-        "tasks": paper_doc.get("tasks", []), "isImplementable": paper_doc.get("is_implementable", True),
-        "implementationStatus": paper_doc.get("status", "Not Started"),
+        "tasks": paper_doc.get("tasks", []),
+        # --- Implementability Fields ---
+        "isImplementable": paper_doc.get("isImplementable", True),
+        "nonImplementableStatus": paper_doc.get("nonImplementableStatus", "implementable"),
+        "nonImplementableVotes": paper_doc.get("nonImplementableVotes", 0), # Thumbs Up count
+        "disputeImplementableVotes": paper_doc.get("disputeImplementableVotes", 0), # Thumbs Down count
+        "currentUserImplementabilityVote": current_user_implementability_vote, # 'up', 'down', or 'none'
+        "nonImplementableConfirmedBy": paper_doc.get("nonImplementableConfirmedBy"), # NEW: 'community', 'owner', or null
+        # --- End Implementability Fields ---
+        "implementationStatus": paper_doc.get("status", STATUS_NOT_STARTED), # Use constant
         "implementationSteps": paper_doc.get("implementationSteps", default_steps),
         "upvoteCount": paper_doc.get("upvoteCount", 0),
-        "currentUserVote": current_user_vote  # Add current user's vote status
+        "currentUserVote": current_user_vote
     }
 
 # --- API Endpoints ---
@@ -227,15 +273,14 @@ def transform_paper(paper_doc, current_user_id=None):  # Add current_user_id
 def get_papers():
     try:
         # --- Parameter Parsing ---
+        # ... (keep existing parsing: limit, page, search_term, sort_param, dates, authors) ...
         limit_str = request.args.get('limit', '12')
         page_str = request.args.get('page', '1')
         search_term = request.args.get('search', '').strip()
         sort_param = request.args.get('sort', 'newest').lower()
-        # --- NEW: Advanced Search Params ---
         start_date_str = request.args.get('startDate', None)
         end_date_str = request.args.get('endDate', None)
         search_authors = request.args.get('searchAuthors', '').strip()
-        # --- End NEW ---
 
         # ... (limit, page validation) ...
         try:
@@ -250,37 +295,36 @@ def get_papers():
         except ValueError:
             return jsonify({"error": "Invalid page parameter"}), 400
 
-        # --- NEW: Parse Dates ---
+        # --- Parse Dates ---
         start_date = None
         end_date = None
         try:
             if start_date_str:
-                start_date = parse_date(start_date_str).replace(hour=0, minute=0, second=0, microsecond=0) # Start of day
+                start_date = parse_date(start_date_str).replace(hour=0, minute=0, second=0, microsecond=0)
             if end_date_str:
-                # Add one day and set time to beginning for exclusive upper bound (<)
-                # Or keep same day and set time to end for inclusive upper bound (<=)
-                # Using inclusive upper bound here:
-                end_date = parse_date(end_date_str).replace(hour=23, minute=59, second=59, microsecond=999999) # End of day
+                end_date = parse_date(end_date_str).replace(hour=23, minute=59, second=59, microsecond=999999)
         except ParserError:
             return jsonify({"error": "Invalid date format. Please use YYYY-MM-DD or similar."}), 400
-        # --- End NEW ---
-
 
         skip = (page - 1) * limit
         papers_cursor = None
         total_count = 0
         current_user_id = session.get('user', {}).get('id')
 
-        # --- Determine if Search or Advanced Search is Active ---
+        # --- Determine if Search or Advanced Filter is Active ---
+        # Consider any specific filter or search term as 'active search'
         is_search_active = bool(search_term or start_date or end_date or search_authors)
 
+        # --- Atlas Search Path ---
         if is_search_active:
-            print(f"Executing Search with: Term='{search_term}', Start='{start_date}', End='{end_date}', Authors='{search_authors}'")
+            # ... (keep existing Atlas Search pipeline logic) ...
+            # This path naturally allows finding non-implementable papers if they match search criteria.
+            print(f"Executing Search/Filter with: Term='{search_term}', Start='{start_date}', End='{end_date}', Authors='{search_authors}'")
 
             # --- Atlas Search Pipeline ---
             atlas_search_index_name = "default"
-            score_threshold = 3 # Keep score threshold if needed, or adjust/remove
-            overall_limit = 240 # Keep overall limit
+            score_threshold = 3
+            overall_limit = 2400
 
             # --- Build Search Clauses ---
             must_clauses = []
@@ -289,6 +333,7 @@ def get_papers():
 
             # 1. Main Search Term (Title/Abstract)
             if search_term:
+                # ... (existing search term logic) ...
                 try:
                     terms = shlex.split(search_term)
                     print(f"Split terms for main search: {terms}")
@@ -296,19 +341,15 @@ def get_papers():
                     terms = search_term.split()
                     print(f"Warning: shlex split failed for main search, using simple split: {terms}")
 
-                # Add term matching for title/abstract to 'must'
                 must_clauses.extend([
                     {
                         "text": {
                             "query": t,
-                            "path": ["title", "abstract"], # <<< MODIFIED: Only title/abstract
-                            # Optional: Keep fuzzy if desired for main search
+                            "path": ["title", "abstract"],
                             "fuzzy": {"maxEdits": 1, "prefixLength": 1}
                         }
                     } for t in terms
                 ])
-
-                # Boost exact phrase in title
                 should_clauses.append({
                     "text": {
                         "query": search_term,
@@ -317,140 +358,87 @@ def get_papers():
                     }
                 })
 
+
             # 2. Date Range Filter
             date_range_query = {}
-            if start_date:
-                date_range_query["gte"] = start_date
-            if end_date:
-                date_range_query["lte"] = end_date # Use lte for inclusive end date
-
+            if start_date: date_range_query["gte"] = start_date
+            if end_date: date_range_query["lte"] = end_date
             if date_range_query:
-                filter_clauses.append({
-                    "range": {
-                        "path": "publication_date",
-                        **date_range_query # Unpack gte/lte
-                    }
-                })
+                filter_clauses.append({"range": {"path": "publication_date", **date_range_query}})
 
             # 3. Author Filter
             if search_authors:
-                 # Use 'text' query on authors field within filter
-                 # This assumes 'authors' is indexed appropriately (e.g., standard analyzer)
-                 filter_clauses.append({
-                     "text": {
-                         "query": search_authors,
-                         "path": "authors" # Search within the authors field
-                         # Consider 'phrase' if exact author name match is needed:
-                         # "phrase": { "query": search_authors, "path": "authors" }
-                     }
-                 })
-
+                 filter_clauses.append({"text": {"query": search_authors, "path": "authors"}})
 
             # --- Construct the $search stage ---
-            search_operator = {
-                "index": atlas_search_index_name,
-                "compound": {},
-                "highlight": {"path": ["title", "abstract"]}
-            }
+            search_operator = {"index": atlas_search_index_name, "compound": {}}
+            if must_clauses: search_operator["compound"]["must"] = must_clauses
+            if should_clauses: search_operator["compound"]["should"] = should_clauses
+            if filter_clauses: search_operator["compound"]["filter"] = filter_clauses
 
-            if must_clauses:
-                search_operator["compound"]["must"] = must_clauses
-            if should_clauses:
-                search_operator["compound"]["should"] = should_clauses
-            if filter_clauses:
-                search_operator["compound"]["filter"] = filter_clauses
-
-            # Handle case where only filters are provided (no text search term)
-            # In this case, 'must' and 'should' might be empty.
-            # Atlas Search requires at least one clause (must, should, filter, mustNot).
-            # If only filters are present, the 'compound' structure is sufficient.
+            # Handle case where only filters are provided
             if not must_clauses and not should_clauses and not filter_clauses:
-                 # This case shouldn't happen due to is_search_active check, but as a safeguard:
-                 print("Warning: Search initiated with no criteria.")
-                 # Fallback to non-search logic or return empty results?
-                 is_search_active = False # Treat as non-search
+                 is_search_active = False # Fallback to non-search if criteria somehow empty
             elif not must_clauses and not should_clauses:
-                 # If only filters are present, remove empty must/should
                  search_operator["compound"].pop("must", None)
                  search_operator["compound"].pop("should", None)
-
+                 # If only filters, ensure compound isn't empty
+                 if not filter_clauses: is_search_active = False # Fallback
 
             # --- Build Full Pipeline (Only if search is active) ---
             if is_search_active:
-                search_pipeline_stages = [
-                    {"$search": search_operator},
-                    {"$addFields": {
-                        "score": {"$meta": "searchScore"},
-                        "highlights": {"$meta": "searchHighlights"}
-                    }},
-                    # Optional: Re-apply score threshold if desired
-                    {"$match": {"score": {"$gt": score_threshold}}},
-                    # Sort primarily by score if text search was involved, otherwise maybe just date?
-                    # If search_term exists, sort by score. Otherwise, sort by date (or upvotes if selected).
-                    {"$sort": {"score": DESCENDING, "publication_date": DESCENDING} if search_term else {"publication_date": DESCENDING}},
-                    {"$limit": overall_limit}
-                ]
+                search_pipeline_stages = [{"$search": search_operator}]
+                if search_term: # Only add score/highlight if text search was performed
+                    search_pipeline_stages.extend([
+                        {"$addFields": {"score": {"$meta": "searchScore"}, "highlights": {"$meta": "searchHighlights"}}},
+                        {"$match": {"score": {"$gt": score_threshold}}}
+                    ])
+                    sort_stage = {"$sort": {"score": DESCENDING, "publication_date": DESCENDING}}
+                else: # Sort by date if only filters were used
+                    sort_stage = {"$sort": {"publication_date": DESCENDING}}
+                search_pipeline_stages.append(sort_stage)
+                search_pipeline_stages.append({"$limit": overall_limit})
 
-                # Use $facet for pagination and total count
                 facet_pipeline = search_pipeline_stages + [
                     {"$facet": {
-                        "paginatedResults": [
-                            {"$skip": skip},
-                            {"$limit": limit}
-                        ],
-                        "totalCount": [
-                            {"$count": 'count'}
-                        ]
+                        "paginatedResults": [{"$skip": skip}, {"$limit": limit}],
+                        "totalCount": [{"$count": 'count'}]
                     }}
                 ]
-
                 # --- Execute Aggregation ---
                 try:
+                    # ... (existing aggregation execution and error handling) ...
                     print("Executing Atlas Search $facet pipeline...")
                     results = list(papers_collection.aggregate(facet_pipeline, allowDiskUse=True))
-
                     if results and results[0]:
                         total_count = results[0]['totalCount'][0]['count'] if results[0]['totalCount'] else 0
                         papers_cursor = results[0]['paginatedResults']
+                        search_type = "Text search" if search_term else "Filter-only search"
                         print(f"Atlas Search found {total_count} total documents matching criteria (capped at {overall_limit}).")
                         print(f"Returning {len(papers_cursor)} documents for page {page}.")
                     else:
                          print("Atlas Search returned no results or unexpected format after filtering/limiting.")
                          papers_cursor = []
                          total_count = 0
-
                 except OperationFailure as op_error:
-                     # ... (existing error handling) ...
                      print(f"Atlas Search OperationFailure: {op_error.details}")
                      traceback.print_exc()
-                     if "index not found" in str(op_error).lower():
-                          return jsonify({"error": f"Atlas Search index '{atlas_search_index_name}' not found. Please check configuration."}), 500
-                     return jsonify({"error": "Failed during Atlas Search operation"}), 500
+                     return jsonify({"error": "Search operation failed"}), 500
                 except Exception as agg_error:
-                    # ... (existing error handling) ...
                     print(f"Error during Atlas Search aggregation: {agg_error}")
                     traceback.print_exc()
-                    return jsonify({"error": "Failed to retrieve paper data via Atlas Search"}), 500
-            # --- End Atlas Search Pipeline ---
+                    return jsonify({"error": "Failed to execute search query"}), 500
+            # --- End Atlas Search Path ---
 
-        # --- Non-search logic (or fallback if is_search_active became false) ---
+        # --- Non-search / Default Path ---
         if not is_search_active:
-            print(f"Executing standard FIND with sort: '{sort_param}'")
-            # --- Build Filter for Non-Search (if advanced filters were provided without main term) ---
-            # This part is optional. If you want date/author filters to work *without* a main search term,
-            # you'd build a standard MongoDB filter here. Otherwise, the advanced filters only apply
-            # when combined with Atlas Search. Let's assume advanced filters *require* Atlas Search for now.
-            base_filter = {}
-            # Example if you wanted non-search filters:
-            # if start_date or end_date:
-            #     base_filter["publication_date"] = {}
-            #     if start_date: base_filter["publication_date"]["$gte"] = start_date
-            #     if end_date: base_filter["publication_date"]["$lte"] = end_date
-            # if search_authors:
-            #     # Simple regex for non-search author matching
-            #     base_filter["authors"] = {"$regex": search_authors, "$options": "i"}
+            print(f"Executing standard FIND with sort: '{sort_param}' and default non-implementable filter.")
+            # --- MODIFICATION: Add default filter ---
+            base_filter = {
+                "nonImplementableStatus": {"$ne": "confirmed_non_implementable"}
+            }
+            # --- End MODIFICATION ---
 
-            # --- Determine Sort Criteria ---
             if sort_param == 'oldest':
                 sort_criteria = [("publication_date", ASCENDING)]
             elif sort_param == 'upvotes':
@@ -459,20 +447,21 @@ def get_papers():
                 sort_criteria = [("publication_date", DESCENDING)]
 
             try:
-                total_count = papers_collection.count_documents(base_filter) # Use count_documents with filter
-                print(f"Total documents (non-search count): {total_count}")
+                # Apply the base_filter to count and find
+                total_count = papers_collection.count_documents(base_filter)
+                print(f"Total documents (default view count): {total_count}")
                 if total_count > 0:
                      papers_cursor = papers_collection.find(base_filter).sort(sort_criteria).skip(skip).limit(limit)
                 else:
                      papers_cursor = []
             except Exception as find_error:
-                 # ... (existing error handling) ...
                  print(f"Error during non-search find/count: {find_error}")
                  traceback.print_exc()
                  return jsonify({"error": "Failed to retrieve paper data"}), 500
             # --- End Non-search logic ---
 
         # --- Process Results & Return ---
+        # ... (keep existing result processing and return) ...
         total_count = int(total_count)
         total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
         papers_list = [transform_paper(paper, current_user_id) for paper in papers_cursor] if papers_cursor else []
@@ -480,11 +469,9 @@ def get_papers():
         return jsonify({"papers": papers_list, "totalPages": total_pages})
 
     except Exception as e:
-        # ... (existing general error handling) ...
         print(f"General Error in /api/papers: {e}")
         traceback.print_exc()
         return jsonify({"error": "An internal server error occurred"}), 500
-
 
 
 @app.route('/api/papers/<string:paper_id>', methods=['GET'])
@@ -577,6 +564,290 @@ def vote_on_paper(paper_id):
         traceback.print_exc()
         return jsonify({"error": "An internal server error occurred during voting"}), 500
 
+
+@app.route('/api/papers/<string:paper_id>/flag_implementability', methods=['POST'])
+@limiter.limit("30 per minute")
+@login_required
+@csrf.exempt
+def flag_paper_implementability(paper_id):
+    try:
+        user_id_str = session['user'].get('id')
+        if not user_id_str: return jsonify({"error": "User ID not found in session"}), 401
+
+        try:
+            user_obj_id = ObjectId(user_id_str)
+            paper_obj_id = ObjectId(paper_id)
+        except InvalidId: return jsonify({"error": "Invalid paper or user ID format"}), 400
+
+        data = request.get_json()
+        # Action still expected as 'confirm' (thumbs up) or 'dispute' (thumbs down) from frontend mapping
+        action = data.get('action')
+
+        # Allow 'flag' as initial action (maps to confirm)
+        if action not in ['flag', 'confirm', 'dispute', 'retract']:
+            return jsonify({"error": "Invalid action type. Must map to 'confirm', 'dispute', or 'retract'."}), 400
+
+        paper = papers_collection.find_one({"_id": paper_obj_id})
+        if not paper: return jsonify({"error": "Paper not found"}), 404
+
+        # Prevent voting if owner already confirmed
+        if paper.get("nonImplementableStatus") == "confirmed_non_implementable":
+             return jsonify({"error": "Implementability status already confirmed by owner."}), 400
+
+        vote_type = None
+        update = {"$set": {}} # Initialize $set
+        increment = {}
+        new_status = paper.get("nonImplementableStatus", "implementable")
+        needs_status_check = False
+
+        existing_vote = paper_status_votes_collection.find_one({
+            "userId": user_obj_id, "paperId": paper_obj_id
+        })
+        current_vote_type = existing_vote.get("voteType") if existing_vote else None
+
+        if action == 'retract':
+            if not existing_vote:
+                return jsonify({"error": "No existing vote to retract."}), 400
+
+            delete_result = paper_status_votes_collection.delete_one({"_id": existing_vote["_id"]})
+            if delete_result.deleted_count == 1:
+                if current_vote_type == 'confirm_non_implementable':
+                    increment["nonImplementableVotes"] = -1
+                elif current_vote_type == 'dispute_non_implementable':
+                    increment["disputeImplementableVotes"] = -1
+                needs_status_check = True
+                print(f"User {user_id_str} retracted {current_vote_type} vote for paper {paper_id}")
+            else:
+                 return jsonify({"error": "Failed to retract vote."}), 500
+
+        elif action in ['flag', 'confirm']: # Thumbs Up
+            vote_type = 'confirm_non_implementable'
+            if current_vote_type == vote_type:
+                return jsonify({"error": "You have already voted thumbs up (confirm non-implementability)."}), 400
+
+            if existing_vote: # Switching vote from dispute to confirm
+                paper_status_votes_collection.update_one(
+                    {"_id": existing_vote["_id"]},
+                    {"$set": {"voteType": vote_type, "createdAt": datetime.utcnow()}}
+                )
+                increment["nonImplementableVotes"] = 1
+                increment["disputeImplementableVotes"] = -1
+                print(f"User {user_id_str} switched vote to confirm (up) for paper {paper_id}")
+            else: # New confirm vote
+                try:
+                    paper_status_votes_collection.insert_one({
+                        "userId": user_obj_id, "paperId": paper_obj_id,
+                        "voteType": vote_type, "createdAt": datetime.utcnow()
+                    })
+                    increment["nonImplementableVotes"] = 1
+                    print(f"User {user_id_str} voted confirm (up) for paper {paper_id}")
+                except DuplicateKeyError:
+                     return jsonify({"error": "Vote already exists (concurrent request?)."}), 409
+
+            # If it was previously 'implementable', flag it now
+            if paper.get("nonImplementableStatus", "implementable") == "implementable":
+                update["$set"]["nonImplementableStatus"] = "flagged_non_implementable"
+                if not paper.get("nonImplementableFlaggedBy"):
+                     update["$set"]["nonImplementableFlaggedBy"] = user_obj_id
+                new_status = "flagged_non_implementable"
+                print(f"Paper {paper_id} status changed to flagged_non_implementable")
+
+            needs_status_check = True
+
+        elif action == 'dispute': # Thumbs Down
+            vote_type = 'dispute_non_implementable'
+            if current_vote_type == vote_type:
+                return jsonify({"error": "You have already voted thumbs down (dispute non-implementability)."}), 400
+
+            # Can only dispute if it's currently flagged
+            if paper.get("nonImplementableStatus") != "flagged_non_implementable":
+                 return jsonify({"error": "Paper is not currently flagged as non-implementable."}), 400
+
+            if existing_vote: # Switching vote from confirm to dispute
+                paper_status_votes_collection.update_one(
+                    {"_id": existing_vote["_id"]},
+                    {"$set": {"voteType": vote_type, "createdAt": datetime.utcnow()}}
+                )
+                increment["nonImplementableVotes"] = -1
+                increment["disputeImplementableVotes"] = 1
+                print(f"User {user_id_str} switched vote to dispute (down) for paper {paper_id}")
+            else: # New dispute vote
+                 try:
+                     paper_status_votes_collection.insert_one({
+                         "userId": user_obj_id, "paperId": paper_obj_id,
+                         "voteType": vote_type, "createdAt": datetime.utcnow()
+                     })
+                     increment["disputeImplementableVotes"] = 1
+                     print(f"User {user_id_str} voted dispute (down) for paper {paper_id}")
+                 except DuplicateKeyError:
+                      return jsonify({"error": "Vote already exists (concurrent request?)."}), 409
+
+            needs_status_check = True
+
+        # Apply increments and potential status set
+        if increment:
+            update["$inc"] = increment
+        # Ensure update has $set if it's empty, otherwise Mongo complains
+        if not update["$set"]:
+             del update["$set"]
+
+        if update:
+            updated_paper_doc = papers_collection.find_one_and_update(
+                {"_id": paper_obj_id},
+                update,
+                return_document=ReturnDocument.AFTER
+            )
+            if not updated_paper_doc:
+                 print(f"Error: Failed to apply update to paper {paper_id} after voting.")
+                 return jsonify({"error": "Failed to update paper after voting."}), 500
+            paper = updated_paper_doc
+            new_status = paper.get("nonImplementableStatus")
+        else:
+             paper = papers_collection.find_one({"_id": paper_obj_id})
+
+
+        # --- Check Thresholds ---
+        final_status_update = {}
+        if needs_status_check and new_status == "flagged_non_implementable":
+            confirm_votes = paper.get("nonImplementableVotes", 0)
+            dispute_votes = paper.get("disputeImplementableVotes", 0)
+
+            print(f"Checking thresholds for paper {paper_id}: Confirm(Up)={confirm_votes}, Dispute(Down)={dispute_votes}")
+
+            # Condition to confirm non-implementability by community
+            if confirm_votes >= dispute_votes + NON_IMPLEMENTABLE_CONFIRM_THRESHOLD:
+                final_status_update["$set"] = {
+                    "isImplementable": False,
+                    "nonImplementableStatus": "confirmed_non_implementable",
+                    "status": STATUS_CONFIRMED_NON_IMPLEMENTABLE, # <-- Update main status
+                    "nonImplementableConfirmedBy": "community" # <-- Set confirmation source
+                }
+                print(f"Paper {paper_id} confirmed non-implementable by community vote threshold.")
+
+            # Condition to revert back to implementable
+            elif dispute_votes >= confirm_votes:
+                 final_status_update["$set"] = {
+                     "isImplementable": True,
+                     "nonImplementableStatus": "implementable",
+                     "status": STATUS_NOT_STARTED # <-- Reset main status
+                 }
+                 final_status_update["$unset"] = {
+                     "nonImplementableVotes": "",
+                     "disputeImplementableVotes": "",
+                     "nonImplementableFlaggedBy": "",
+                     "nonImplementableConfirmedBy": "" # <-- Clear confirmation source
+                 }
+                 paper_status_votes_collection.delete_many({"paperId": paper_obj_id})
+                 print(f"Paper {paper_id} reverted to implementable by vote threshold.")
+
+
+        # Apply final status update if threshold met
+        if final_status_update:
+             updated_paper = papers_collection.find_one_and_update(
+                 {"_id": paper_obj_id},
+                 final_status_update,
+                 return_document=ReturnDocument.AFTER
+             )
+        else:
+             updated_paper = paper
+
+
+        if updated_paper:
+            return jsonify(transform_paper(updated_paper, user_id_str))
+        else:
+            # Fallback fetch
+            final_paper_doc = papers_collection.find_one({"_id": paper_obj_id})
+            if final_paper_doc:
+                 return jsonify(transform_paper(final_paper_doc, user_id_str))
+            else:
+                 return jsonify({"error": "Failed to retrieve final paper status."}), 500
+
+
+    except Exception as e:
+        print(f"Error flagging/voting implementability for paper {paper_id}: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "An internal server error occurred during implementability voting"}), 500
+
+
+# --- NEW: Owner-Only Endpoint to Force Set Implementability ---
+@app.route('/api/papers/<string:paper_id>/set_implementability', methods=['POST'])
+@limiter.limit("30 per minute")
+@login_required
+@owner_required
+@csrf.exempt
+def set_paper_implementability(paper_id):
+    try:
+        user_id_str = session['user'].get('id')
+        try:
+            paper_obj_id = ObjectId(paper_id)
+        except InvalidId:
+            return jsonify({"error": "Invalid paper ID format"}), 400
+
+        data = request.get_json()
+        set_implementable = data.get('isImplementable')
+
+        if not isinstance(set_implementable, bool):
+            return jsonify({"error": "Invalid value for isImplementable. Must be true or false."}), 400
+
+        update = { "$set": {}, "$unset": {} } # Initialize
+
+        if set_implementable: # Owner sets to Implementable
+            update["$set"] = {
+                "isImplementable": True,
+                "nonImplementableStatus": "implementable",
+                "status": STATUS_NOT_STARTED # <-- Reset main status
+            }
+            update["$unset"] = {
+                "nonImplementableVotes": "",
+                "disputeImplementableVotes": "",
+                "nonImplementableFlaggedBy": "",
+                "nonImplementableConfirmedBy": "" # <-- Clear confirmation source
+            }
+            print(f"Owner setting paper {paper_id} to IMPLEMENTABLE.")
+        else: # Owner sets to Non-Implementable
+            update["$set"] = {
+                "isImplementable": False,
+                "nonImplementableStatus": "confirmed_non_implementable",
+                "status": STATUS_CONFIRMED_NON_IMPLEMENTABLE, # <-- Set main status
+                "nonImplementableConfirmedBy": "owner" # <-- Set confirmation source
+            }
+            update["$unset"] = {
+                "nonImplementableVotes": "",
+                "disputeImplementableVotes": "",
+                "nonImplementableFlaggedBy": ""
+                # Keep nonImplementableConfirmedBy = 'owner'
+            }
+            print(f"Owner setting paper {paper_id} to NON-IMPLEMENTABLE.")
+
+        # Clean up empty $set or $unset
+        if not update["$set"]: del update["$set"]
+        if not update["$unset"]: del update["$unset"]
+
+        # Delete any existing status votes for this paper regardless of action
+        delete_result = paper_status_votes_collection.delete_many({"paperId": paper_obj_id})
+        print(f"Owner action: Deleted {delete_result.deleted_count} status votes for paper {paper_id}.")
+
+        updated_paper = papers_collection.find_one_and_update(
+            {"_id": paper_obj_id},
+            update,
+            return_document=ReturnDocument.AFTER
+        )
+
+        if updated_paper:
+            print(f"Owner set implementability for paper {paper_id} to {set_implementable}")
+            return jsonify(transform_paper(updated_paper, user_id_str))
+        else:
+            if papers_collection.count_documents({"_id": paper_obj_id}) == 0:
+                 return jsonify({"error": "Paper not found"}), 404
+            else:
+                 return jsonify({"error": "Failed to update paper implementability status"}), 500
+
+    except Exception as e:
+        print(f"Error setting implementability for paper {paper_id} by owner: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "An internal server error occurred during owner action"}), 500
+
+
 @app.route('/api/papers/<string:paper_id>', methods=['DELETE'])
 @limiter.limit("30 per minute")
 @login_required
@@ -584,39 +855,44 @@ def vote_on_paper(paper_id):
 @csrf.exempt
 def remove_paper(paper_id):
     try:
-        try:
-            obj_id = ObjectId(paper_id)
-        except InvalidId:
-            return jsonify({"error": "Invalid paper ID format"}), 400
+        try: obj_id = ObjectId(paper_id)
+        except InvalidId: return jsonify({"error": "Invalid paper ID format"}), 400
 
         paper_to_remove = papers_collection.find_one({"_id": obj_id})
-        if not paper_to_remove:
-            return jsonify({"error": "Paper not found"}), 404
+        if not paper_to_remove: return jsonify({"error": "Paper not found"}), 404
 
+        # --- Move to removed collection ---
         removed_doc = paper_to_remove.copy()
+        # ... (rest of removed_doc setup) ...
         removed_doc["original_id"] = removed_doc.pop("_id")
         removed_doc["removedAt"] = datetime.utcnow()
-        removed_doc["removedBy"] = {
-            "userId": session['user'].get('id'),
-            "username": session['user'].get('username')
-        }
-        if "pwc_url" in removed_doc:
-             removed_doc["original_pwc_url"] = removed_doc["pwc_url"]
-
+        removed_doc["removedBy"] = {"userId": session['user'].get('id'), "username": session['user'].get('username')}
+        if "pwc_url" in removed_doc: removed_doc["original_pwc_url"] = removed_doc["pwc_url"]
         insert_result = removed_papers_collection.insert_one(removed_doc)
         print(f"Paper {paper_id} moved to removed_papers collection with new ID {insert_result.inserted_id}")
 
+        # --- Clean up related data ---
+        # Delete general votes
+        vote_delete_result = user_votes_collection.delete_many({"paperId": obj_id})
+        print(f"Removed {vote_delete_result.deleted_count} general votes for deleted paper {paper_id}")
+        # Delete status votes
+        status_vote_delete_result = paper_status_votes_collection.delete_many({"paperId": obj_id})
+        print(f"Removed {status_vote_delete_result.deleted_count} status votes for deleted paper {paper_id}")
+
+        # --- Delete from main collection ---
         delete_result = papers_collection.delete_one({"_id": obj_id})
         if delete_result.deleted_count == 1:
             print(f"Paper {paper_id} successfully deleted from main collection.")
             return jsonify({"message": "Paper removed successfully"}), 200
         else:
-            print(f"Warning: Paper {paper_id} was found but deletion failed (deleted_count={delete_result.deleted_count}). It was already moved to removed_papers.")
+            print(f"Warning: Paper {paper_id} deletion failed (count={delete_result.deleted_count}). Moved to removed_papers.")
+            # Status 207 might be appropriate if cleanup happened but delete failed
             return jsonify({"error": "Paper removed but encountered issue during final cleanup"}), 207
-
     except Exception as e:
         print(f"Error removing paper {paper_id}: {e}")
+        traceback.print_exc() # Add traceback
         return jsonify({"error": "An internal server error occurred during paper removal"}), 500
+
 
 # --- Authentication Endpoints ---
 GITHUB_AUTHORIZE_URL = "https://github.com/login/oauth/authorize"

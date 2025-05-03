@@ -44,6 +44,7 @@ const ListControls: React.FC<ListControlsProps> = ({
           <button
             onClick={onToggleAdvancedSearch}
             className="btn btn-secondary btn-advanced-toggle" // Add specific class
+            style={{'width':'175px'}}
             aria-expanded={showAdvancedSearch}
           >
             {showAdvancedSearch ? 'Hide Advanced' : 'Advanced Search'}

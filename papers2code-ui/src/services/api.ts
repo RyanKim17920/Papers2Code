@@ -90,12 +90,70 @@ export const updateStepStatusInApi = async (
     throw new Error("Backend update not implemented");
 };
 
-export const flagPaperImplementabilityInApi = async (
+export type ImplementabilityAction = 'flag' | 'confirm' | 'dispute' | 'retract';
+
+export const flagImplementabilityInApi = async (
     paperId: string,
-    isImplementable: boolean
-): Promise<Paper | undefined> => {
-    console.warn('flagPaperImplementabilityInApi: Backend endpoint not implemented yet.');
-    throw new Error("Backend update not implemented");
+    action: ImplementabilityAction
+): Promise<Paper> => {
+    const url = `${API_BASE_URL}/papers/${paperId}/flag_implementability`;
+    console.log(`Attempting action '${action}' on implementability for paper:`, url);
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ action }),
+        credentials: 'include', // Crucial for sending session cookie
+    });
+
+    if (!response.ok) {
+        let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.error) {
+                errorMsg = `API Error (${response.status}): ${errorData.error}`;
+            }
+        } catch (e) { /* Ignore if response is not JSON */ }
+        console.error(`Failed action '${action}' on implementability:`, errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    const updatedPaper: Paper = await response.json(); // Includes updated status/votes
+    console.log(`Action '${action}' successful for paper ${paperId}. New status: ${updatedPaper.nonImplementableStatus}`);
+    return updatedPaper;
+};
+
+
+// --- NEW: Function for owner to force set implementability ---
+export const setImplementabilityInApi = async (
+    paperId: string,
+    isImplementable: boolean // true or false
+): Promise<Paper> => {
+    const url = `${API_BASE_URL}/papers/${paperId}/set_implementability`;
+    console.log(`Owner setting implementability to ${isImplementable} for paper:`, url);
+
+    const response = await fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ isImplementable }),
+        credentials: 'include', // Crucial for owner check
+    });
+
+     if (!response.ok) {
+        let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+        try {
+            const errorData = await response.json();
+            if (errorData && errorData.error) {
+                errorMsg = `API Error (${response.status}): ${errorData.error}`;
+            }
+        } catch (e) { /* Ignore if response is not JSON */ }
+        console.error(`Failed owner action setImplementability:`, errorMsg);
+        throw new Error(errorMsg);
+    }
+
+    const updatedPaper: Paper = await response.json(); // Includes updated status
+    console.log(`Owner action setImplementability successful for paper ${paperId}.`);
+    return updatedPaper;
 };
 
 export const voteOnPaperInApi = async (

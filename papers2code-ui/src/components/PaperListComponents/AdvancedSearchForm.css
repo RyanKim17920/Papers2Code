@@ -25,6 +25,7 @@
     flex-wrap: wrap; /* Allow wrapping on smaller screens if needed */
     gap: 20px; /* Adjust gap between items */
     margin-bottom: 20px;
+    margin-top:30px;
     align-items: flex-end; /* Align items based on their bottom edge (useful if labels are above) */
   }
   
@@ -132,19 +133,30 @@
   border-radius: var(--border-radius-sm);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
   font-size: 0.9em; /* Slightly smaller font for calendar */
-  overflow-y:hidden;
+  overflow-y:hidden; /* Keep this if you don't want internal scrollbars */
+  /* --- ADD THIS --- */
+  min-height: 350px; /* Adjust this value based on your font/padding if needed */
+                     /* This should be enough for header + day names + 6 week rows */
+  display: inline-block; /* Helps with consistent layout */
 }
 
-/* Header styling (contains arrows and month/year) */
-.react-datepicker__header{
-    display:block;           /* overrides the previous flex */
-    padding:4px 0 0;         /* keeps it compact */
-    text-align:center;
-    height:125px;
-    overflow-y:hidden;
-  }
-  .react-datepicker__current-month{ margin: 0; }    /* kill default margin */
 
+/* Header styling (contains arrows and month/year) */
+.react-datepicker__header {
+  background-color: var(--card-background-alt, #f8f9fa);
+  border-bottom: 1px solid var(--border-color-light);
+  padding-top: 8px;
+  padding-bottom: 8px;
+  position: relative; /* Needed for arrow positioning */
+  text-align: center; /* Center the inline content (month/year) */
+}
+.react-datepicker__current-month {
+  font-size: 1em;
+  font-weight: 500;
+  color: var(--text-heading-color);
+  display: inline-block; /* Allows centering via text-align */
+  padding: 0 5px; /* Add slight horizontal padding */
+}    /* kill default margin */
   .react-datepicker__month-dropdown-container,
   .react-datepicker__year-dropdown-container{ margin: 0 4px; }
   
@@ -289,3 +301,12 @@
   width: 18px; /* Adjust size */
 }
 
+
+h2 {
+  text-align: center;
+  font-size: 2.5em;
+  font-weight: 600;
+  color: var(--text-heading-color);
+  border-bottom: 1px solid var(--border-color);
+  padding-bottom: 15px;
+}

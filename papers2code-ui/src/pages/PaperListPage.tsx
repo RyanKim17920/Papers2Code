@@ -43,7 +43,7 @@ const PaperListPage: React.FC = () => {
   return (
     <div className="paper-list-page">
       <div className="list-header">
-        <h2>Papers Seeking Implementation</h2>
+        <h1>Papers Without Implementation</h1>
         <ListControls
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}

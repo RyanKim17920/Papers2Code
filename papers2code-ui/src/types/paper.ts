@@ -4,9 +4,11 @@ export interface Author {
   name: string; // Backend now sends this structure
 }
 
+export interface Author {
+  name: string;
+}
+
 export enum ImplementationStatus {
-    // Make sure these string values match the 'status' field in MongoDB
-    // or the defaults provided in transform_paper
     NotStarted = 'Not Started',
     ContactingAuthor = 'Contacting Author',
     DefiningRequirements = 'Defining Requirements',
@@ -15,10 +17,9 @@ export enum ImplementationStatus {
     Completed = 'Completed',
     AuthorDeclined = 'Author Declined (Proceeding)',
     AwaitingReview = 'Awaiting Review',
-    // Add any other statuses present in your DB data
-    NeedsCode = 'Needs Code', // From your example
+    NeedsCode = 'Needs Code',
+    ConfirmedNonImplementable = 'Confirmed Non-Implementable', // <-- NEW STATUS
 }
-
 export interface ImplementationStep {
   id: number;
   name: string;
@@ -27,22 +28,29 @@ export interface ImplementationStep {
 }
 
 export interface Paper {
-  id: string; // MongoDB ObjectId as string
-  pwcUrl?: string; // PapersWithCode URL
-  arxivId?: string; // arXiv ID (e.g., '2310.12345')
+  id: string;
+  pwcUrl?: string;
+  arxivId?: string;
   title: string;
   abstract: string;
   authors: Author[];
-  urlAbs?: string; // URL to abstract page (e.g., arXiv page)
-  urlPdf?: string; // URL to PDF
-  date: string; // Publication date (YYYY-MM-DD)
-  proceeding?: string; // Conference or journal name
-  tasks?: string[]; // Associated ML tasks
-  isImplementable: boolean; // Flag set by owner
-  implementationStatus: 'Not Started' | 'In Progress' | 'Completed' | 'Blocked';
+  urlAbs?: string;
+  urlPdf?: string;
+  date: string;
+  proceeding?: string;
+  tasks?: string[];
+  // --- Implementability Fields ---
+  isImplementable: boolean;
+  nonImplementableStatus: 'implementable' | 'flagged_non_implementable' | 'confirmed_non_implementable';
+  nonImplementableVotes: number; // Votes confirming non-implementability (Thumbs Up)
+  disputeImplementableVotes: number; // Votes disputing non-implementability (Thumbs Down)
+  currentUserImplementabilityVote: 'up' | 'down' | 'none'; // <-- CHANGED: Use 'up'/'down' for frontend state
+  nonImplementableConfirmedBy: 'community' | 'owner' | null; // <-- NEW: Track confirmation source
+  // --- End Implementability Fields ---
+  implementationStatus: ImplementationStatus | string; // Overall status (will include ConfirmedNonImplementable)
   implementationSteps: ImplementationStep[];
-  upvoteCount: number; // Add upvote count
-  currentUserVote: 'up' | 'none'; // Add current user's vote status ('down' can be added later)
+  upvoteCount: number;
+  currentUserVote: 'up' | 'none';
 }
 
 export interface PaperSummary {
