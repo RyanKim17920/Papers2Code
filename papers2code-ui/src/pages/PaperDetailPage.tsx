@@ -158,21 +158,18 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
     let implementabilityNotice = null;
     if (status === 'confirmed_non_implementable') {
-        const confirmationSource = confirmedBy === 'owner' ? 'by owner override' : (confirmedBy === 'community' ? 'by community vote' : '');
+        // --- SIMPLIFIED NOTICE ---
         implementabilityNotice = (
             <p className="not-implementable-notice confirmed">
-                This paper has been confirmed as likely not suitable for implementation {confirmationSource}.
+                This paper has been confirmed as likely not suitable for implementation.
                 <br/>
-                {/* --- FIX: Explicitly show confirmed status --- */}
                 Overall Status: {ImplementationStatus.ConfirmedNonImplementable}
             </p>
         );
     } else if (status === 'flagged_non_implementable') {
-        // ... existing flagged notice ...
         implementabilityNotice = (
             <div className="not-implementable-notice flagged">
                 <p>This paper has been flagged as potentially non-implementable. Please vote:</p>
-                {/* Voting display moved to actions section */}
             </div>
         );
     } else {
@@ -225,9 +222,10 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                  {/* --- Implementability Actions --- */}
                  <div className="paper-actions"> {/* Outer container */}
                     {/* --- HIDE voting if owner forced implementable --- */}
-                    {!(paper.nonImplementableStatus === 'implementable' && paper.nonImplementableConfirmedBy === 'owner') && (
+                    {!(paper.nonImplementableStatus === 'implementable' && paper.nonImplementableConfirmedBy === 'owner') &&
+                         status !== 'confirmed_non_implementable' && (
                         <div className="implementability-actions"> {/* Inner container for voting/flagging */}
-                            <h4>Implementability Voting</h4>
+                            <h4>Non-Implementability Voting</h4>
                             <p className="voting-description">
                                 Vote here if you believe this paper is non-code-related, impractical, or impossible to implement due to missing details, unclear methods, or other factors.
                             </p>

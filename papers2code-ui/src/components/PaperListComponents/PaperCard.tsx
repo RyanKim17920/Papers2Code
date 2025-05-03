@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Paper } from '../../types/paper'; // Use full Paper type
+import { Paper, ImplementationStatus } from '../../types/paper'; // Import ImplementationStatus
 import './PaperCard.css';
+
 
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -15,12 +16,14 @@ interface PaperCardProps {
 }
 
 const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
+  // ... existing useState and handleVoteClick ...
   const [isVoting, setIsVoting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
 
   const authors = paper.authors.map(a => a.name).join(', ');
 
   const handleVoteClick = async () => {
+    // ... existing vote logic ...
     if (isVoting) return; // Prevent multiple clicks
 
     setIsVoting(true);
@@ -40,26 +43,50 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
     }
   };
 
+  // --- Determine Display Status and Class ---
+  let displayStatus = paper.implementationStatus;
+  let statusClass = 'status-default';
+  let statusSymbol = '⏳'; // Default: Hourglass
+
+  if (paper.nonImplementableStatus === 'confirmed_non_implementable') {
+      displayStatus = ImplementationStatus.ConfirmedNonImplementable;
+      statusClass = 'status-non-implementable';
+      statusSymbol = '🚫'; // Symbol: Prohibited / Stop
+  } else if (paper.implementationStatus === ImplementationStatus.Completed) {
+      displayStatus = ImplementationStatus.Completed;
+      statusClass = 'status-completed';
+      statusSymbol = '✅'; // Symbol: Check Mark
+  } else if (paper.implementationStatus === ImplementationStatus.ImplementationInProgress) {
+      displayStatus = ImplementationStatus.ImplementationInProgress;
+      statusClass = 'status-in-progress';
+      statusSymbol = '🚧'; // Symbol: Construction / In Progress
+  } else if (paper.implementationStatus === ImplementationStatus.NeedsCode) {
+      statusClass = 'status-needs-code'; // Add specific class if needed
+      statusSymbol = '❓'; // Symbol: Question Mark / Needs Info
+  } // Add more else if for other specific statuses if needed // Add more else if for other specific statuses if needed
+  // --- End Determine Status and Class ---
+
 
   return (
     <div className="paper-card">
-      {/* Title */}
+      {/* ... Title and Meta Top ... */}
       <h3>
         <Link to={`/paper/${paper.id}`}>{paper.title}</Link>
       </h3>
-
-      {/* Meta content */}
       <div className="card-meta-content">
         <div className="card-meta-top">
           <p className="authors">Authors: {authors}</p>
         </div>
         <div className="card-meta-bottom">
           <p className="date">Date: {new Date(paper.date).toLocaleDateString()}</p>
-          <p className="status">Status: {paper.implementationStatus}</p>
+          {/* --- Use determined display status, class, and symbol --- */}
+          <p className={`status ${statusClass}`}>
+            <span className="status-symbol">{statusSymbol}</span>
+            <span className="status-text">{displayStatus}</span>
+          </p>
         </div>
       </div>
-
-      {/* Actions at the bottom: Votes and Details Link */}
+      {/* ... Actions ... */}
       <div className="card-actions">
         <div className="vote-section">
            <button

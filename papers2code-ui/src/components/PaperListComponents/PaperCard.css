@@ -72,12 +72,14 @@
 
 .paper-card .authors,
 .paper-card .date,
-.paper-card .status {
+.paper-card  {
   font-size: 0.87em;
   color: var(--text-muted-color);
   margin: 0 0 5px 0;
   line-height: 1.5;
 }
+
+
 
 .paper-card .authors {
   font-weight: 400;
@@ -88,7 +90,7 @@
 }
 
 .paper-card .date,
-.paper-card .status {
+.paper-card  {
   font-weight: 500;
 }
 
@@ -107,6 +109,66 @@
   transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
   border: 1px solid var(--primary-color); /* Add border */
   /* margin-top: 0; */ /* No longer needed */
+}
+
+.status {
+  display: inline-flex; /* Use flex to align symbol and text */
+  align-items: center; /* Vertically center */
+  gap: 5px; /* Space between symbol and text */
+  padding: 4px 10px; /* Adjusted padding */
+  border-radius: var(--border-radius-md); /* Slightly more rounded */
+  font-size: 0.8em;
+  font-weight: 500;
+  /* line-height: 1.2; /* Remove specific line-height, rely on flex alignment */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 10px;
+  border: 1px solid transparent; /* Base border */
+  white-space: nowrap; /* Prevent text wrapping which might cause overflow */
+  overflow: hidden; /* Hide any potential overflow */
+  vertical-align: middle; /* Helps alignment when used inline with other text */
+}
+
+.status-symbol {
+  font-size: 0.9em; /* Adjust symbol size relative to text */
+  flex-shrink: 0; /* Prevent symbol from shrinking */
+}
+
+.status-text {
+  /* Text specific styles if needed */
+  overflow: hidden; /* Hide overflow on text specifically if needed */
+  text-overflow: ellipsis; /* Add ellipsis if text is too long */
+}
+
+
+/* Default/Needs Code/Other Statuses */
+.status-default,
+.status-needs-code {
+  background-color: #f8f9fa; /* Very light grey */
+  color: #6c757d; /* Muted text */
+  border-color: #dee2e6; /* Light border */
+}
+
+/* In Progress */
+.status-in-progress {
+  background-color: #e7f3ff; /* Lighter blue */
+  color: #0056b3; /* Darker blue text */
+  border-color: #b8daff; /* Softer blue border */
+}
+
+/* Completed */
+.status-completed {
+  background-color: #e6f9f0; /* Lighter green */
+  color: #198754; /* Darker green text */
+  border-color: #a3e9c1; /* Softer green border */
+}
+
+/* Non-Implementable Status */
+.status-non-implementable {
+  background-color: #fff5f5; /* Lighter red */
+  color: #c82333; /* Darker red text */
+  border-color: #f5c6cb; /* Softer red border */
+  font-weight: 600; /* Slightly bolder */
 }
 
 .paper-card .details-link:hover {

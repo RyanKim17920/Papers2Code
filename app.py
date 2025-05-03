@@ -99,16 +99,15 @@ try:
     papers_collection = db.papers_without_code
     users_collection = db.users
     removed_papers_collection = db.removed_papers
-    user_votes_collection = db.user_action_votes
-    paper_status_votes_collection = db.paper_status_votes
+    user_actions_collection = db.user_actions
+
     print("Available collections:", db.list_collection_names())
 
     # --- Get existing index names --- 
     papers_indexes = papers_collection.index_information()
     users_indexes = users_collection.index_information()
     removed_papers_indexes = removed_papers_collection.index_information()
-    user_votes_indexes = user_votes_collection.index_information()
-    paper_status_votes_indexes = paper_status_votes_collection.index_information()
+    user_actions_indexes = user_actions_collection.index_information()
     print("Existing indexes fetched.")
 
     # --- Ensure Indexes --- 
@@ -171,38 +170,25 @@ try:
         print(f"Index exists: {original_pwc_url_index_name}")
 
     # User Votes Collection
-    user_paper_vote_index_name = "userId_1_paperId_1"
-    if user_paper_vote_index_name not in user_votes_indexes:
-        user_votes_collection.create_index([("userId", 1), ("paperId", 1)], name=user_paper_vote_index_name, unique=True, background=True)
-        print(f"Creating index: {user_paper_vote_index_name}")
-    else:
-        print(f"Index exists: {user_paper_vote_index_name}")
-
-    paper_vote_lookup_index_name = "paperId_1"
-    if paper_vote_lookup_index_name not in user_votes_indexes:
-        user_votes_collection.create_index([("paperId", 1)], name=paper_vote_lookup_index_name, background=True)
-        print(f"Creating index: {paper_vote_lookup_index_name}")
-    else:
-        print(f"Index exists: {paper_vote_lookup_index_name}")
-
-    status_vote_user_paper_type_index = "userId_1_paperId_1_voteType_1"
-    if status_vote_user_paper_type_index not in paper_status_votes_indexes:
-        paper_status_votes_collection.create_index(
-            [("userId", 1), ("paperId", 1), ("voteType", 1)],
-            name=status_vote_user_paper_type_index, unique=True, background=True
+    user_paper_action_index_name = "userId_1_paperId_1_actionType_1"
+    if user_paper_action_index_name not in user_actions_indexes:
+        user_actions_collection.create_index(
+            [("userId", 1), ("paperId", 1), ("actionType", 1)],
+            name=user_paper_action_index_name, unique=True, background=True
         )
-        print(f"Creating index: {status_vote_user_paper_type_index}")
+        print(f"Creating index: {user_paper_action_index_name}")
     else:
-        print(f"Index exists: {status_vote_user_paper_type_index}")
+        print(f"Index exists: {user_paper_action_index_name}")
 
-    status_vote_paper_lookup_index = "paperId_1"
-    if status_vote_paper_lookup_index not in paper_status_votes_indexes:
-        paper_status_votes_collection.create_index(
-            [("paperId", 1)], name=status_vote_paper_lookup_index, background=True
+    # Index for finding all actions for a paper (useful for cleanup)
+    paper_action_lookup_index_name = "paperId_1"
+    if paper_action_lookup_index_name not in user_actions_indexes:
+        user_actions_collection.create_index(
+            [("paperId", 1)], name=paper_action_lookup_index_name, background=True
         )
-        print(f"Creating index: {status_vote_paper_lookup_index}")
+        print(f"Creating index: {paper_action_lookup_index_name}")
     else:
-        print(f"Index exists: {status_vote_paper_lookup_index}")
+        print(f"Index exists: {paper_action_lookup_index_name}")
 
     print("Index check complete.")
     client.admin.command('ping')
@@ -227,22 +213,23 @@ def transform_paper(paper_doc, current_user_id=None):  # Add current_user_id
 
     # Determine current user's vote status
     current_user_vote = 'none'
-    if current_user_id:
-        vote_doc = user_votes_collection.find_one({"userId": ObjectId(current_user_id), "paperId": paper_doc["_id"]})
-        if vote_doc:
-            current_user_vote = 'up'  # Assuming only upvotes for now
-
     current_user_implementability_vote = 'none'
     if current_user_id:
-        status_vote_doc = paper_status_votes_collection.find_one({
-            "userId": ObjectId(current_user_id),
+        user_obj_id = ObjectId(current_user_id)
+        # Find all actions by this user on this paper
+        user_actions = list(user_actions_collection.find({
+            "userId": user_obj_id,
             "paperId": paper_doc["_id"]
-        })
-        if status_vote_doc:
-            if status_vote_doc.get("voteType") == 'confirm_non_implementable':
+        }))
+        for action_doc in user_actions:
+            action_type = action_doc.get("actionType")
+            if action_type == 'upvote':
+                current_user_vote = 'up'
+            elif action_type == 'confirm_non_implementable':
                 current_user_implementability_vote = 'up' # Map confirm -> up
-            elif status_vote_doc.get("voteType") == 'dispute_non_implementable':
+            elif action_type == 'dispute_non_implementable':
                 current_user_implementability_vote = 'down' # Map dispute -> down
+            # Add more elif for future action types if needed
 
 
     return {
@@ -253,7 +240,7 @@ def transform_paper(paper_doc, current_user_id=None):  # Add current_user_id
         "date": date_str, "proceeding": paper_doc.get("venue"),
         "tasks": paper_doc.get("tasks", []),
         # --- Implementability Fields ---
-        "isImplementable": paper_doc.get("isImplementable", True),
+        "isImplementable": paper_doc.get("is_implementable", True),
         "nonImplementableStatus": paper_doc.get("nonImplementableStatus", "implementable"),
         "nonImplementableVotes": paper_doc.get("nonImplementableVotes", 0), # Thumbs Up count
         "disputeImplementableVotes": paper_doc.get("disputeImplementableVotes", 0), # Thumbs Down count
@@ -387,6 +374,7 @@ def get_papers():
 
             # --- Build Full Pipeline (Only if search is active) ---
             if is_search_active:
+                print(f"Executing standard FIND with sort: '{sort_param}' and default non-implementable filter.")
                 search_pipeline_stages = [{"$search": search_operator}]
                 if search_term: # Only add score/highlight if text search was performed
                     search_pipeline_stages.extend([
@@ -405,6 +393,7 @@ def get_papers():
                         "totalCount": [{"$count": 'count'}]
                     }}
                 ]
+
                 # --- Execute Aggregation ---
                 try:
                     # ... (existing aggregation execution and error handling) ...
@@ -517,47 +506,77 @@ def vote_on_paper(paper_id):
         if vote_type not in ['up', 'none']:
             return jsonify({"error": "Invalid vote type. Must be 'up' or 'none'."}), 400
 
-        existing_vote = user_votes_collection.find_one({"userId": user_obj_id, "paperId": paper_obj_id})
+        action_type = 'upvote'
+        existing_action = user_actions_collection.find_one({
+            "userId": user_obj_id,
+            "paperId": paper_obj_id,
+            "actionType": action_type
+        })
 
         updated_paper = None
+        update_result = None
 
         if vote_type == 'up':
-            if not existing_vote:
-                user_votes_collection.insert_one({
-                    "userId": user_obj_id,
-                    "paperId": paper_obj_id,
-                    "createdAt": datetime.utcnow()
-                })
-                updated_paper = papers_collection.find_one_and_update(
-                    {"_id": paper_obj_id},
-                    {"$inc": {"upvoteCount": 1}},
-                    return_document=ReturnDocument.AFTER
-                )
-                print(f"User {user_id_str} upvoted paper {paper_id}")
+            if not existing_action:
+                try:
+                    update_result = user_actions_collection.insert_one({
+                        "userId": user_obj_id,
+                        "paperId": paper_obj_id,
+                        "actionType": action_type,
+                        "createdAt": datetime.utcnow()
+                    })
+                    if update_result.inserted_id:
+                        updated_paper = papers_collection.find_one_and_update(
+                            {"_id": paper_obj_id},
+                            {"$inc": {"upvoteCount": 1}},
+                            return_document=ReturnDocument.AFTER
+                        )
+                        print(f"User {user_id_str} upvoted paper {paper_id}")
+                    else:
+                        print(f"Error: Failed to insert upvote action for user {user_id_str}, paper {paper_id}")
+                except DuplicateKeyError:
+                     print(f"Warning: Duplicate upvote action detected for user {user_id_str}, paper {paper_id} (concurrent request?).")
+                     # Fetch current paper state as if vote exists
+                     updated_paper = papers_collection.find_one({"_id": paper_obj_id})
             else:
+                # Already voted, do nothing, return current paper state
                 updated_paper = papers_collection.find_one({"_id": paper_obj_id})
                 print(f"User {user_id_str} tried to upvote paper {paper_id} again.")
 
         elif vote_type == 'none':
-            if existing_vote:
-                user_votes_collection.delete_one({"_id": existing_vote["_id"]})
-                updated_paper = papers_collection.find_one_and_update(
-                    {"_id": paper_obj_id},
-                    {"$inc": {"upvoteCount": -1}},
-                    return_document=ReturnDocument.AFTER
-                )
-                if updated_paper and updated_paper.get("upvoteCount", 0) < 0:
-                    papers_collection.update_one({"_id": paper_obj_id}, {"$set": {"upvoteCount": 0}})
-                    updated_paper["upvoteCount"] = 0
-                print(f"User {user_id_str} removed vote from paper {paper_id}")
+            if existing_action:
+                update_result = user_actions_collection.delete_one({"_id": existing_action["_id"]})
+                if update_result.deleted_count == 1:
+                    updated_paper = papers_collection.find_one_and_update(
+                        {"_id": paper_obj_id},
+                        {"$inc": {"upvoteCount": -1}},
+                        return_document=ReturnDocument.AFTER
+                    )
+                    # Ensure count doesn't go below zero
+                    if updated_paper and updated_paper.get("upvoteCount", 0) < 0:
+                        papers_collection.update_one({"_id": paper_obj_id}, {"$set": {"upvoteCount": 0}})
+                        updated_paper["upvoteCount"] = 0
+                    print(f"User {user_id_str} removed upvote from paper {paper_id}")
+                else:
+                    print(f"Error: Failed to delete upvote action for user {user_id_str}, paper {paper_id}")
+                    # Fetch current state if delete failed
+                    updated_paper = papers_collection.find_one({"_id": paper_obj_id})
             else:
+                # No vote to remove, do nothing, return current paper state
                 updated_paper = papers_collection.find_one({"_id": paper_obj_id})
-                print(f"User {user_id_str} tried to remove non-existent vote from paper {paper_id}.")
+                print(f"User {user_id_str} tried to remove non-existent upvote from paper {paper_id}.")
 
         if updated_paper:
             return jsonify(transform_paper(updated_paper, user_id_str))
         else:
-            return jsonify({"error": "Failed to update paper vote status"}), 500
+            # Fallback if paper update failed somehow
+            current_paper = papers_collection.find_one({"_id": paper_obj_id})
+            if current_paper:
+                 return jsonify(transform_paper(current_paper, user_id_str))
+            else:
+                 # This case should be rare if paper existed initially
+                 return jsonify({"error": "Failed to update paper vote status and couldn't refetch paper."}), 500
+
 
     except Exception as e:
         print(f"Error voting on paper {paper_id}: {e}")
@@ -585,7 +604,7 @@ def flag_paper_implementability(paper_id):
 
         # Allow 'flag' as initial action (maps to confirm)
         if action not in ['flag', 'confirm', 'dispute', 'retract']:
-            return jsonify({"error": "Invalid action type. Must map to 'confirm', 'dispute', or 'retract'."}), 400
+            return jsonify({"error": "Invalid action type."}), 400
 
         paper = papers_collection.find_one({"_id": paper_obj_id})
         if not paper: return jsonify({"error": "Paper not found"}), 404
@@ -594,116 +613,130 @@ def flag_paper_implementability(paper_id):
         if paper.get("nonImplementableStatus") == "confirmed_non_implementable":
              return jsonify({"error": "Implementability status already confirmed by owner."}), 400
 
-        vote_type = None
-        update = {"$set": {}} # Initialize $set
+        if paper.get("nonImplementableStatus") == "confirmed_non_implementable" and paper.get("nonImplementableConfirmedBy") == "owner":
+             return jsonify({"error": "Implementability status already confirmed by owner."}), 400
+
+        # --- CHANGE 9: Use user_actions_collection ---
+        # Determine current vote based on action type
+        current_action_doc = user_actions_collection.find_one({
+            "userId": user_obj_id,
+            "paperId": paper_obj_id,
+            "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
+        })
+        current_action_type = current_action_doc.get("actionType") if current_action_doc else None
+
+        update = {"$set": {}}
         increment = {}
         new_status = paper.get("nonImplementableStatus", "implementable")
         needs_status_check = False
-
-        existing_vote = paper_status_votes_collection.find_one({
-            "userId": user_obj_id, "paperId": paper_obj_id
-        })
-        current_vote_type = existing_vote.get("voteType") if existing_vote else None
+        action_to_perform = None # 'insert', 'update', 'delete'
+        new_action_type = None
 
         if action == 'retract':
-            if not existing_vote:
+            if not current_action_doc:
                 return jsonify({"error": "No existing vote to retract."}), 400
 
-            delete_result = paper_status_votes_collection.delete_one({"_id": existing_vote["_id"]})
-            if delete_result.deleted_count == 1:
-                if current_vote_type == 'confirm_non_implementable':
-                    increment["nonImplementableVotes"] = -1
-                elif current_vote_type == 'dispute_non_implementable':
-                    increment["disputeImplementableVotes"] = -1
-                needs_status_check = True
-                print(f"User {user_id_str} retracted {current_vote_type} vote for paper {paper_id}")
-            else:
-                 return jsonify({"error": "Failed to retract vote."}), 500
+            action_to_perform = 'delete'
+            if current_action_type == 'confirm_non_implementable':
+                increment["nonImplementableVotes"] = -1
+            elif current_action_type == 'dispute_non_implementable':
+                increment["disputeImplementableVotes"] = -1
+            needs_status_check = True
+            print(f"User {user_id_str} retracting {current_action_type} vote for paper {paper_id}")
 
         elif action in ['flag', 'confirm']: # Thumbs Up
-            vote_type = 'confirm_non_implementable'
-            if current_vote_type == vote_type:
+            new_action_type = 'confirm_non_implementable'
+            if current_action_type == new_action_type:
                 return jsonify({"error": "You have already voted thumbs up (confirm non-implementability)."}), 400
 
-            if existing_vote: # Switching vote from dispute to confirm
-                paper_status_votes_collection.update_one(
-                    {"_id": existing_vote["_id"]},
-                    {"$set": {"voteType": vote_type, "createdAt": datetime.utcnow()}}
-                )
+            if current_action_doc: # Switching vote from dispute to confirm
+                action_to_perform = 'update'
                 increment["nonImplementableVotes"] = 1
                 increment["disputeImplementableVotes"] = -1
-                print(f"User {user_id_str} switched vote to confirm (up) for paper {paper_id}")
+                print(f"User {user_id_str} switching vote to confirm (up) for paper {paper_id}")
             else: # New confirm vote
-                try:
-                    paper_status_votes_collection.insert_one({
-                        "userId": user_obj_id, "paperId": paper_obj_id,
-                        "voteType": vote_type, "createdAt": datetime.utcnow()
-                    })
-                    increment["nonImplementableVotes"] = 1
-                    print(f"User {user_id_str} voted confirm (up) for paper {paper_id}")
-                except DuplicateKeyError:
-                     return jsonify({"error": "Vote already exists (concurrent request?)."}), 409
+                action_to_perform = 'insert'
+                increment["nonImplementableVotes"] = 1
+                print(f"User {user_id_str} voting confirm (up) for paper {paper_id}")
 
-            # If it was previously 'implementable', flag it now
             if paper.get("nonImplementableStatus", "implementable") == "implementable":
                 update["$set"]["nonImplementableStatus"] = "flagged_non_implementable"
                 if not paper.get("nonImplementableFlaggedBy"):
                      update["$set"]["nonImplementableFlaggedBy"] = user_obj_id
                 new_status = "flagged_non_implementable"
                 print(f"Paper {paper_id} status changed to flagged_non_implementable")
-
             needs_status_check = True
 
         elif action == 'dispute': # Thumbs Down
-            vote_type = 'dispute_non_implementable'
-            if current_vote_type == vote_type:
+            new_action_type = 'dispute_non_implementable'
+            if current_action_type == new_action_type:
                 return jsonify({"error": "You have already voted thumbs down (dispute non-implementability)."}), 400
 
-            # Can only dispute if it's currently flagged
             if paper.get("nonImplementableStatus") != "flagged_non_implementable":
                  return jsonify({"error": "Paper is not currently flagged as non-implementable."}), 400
 
-            if existing_vote: # Switching vote from confirm to dispute
-                paper_status_votes_collection.update_one(
-                    {"_id": existing_vote["_id"]},
-                    {"$set": {"voteType": vote_type, "createdAt": datetime.utcnow()}}
-                )
+            if current_action_doc: # Switching vote from confirm to dispute
+                action_to_perform = 'update'
                 increment["nonImplementableVotes"] = -1
                 increment["disputeImplementableVotes"] = 1
-                print(f"User {user_id_str} switched vote to dispute (down) for paper {paper_id}")
+                print(f"User {user_id_str} switching vote to dispute (down) for paper {paper_id}")
             else: # New dispute vote
-                 try:
-                     paper_status_votes_collection.insert_one({
-                         "userId": user_obj_id, "paperId": paper_obj_id,
-                         "voteType": vote_type, "createdAt": datetime.utcnow()
-                     })
-                     increment["disputeImplementableVotes"] = 1
-                     print(f"User {user_id_str} voted dispute (down) for paper {paper_id}")
-                 except DuplicateKeyError:
-                      return jsonify({"error": "Vote already exists (concurrent request?)."}), 409
-
+                 action_to_perform = 'insert'
+                 increment["disputeImplementableVotes"] = 1
+                 print(f"User {user_id_str} voting dispute (down) for paper {paper_id}")
             needs_status_check = True
 
-        # Apply increments and potential status set
+        # --- Perform Action on user_actions collection ---
+        action_update_successful = False
+        if action_to_perform == 'delete':
+            delete_result = user_actions_collection.delete_one({"_id": current_action_doc["_id"]})
+            action_update_successful = delete_result.deleted_count == 1
+        elif action_to_perform == 'update':
+            update_result = user_actions_collection.update_one(
+                {"_id": current_action_doc["_id"]},
+                {"$set": {"actionType": new_action_type, "createdAt": datetime.utcnow()}}
+            )
+            action_update_successful = update_result.modified_count == 1
+        elif action_to_perform == 'insert':
+            try:
+                insert_result = user_actions_collection.insert_one({
+                    "userId": user_obj_id, "paperId": paper_obj_id,
+                    "actionType": new_action_type, "createdAt": datetime.utcnow()
+                })
+                action_update_successful = insert_result.inserted_id is not None
+            except DuplicateKeyError:
+                 print(f"Warning: Duplicate action insert detected for {new_action_type}, user {user_id_str}, paper {paper_id}.")
+                 # Assume action exists, proceed with paper update, but don't count as successful action update here
+                 action_update_successful = True # Allow paper update to proceed
+
+        if not action_update_successful and action_to_perform:
+             print(f"Error: Failed to perform '{action_to_perform}' on user_actions for paper {paper_id}, user {user_id_str}")
+             # Fetch current paper state and return, maybe the action succeeded concurrently
+             current_paper = papers_collection.find_one({"_id": paper_obj_id})
+             return jsonify(transform_paper(current_paper, user_id_str)) if current_paper else jsonify({"error": "Failed to update action and refetch paper."}), 500
+
+        # --- Apply increments and status updates to paper ---
         if increment:
             update["$inc"] = increment
-        # Ensure update has $set if it's empty, otherwise Mongo complains
         if not update["$set"]:
-             del update["$set"]
+             del update["$set"] # Avoid empty $set
 
         if update:
             updated_paper_doc = papers_collection.find_one_and_update(
-                {"_id": paper_obj_id},
-                update,
-                return_document=ReturnDocument.AFTER
+                {"_id": paper_obj_id}, update, return_document=ReturnDocument.AFTER
             )
             if not updated_paper_doc:
-                 print(f"Error: Failed to apply update to paper {paper_id} after voting.")
-                 return jsonify({"error": "Failed to update paper after voting."}), 500
-            paper = updated_paper_doc
+                 print(f"Error: Failed to apply update to paper {paper_id} after action.")
+                 # Try to refetch, maybe update succeeded concurrently
+                 current_paper = papers_collection.find_one({"_id": paper_obj_id})
+                 return jsonify(transform_paper(current_paper, user_id_str)) if current_paper else jsonify({"error": "Failed to update paper after action and refetch."}), 500
+            paper = updated_paper_doc # Use the updated doc for threshold check
             new_status = paper.get("nonImplementableStatus")
         else:
+             # If no paper update needed yet (e.g., retracting only vote), refetch paper
              paper = papers_collection.find_one({"_id": paper_obj_id})
+             if not paper: return jsonify({"error": "Failed to refetch paper after action."}), 500
+             new_status = paper.get("nonImplementableStatus")
 
 
         # --- Check Thresholds ---
@@ -711,56 +744,53 @@ def flag_paper_implementability(paper_id):
         if needs_status_check and new_status == "flagged_non_implementable":
             confirm_votes = paper.get("nonImplementableVotes", 0)
             dispute_votes = paper.get("disputeImplementableVotes", 0)
-
             print(f"Checking thresholds for paper {paper_id}: Confirm(Up)={confirm_votes}, Dispute(Down)={dispute_votes}")
 
             # Condition to confirm non-implementability by community
             if confirm_votes >= dispute_votes + NON_IMPLEMENTABLE_CONFIRM_THRESHOLD:
                 final_status_update["$set"] = {
-                    "isImplementable": False,
+                    # --- CHANGE 10: Use is_implementable ---
+                    "is_implementable": False, # Use snake_case
                     "nonImplementableStatus": "confirmed_non_implementable",
-                    "status": STATUS_CONFIRMED_NON_IMPLEMENTABLE, # <-- Update main status
-                    "nonImplementableConfirmedBy": "community" # <-- Set confirmation source
+                    "status": STATUS_CONFIRMED_NON_IMPLEMENTABLE,
+                    "nonImplementableConfirmedBy": "community"
                 }
                 print(f"Paper {paper_id} confirmed non-implementable by community vote threshold.")
 
             # Condition to revert back to implementable
             elif dispute_votes >= confirm_votes:
                  final_status_update["$set"] = {
-                     "isImplementable": True,
+                     # --- CHANGE 11: Use is_implementable ---
+                     "is_implementable": True, # Use snake_case
                      "nonImplementableStatus": "implementable",
-                     "status": STATUS_NOT_STARTED # <-- Reset main status
+                     "status": STATUS_NOT_STARTED
                  }
                  final_status_update["$unset"] = {
-                     "nonImplementableVotes": "",
-                     "disputeImplementableVotes": "",
-                     "nonImplementableFlaggedBy": "",
-                     "nonImplementableConfirmedBy": "" # <-- Clear confirmation source
+                     "nonImplementableVotes": "", "disputeImplementableVotes": "",
+                     "nonImplementableFlaggedBy": "", "nonImplementableConfirmedBy": ""
                  }
-                 paper_status_votes_collection.delete_many({"paperId": paper_obj_id})
-                 print(f"Paper {paper_id} reverted to implementable by vote threshold.")
+                 # --- CHANGE 12: Delete actions from user_actions ---
+                 delete_result = user_actions_collection.delete_many({
+                     "paperId": paper_obj_id,
+                     "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
+                 })
+                 print(f"Paper {paper_id} reverted to implementable by vote threshold. Deleted {delete_result.deleted_count} status actions.")
 
 
         # Apply final status update if threshold met
         if final_status_update:
              updated_paper = papers_collection.find_one_and_update(
-                 {"_id": paper_obj_id},
-                 final_status_update,
-                 return_document=ReturnDocument.AFTER
+                 {"_id": paper_obj_id}, final_status_update, return_document=ReturnDocument.AFTER
              )
         else:
-             updated_paper = paper
-
+             updated_paper = paper # Use the paper state after initial increments/status change
 
         if updated_paper:
             return jsonify(transform_paper(updated_paper, user_id_str))
         else:
-            # Fallback fetch
+            # Fallback fetch if final update failed
             final_paper_doc = papers_collection.find_one({"_id": paper_obj_id})
-            if final_paper_doc:
-                 return jsonify(transform_paper(final_paper_doc, user_id_str))
-            else:
-                 return jsonify({"error": "Failed to retrieve final paper status."}), 500
+            return jsonify(transform_paper(final_paper_doc, user_id_str)) if final_paper_doc else jsonify({"error": "Failed to retrieve final paper status."}), 500
 
 
     except Exception as e:
@@ -793,44 +823,42 @@ def set_paper_implementability(paper_id):
 
         if set_implementable: # Owner sets to Implementable
             update["$set"] = {
-                "isImplementable": True,
+                # --- CHANGE 14: Use is_implementable ---
+                "is_implementable": True, # Use snake_case
                 "nonImplementableStatus": "implementable",
-                "status": STATUS_NOT_STARTED # <-- Reset main status
+                "status": STATUS_NOT_STARTED
             }
             update["$unset"] = {
-                "nonImplementableVotes": "",
-                "disputeImplementableVotes": "",
-                "nonImplementableFlaggedBy": "",
-                "nonImplementableConfirmedBy": "" # <-- Clear confirmation source
+                "nonImplementableVotes": "", "disputeImplementableVotes": "",
+                "nonImplementableFlaggedBy": "", "nonImplementableConfirmedBy": ""
             }
             print(f"Owner setting paper {paper_id} to IMPLEMENTABLE.")
         else: # Owner sets to Non-Implementable
             update["$set"] = {
-                "isImplementable": False,
+                # --- CHANGE 15: Use is_implementable ---
+                "is_implementable": False, # Use snake_case
                 "nonImplementableStatus": "confirmed_non_implementable",
-                "status": STATUS_CONFIRMED_NON_IMPLEMENTABLE, # <-- Set main status
-                "nonImplementableConfirmedBy": "owner" # <-- Set confirmation source
+                "status": STATUS_CONFIRMED_NON_IMPLEMENTABLE,
+                "nonImplementableConfirmedBy": "owner"
             }
             update["$unset"] = {
-                "nonImplementableVotes": "",
-                "disputeImplementableVotes": "",
+                "nonImplementableVotes": "", "disputeImplementableVotes": "",
                 "nonImplementableFlaggedBy": ""
-                # Keep nonImplementableConfirmedBy = 'owner'
             }
             print(f"Owner setting paper {paper_id} to NON-IMPLEMENTABLE.")
 
-        # Clean up empty $set or $unset
         if not update["$set"]: del update["$set"]
         if not update["$unset"]: del update["$unset"]
 
-        # Delete any existing status votes for this paper regardless of action
-        delete_result = paper_status_votes_collection.delete_many({"paperId": paper_obj_id})
-        print(f"Owner action: Deleted {delete_result.deleted_count} status votes for paper {paper_id}.")
+        # --- CHANGE 16: Delete relevant actions from user_actions ---
+        delete_result = user_actions_collection.delete_many({
+            "paperId": paper_obj_id,
+            "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
+        })
+        print(f"Owner action: Deleted {delete_result.deleted_count} status actions for paper {paper_id}.")
 
         updated_paper = papers_collection.find_one_and_update(
-            {"_id": paper_obj_id},
-            update,
-            return_document=ReturnDocument.AFTER
+            {"_id": paper_obj_id}, update, return_document=ReturnDocument.AFTER
         )
 
         if updated_paper:
@@ -873,11 +901,8 @@ def remove_paper(paper_id):
 
         # --- Clean up related data ---
         # Delete general votes
-        vote_delete_result = user_votes_collection.delete_many({"paperId": obj_id})
-        print(f"Removed {vote_delete_result.deleted_count} general votes for deleted paper {paper_id}")
-        # Delete status votes
-        status_vote_delete_result = paper_status_votes_collection.delete_many({"paperId": obj_id})
-        print(f"Removed {status_vote_delete_result.deleted_count} status votes for deleted paper {paper_id}")
+        action_delete_result = user_actions_collection.delete_many({"paperId": obj_id})
+        print(f"Removed {action_delete_result.deleted_count} actions from user_actions for deleted paper {paper_id}")
 
         # --- Delete from main collection ---
         delete_result = papers_collection.delete_one({"_id": obj_id})

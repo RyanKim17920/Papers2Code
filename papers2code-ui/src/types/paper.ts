@@ -9,7 +9,7 @@ export interface Author {
 }
 
 export enum ImplementationStatus {
-    NotStarted = 'Not Started',
+    //NotStarted = 'Not Started',
     ContactingAuthor = 'Contacting Author',
     DefiningRequirements = 'Defining Requirements',
     ImplementationInProgress = 'Implementation In Progress',

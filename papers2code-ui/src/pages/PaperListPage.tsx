@@ -1,5 +1,5 @@
 import React from 'react';
-import { usePaperList } from '../hooks/usePaperList';
+import { usePaperList, SortPreference } from '../hooks/usePaperList';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ListControls from '../components/PaperListComponents/ListControls';
 import PaperListDisplay from '../components/PaperListComponents/PaperListDisplay';
@@ -47,7 +47,7 @@ const PaperListPage: React.FC = () => {
         <ListControls
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
-          activeSortDisplay={activeSortDisplay}
+          activeSortDisplay={activeSortDisplay as SortPreference | 'relevance'}
           onSortChange={handleSortChange}
           isSearchActive={isAnySearchActive} // <-- Use combined check
           onToggleAdvancedSearch={toggleAdvancedSearch} // <-- Pass handler
