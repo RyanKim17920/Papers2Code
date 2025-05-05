@@ -151,30 +151,41 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const canVote = !!currentUser;
     const isOwner = !!currentUser?.isOwner;
 
-    // --- UPDATED: Implementability Notice and Voting UI ---
     const userVote = paper.currentUserImplementabilityVote; // 'up', 'down', 'none'
     const status = paper.nonImplementableStatus;
-    const confirmedBy = paper.nonImplementableConfirmedBy; // 'community', 'owner', null
+    const confirmedBy = paper.nonImplementableConfirmedBy; // Needed for owner confirmation check
 
+    // --- UPDATED: Implementability Notice Logic ---
     let implementabilityNotice = null;
     if (status === 'confirmed_non_implementable') {
-        // --- SIMPLIFIED NOTICE ---
+        // Notice for confirmed NON-implementable
         implementabilityNotice = (
             <p className="not-implementable-notice confirmed">
                 This paper has been confirmed as likely not suitable for implementation.
-                <br/>
-                Overall Status: {ImplementationStatus.ConfirmedNonImplementable}
+                {/* REMOVED: Overall Status line */}
             </p>
         );
     } else if (status === 'flagged_non_implementable') {
+        // Notice for flagged non-implementable (prompting for votes)
         implementabilityNotice = (
             <div className="not-implementable-notice flagged">
                 <p>This paper has been flagged as potentially non-implementable. Please vote:</p>
+                {/* REMOVED: Overall Status line */}
             </div>
         );
+    } else if (status === 'implementable' && confirmedBy === 'owner') {
+        // --- NEW: Notice for owner-confirmed IMPLEMENTABLE ---
+        implementabilityNotice = (
+            <p className="implementable-notice owner-confirmed">
+                ✅ Status confirmed as implementable by owner.
+                {/* REMOVED: Overall Status line */}
+            </p>
+        );
     } else {
-         // Implementable status - show main status from paper object
-         implementabilityNotice = <p className="implementable-notice">Overall Status: {paper.implementationStatus}</p>;
+         // Default notice for implementable (not explicitly confirmed by owner)
+         // No specific notice needed here unless desired. Can be null or a generic message.
+         // implementabilityNotice = <p className="implementable-notice">Status: Implementable</p>; // Example if needed
+         implementabilityNotice = null; // Keep it clean by default
     }
 
 
@@ -187,10 +198,13 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 {isRemoving && <p className="loading-message">Removing paper...</p>}
                 {isUpdatingStatus && <p className="loading-message">Updating status...</p>}
 
-                <h1>{paper.title}</h1>
-
+                <h1 className="paper-title">{paper.title}</h1>
                 {/* Display Implementability Status Notice */}
-                {implementabilityNotice}
+                {implementabilityNotice && ( // Only render div if notice exists
+                    <div className="status-notice-container">
+                        {implementabilityNotice}
+                    </div>
+                )}
 
                 <div className="paper-meta">
                     {/* ... existing meta details ... */}
@@ -216,69 +230,61 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         onStepUpdate={handleStepUpdate}
                     />
                 ) : (
-                     <p>Implementation tracking is disabled.</p>
+                    <p className="not-implementable-notice confirmed"> Progress Tracker is disabled for confirmed non-implementable papers. </p>
                 )}
 
                  {/* --- Implementability Actions --- */}
                  <div className="paper-actions"> {/* Outer container */}
-                    {/* --- HIDE voting if owner forced implementable --- */}
-                    {!(paper.nonImplementableStatus === 'implementable' && paper.nonImplementableConfirmedBy === 'owner') &&
-                         status !== 'confirmed_non_implementable' && (
+                    {/* --- UPDATED CONDITION: Only show voting if status is 'flagged' --- */}
+                    {status === 'flagged_non_implementable' && (
                         <div className="implementability-actions"> {/* Inner container for voting/flagging */}
                             <h4>Non-Implementability Voting</h4>
                             <p className="voting-description">
                                 Vote here if you believe this paper is non-code-related, impractical, or impossible to implement due to missing details, unclear methods, or other factors.
                             </p>
 
-                            {/* Voting UI (Show when flagged or initially implementable) */}
-                            {status !== 'confirmed_non_implementable' && (
-                                <div className="user-implementability-actions">
-                                    {canVote ? (
-                                        <>
-                                            {/* Thumbs Up Button (Confirm Non-Implementable) */}
+                            {/* Voting UI */}
+                            <div className="user-implementability-actions">
+                                {canVote ? (
+                                    <>
+                                        {/* Thumbs Up Button (Confirm Non-Implementable) */}
+                                        <button
+                                            onClick={() => handleImplementabilityAction('vote_up')}
+                                            disabled={isUpdatingStatus || userVote === 'up'}
+                                            className={`vote-button thumbs-up ${userVote === 'up' ? 'voted' : ''}`}
+                                            title="Confirm non-implementable" // Title simplified as it only shows when flagged
+                                        >
+                                            <FaThumbsUp />
+                                            <span className="vote-count">{paper.nonImplementableVotes}</span>
+                                        </button>
+
+                                        {/* Thumbs Down Button (Dispute Non-Implementable) */}
+                                        <button
+                                            onClick={() => handleImplementabilityAction('vote_down')}
+                                            disabled={isUpdatingStatus || userVote === 'down'}
+                                            className={`vote-button thumbs-down ${userVote === 'down' ? 'voted' : ''}`}
+                                            title="Dispute non-implementability (vote as implementable)"
+                                        >
+                                            <FaThumbsDown />
+                                            <span className="vote-count">{paper.disputeImplementableVotes}</span>
+                                        </button>
+
+                                        {/* Retract Vote Button */}
+                                        {userVote !== 'none' && ( // Show retract if user has voted (up or down)
                                             <button
-                                                onClick={() => handleImplementabilityAction('vote_up')}
-                                                disabled={isUpdatingStatus || userVote === 'up'}
-                                                className={`vote-button thumbs-up ${userVote === 'up' ? 'voted' : ''}`}
-                                                title={status === 'implementable' ? "Flag as non-implementable" : "Confirm non-implementable"}
+                                                onClick={() => handleImplementabilityAction('retract')}
+                                                disabled={isUpdatingStatus}
+                                                className="button-link retract-vote-button"
                                             >
-                                                <FaThumbsUp />
-                                                <span className="vote-count">{paper.nonImplementableVotes}</span>
+                                                Retract Vote
                                             </button>
-
-                                            {/* Thumbs Down Button (Dispute Non-Implementable - only show if flagged) */}
-                                            {status === 'flagged_non_implementable' && (
-                                                <button
-                                                    onClick={() => handleImplementabilityAction('vote_down')}
-                                                    disabled={isUpdatingStatus || userVote === 'down'}
-                                                    className={`vote-button thumbs-down ${userVote === 'down' ? 'voted' : ''}`}
-                                                    title="Dispute non-implementability (vote as implementable)"
-                                                >
-                                                    <FaThumbsDown />
-                                                    <span className="vote-count">{paper.disputeImplementableVotes}</span>
-                                                </button>
-                                            )}
-
-                                            {/* Retract Vote Button */}
-                                            {userVote !== 'none' && status === 'flagged_non_implementable' && (
-                                                <button
-                                                    onClick={() => handleImplementabilityAction('retract')}
-                                                    disabled={isUpdatingStatus}
-                                                    className="button-link retract-vote-button"
-                                                >
-                                                    Retract Vote
-                                                </button>
-                                            )}
-                                        </>
-                                    ) : (
-                                        <p><small>Login to vote on implementability status.</small></p>
-                                    )}
-                                </div>
-                            )}
-                            {status === 'confirmed_non_implementable' && !isOwner && (
-                                <p><small>Status confirmed. Voting disabled.</small></p>
-                            )}
-                        </div> // REMOVED comment here
+                                        )}
+                                    </>
+                                ) : (
+                                    <p><small>Login to vote on implementability status.</small></p>
+                                )}
+                            </div>
+                        </div>
                     )}
 
                     {isOwner && (
