@@ -80,13 +80,30 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
     // --- UPDATED: Handle Implementability Actions (Voting, Owner Set) ---
     const handleImplementabilityAction = async (
-        // Action type now includes 'vote_up', 'vote_down' for clarity
         action: 'vote_up' | 'vote_down' | 'retract' | 'owner_set_true' | 'owner_set_false'
     ) => {
-        if (!paper || !paperId || isUpdatingStatus) return;
+        console.log(`handleImplementabilityAction called with action: ${action}, paperId: ${paperId}, isUpdatingStatus: ${isUpdatingStatus}`);
+
+        if (!paper || !paperId || isUpdatingStatus) {
+            console.log("handleImplementabilityAction: Guard clause prevented execution (paper, paperId, or isUpdatingStatus)");
+            return;
+        }
+
+        // --- Add Confirmation for Owner Actions ---
+        if (action === 'owner_set_true') {
+            if (!window.confirm(`Are you sure you want to reset the status of "${paper.title}" to IMPLEMENTABLE? This will clear all community flags and votes.`)) {
+                return; // Abort if user cancels
+            }
+        } else if (action === 'owner_set_false') {
+             if (!window.confirm(`Are you sure you want to force set the status of "${paper.title}" to NON-IMPLEMENTABLE? This will override community flags/votes.`)) {
+                return; // Abort if user cancels
+            }
+        }
+        // --- End Confirmation ---
 
         setUpdateError(null);
         setIsUpdatingStatus(true);
+        console.log("handleImplementabilityAction: Set isUpdatingStatus to true");
 
         try {
             let updatedPaper: Paper;
@@ -94,24 +111,28 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
             // Map frontend actions to backend API actions
             if (action === 'vote_up') {
-                // If paper is 'implementable', first vote is a 'flag' action
-                apiAction = paper.nonImplementableStatus === 'implementable' ? 'flag' : 'confirm';
+                apiAction = 'confirm';
             } else if (action === 'vote_down') {
                 apiAction = 'dispute';
             } else if (action === 'retract') {
                 apiAction = 'retract';
             }
+            console.log(`handleImplementabilityAction: Mapped frontend action '${action}' to API action '${apiAction}'`);
 
             if (apiAction) { // User voting actions
                  if (!currentUser) {
                      throw new Error("You must be logged in to vote.");
                  }
+                 console.log(`handleImplementabilityAction: Calling flagImplementabilityInApi with paperId: ${paperId}, apiAction: ${apiAction}`);
                  updatedPaper = await flagImplementabilityInApi(paperId, apiAction);
             } else if (action === 'owner_set_true' && currentUser?.isOwner) { // Owner actions
+                console.log(`handleImplementabilityAction: Calling setImplementabilityInApi with paperId: ${paperId}, isImplementable: true`);
                 updatedPaper = await setImplementabilityInApi(paperId, true);
             } else if (action === 'owner_set_false' && currentUser?.isOwner) {
+                console.log(`handleImplementabilityAction: Calling setImplementabilityInApi with paperId: ${paperId}, isImplementable: false`);
                 updatedPaper = await setImplementabilityInApi(paperId, false);
             } else {
+                 console.error(`handleImplementabilityAction: Invalid action ('${action}') or insufficient permissions (isOwner: ${currentUser?.isOwner})`);
                  throw new Error("Invalid action or insufficient permissions.");
             }
             setPaper(updatedPaper);
@@ -121,6 +142,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             setUpdateError(err instanceof Error ? err.message : "Failed to update implementability status.");
         } finally {
             setIsUpdatingStatus(false);
+            console.log("handleImplementabilityAction: Set isUpdatingStatus to false in finally block");
         }
     };
 
@@ -235,39 +257,45 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
                  {/* --- Implementability Actions --- */}
                  <div className="paper-actions"> {/* Outer container */}
-                    {/* --- UPDATED CONDITION: Only show voting if status is 'flagged' --- */}
-                    {status === 'flagged_non_implementable' && (
+                    {/* --- FIX: Show voting if implementable OR flagged --- */}
+                    {(status === 'flagged_non_implementable' || (status === 'implementable' && confirmedBy !== 'owner'))  && (
                         <div className="implementability-actions"> {/* Inner container for voting/flagging */}
-                            <h4>Non-Implementability Voting</h4>
+                            <h4>{status === 'implementable' ? 'Flag Non-Implementable?' : 'Non-Implementability Voting'}</h4>
                             <p className="voting-description">
-                                Vote here if you believe this paper is non-code-related, impractical, or impossible to implement due to missing details, unclear methods, or other factors.
+                                {status === 'implementable'
+                                    ? 'Vote here if you believe this paper is non-code-related, impractical, or impossible to implement due to missing details, unclear methods, or other factors.'
+                                    : 'This paper has been flagged. Confirm or dispute the non-implementable status.'}
                             </p>
 
                             {/* Voting UI */}
                             <div className="user-implementability-actions">
                                 {canVote ? (
                                     <>
-                                        {/* Thumbs Up Button (Confirm Non-Implementable) */}
+                                        {/* Thumbs Up Button (Flag or Confirm Non-Implementable) */}
                                         <button
                                             onClick={() => handleImplementabilityAction('vote_up')}
                                             disabled={isUpdatingStatus || userVote === 'up'}
                                             className={`vote-button thumbs-up ${userVote === 'up' ? 'voted' : ''}`}
-                                            title="Confirm non-implementable" // Title simplified as it only shows when flagged
+                                            // --- FIX: Adjust title based on status --- 
+                                            title={status === 'implementable' ? 'Flag as non-implementable' : 'Confirm non-implementable'}
                                         >
                                             <FaThumbsUp />
                                             <span className="vote-count">{paper.nonImplementableVotes}</span>
                                         </button>
 
                                         {/* Thumbs Down Button (Dispute Non-Implementable) */}
-                                        <button
-                                            onClick={() => handleImplementabilityAction('vote_down')}
-                                            disabled={isUpdatingStatus || userVote === 'down'}
-                                            className={`vote-button thumbs-down ${userVote === 'down' ? 'voted' : ''}`}
-                                            title="Dispute non-implementability (vote as implementable)"
-                                        >
-                                            <FaThumbsDown />
-                                            <span className="vote-count">{paper.disputeImplementableVotes}</span>
-                                        </button>
+                                        {/* Only show dispute button if status is flagged, or if implementable AND user has voted up (to allow changing vote) */}
+                                        {(status === 'flagged_non_implementable' || (status === 'implementable' && userVote === 'up')) && (
+                                            <button
+                                                onClick={() => handleImplementabilityAction('vote_down')}
+                                                disabled={isUpdatingStatus || userVote === 'down'}
+                                                className={`vote-button thumbs-down ${userVote === 'down' ? 'voted' : ''}`}
+                                                title="Dispute non-implementability (vote as implementable)"
+                                            >
+                                                <FaThumbsDown />
+                                                <span className="vote-count">{paper.disputeImplementableVotes}</span>
+                                            </button>
+                                        )}
 
                                         {/* Retract Vote Button */}
                                         {userVote !== 'none' && ( // Show retract if user has voted (up or down)
@@ -301,10 +329,11 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                 </button>
                                 <button
                                     onClick={() => handleImplementabilityAction('owner_set_true')}
+                                    // Disable if already implementable (regardless of who confirmed)
                                     disabled={isUpdatingStatus || status === 'implementable'}
-                                    className="button-secondary" // Use secondary/neutral for setting implementable
+                                    className="button-secondary"
                                 >
-                                    Force Set Implementable
+                                    Reset to Implementable
                                 </button>
                             </div>
                             {/* Remove Paper */}

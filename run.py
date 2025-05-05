@@ -1,5 +1,5 @@
 import os
-from app import create_app # Import the factory function
+from papers2code_app import create_app # Import the factory function
 
 # Load environment variables (optional here if loaded in Config, but good practice)
 from dotenv import load_dotenv

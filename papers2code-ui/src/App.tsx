@@ -1,33 +1,35 @@
 // src/App.tsx
-import React, { useState, useEffect } from 'react'; // Add useState, useEffect
+import React, { useState, useEffect } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
 import logo from './images/papers2codelogo.png';
-import { UserProfile, checkCurrentUser, redirectToGitHubLogin, logoutUser } from './services/auth'; // Import auth functions/types
+import { UserProfile, checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './services/auth';
 import './App.css';
 
 function App() {
-  // State to hold user info and loading status
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
-  const [authLoading, setAuthLoading] = useState<boolean>(true); // Track initial auth check
+  const [authLoading, setAuthLoading] = useState<boolean>(true);
 
-  // Check login status when the app loads
+  // Check login status and fetch CSRF token when the app loads
   useEffect(() => {
-    const verifyUser = async () => {
+    const initializeApp = async () => {
       setAuthLoading(true);
+      await fetchAndStoreCsrfToken(); // Fetch and store the token
       const user = await checkCurrentUser();
       setCurrentUser(user);
       setAuthLoading(false);
     };
-    verifyUser();
-  }, []); // Run only once on initial mount
+    initializeApp();
+  }, []);
 
   // Handle Logout
   const handleLogout = async () => {
-    await logoutUser(); // Call API to clear backend session
-    setCurrentUser(null); // Clear frontend state
+    await logoutUser();
+    setCurrentUser(null);
+    localStorage.removeItem('csrfToken'); // Clear token on logout
   };
+
   return (
     <Router>
       <div className="app-container">
@@ -35,14 +37,13 @@ function App() {
           <Link to="/" className="logo-link">
             <img src={logo} alt="Papers To Code Community Logo" className="app-logo" />
           </Link>
-          <nav className="main-nav"> {/* Wrap nav elements */}
+          <nav className="main-nav">
             {/* Add other nav links here if needed */}
           </nav>
-          <div className="auth-section"> {/* Section for auth button/info */}
+          <div className="auth-section">
             {authLoading ? (
               <span className="auth-loading">Loading...</span>
             ) : currentUser ? (
-              // Logged In State
               <div className="user-info">
                 {currentUser.avatarUrl && (
                   <img
@@ -57,7 +58,6 @@ function App() {
                 </button>
               </div>
             ) : (
-              // Logged Out State
               <button onClick={redirectToGitHubLogin} className="auth-button connect-button">
                 Connect with GitHub
               </button>
@@ -68,12 +68,10 @@ function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<PaperListPage />} />
-            {/* Pass currentUser to PaperDetailPage */}
             <Route 
               path="/paper/:paperId" 
               element={<PaperDetailPage currentUser={currentUser} />} 
             />
-            {/* Note: No /auth/callback route needed on frontend if backend redirects home */}
             <Route path="*" element={<NotFoundPage />} />
           </Routes>
         </main>
@@ -86,9 +84,7 @@ function App() {
   );
 }
 
-// Simple 404 component (keep as is)
 const NotFoundPage: React.FC = () => {
-    // ... (no changes) ...
     return (
         <div style={{ textAlign: 'center', marginTop: '50px', width: '100vw' }}>
             <h1>404 - Page Not Found</h1>
