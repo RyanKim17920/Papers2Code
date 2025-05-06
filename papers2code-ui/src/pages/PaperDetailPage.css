@@ -13,7 +13,7 @@
   margin-left:5%;
   margin-right:5%;
 }
- 
+
  .back-link {
    display: inline-block;
    margin-bottom: 30px; /* More space below */
@@ -27,7 +27,7 @@
  .back-link::before { /* Add arrow visually */
      content: '← ';
  }
- 
+
  .paper-detail-page h1 {
    margin-top: 0;
    margin-bottom: 25px;
@@ -38,7 +38,7 @@
    font-weight: 600;
    line-height: 1.3;
  }
- 
+
  .paper-meta {
    margin-bottom: 30px;
    font-size: 0.95em;
@@ -49,20 +49,20 @@
    border-radius: var(--border-radius-md);
    border: 1px solid #d1f3e9; /* Border matching light bg */
  }
- 
+
  .paper-meta p {
    margin-bottom: 10px;
  }
  .paper-meta p:last-child {
      margin-bottom: 0;
  }
- 
+
  .paper-meta strong {
      color: var(--text-color);
      margin-right: 8px; /* More space after strong tag */
      font-weight: 500;
  }
- 
+
  .paper-meta a {
    color: var(--primary-color);
    text-decoration: none;
@@ -72,7 +72,7 @@
    text-decoration: underline; /* Underline links in meta for clarity */
    color: var(--primary-hover-color);
  }
- 
+
  .paper-abstract {
    margin-top: 30px;
    margin-bottom: 35px;
@@ -85,29 +85,13 @@
      font-size: 1.5em; /* Adjust size */
      font-weight: 600;
  }
- 
- .paper-actions {
-    /* General container for actions below the main content */
-    margin-top: 35px;
-    padding-top: 30px;
-    border-top: 1px solid var(--border-color);
-}
 
  /* Notice styling */
- implementable-notice {
-    /* General notice styling */
-    padding: 15px 20px;
-    border-radius: var(--border-radius-md);
-    margin-bottom: 30px;
-    font-size: 0.95em;
-    border: 1px solid; /* Base border */
-}
-
 .not-implementable-notice,
 .implementable-notice { /* Add style for implementable notice */
     padding: 15px 20px;
     border-radius: var(--border-radius-md);
-    margin-bottom: 20px;
+    margin-bottom: 20px; /* Adjusted from 30px */
     font-size: 0.95em;
     border: 1px solid;
     line-height: 1.5; /* Improve readability */
@@ -137,54 +121,28 @@
 /* --- Action Sections Styling --- */
 .paper-actions {
     margin-top: 40px;
-    /* Removed border/padding from outer container */
     display: flex;
     flex-direction: column;
     gap: 30px; /* Space between implementability and owner sections */
 }
 
-.implementability-actions,
-.owner-actions {
+.privileged-actions {
     padding: 25px; /* Increased padding */
     border-radius: var(--border-radius-lg); /* Slightly larger radius */
-    border: 1px solid var(--border-color);
+    border: 1px solid var(--danger-color, #e53935); /* Red border for danger zone */
+    background-color: #fff5f5; /* Very light red background */
 }
 
-.implementability-actions {
-    border-color: var(--warning-border-color, #ffecb3);
-    background-color: var(--card-alt-background-color); /* Use alt background */
-}
-
-.owner-actions {
-    border-color: var(--danger-color, #e53935);
-    background-color: var(--danger-light-color, #ffebee);
-}
-
-.implementability-actions h4,
-.owner-actions h3 {
+.privileged-actions h3 {
     margin-top: 0;
     margin-bottom: 25px; /* More space below heading */
     font-size: 1.3em; /* Larger heading */
     font-weight: 600;
     padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color-light);
+    border-bottom: 1px solid var(--danger-border-color, #ef9a9a); /* Use danger border color */
+    color: var(--danger-color); /* Red heading */
 }
 
-.owner-actions h3 {
-    color: var(--danger-dark-color, #c62828);
-    border-bottom-color: var(--danger-border-color, #ef9a9a);
-}
-
-/* NEW: Style for voting description */
-.voting-description {
-    font-size: 0.9em;
-    color: var(--text-muted-color);
-    margin-bottom: 20px; /* Space before the buttons */
-    line-height: 1.5;
-}
-
-.owner-implementability-actions,
-.user-implementability-actions,
 .remove-paper-action { /* Style remove action container */
     display: flex;
     flex-wrap: wrap;
@@ -192,251 +150,11 @@
     align-items: center; /* Align items vertically */
     margin-bottom: 20px; /* Space between action groups */
 }
-.owner-actions > div:last-child {
-    margin-bottom: 0; /* Remove margin from last group in owner actions */
+.privileged-actions > div:last-child {
+    margin-bottom: 0; /* Remove margin from last group in privileged actions */
 }
-
-
-/* --- NEW: Voting Button Styles --- */
-.vote-button {
-    display: inline-flex; /* Use inline-flex for icon + text */
-    align-items: center;
-    gap: 8px; /* Space between icon and count */
-    padding: 8px 12px;
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-md);
-    background-color: var(--button-secondary-bg);
-    color: var(--button-secondary-text);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 1em; /* Adjust size */
-}
-
-.vote-button:hover:not(:disabled) {
-    background-color: var(--button-secondary-hover-bg);
-    border-color: #adb5bd;
-}
-
-.vote-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-
-.vote-button svg {
-    font-size: 1.1em; /* Slightly larger icon */
-}
-
-.vote-button .vote-count {
-    font-weight: 500;
-    min-width: 10px; /* Ensure space for count */
-    text-align: right;
-}
-
-/* Style for voted state */
-.vote-button.voted {
-    border-color: var(--primary-color);
-    background-color: var(--primary-light-color); /* Use a light primary color */
-    color: var(--primary-dark-color); /* Use darker primary text */
-}
-.vote-button.thumbs-up.voted {
-    border-color: var(--success-color); /* Green border for voted up */
-    background-color: var(--success-light-color);
-    color: var(--success-dark-color);
-}
-.vote-button.thumbs-down.voted {
-     border-color: var(--danger-color); /* Red border for voted down */
-     background-color: var(--danger-light-color);
-     color: var(--danger-dark-color);
-}
-
-.retract-vote-button {
-    margin-left: 10px; /* Space before retract button */
-}
-
 
 /* --- Button Styles (Warning, Danger, Secondary, Link) --- */
-/* Assuming base styles exist in App.css or similar */
-/* Ensure these classes are defined with appropriate colors */
-
-.button-warning {
-    /* Styles for warning buttons */
-    background-color: var(--warning-color);
-    color: var(--warning-text-color);
-    border: 1px solid var(--warning-dark-color);
-}
-.button-warning:hover:not(:disabled) {
-    background-color: var(--warning-dark-color);
-    color: white;
-}
-
-.button-danger {
-    /* Styles for danger buttons */
-    background-color: var(--danger-color);
-    color: white; /* Ensure contrast */
-    border: 1px solid var(--danger-dark-color);
-}
-.button-danger:hover:not(:disabled) {
-    background-color: var(--danger-dark-color);
-}
-
-.button-secondary {
-    /* Styles for secondary buttons */
-    background-color: var(--button-secondary-bg);
-    color: var(--button-secondary-text);
-    border: 1px solid var(--border-color);
-}
-.button-secondary:hover:not(:disabled) {
-    background-color: var(--button-secondary-hover-bg);
-}
-
-.button-link {
-    /* Styles for link buttons */
-    background: none;
-    border: none;
-    color: var(--primary-color);
-    text-decoration: underline;
-    padding: 0;
-    font-size: 0.9em;
-    cursor: pointer;
-}
-.button-link:hover:not(:disabled) {
-    color: var(--primary-hover-color);
-}
-
-/* --- Other Styles --- */
-.owner-actions .warning-text {
-    margin-top: 5px; /* Reduced margin */
-    margin-left: 0; /* Align with button */
-    font-size: 0.9em;
-    color: var(--danger-dark-color, #c62828);
-    flex-basis: 100%; /* Allow text to wrap below button */
-}
-
-.loading-message, .update-error {
-    /* ... existing styles ... */
-    margin-bottom: 15px;
-    padding: 10px 15px;
-    border-radius: var(--border-radius-sm);
-}
-
-.loading-message, .update-error {
-    margin-bottom: 15px;
-    padding: 10px 15px;
-    border-radius: var(--border-radius-sm);
-}
-.loading-message {
-    background-color: var(--info-light-color);
-    color: var(--info-text-color);
-}
-.update-error {
-    background-color: var(--danger-light-color);
-    color: var(--danger-text-color);
-}
-
-small {
-    color: var(--text-muted-color);
-}
-
-/* NEW: Implementability & Owner Action Section Styling */
-.implementability-actions {
-  border-color: var(--border-color); /* Use standard border color */
-  background-color: var(--card-alt-background-color);
-  padding: 25px 30px; /* Adjust padding */
-}
-
-.implementability-actions h4 {
-  margin-top: 0;
-  margin-bottom: 15px; /* Reduced space below heading */
-  font-size: 1.2em; /* Slightly smaller heading */
-  font-weight: 600;
-  padding-bottom: 12px;
-  border-bottom: 1px solid var(--border-color-light);
-  color: var(--text-heading-color); /* Standard heading color */
-}
-
-/* Style for voting description */
-.voting-description {
-  font-size: 0.95em; /* Slightly larger description */
-  color: var(--text-muted-color);
-  margin-bottom: 25px; /* More space before the buttons */
-  line-height: 1.6;
-}
-
-.user-implementability-actions {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 12px; /* Slightly reduced gap */
-  align-items: center;
-  margin-bottom: 10px; /* Reduced margin */
-}
-
-/* --- Refined Voting Button Styles --- */
-.vote-button {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px; /* Reduced gap */
-  padding: 6px 14px; /* Adjusted padding */
-  border: 1px solid var(--border-color);
-  border-radius: 15px; /* More rounded buttons */
-  background-color: var(--background-color); /* Use main background */
-  color: var(--text-muted-color); /* Muted text color */
-  cursor: pointer;
-  transition: all 0.2s ease;
-  font-size: 0.9em; /* Slightly smaller font */
-}
-
-.vote-button:hover:not(:disabled) {
-  background-color: var(--button-secondary-hover-bg);
-  border-color: var(--primary-color); /* Highlight border on hover */
-  color: var(--text-color); /* Darker text on hover */
-}
-
-.vote-button:disabled {
-  opacity: 0.5; /* Make disabled more subtle */
-  cursor: not-allowed;
-}
-
-.vote-button svg {
-  font-size: 1em; /* Adjust icon size */
-  margin-bottom: -1px; /* Fine-tune icon alignment */
-}
-
-.vote-button .vote-count {
-  font-weight: 600; /* Bolder count */
-  font-size: 0.95em;
-  min-width: 12px;
-  text-align: center;
-  color: var(--text-color); /* Make count clearer */
-}
-
-/* Style for voted state */
-.vote-button.voted {
-  border-width: 1px; /* Keep border width consistent */
-  box-shadow: 0 0 0 1px var(--primary-color); /* Use box-shadow for outline */
-}
-.vote-button.thumbs-up.voted {
-  border-color: var(--success-color);
-  background-color: var(--success-light-color);
-  color: var(--success-dark-color);
-  box-shadow: 0 0 0 1px var(--success-color);
-}
-.vote-button.thumbs-down.voted {
-   border-color: var(--danger-color);
-   background-color: var(--danger-light-color);
-   color: var(--danger-dark-color);
-   box-shadow: 0 0 0 1px var(--danger-color);
-}
-/* Clearer text color for voted state */
-.vote-button.voted .vote-count {
-  color: inherit; /* Inherit color from parent (.voted) */
-}
-
-
-.retract-vote-button {
-  margin-left: 15px; /* More space before retract button */
-  font-size: 0.85em; /* Smaller retract button */
-}
-
 /* Warning Button (Yellow/Orange) */
 .button-warning {
     background-color: var(--warning-color);
@@ -446,12 +164,13 @@ small {
 .button-warning:hover:not(:disabled) {
     background-color: #e0a800; /* Darker warning */
     border-color: #e0a800;
+    color: white; /* Ensure contrast on hover */
 }
 
 /* Danger Button (Red) */
 .button-danger {
     background-color: var(--danger-color);
-    color: var(--danger-text-color);
+    color: var(--danger-text-color, white); /* Default to white */
     border: 1px solid var(--danger-color);
 }
 .button-danger:hover:not(:disabled) {
@@ -478,33 +197,292 @@ small {
     text-decoration: underline;
     padding: 0;
     font-size: 0.9em;
+    cursor: pointer;
 }
 .button-link:hover:not(:disabled) {
     color: var(--primary-hover-color);
 }
 
-/* Specific Owner Actions Styling */
-.owner-actions {
-    border-color: var(--danger-color); /* Red border for danger zone */
-    background-color: #fff5f5; /* Very light red background */
-}
-
-.owner-actions h3 {
-    color: var(--danger-color); /* Red heading */
-}
-
-.warning-text {
+/* --- Other Styles --- */
+.privileged-actions .warning-text {
+    margin-top: 10px; /* Adjusted margin */
+    margin-left: 0; /* Align with button */
     font-size: 0.85em;
-    color: var(--text-muted-color);
-    margin-top: 10px;
+    color: var(--text-muted-color); /* Use muted text color */
+    flex-basis: 100%; /* Allow text to wrap below button */
 }
 
+.loading-message, .update-error {
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    border-radius: var(--border-radius-sm);
+}
 .loading-message {
-    font-style: italic;
-    color: var(--text-muted-color);
-    margin-bottom: 15px;
+    background-color: var(--info-light-color);
+    color: var(--info-text-color);
+    font-style: italic; /* Keep italic style */
+}
+.update-error {
+    background-color: var(--danger-light-color);
+    color: var(--danger-text-color);
 }
 
-.update-error {
-    margin-bottom: 15px;
+small {
+    color: var(--text-muted-color);
+}
+
+/* --- Modal Styles --- */
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1000; /* Ensure it's on top */
+}
+
+.modal-content {
+    background-color: var(--card-background-color);
+    padding: 30px 40px;
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--box-shadow-lg);
+    min-width: 300px;
+    max-width: 500px;
+    max-height: 80vh;
+    overflow-y: auto;
+    position: relative; /* For close button positioning */
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--text-muted-color);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+}
+
+.modal-close-button:hover {
+    color: var(--text-color);
+}
+
+/* --- Tab Styles --- */
+.paper-tabs {
+    display: flex;
+    gap: 5px; /* Small gap between tabs */
+    margin-top: 30px; /* Space above tabs */
+    margin-bottom: 25px; /* Space below tabs */
+    border-bottom: 2px solid var(--border-color); /* Line below tabs */
+    overflow-y:hidden;
+}
+
+.tab-button {
+    padding: 10px 20px;
+    font-size: 1em;
+    font-weight: 500;
+    color: var(--text-muted-color);
+    background-color: transparent;
+    border: none;
+    border-bottom: 2px solid transparent; /* Placeholder for active state */
+    cursor: pointer;
+    transition: color 0.2s ease, border-color 0.2s ease;
+    margin-bottom: -2px; /* Overlap the container's border */
+}
+
+.tab-button:hover {
+    color: var(--text-color);
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+}
+/* Note: :active state might not be needed if .active class handles the visual state */
+/* .tab-button:active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color);
+    font-weight: 600;
+} */
+
+/* --- General Tab Pane Styling --- */
+.tab-pane-container {
+    margin-top: 15px;
+    padding: 20px;
+    background-color: var(--card-alt-background-color);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color-light);
+}
+
+/* Area for buttons/actions within a tab */
+.tab-action-area {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color-light);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+.tab-action-area p { /* Style login prompts etc. */
+    margin: 0;
+}
+.tab-action-area small {
+    color: var(--text-muted-color);
+}
+
+/* --- User Display List Styles (used in tabs/modals) --- */
+.user-display-list h3 {
+    margin-top: 0;
+    margin-bottom: 15px; /* Reduced margin */
+    font-size: 1.1rem; /* Slightly smaller */
+    color: var(--text-heading-color);
+    border-bottom: 1px solid var(--border-color-light); /* Lighter border */
+    padding-bottom: 8px;
+}
+
+.user-display-list ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    max-height: 50vh; /* Adjust max height */
+    overflow-y: auto;
+}
+
+.user-display-list li {
+    display: flex;
+    align-items: center;
+    padding: 8px 0px; /* Reduced padding */
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.user-display-list li:last-child {
+    border-bottom: none;
+}
+
+.user-avatar-small {
+    width: 30px; /* Smaller avatar */
+    height: 30px;
+    border-radius: 50%;
+    margin-right: 10px; /* Reduced margin */
+    object-fit: cover;
+    border: 1px solid var(--border-color);
+    background-color: #eee; /* Placeholder background */
+}
+/* Add a default avatar style if needed */
+img[src*="default/avatar.png"] { /* Basic selector for default */
+    background-color: #eee;
+}
+
+.user-display-list span {
+    font-size: 0.95rem;
+    color: var(--text-color);
+    font-weight: 500;
+}
+
+/* --- Voting Buttons (Consolidated) --- */
+.vote-button { /* General style for reuse */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px; /* Slightly larger padding */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.95em;
+    font-weight: 500;
+}
+.vote-button:hover:not(:disabled) {
+    background-color: var(--button-secondary-hover-bg);
+    border-color: #adb5bd;
+}
+.vote-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.vote-button svg {
+    font-size: 1.1em;
+}
+.vote-button .vote-count {
+    font-weight: 600;
+    min-width: 10px; /* Ensure space for count */
+    text-align: right;
+}
+
+/* Clickable Vote Count */
+.vote-count.clickable {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--text-muted-color);
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+.vote-count.clickable:hover {
+    color: var(--primary-color);
+    text-decoration-color: var(--primary-color);
+}
+
+/* Voted states */
+.vote-button.upvote-tab.voted { /* Specific to upvote button in tab */
+    background-color: var(--primary-light-color);
+    border-color: var(--primary-color);
+    color: var(--primary-dark-color);
+    font-weight: 600;
+}
+.vote-button.thumbs-up.voted {
+    border-color: var(--success-color);
+    background-color: var(--success-light-color);
+    color: var(--success-dark-color);
+    font-weight: 600;
+}
+.vote-button.thumbs-down.voted {
+     border-color: var(--danger-color);
+     background-color: var(--danger-light-color);
+     color: var(--danger-dark-color);
+     font-weight: 600;
+}
+
+.retract-vote-button { /* Style for retract link/button */
+    margin-left: 10px;
+    font-size: 0.9em;
+    /* Inherits button-link styles if it's a button, or style as needed */
+}
+
+/* --- Implementability Tab Specific Styles --- */
+.implementability-explanation {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: var(--background-color); /* Slightly different background */
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-color-light);
+}
+
+.implementability-explanation h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    color: var(--text-heading-color);
+}
+
+.implementability-explanation p {
+    font-size: 0.95em;
+    color: var(--text-muted-color);
+    line-height: 1.6;
+    margin: 0;
+}
+.implementability-explanation svg { /* Style icons in text */
+    vertical-align: middle;
+    margin: 0 2px; /* Fixed: Added semicolon */
+    font-size: 1.1em;
 }

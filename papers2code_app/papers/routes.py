@@ -679,3 +679,65 @@ def remove_paper(paper_id):
         print(f"Error removing paper {paper_id}: {e}")
         traceback.print_exc()
         return jsonify({"error": "An internal server error occurred during paper removal"}), 500
+
+
+@papers_bp.route('/<string:paper_id>/actions', methods=['GET'])
+@limiter.limit("100 per minute")
+def get_paper_actions(paper_id):
+    try:
+        try:
+            paper_obj_id = ObjectId(paper_id)
+        except InvalidId:
+            return jsonify({"error": "Invalid paper ID format"}), 400
+
+        papers_collection = get_papers_collection()
+        if papers_collection.count_documents({"_id": paper_obj_id}) == 0:
+            return jsonify({"error": "Paper not found"}), 404
+
+        user_actions_collection = get_user_actions_collection()
+        users_collection = get_users_collection()
+
+        actions = list(user_actions_collection.find(
+            {"paperId": paper_obj_id},
+            {"_id": 0, "userId": 1, "actionType": 1} # Project only needed fields
+        ))
+
+        if not actions:
+            return jsonify({"upvotes": [], "confirmations": [], "disputes": []}), 200
+
+        # Get unique user IDs involved
+        user_ids = list(set(action['userId'] for action in actions if 'userId' in action))
+
+        # Fetch user details in one go
+        user_details_list = list(users_collection.find(
+            {"_id": {"$in": user_ids}},
+            {"_id": 1, "username": 1, "avatar_url": 1} # Project needed user fields
+        ))
+        user_map = {str(user['_id']): {
+                        "userId": str(user['_id']),
+                        "username": user.get('username', 'Unknown'),
+                        "avatarUrl": user.get('avatar_url') # Match frontend UserProfile field
+                    } for user in user_details_list}
+
+        # Categorize actions
+        result = {"upvotes": [], "confirmations": [], "disputes": []}
+        for action in actions:
+            user_id_str = str(action.get('userId'))
+            user_info = user_map.get(user_id_str)
+            if not user_info:
+                continue # Skip if user details couldn't be found
+
+            action_type = action.get('actionType')
+            if action_type == 'upvote':
+                result["upvotes"].append(user_info)
+            elif action_type == 'confirm_non_implementable':
+                result["confirmations"].append(user_info)
+            elif action_type == 'dispute_non_implementable':
+                result["disputes"].append(user_info)
+
+        return jsonify(result), 200
+
+    except Exception as e:
+        print(f"Error getting actions for paper {paper_id}: {e}")
+        traceback.print_exc()
+        return jsonify({"error": "An internal server error occurred while fetching actions"}), 500

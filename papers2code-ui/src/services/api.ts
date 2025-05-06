@@ -1,6 +1,7 @@
 // src/services/api.ts
 import { Paper } from '../types/paper';
 import { getCsrfToken } from './auth'; // Import the helper function
+import { UserProfile } from './auth'; // Ensure UserProfile is imported
 
 const API_BASE_URL = 'http://localhost:5000';
 const PAPERS_PREFIX = '/api'; // Prefix for paper-related API calls
@@ -10,6 +11,14 @@ export interface AdvancedPaperFilters {
   endDate?: string;   // Expecting YYYY-MM-DD string format
   searchAuthors?: string;
 }
+
+// --- NEW: Type for the response from the /actions endpoint ---
+export interface PaperActionUsers {
+  upvotes: UserProfile[];
+  confirmations: UserProfile[];
+  disputes: UserProfile[];
+}
+// --- End NEW ---
 
 /**
  * Fetches papers from the backend API.
@@ -239,40 +248,26 @@ export const removePaperFromApi = async (paperId: string): Promise<void> => {
   }
 };
 
-// --- fetchAuthStatus (This seems redundant if checkCurrentUser exists in auth.ts) ---
-// Consider removing fetchAuthStatus if checkCurrentUser provides the needed info.
-/*
-export const fetchAuthStatus = async (): Promise<{ isAuthenticated: boolean; user: any | null }> => {
-  const url = `${API_BASE_URL}${AUTH_PREFIX}/status`; // Needs AUTH_PREFIX if kept
-  console.log("Fetching auth status from:", url);
+// --- NEW: Function to fetch users who performed actions on a paper ---
+export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActionUsers> => {
   try {
-      const response = await fetch(url, {
+      const response = await fetch(`${API_BASE_URL}/api/papers/${paperId}/actions`, {
           credentials: 'include',
       });
       if (!response.ok) {
-          if (response.status === 401) {
-               console.log("Auth status check: Not authenticated (401)");
-               return { isAuthenticated: false, user: null };
-          }
-          console.error(`Auth status check failed: ${response.status} ${response.statusText}`);
-          return { isAuthenticated: false, user: null };
+          const errorData = await response.json().catch(() => ({})); // Try to get error details
+          throw new Error(`API Error (${response.status}): ${errorData.error || response.statusText}`);
       }
-      const data = await response.json();
-      console.log("Auth status received:", data);
+      const data: PaperActionUsers = await response.json();
+      console.log(`Fetched action users for paper ${paperId}:`, data);
+      // Ensure arrays exist even if empty
+      data.upvotes = data.upvotes || [];
+      data.confirmations = data.confirmations || [];
+      data.disputes = data.disputes || [];
       return data;
   } catch (error) {
-      console.error("Error fetching auth status:", error);
-      return { isAuthenticated: false, user: null };
+      console.error(`Error fetching action users for paper ${paperId}:`, error);
+      throw error; // Re-throw to be handled by the component
   }
 };
-*/
-
-// --- redirectToGitHubLogin (This seems redundant if it exists in auth.ts) ---
-// Consider removing this if the one in auth.ts is used.
-/*
-export const redirectToGitHubLogin = () => {
-  const loginUrl = `${API_BASE_URL}${AUTH_PREFIX}/github/login`; // Needs AUTH_PREFIX if kept
-  console.log("Redirecting to GitHub login:", loginUrl);
-  window.location.href = loginUrl;
-};
-*/
+// --- End NEW ---
