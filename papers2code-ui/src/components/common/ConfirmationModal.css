@@ -1,0 +1,95 @@
+
+/* Styles adapted from PaperDetailPage.css modal styles */
+
+.modal-backdrop {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0, 0, 0, 0.6);
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    z-index: 1050; /* Ensure it's above other content, adjust if needed */
+    padding: 20px; /* Add padding for smaller screens */
+    box-sizing: border-box;
+}
+
+.modal-content {
+    background-color: var(--card-background-color);
+    padding: 25px 35px; /* Slightly adjusted padding */
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--box-shadow-lg);
+    min-width: 300px;
+    max-width: 550px; /* Slightly wider max-width */
+    width: 100%; /* Allow shrinking on small screens */
+    max-height: 90vh; /* Limit height */
+    overflow-y: auto;
+    position: relative;
+    display: flex;
+    flex-direction: column;
+}
+
+.modal-close-button {
+    position: absolute;
+    top: 10px;
+    right: 15px;
+    background: none;
+    border: none;
+    font-size: 1.8rem;
+    font-weight: bold;
+    color: var(--text-muted-color);
+    cursor: pointer;
+    padding: 0;
+    line-height: 1;
+    overflow-y: hidden;
+}
+
+.modal-close-button:hover {
+    color: var(--text-color);
+}
+
+.modal-content h2 {
+    margin-top: 0;
+    margin-bottom: 20px; /* Space below title */
+    font-size: 1.4em; /* Adjust title size */
+    font-weight: 600;
+    color: var(--text-heading-color);
+    padding-bottom: 10px;
+    border-bottom: 1px solid var(--border-color-light);
+}
+
+.modal-body {
+    margin-bottom: 25px; /* Space below content */
+    line-height: 1.6;
+    color: var(--text-color);
+    flex-grow: 1; /* Allow body to take available space */
+}
+
+.modal-body p {
+    margin-top: 0;
+}
+.modal-body p:last-child {
+    margin-bottom: 0;
+}
+
+
+.modal-actions {
+    display: flex;
+    justify-content: flex-end;
+    gap: 10px;
+    margin-top: auto; /* Push actions to the bottom */
+    padding-top: 15px; /* Space above actions */
+    border-top: 1px solid var(--border-color-light);
+}
+
+/* Assuming .btn and button variations (button-primary, button-secondary, button-danger etc.) are defined globally or in App.css */
+.modal-actions .btn {
+    min-width: 80px; /* Ensure buttons have a minimum width */
+}
+
+.modal-actions .btn:disabled {
+    opacity: 0.7;
+    cursor: not-allowed;
+}

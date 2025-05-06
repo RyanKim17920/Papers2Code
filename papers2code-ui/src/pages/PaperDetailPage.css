@@ -286,33 +286,50 @@ small {
 }
 
 .tab-button {
-    padding: 10px 20px;
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+    color: var(--text-muted-color);
     font-size: 1em;
     font-weight: 500;
-    color: var(--text-muted-color);
-    background-color: transparent;
-    border: none;
-    border-bottom: 2px solid transparent; /* Placeholder for active state */
-    cursor: pointer;
-    transition: color 0.2s ease, border-color 0.2s ease;
-    margin-bottom: -2px; /* Overlap the container's border */
+    border-bottom: 3px solid transparent; /* Thicker transparent border for spacing */
+    margin-bottom: -2px; /* Overlap container border */
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    white-space: nowrap; /* Prevent wrapping */
+    position: relative; /* Needed for potential pseudo-elements */
+    outline: none; /* Remove focus outline */
 }
 
-.tab-button:hover {
+.tab-button:hover:not(.active) {
     color: var(--text-color);
+    background-color: var(--background-hover-light); /* Subtle hover background */
+    outline:none;
 }
 
 .tab-button.active {
     color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
+    border-bottom-color: var(--primary-color); /* Keep the bottom border indicator */
     font-weight: 600;
+    /* Use a slightly more prominent background - adjust color as needed */
+    background-color: var(--primary-background-medium, #d1eaff); /* Example: slightly darker/more saturated blue */
+    outline:none;
 }
-/* Note: :active state might not be needed if .active class handles the visual state */
-/* .tab-button:active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color);
-    font-weight: 600;
-} */
+
+/* Optional: Add a top border radius for active tab for a more "tab-like" look */
+.tab-button.active {
+    border-top-left-radius: var(--border-radius-sm);
+    border-top-right-radius: var(--border-radius-sm);
+    outline:none;
+}
+
+
+
+/* Tab Content */
+.tab-content {
+    padding-top: 1rem; /* Add some space between tabs and content */
+}
+
 
 /* --- General Tab Pane Styling --- */
 .tab-pane-container {

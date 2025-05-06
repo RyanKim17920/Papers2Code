@@ -1,11 +1,8 @@
 // src/types/paper.ts (Review and adjust if needed)
 
 export interface Author {
-  name: string; // Backend now sends this structure
-}
-
-export interface Author {
-  name: string;
+    id: number;
+    name: string;
 }
 
 export enum ImplementationStatus {
@@ -20,38 +17,49 @@ export enum ImplementationStatus {
     NeedsCode = 'Needs Code',
     ConfirmedNonImplementable = 'Confirmed Non-Implementable', // <-- NEW STATUS
 }
+
 export interface ImplementationStep {
-  id: number;
-  name: string;
-  description: string;
-  status: 'pending' | 'in-progress' | 'completed' | 'skipped';
+    id: number;
+    order: number;
+    title: string;
+    description: string | null;
+    status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+    github_url: string | null;
+    created_at: string;
+    updated_at: string;
 }
 
 export interface Paper {
-  id: string;
-  pwcUrl?: string;
-  arxivId?: string;
-  title: string;
-  abstract: string;
-  authors: Author[];
-  urlAbs?: string;
-  urlPdf?: string;
-  date: string;
-  proceeding?: string;
-  tasks?: string[];
-  // --- Implementability Fields ---
-  isImplementable: boolean;
-  nonImplementableStatus: 'implementable' | 'flagged_non_implementable' | 'confirmed_non_implementable';
-  nonImplementableVotes: number; // Votes confirming non-implementability (Thumbs Up)
-  disputeImplementableVotes: number; // Votes disputing non-implementability (Thumbs Down)
-  currentUserImplementabilityVote: 'up' | 'down' | 'none'; // <-- CHANGED: Use 'up'/'down' for frontend state
-  nonImplementableConfirmedBy: 'community' | 'owner' | null; // <-- NEW: Track confirmation source
-  // --- End Implementability Fields ---
-  implementationStatus: ImplementationStatus | string; // Overall status (will include ConfirmedNonImplementable)
-  implementationSteps: ImplementationStep[];
-  upvoteCount: number;
-  currentUserVote: 'up' | 'none';
+    id: number;
+    title: string;
+    abstract: string | null;
+    authors: Author[] | null;
+    arxivId: string | null;
+    urlAbs: string | null;
+    urlPdf: string | null;
+    proceeding: string | null;
+    date: string | null; // Consider using Date type after fetching
+    tags: string[] | null;
+    pwcUrl: string | null;
+    ownerId: number | null; // Added ownerId
+    implementationStatus: string | null;
+    implementationNotes: string | null;
+    implementationSteps: ImplementationStep[] | null;
+    isImplementable: boolean;
+    nonImplementableStatus: 'implementable' | 'flagged_non_implementable' | 'confirmed_non_implementable';
+    nonImplementableReason: string | null;
+    nonImplementableConfirmedBy: string | null;
+    upvoteCount: number;
+    nonImplementableVotes: number;
+    disputeImplementableVotes: number;
+    currentUserVote: 'up' | 'none';
+    currentUserImplementabilityVote: 'up' | 'down' | 'none'; // 'up' = flagged non-implementable, 'down' = disputed flag
+    created_at: string;
+    updated_at: string;
 }
+
+// Define the specific actions for implementability voting (matching backend)
+export type ImplementabilityAction = 'confirm' | 'dispute' | 'retract';
 
 export interface PaperSummary {
     id: string;
