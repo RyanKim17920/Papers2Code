@@ -1,7 +1,6 @@
 /* src/components/ProgressTracker.css */
 
 .progress-tracker {
-margin-top: 35px;
 padding-top: 25px;
 border-top: 1px solid var(--border-color);
 }

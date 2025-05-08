@@ -40,7 +40,7 @@
  }
 
  .paper-meta {
-   margin-bottom: 30px;
+   margin-bottom: 30px; /* Standardized bottom margin */
    font-size: 0.95em;
    line-height: 1.7;
    color: var(--text-muted-color);
@@ -75,7 +75,7 @@
 
  .paper-abstract {
    margin-top: 30px;
-   margin-bottom: 35px;
+   margin-bottom: 30px; /* Standardized bottom margin */
    line-height: 1.75; /* More line height for abstract */
    color: var(--text-color);
  }
@@ -127,31 +127,45 @@
 }
 
 .privileged-actions {
-    padding: 25px; /* Increased padding */
+    padding: 25px;
+    padding-top: 15px; /* Reduced top padding */
     border-radius: var(--border-radius-lg); /* Slightly larger radius */
     border: 1px solid var(--danger-color, #e53935); /* Red border for danger zone */
     background-color: #fff5f5; /* Very light red background */
+    display: flex; /* Use flexbox for gap */
+    flex-direction: column;
+    gap: 15px; /* Reduced gap between action groups */
 }
 
 .privileged-actions h3 {
-    margin-top: 0;
-    margin-bottom: 25px; /* More space below heading */
-    font-size: 1.3em; /* Larger heading */
-    font-weight: 600;
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--danger-border-color, #ef9a9a); /* Use danger border color */
-    color: var(--danger-color); /* Red heading */
+    margin-top: 0; /* Remove top margin from main header */
+    margin-bottom: 20px; /* Space below main header */
+    padding-bottom: 15px; /* Space below border */
+    border-bottom: 1px solid var(--danger-light-color, #ffcdd2); /* Lighter border */
+    font-size: 1.4em;
+    color: var(--danger-dark-color, #c62828);
 }
 
-.remove-paper-action { /* Style remove action container */
-    display: flex;
-    flex-wrap: wrap;
-    gap: 15px;
-    align-items: center; /* Align items vertically */
-    margin-bottom: 20px; /* Space between action groups */
+.owner-action-group {
+    padding: 15px; /* Add some internal padding */
+    background-color: rgba(255, 255, 255, 0.5); /* Slightly whiter background */
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--danger-light-color, #ffcdd2);
 }
-.privileged-actions > div:last-child {
-    margin-bottom: 0; /* Remove margin from last group in privileged actions */
+
+.owner-action-group h4 {
+    margin-top: 0; /* Remove top margin */
+    margin-bottom: 15px; /* Space below header */
+    font-size: 1.1em;
+    color: var(--text-heading-color);
+}
+
+.owner-action-group .btn + .btn {
+    margin-left: 10px; /* Space between buttons if they are inline */
+}
+
+.owner-action-group .warning-text {
+    margin-top: 15px; /* Consistent space above warning text */
 }
 
 /* --- Button Styles (Warning, Danger, Secondary, Link) --- */
@@ -279,8 +293,8 @@ small {
 .paper-tabs {
     display: flex;
     gap: 5px; /* Small gap between tabs */
-    margin-top: 30px; /* Space above tabs */
-    margin-bottom: 25px; /* Space below tabs */
+    /* margin-top: 30px; */ /* Removed margin-top */
+    margin-bottom: 30px; /* Standardized space below tabs */
     border-bottom: 2px solid var(--border-color); /* Line below tabs */
     overflow-y:hidden;
 }
@@ -323,21 +337,23 @@ small {
     outline:none;
 }
 
-
-
-/* Tab Content */
-.tab-content {
-    padding-top: 1rem; /* Add some space between tabs and content */
-}
-
-
 /* --- General Tab Pane Styling --- */
 .tab-pane-container {
-    margin-top: 15px;
-    padding: 20px;
+    padding: 25px;
+    padding-top: 0; /* Removed top padding to reduce space above tab content */
     background-color: var(--card-alt-background-color);
     border-radius: var(--border-radius-md);
     border: 1px solid var(--border-color-light);
+}
+
+/* Ensure ProgressTracker container doesn't add extra space */
+.tab-pane-container > .progress-tracker-container { /* Assuming a wrapper div */
+    margin-top: 0;
+    padding-top: 0;
+}
+/* Or target ProgressTracker directly if no wrapper */
+.tab-pane-container > div:first-child > .progress-tracker { /* Example selector */
+     margin-top: 0;
 }
 
 /* Area for buttons/actions within a tab */

@@ -153,7 +153,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         className={`tab-button ${activeTab === 'admin' ? 'active' : ''}`}
                         onClick={() => setActiveTab('admin')}
                     >
-                        Admin Actions
+                        Admin Actions 
                     </button>
                 )}
             </div>
@@ -168,7 +168,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                      <div className="tab-pane-container">
                         {/* Metadata Section */}
                         <div className="paper-meta">
-                             <h3>Metadata</h3>
+                            
                             <p>
                                 <strong>Authors:</strong> {paper.authors?.map((a: Author) => a.name).join(', ') || 'N/A'}
                             </p>
@@ -176,6 +176,13 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                 <strong>Date:</strong> {paper.date ? new Date(paper.date).toLocaleDateString() : 'N/A'}
                                 {paper.proceeding && <span> | <strong>Proceeding:</strong> {paper.proceeding}</span>}
                             </p>
+                            {paper.arxivId && <p><strong>ArXiv ID:</strong> {paper.arxivId}</p>}
+                            <p>
+                                {paper.urlAbs && <a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">Abstract Link</a>}
+                                {paper.urlPdf && <> | <a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">PDF Link</a></>}
+                                {paper.pwcUrl && <> | <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">PapersWithCode</a></>}
+                            </p>
+                            {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}
                             <p>
                                 <strong>Status:</strong>
                                 <span className={`status ${getStatusClass(paper.implementationStatus)}`}>
@@ -183,14 +190,9 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                 </span>
                             </p>
                             <p>
-                                {paper.urlAbs && <a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">Abstract Link</a>}
-                                {paper.urlPdf && <> | <a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">PDF Link</a></>}
-                                {paper.pwcUrl && <> | <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">PapersWithCode</a></>}
-                                {paper.arxivId && <> | <a href={`https://arxiv.org/abs/${paper.arxivId}`} target="_blank" rel="noopener noreferrer">arXiv:{paper.arxivId}</a></>}
-                            </p>
-                             <p>
                                 <strong>Upvotes:</strong> {paper.upvoteCount}
                             </p>
+                             
                         </div>
 
                         
@@ -206,7 +208,6 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 {/* Implementation Details Tab */}
                 {activeTab === 'details' && (
                     <div className="tab-pane-container">
-                        <h3>Implementation Progress</h3>
                         <ProgressTracker
                             steps={paper.implementationSteps || []}
                             paperId={String(paper.id)} // Convert number to string
@@ -267,7 +268,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             <p>
                                 Use <FaThumbsUp color="var(--success-color)" /> if you think this paper <strong>cannot</strong> be reasonably implemented (e.g., requires unavailable hardware, data, or is underspecified).
                                 Use <FaThumbsDown color="var(--danger-color)" /> if you disagree with a non-implementable flag.
-                                The paper owner can confirm the status based on community feedback.
+                                The paper admins can confirm the status based on community feedback.
                             </p>
                         </div>
                         <div className="tab-action-area">
@@ -318,7 +319,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     </div>
                 )}
 
-                 {/* Admin Actions Tab */}
+                 {/* Owner Actions Tab */}
                  {activeTab === 'admin' && isOwner && (
                      <div className="tab-pane-container">
                         <div className="paper-actions privileged-actions">

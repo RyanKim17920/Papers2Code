@@ -14,8 +14,8 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, paperId, onSte
   const handleStatusChange = (stepId: number, currentStatus: ImplementationStep['status']) => {
     // Simple cycle for demo: pending -> in-progress -> completed -> skipped -> pending
     let nextStatus: ImplementationStep['status'] = 'pending';
-    if (currentStatus === 'pending') nextStatus = 'in-progress';
-    else if (currentStatus === 'in-progress') nextStatus = 'completed';
+    if (currentStatus === 'pending') nextStatus = 'in_progress';
+    else if (currentStatus === 'in_progress') nextStatus = 'completed';
     else if (currentStatus === 'completed') nextStatus = 'skipped';
     else if (currentStatus === 'skipped') nextStatus = 'pending';
 

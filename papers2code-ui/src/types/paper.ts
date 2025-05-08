@@ -56,6 +56,7 @@ export interface Paper {
     currentUserImplementabilityVote: 'up' | 'down' | 'none'; // 'up' = flagged non-implementable, 'down' = disputed flag
     created_at: string;
     updated_at: string;
+    tasks?: string[]; // Add optional tasks property
 }
 
 // Define the specific actions for implementability voting (matching backend)
