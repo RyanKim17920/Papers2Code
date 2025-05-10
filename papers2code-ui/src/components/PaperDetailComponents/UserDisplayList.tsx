@@ -36,7 +36,7 @@ export const UserDisplayList: React.FC<UserDisplayListProps> = ({
                             <UserAvatar
                                 avatarUrl={user.avatarUrl}
                                 username={user.username}
-                                className="user-avatar-small"
+                                className="avatar-sm"
                             />
                             <span>{user.username}</span>
                         </li>

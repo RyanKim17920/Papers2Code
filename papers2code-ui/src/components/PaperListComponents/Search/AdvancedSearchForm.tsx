@@ -1,7 +1,7 @@
 import React from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
-import { AdvancedPaperFilters } from '../../services/api';
+import { AdvancedPaperFilters } from '../../../services/api';
 import './AdvancedSearchForm.css';
 
 

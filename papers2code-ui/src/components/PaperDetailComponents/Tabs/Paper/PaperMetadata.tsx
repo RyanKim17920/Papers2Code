@@ -1,8 +1,8 @@
 import React from 'react';
-import { Paper } from '../../types/paper'; // Assuming Paper type is defined
-import { getStatusClass } from '../../utils/statusUtils'; // Assuming you'll create this
+import { Paper } from '../../../../types/paper'; // Assuming Paper type is defined
+import { getStatusClass } from '../../../../utils/statusUtils'; // Assuming you'll create this
 import './PaperMetadata.css';
-import { Author } from '../../types/paper';
+import { Author } from '../../../../types/paper';
 
 interface PaperMetadataProps {
     paper: Paper;

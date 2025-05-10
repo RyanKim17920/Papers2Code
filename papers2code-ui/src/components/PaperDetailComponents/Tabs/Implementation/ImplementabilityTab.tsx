@@ -1,11 +1,11 @@
 import React from 'react';
-import { Paper } from '../../types/paper'; // Corrected import path
-import { UserProfile } from '../../services/auth'; // Added import for UserProfile
-import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from './VotingButtons';
-import { UserDisplayList } from './UserDisplayList'; // Named import
+import { Paper } from '../../../../types/paper'; // Corrected import path
+import { UserProfile } from '../../../../services/auth'; // Added import for UserProfile
+import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
+import { UserDisplayList } from '../../UserDisplayList'; // Named import
 import './ImplementabilityTab.css';
 // import { ActionUsers } from '../../hooks/usePaperDetail'; // Remove this line
-import type { PaperActionUsers } from '../../services/api'; // Add this line
+import type { PaperActionUsers } from '../../../../services/api'; // Add this line
 
 
 interface ImplementabilityTabProps {

@@ -1,6 +1,6 @@
 import React from 'react';
 import ProgressTracker from './ProgressTracker'; // Assuming this is correctly pathed
-import { Paper } from '../../types/paper';
+import { Paper } from '../../../../types/paper';
 
 interface DetailsTabProps {
     paper: Paper;

@@ -8,14 +8,14 @@ import { UserProfile } from '../services/auth';
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmationModal from '../components/common/ConfirmationModal';
 
-import PaperMetadata from '../components/PaperDetailComponents/PaperMetadata';
-import PaperAbstract from '../components/PaperDetailComponents/PaperAbstract';
-import ImplementabilityNotice from '../components/PaperDetailComponents/ImplementabilityNotice';
+import PaperMetadata from '../components/PaperDetailComponents/Tabs/Paper/PaperMetadata';
+import PaperAbstract from '../components/PaperDetailComponents/Tabs/Paper/PaperAbstract';
+import ImplementabilityNotice from '../components/PaperDetailComponents/Tabs/Implementation/ImplementabilityNotice';
 import PaperTabs from '../components/PaperDetailComponents/PaperTabs';
-import DetailsTab from '../components/PaperDetailComponents/DetailsTab';
-import { UpvotesTab } from '../components/PaperDetailComponents/UpvotesTab'; // Named import
-import { ImplementabilityTab } from '../components/PaperDetailComponents/ImplementabilityTab'; // Named import
-import { OwnerActions } from '../components/PaperDetailComponents/OwnerActions'; // Named import
+import DetailsTab from '../components/PaperDetailComponents/Tabs/Implementation/DetailsTab';
+import { UpvotesTab } from '../components/PaperDetailComponents/Tabs/Upvote/UpvotesTab'; // Named import
+import { ImplementabilityTab } from '../components/PaperDetailComponents/Tabs/Implementation/ImplementabilityTab'; // Named import
+import { OwnerActions } from '../components/PaperDetailComponents/Tabs/Admin/OwnerActions'; // Named import
 
 import './PaperDetailPage.css';
 

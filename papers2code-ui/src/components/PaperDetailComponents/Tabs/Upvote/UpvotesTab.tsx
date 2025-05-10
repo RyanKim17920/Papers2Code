@@ -1,16 +1,16 @@
 import React from 'react';
-import { Paper } from '../types'; // Corrected import path
-import { UserProfile } from '../services/auth';
-import { VoteButton, RetractVoteButton, FaArrowUp } from './VotingButtons';
-import { UserDisplayList } from './UserDisplayList'; // Named import
-import { ActionUsers } from '../hooks/usePaperDetail';
+import { Paper } from '../../../../types/paper'; // Corrected import path
+import { UserProfile } from '../../../../services/auth'; // Corrected import path
+import { VoteButton, RetractVoteButton, FaArrowUp } from '../../VotingButtons';
+import { UserDisplayList } from '../../UserDisplayList'; // Named import
+import type { PaperActionUsers } from '../../../../services/api'; // Add this line
 
 interface UpvotesTabProps {
     paper: Paper;
     currentUser: UserProfile | null;
     isVoting: boolean;
     handleUpvote: (voteType: 'up' | 'none') => void;
-    actionUsers: ActionUsers | null;
+    actionUsers: PaperActionUsers | null;
     isLoadingActionUsers: boolean;
     actionUsersError: string | null;
 }

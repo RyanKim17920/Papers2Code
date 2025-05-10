@@ -28,7 +28,7 @@
     border-bottom: none;
 }
 
-.user-avatar-small {
+.avatar-sm { /* Was .user-avatar-small */
     width: 30px; /* Smaller avatar */
     height: 30px;
     border-radius: 50%;

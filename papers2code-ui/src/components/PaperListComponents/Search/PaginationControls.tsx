@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import getVisiblePages from '../../functions/getVisiblePages'; // Assuming path
+import getVisiblePages from '../../../functions/getVisiblePages'; // Assuming path
 
 interface PaginationControlsProps {
   currentPage: number;

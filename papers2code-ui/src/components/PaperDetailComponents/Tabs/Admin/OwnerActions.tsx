@@ -1,8 +1,8 @@
 import React, { useState } from 'react'; // Added useState
-import { Paper } from '../../types/paper'; // Corrected import path
-import { UserProfile } from '../../services/auth'; // Corrected import path
-import { updatePaperStatusInApi } from '../../services/api'; // Changed from apiService to a direct import
-import { getStatusClass } from '../../utils/statusUtils'; // Import shared getStatusClass
+import { Paper } from '../../../../types/paper'; // Corrected import path
+import { UserProfile } from '../../../../services/auth'; // Corrected import path
+import { updatePaperStatusInApi } from '../../../../services/api'; // Changed from apiService to a direct import
+import { getStatusClass } from '../../../../utils/statusUtils'; // Import shared getStatusClass
 import './OwnerActions.css';
 
 interface OwnerActionsProps {
