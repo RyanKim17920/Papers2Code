@@ -5,6 +5,7 @@ import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
 import logo from './images/papers2codelogo.png';
 import { UserProfile, checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './services/auth';
+import UserAvatar from './components/UserAvatar'; // Import the UserAvatar component
 import './App.css';
 
 function App() {
@@ -45,13 +46,11 @@ function App() {
               <span className="auth-loading">Loading...</span>
             ) : currentUser ? (
               <div className="user-info">
-                {currentUser.avatarUrl && (
-                  <img
-                    src={currentUser.avatarUrl}
-                    alt={`${currentUser.username}'s avatar`}
-                    className="user-avatar"
-                  />
-                )}
+                <UserAvatar
+                  avatarUrl={currentUser.avatarUrl}
+                  username={currentUser.username}
+                  className="user-avatar" // This class is defined in UserAvatar.css
+                />
                 <span className="username">{currentUser.username}</span>
                 <button onClick={handleLogout} className="auth-button logout-button">
                   Logout
@@ -68,9 +67,9 @@ function App() {
         <main className="app-main">
           <Routes>
             <Route path="/" element={<PaperListPage />} />
-            <Route 
-              path="/paper/:paperId" 
-              element={<PaperDetailPage currentUser={currentUser} />} 
+            <Route
+              path="/paper/:paperId"
+              element={<PaperDetailPage currentUser={currentUser} />}
             />
             <Route path="*" element={<NotFoundPage />} />
           </Routes>

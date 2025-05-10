@@ -21,7 +21,7 @@ export enum ImplementationStatus {
 export interface ImplementationStep {
     id: number;
     order: number;
-    title: string;
+    name: string;
     description: string | null;
     status: 'pending' | 'in_progress' | 'completed' | 'skipped';
     github_url: string | null;
@@ -30,7 +30,7 @@ export interface ImplementationStep {
 }
 
 export interface Paper {
-    id: number;
+    id: string;
     title: string;
     abstract: string | null;
     authors: Author[] | null;
@@ -71,3 +71,4 @@ export interface PaperSummary {
     implementationStatus: ImplementationStatus | string;
     isImplementable: boolean;
 }
+

@@ -1,0 +1,32 @@
+/* c:\Users\ilove\CODING\Papers-2-code\papers2code-ui\src\components\PaperDetailComponents\ImplementabilityNotice.css */
+/* Notice styling */
+.not-implementable-notice,
+.implementable-notice { /* Add style for implementable notice */
+    padding: 15px 20px;
+    border-radius: var(--border-radius-md);
+    margin-bottom: 20px; /* Adjusted from 30px */
+    font-size: 0.95em;
+    border: 1px solid;
+    line-height: 1.5; /* Improve readability */
+}
+
+.implementable-notice {
+    background-color: var(--info-light-color, #e7f3ff); /* Light blue/green */
+    border-color: var(--info-color, #007bff);
+    color: var(--info-dark-color, #0056b3);
+}
+
+.not-implementable-notice.flagged {
+    background-color: var(--warning-light-color, #fff8e1);
+    border-color: var(--warning-color, #ffc107);
+    color: var(--warning-dark-color, #b78100);
+}
+.not-implementable-notice.flagged p {
+    margin: 5px 0;
+}
+
+.not-implementable-notice.confirmed {
+    background-color: var(--danger-light-color, #ffebee);
+    border-color: var(--danger-color, #e53935);
+    color: var(--danger-dark-color, #c62828);
+}

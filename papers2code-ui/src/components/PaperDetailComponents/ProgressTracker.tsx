@@ -27,7 +27,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, paperId, onSte
       <h4>Implementation Progress</h4>
       <ul>
         {steps.map((step) => (
-          <li key={step.id} className={`step-item status-${step.status}`}>
+          <li key={step.id} className={`step-item stastus-${step.status}`}>
             <span className="step-name">{step.name}</span>
             <span className="step-description">{step.description}</span>
             <button

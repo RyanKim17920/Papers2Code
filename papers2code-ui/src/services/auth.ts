@@ -2,7 +2,7 @@
 
 // Define the expected user structure based on backend session data
 export interface UserProfile {
-    id: number;
+    id: string;
     username: string;
     avatarUrl?: string | null;
     name?: string | null;

@@ -1,0 +1,28 @@
+/* c:\Users\ilove\CODING\Papers-2-code\papers2code-ui\src\components\PaperDetailComponents\ImplementabilityTab.css */
+/* --- Implementability Tab Specific Styles --- */
+.implementability-explanation {
+    margin-bottom: 25px;
+    padding: 15px;
+    background-color: var(--background-color); /* Slightly different background */
+    border-radius: var(--border-radius-sm);
+    border: 1px solid var(--border-color-light);
+}
+
+.implementability-explanation h4 {
+    margin-top: 0;
+    margin-bottom: 10px;
+    font-size: 1.1em;
+    color: var(--text-heading-color);
+}
+
+.implementability-explanation p {
+    font-size: 0.95em;
+    color: var(--text-muted-color);
+    line-height: 1.6;
+    margin: 0;
+}
+.implementability-explanation svg { /* Style icons in text */
+    vertical-align: middle;
+    margin: 0 2px;
+    font-size: 1.1em;
+}

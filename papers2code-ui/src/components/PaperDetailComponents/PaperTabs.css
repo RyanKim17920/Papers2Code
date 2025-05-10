@@ -1,0 +1,84 @@
+/* c:\Users\ilove\CODING\Papers-2-code\papers2code-ui\src\components\PaperDetailComponents\PaperTabs.css */
+/* --- Tab Styles --- */
+.paper-tabs {
+    display: flex;
+    gap: 5px; /* Small gap between tabs */
+    /* margin-top: 30px; */ /* Removed margin-top */
+    margin-bottom: 30px; /* Standardized space below tabs */
+    border-bottom: 2px solid var(--border-color); /* Line below tabs */
+    overflow-y:hidden;
+}
+
+.tab-button {
+    padding: 0.8rem 1.5rem;
+    cursor: pointer;
+    border: none;
+    background-color: transparent;
+    color: var(--text-muted-color);
+    font-size: 1em;
+    font-weight: 500;
+    border-bottom: 3px solid transparent; /* Thicker transparent border for spacing */
+    margin-bottom: -2px; /* Overlap container border */
+    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
+    white-space: nowrap; /* Prevent wrapping */
+    position: relative; /* Needed for potential pseudo-elements */
+    outline: none; /* Remove focus outline */
+}
+
+.tab-button:hover:not(.active) {
+    color: var(--text-color);
+    background-color: var(--background-hover-light); /* Subtle hover background */
+    outline:none;
+}
+
+.tab-button.active {
+    color: var(--primary-color);
+    border-bottom-color: var(--primary-color); /* Keep the bottom border indicator */
+    font-weight: 600;
+    /* Use a slightly more prominent background - adjust color as needed */
+    background-color: var(--primary-background-medium, #d1eaff); /* Example: slightly darker/more saturated blue */
+    outline:none;
+}
+
+/* Optional: Add a top border radius for active tab for a more "tab-like" look */
+.tab-button.active {
+    border-top-left-radius: var(--border-radius-sm);
+    border-top-right-radius: var(--border-radius-sm);
+    outline:none;
+}
+
+/* --- General Tab Pane Styling --- */
+.tab-pane-container {
+    padding: 25px;
+    padding-top: 0; /* Removed top padding to reduce space above tab content */
+    background-color: var(--card-alt-background-color);
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--border-color-light);
+}
+
+/* Ensure ProgressTracker container doesn't add extra space */
+.tab-pane-container > .progress-tracker-container { /* Assuming a wrapper div */
+    margin-top: 0;
+    padding-top: 0;
+}
+/* Or target ProgressTracker directly if no wrapper */
+.tab-pane-container > div:first-child > .progress-tracker { /* Example selector */
+     margin-top: 0;
+}
+
+/* Area for buttons/actions within a tab */
+.tab-action-area {
+    margin-bottom: 25px;
+    padding-bottom: 20px;
+    border-bottom: 1px solid var(--border-color-light);
+    display: flex;
+    align-items: center;
+    gap: 15px;
+    flex-wrap: wrap;
+}
+.tab-action-area p { /* Style login prompts etc. */
+    margin: 0;
+}
+.tab-action-area small {
+    color: var(--text-muted-color);
+}

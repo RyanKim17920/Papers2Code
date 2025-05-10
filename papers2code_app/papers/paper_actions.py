@@ -152,12 +152,12 @@ def get_paper_actions(paper_id):
         # Fetch user details in one go
         user_details_list = list(users_collection.find(
             {"_id": {"$in": user_ids}},
-            {"_id": 1, "username": 1, "avatar_url": 1} # Project needed user fields
+            {"_id": 1, "username": 1, "avatarUrl": 1}
         ))
         user_map = {str(user['_id']): {
-                        "userId": str(user['_id']),
+                        "id": str(user['_id']), 
                         "username": user.get('username', 'Unknown'),
-                        "avatarUrl": user.get('avatar_url') # Match frontend UserProfile field
+                        "avatarUrl": user.get('avatarUrl')
                     } for user in user_details_list}
 
         # Categorize actions

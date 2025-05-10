@@ -1,0 +1,64 @@
+/* c:\Users\ilove\CODING\Papers-2-code\papers2code-ui\src\components\PaperDetailComponents\OwnerActions.css */
+/* --- Action Sections Styling --- */
+.paper-actions {
+    margin-top: 40px;
+    display: flex;
+    flex-direction: column;
+    gap: 30px; /* Space between implementability and owner sections */
+}
+
+.privileged-actions {
+    padding: 25px;
+    padding-top: 15px; /* Reduced top padding */
+    border-radius: var(--border-radius-lg); /* Slightly larger radius */
+    border: 1px solid var(--danger-color, #e53935); /* Red border for danger zone */
+    background-color: #fff5f5; /* Very light red background */
+    display: flex; /* Use flexbox for gap */
+    flex-direction: column;
+    gap: 15px; /* Reduced gap between action groups */
+}
+
+.privileged-actions h3 {
+    margin-top: 0; /* Remove top margin from main header */
+    margin-bottom: 20px; /* Space below main header */
+    padding-bottom: 15px; /* Space below border */
+    border-bottom: 1px solid var(--danger-light-color, #ffcdd2); /* Lighter border */
+    font-size: 1.4em;
+    color: var(--danger-dark-color, #c62828);
+}
+
+.owner-action-group {
+    padding: 15px; /* Add some internal padding */
+    background-color: rgba(255, 255, 255, 0.5); /* Slightly whiter background */
+    border-radius: var(--border-radius-md);
+    border: 1px solid var(--danger-light-color, #ffcdd2);
+}
+
+.owner-action-group h4 {
+    margin-top: 0; /* Remove top margin */
+    margin-bottom: 15px; /* Space below header */
+    font-size: 1.1em;
+    color: var(--text-heading-color);
+}
+
+.owner-action-group .btn + .btn {
+    margin-left: 10px; /* Space between buttons if they are inline */
+}
+
+.owner-action-group .warning-text {
+    margin-top: 15px; /* Consistent space above warning text */
+}
+
+.privileged-actions .warning-text {
+    margin-top: 10px; /* Adjusted margin */
+    margin-left: 0; /* Align with button */
+    font-size: 0.85em;
+    color: var(--text-muted-color); /* Use muted text color */
+    flex-basis: 100%; /* Allow text to wrap below button */
+}
+
+.loading-inline {
+    margin-left: 10px;
+    font-style: italic;
+    color: var(--text-muted-color);
+}

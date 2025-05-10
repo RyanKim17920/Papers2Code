@@ -19,13 +19,11 @@
   }
   
   .form-grid {
-    /* display: grid; */ /* Remove grid */
-    /* grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); */ /* Remove grid */
-    display: flex; /* Use Flexbox */
-    flex-wrap: wrap; /* Allow wrapping on smaller screens if needed */
-    gap: 20px; /* Adjust gap between items */
-    margin-bottom: 20px;
-    margin-top:30px;
+    /* cleaned up: removed commented grid layout, using flex only */
+    display: flex;
+    flex-wrap: wrap;
+    gap: 20px;
+    margin: 30px 0 20px; /* combined top/bottom margins */
     align-items: flex-end; /* Align items based on their bottom edge (useful if labels are above) */
   }
   
@@ -39,7 +37,7 @@
   
   
   .form-group-full-width {
-    grid-column: 1 / -1; /* Make author field span full width */
+    flex: 1 1 100%; /* Span full width in flex layout */
   }
   
   
@@ -211,13 +209,14 @@
   border-left-color: var(--primary-color); /* Hover color */
 }
 
-/* Month/Year Dropdown Styling */
+/* Combined Month/Year Dropdown Styling */
 .react-datepicker__month-dropdown-container,
 .react-datepicker__year-dropdown-container {
   display: inline-block;
-  margin: 0 5px; /* Space around dropdowns */
+  margin: 0 5px;
 }
 
+/* Combined Month/Year Select Styling */
 .react-datepicker__month-select,
 .react-datepicker__year-select {
   font-family: inherit;

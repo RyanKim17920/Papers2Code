@@ -39,134 +39,10 @@
    line-height: 1.3;
  }
 
- .paper-meta {
-   margin-bottom: 30px; /* Standardized bottom margin */
-   font-size: 0.95em;
-   line-height: 1.7;
-   color: var(--text-muted-color);
-   background-color: var(--primary-light-color); /* Use light primary bg */
-   padding: 20px 25px;
-   border-radius: var(--border-radius-md);
-   border: 1px solid #d1f3e9; /* Border matching light bg */
- }
-
- .paper-meta p {
-   margin-bottom: 10px;
- }
- .paper-meta p:last-child {
-     margin-bottom: 0;
- }
-
- .paper-meta strong {
-     color: var(--text-color);
-     margin-right: 8px; /* More space after strong tag */
-     font-weight: 500;
- }
-
- .paper-meta a {
-   color: var(--primary-color);
-   text-decoration: none;
-   font-weight: 500;
- }
- .paper-meta a:hover {
-   text-decoration: underline; /* Underline links in meta for clarity */
-   color: var(--primary-hover-color);
- }
-
- .paper-abstract {
-   margin-top: 30px;
-   margin-bottom: 30px; /* Standardized bottom margin */
-   line-height: 1.75; /* More line height for abstract */
-   color: var(--text-color);
- }
- .paper-abstract h3 {
-     margin-bottom: 15px;
-     color: var(--text-heading-color);
-     font-size: 1.5em; /* Adjust size */
-     font-weight: 600;
- }
-
- /* Notice styling */
-.not-implementable-notice,
-.implementable-notice { /* Add style for implementable notice */
-    padding: 15px 20px;
-    border-radius: var(--border-radius-md);
-    margin-bottom: 20px; /* Adjusted from 30px */
-    font-size: 0.95em;
-    border: 1px solid;
-    line-height: 1.5; /* Improve readability */
-}
-
-.implementable-notice {
-    background-color: var(--info-light-color, #e7f3ff); /* Light blue/green */
-    border-color: var(--info-color, #007bff);
-    color: var(--info-dark-color, #0056b3);
-}
-
-.not-implementable-notice.flagged {
-    background-color: var(--warning-light-color, #fff8e1);
-    border-color: var(--warning-color, #ffc107);
-    color: var(--warning-dark-color, #b78100);
-}
-.not-implementable-notice.flagged p {
-    margin: 5px 0;
-}
-
-.not-implementable-notice.confirmed {
-    background-color: var(--danger-light-color, #ffebee);
-    border-color: var(--danger-color, #e53935);
-    color: var(--danger-dark-color, #c62828);
-}
-
-/* --- Action Sections Styling --- */
-.paper-actions {
-    margin-top: 40px;
-    display: flex;
-    flex-direction: column;
-    gap: 30px; /* Space between implementability and owner sections */
-}
-
-.privileged-actions {
-    padding: 25px;
-    padding-top: 15px; /* Reduced top padding */
-    border-radius: var(--border-radius-lg); /* Slightly larger radius */
-    border: 1px solid var(--danger-color, #e53935); /* Red border for danger zone */
-    background-color: #fff5f5; /* Very light red background */
-    display: flex; /* Use flexbox for gap */
-    flex-direction: column;
-    gap: 15px; /* Reduced gap between action groups */
-}
-
-.privileged-actions h3 {
-    margin-top: 0; /* Remove top margin from main header */
-    margin-bottom: 20px; /* Space below main header */
-    padding-bottom: 15px; /* Space below border */
-    border-bottom: 1px solid var(--danger-light-color, #ffcdd2); /* Lighter border */
-    font-size: 1.4em;
-    color: var(--danger-dark-color, #c62828);
-}
-
-.owner-action-group {
-    padding: 15px; /* Add some internal padding */
-    background-color: rgba(255, 255, 255, 0.5); /* Slightly whiter background */
-    border-radius: var(--border-radius-md);
-    border: 1px solid var(--danger-light-color, #ffcdd2);
-}
-
-.owner-action-group h4 {
-    margin-top: 0; /* Remove top margin */
-    margin-bottom: 15px; /* Space below header */
-    font-size: 1.1em;
-    color: var(--text-heading-color);
-}
-
-.owner-action-group .btn + .btn {
-    margin-left: 10px; /* Space between buttons if they are inline */
-}
-
-.owner-action-group .warning-text {
-    margin-top: 15px; /* Consistent space above warning text */
-}
+ /* Styles moved to PaperMetadata.css */
+ /* Styles moved to PaperAbstract.css */
+ /* Styles moved to ImplementabilityNotice.css */
+ /* Styles moved to OwnerActions.css */
 
 /* --- Button Styles (Warning, Danger, Secondary, Link) --- */
 /* Warning Button (Yellow/Orange) */
@@ -218,14 +94,6 @@
 }
 
 /* --- Other Styles --- */
-.privileged-actions .warning-text {
-    margin-top: 10px; /* Adjusted margin */
-    margin-left: 0; /* Align with button */
-    font-size: 0.85em;
-    color: var(--text-muted-color); /* Use muted text color */
-    flex-basis: 100%; /* Allow text to wrap below button */
-}
-
 .loading-message, .update-error {
     margin-bottom: 15px;
     padding: 10px 15px;
@@ -245,277 +113,30 @@ small {
     color: var(--text-muted-color);
 }
 
-/* --- Modal Styles --- */
-.modal-backdrop {
-    position: fixed;
-    top: 0;
-    left: 0;
-    width: 100%;
-    height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    z-index: 1000; /* Ensure it's on top */
-}
+/* Styles moved to Modal.css */
+/* Styles moved to PaperTabs.css */
+/* Styles moved to UserDisplayList.css */
+/* Styles moved to VotingButtons.css */
+/* Styles moved to ImplementabilityTab.css */
 
-.modal-content {
-    background-color: var(--card-background-color);
-    padding: 30px 40px;
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--box-shadow-lg);
-    min-width: 300px;
-    max-width: 500px;
-    max-height: 80vh;
-    overflow-y: auto;
-    position: relative; /* For close button positioning */
-}
-
-.modal-close-button {
-    position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
-    border: none;
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: var(--text-muted-color);
-    cursor: pointer;
-    padding: 0;
-    line-height: 1;
-}
-
-.modal-close-button:hover {
-    color: var(--text-color);
-}
-
-/* --- Tab Styles --- */
-.paper-tabs {
-    display: flex;
-    gap: 5px; /* Small gap between tabs */
-    /* margin-top: 30px; */ /* Removed margin-top */
-    margin-bottom: 30px; /* Standardized space below tabs */
-    border-bottom: 2px solid var(--border-color); /* Line below tabs */
-    overflow-y:hidden;
-}
-
-.tab-button {
-    padding: 0.8rem 1.5rem;
-    cursor: pointer;
-    border: none;
-    background-color: transparent;
-    color: var(--text-muted-color);
-    font-size: 1em;
-    font-weight: 500;
-    border-bottom: 3px solid transparent; /* Thicker transparent border for spacing */
-    margin-bottom: -2px; /* Overlap container border */
-    transition: color 0.2s ease, border-color 0.2s ease, background-color 0.2s ease;
-    white-space: nowrap; /* Prevent wrapping */
-    position: relative; /* Needed for potential pseudo-elements */
-    outline: none; /* Remove focus outline */
-}
-
-.tab-button:hover:not(.active) {
-    color: var(--text-color);
-    background-color: var(--background-hover-light); /* Subtle hover background */
-    outline:none;
-}
-
-.tab-button.active {
-    color: var(--primary-color);
-    border-bottom-color: var(--primary-color); /* Keep the bottom border indicator */
-    font-weight: 600;
-    /* Use a slightly more prominent background - adjust color as needed */
-    background-color: var(--primary-background-medium, #d1eaff); /* Example: slightly darker/more saturated blue */
-    outline:none;
-}
-
-/* Optional: Add a top border radius for active tab for a more "tab-like" look */
-.tab-button.active {
-    border-top-left-radius: var(--border-radius-sm);
-    border-top-right-radius: var(--border-radius-sm);
-    outline:none;
-}
-
-/* --- General Tab Pane Styling --- */
-.tab-pane-container {
-    padding: 25px;
-    padding-top: 0; /* Removed top padding to reduce space above tab content */
-    background-color: var(--card-alt-background-color);
-    border-radius: var(--border-radius-md);
-    border: 1px solid var(--border-color-light);
-}
-
-/* Ensure ProgressTracker container doesn't add extra space */
-.tab-pane-container > .progress-tracker-container { /* Assuming a wrapper div */
-    margin-top: 0;
-    padding-top: 0;
-}
-/* Or target ProgressTracker directly if no wrapper */
-.tab-pane-container > div:first-child > .progress-tracker { /* Example selector */
-     margin-top: 0;
-}
-
-/* Area for buttons/actions within a tab */
-.tab-action-area {
-    margin-bottom: 25px;
-    padding-bottom: 20px;
-    border-bottom: 1px solid var(--border-color-light);
-    display: flex;
-    align-items: center;
-    gap: 15px;
-    flex-wrap: wrap;
-}
-.tab-action-area p { /* Style login prompts etc. */
-    margin: 0;
-}
-.tab-action-area small {
-    color: var(--text-muted-color);
-}
-
-/* --- User Display List Styles (used in tabs/modals) --- */
-.user-display-list h3 {
-    margin-top: 0;
-    margin-bottom: 15px; /* Reduced margin */
-    font-size: 1.1rem; /* Slightly smaller */
-    color: var(--text-heading-color);
-    border-bottom: 1px solid var(--border-color-light); /* Lighter border */
-    padding-bottom: 8px;
-}
-
-.user-display-list ul {
-    list-style: none;
-    padding: 0;
-    margin: 0;
-    max-height: 50vh; /* Adjust max height */
-    overflow-y: auto;
-}
-
-.user-display-list li {
-    display: flex;
-    align-items: center;
-    padding: 8px 0px; /* Reduced padding */
-    border-bottom: 1px solid var(--border-color-light);
-}
-
-.user-display-list li:last-child {
-    border-bottom: none;
-}
-
-.user-avatar-small {
-    width: 30px; /* Smaller avatar */
-    height: 30px;
-    border-radius: 50%;
-    margin-right: 10px; /* Reduced margin */
-    object-fit: cover;
-    border: 1px solid var(--border-color);
-    background-color: #eee; /* Placeholder background */
-}
-/* Add a default avatar style if needed */
-img[src*="default/avatar.png"] { /* Basic selector for default */
-    background-color: #eee;
-}
-
-.user-display-list span {
-    font-size: 0.95rem;
-    color: var(--text-color);
-    font-weight: 500;
-}
-
-/* --- Voting Buttons (Consolidated) --- */
-.vote-button { /* General style for reuse */
-    display: inline-flex;
-    align-items: center;
-    gap: 8px;
-    padding: 8px 15px; /* Slightly larger padding */
-    border: 1px solid var(--border-color);
-    border-radius: var(--border-radius-md);
-    background-color: var(--button-secondary-bg);
-    color: var(--button-secondary-text);
-    cursor: pointer;
-    transition: all 0.2s ease;
-    font-size: 0.95em;
-    font-weight: 500;
-}
-.vote-button:hover:not(:disabled) {
-    background-color: var(--button-secondary-hover-bg);
-    border-color: #adb5bd;
-}
-.vote-button:disabled {
-    opacity: 0.6;
-    cursor: not-allowed;
-}
-.vote-button svg {
-    font-size: 1.1em;
-}
-.vote-button .vote-count {
-    font-weight: 600;
-    min-width: 10px; /* Ensure space for count */
-    text-align: right;
-}
-
-/* Clickable Vote Count */
-.vote-count.clickable {
-    cursor: pointer;
-    text-decoration: underline;
-    text-decoration-color: var(--text-muted-color);
-    transition: color 0.2s ease, text-decoration-color 0.2s ease;
-}
-.vote-count.clickable:hover {
-    color: var(--primary-color);
-    text-decoration-color: var(--primary-color);
-}
-
-/* Voted states */
-.vote-button.upvote-tab.voted { /* Specific to upvote button in tab */
-    background-color: var(--primary-light-color);
-    border-color: var(--primary-color);
-    color: var(--primary-dark-color);
-    font-weight: 600;
-}
-.vote-button.thumbs-up.voted {
-    border-color: var(--success-color);
-    background-color: var(--success-light-color);
-    color: var(--success-dark-color);
-    font-weight: 600;
-}
-.vote-button.thumbs-down.voted {
-     border-color: var(--danger-color);
-     background-color: var(--danger-light-color);
-     color: var(--danger-dark-color);
-     font-weight: 600;
-}
-
-.retract-vote-button { /* Style for retract link/button */
-    margin-left: 10px;
-    font-size: 0.9em;
-    /* Inherits button-link styles if it's a button, or style as needed */
-}
-
-/* --- Implementability Tab Specific Styles --- */
-.implementability-explanation {
-    margin-bottom: 25px;
+/* Implementation Notes specific to PaperDetailPage */
+.implementation-notes {
+    margin-top: 20px;
     padding: 15px;
-    background-color: var(--background-color); /* Slightly different background */
+    background-color: var(--background-alt-color); /* Subtle background */
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-color-light);
 }
 
-.implementability-explanation h4 {
+.implementation-notes h4 {
     margin-top: 0;
     margin-bottom: 10px;
-    font-size: 1.1em;
     color: var(--text-heading-color);
+    font-size: 1.2em;
 }
 
-.implementability-explanation p {
-    font-size: 0.95em;
-    color: var(--text-muted-color);
-    line-height: 1.6;
+.implementation-notes p {
     margin: 0;
-}
-.implementability-explanation svg { /* Style icons in text */
-    vertical-align: middle;
-    margin: 0 2px; /* Fixed: Added semicolon */
-    font-size: 1.1em;
+    line-height: 1.6;
+    color: var(--text-color);
 }

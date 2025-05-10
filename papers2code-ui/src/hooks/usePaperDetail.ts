@@ -171,6 +171,7 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         isLoading,
         error,
         updateError,
+        setUpdateError, // Add this line
         isRemoving,
         isUpdatingStatus,
         isVoting,

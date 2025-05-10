@@ -64,7 +64,7 @@ export const fetchPapersFromApi = async (
     try {
       const errorData = await response.json();
       if (errorData && errorData.error) {
-        errorMsg = `API Error: ${errorData.error}`;
+        errorMsg = `API Error (${response.status}): ${errorData.error}`;
       }
     } catch (e) { console.error("Failed to parse error response:", e); }
     throw new Error(errorMsg);
@@ -81,7 +81,16 @@ export const fetchPapersFromApi = async (
 export const fetchPaperByIdFromApi = async (id: string): Promise<Paper | undefined> => {
   const response = await fetch(`${API_BASE_URL}${PAPERS_PREFIX}/papers/${id}`, { credentials: 'include' });
   if (response.status === 404) return undefined;
-  if (!response.ok) throw new Error(`API Error: ${response.status} ${response.statusText}`);
+  if (!response.ok) {
+    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData && errorData.error) {
+        errorMsg = `API Error (${response.status}): ${errorData.error}`;
+      }
+    } catch (e) { console.error("Failed to parse error response for fetchPaperByIdFromApi:", e); }
+    throw new Error(errorMsg);
+  }
   const data: Paper = await response.json();
   return data;
 };
@@ -269,5 +278,49 @@ export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActio
       console.error(`Error fetching action users for paper ${paperId}:`, error);
       throw error; // Re-throw to be handled by the component
   }
+};
+// --- End NEW ---
+
+// --- NEW: Function to update paper implementation status (Owner only) ---
+export const updatePaperStatusInApi = async (
+  paperId: string,
+  status: string,
+  userId: string // Assuming backend might want to log which owner/admin performed the action
+): Promise<Paper> => {
+  const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/status`;
+  console.log(`Owner ${userId} updating paper ${paperId} implementation status to: ${status}`);
+
+  const csrfToken = getCsrfToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  } else {
+    console.warn("CSRF Token is missing for updatePaperStatusInApi, X-CSRFToken header NOT added.");
+  }
+
+  const response = await fetch(url, {
+    method: 'POST', // Or PUT, depending on backend API design
+    headers: headers,
+    body: JSON.stringify({ status, userId }), // Sending userId in case backend needs it
+    credentials: 'include',
+  });
+
+  if (!response.ok) {
+    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData && errorData.error) {
+        errorMsg = `API Error (${response.status}): ${errorData.error}`;
+      }
+    } catch (e) { console.error("Failed to parse error response:", e); }
+    console.error(`Failed to update paper implementation status:`, errorMsg);
+    throw new Error(errorMsg);
+  }
+
+  const updatedPaper: Paper = await response.json();
+  console.log(`Paper ${paperId} implementation status updated successfully to ${status}.`);
+  return updatedPaper;
 };
 // --- End NEW ---

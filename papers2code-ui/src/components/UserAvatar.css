@@ -1,0 +1,24 @@
+.default-avatar-icon {
+    /* Add any specific styling for the FaUserCircle icon if needed */
+    /* For example, you might want to set a default color or size if not overridden by className */
+    color: #ccc; /* A light grey, adjust as needed */
+}
+
+/* You can add more specific styles for different avatar sizes if you pass them via className */
+.user-avatar {
+    width: 40px; /* Example size for navbar */
+    height: 40px;
+    font-size: 40px; /* Added: For react-icons SVG sizing */
+    border-radius: 50%;
+    margin-right: 10px;
+    object-fit: cover; /* Ensures the image covers the area without distortion */
+}
+
+.user-avatar-small {
+    width: 24px; /* Example size for lists */
+    height: 24px;
+    font-size: 24px; /* Added: For react-icons SVG sizing */
+    border-radius: 50%;
+    margin-right: 8px;
+    object-fit: cover;
+}
