@@ -10,7 +10,7 @@ interface OwnerActionsProps {
     currentUser: UserProfile | null;
     onPaperUpdate: (updatedPaper: Paper) => void;
     setUpdateError: (error: string | null) => void;
-    openConfirmStatusModal: (status: 'confirmed_non_implementable' | 'implementable') => void;
+    openConfirmStatusModal: (status: 'confirmed_non_implementable' | 'confirmed_implementable' | 'voting') => void;
     openConfirmRemoveModal: () => void;
     isUpdatingStatus: boolean;
     isRemoving: boolean;
@@ -58,28 +58,30 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
 
                 <div className="owner-action-group">
                     <h4>Implementability Status Management</h4>
-                    {paper.nonImplementableStatus === 'flagged_non_implementable' && (
-                        <button
-                            className="btn button-warning"
-                            onClick={() => openConfirmStatusModal('confirmed_non_implementable')}
-                            disabled={isUpdatingStatus}
-                        >
-                        </button>
-                    )}
-                    {(paper.nonImplementableStatus === 'flagged_non_implementable' || paper.nonImplementableStatus === 'confirmed_non_implementable') && (
-                        <button
-                            className="btn button-secondary"
-                            onClick={() => openConfirmStatusModal('implementable')}
-                            disabled={isUpdatingStatus}
-                        >
-                            {isUpdatingStatus ? 'Processing...' : 'Revert to Implementable'}
-                        </button>
-                    )}
-                    {paper.nonImplementableStatus !== 'flagged_non_implementable' && paper.nonImplementableStatus !== 'confirmed_non_implementable' && (
-                        <p>No pending implementability flags to action for confirmation/reversion.</p>
-                    )}
+                    <button
+                        className="btn button-warning"
+                        onClick={() => openConfirmStatusModal('confirmed_non_implementable')}
+                        disabled={isUpdatingStatus || paper.nonImplementableStatus === 'confirmed_non_implementable'}
+                    >
+                        {isUpdatingStatus && paper.nonImplementableStatus !== 'confirmed_non_implementable' ? 'Processing...' : 'Force Non-Implementable'}
+                    </button>
+                    <button
+                        className="btn button-secondary"
+                        onClick={() => openConfirmStatusModal('confirmed_implementable')}
+                        disabled={isUpdatingStatus || paper.nonImplementableStatus === 'confirmed_implementable'}
+                    >
+                        {isUpdatingStatus && paper.nonImplementableStatus !== 'confirmed_implementable' ? 'Processing...' : 'Force Implementable'}
+                    </button>
+                    <button
+                        className="btn button-secondary"
+                        onClick={() => openConfirmStatusModal('voting')}
+                        // Enable revert only when currently in a confirmed state
+                        disabled={isUpdatingStatus || (paper.nonImplementableStatus !== 'confirmed_non_implementable' && paper.nonImplementableStatus !== 'confirmed_implementable')}
+                    >
+                        {isUpdatingStatus && paper.nonImplementableStatus === 'voting' ? 'Processing...' : 'Revert to Voting'}
+                    </button>
                     <p className="warning-text">
-                        Confirming makes it non-implementable. Reverting makes it implementable again.
+                        Force or lock implementability status, or revert to community voting.
                     </p>
                 </div>
 

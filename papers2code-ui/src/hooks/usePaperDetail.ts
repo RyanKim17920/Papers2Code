@@ -11,7 +11,7 @@ import {
     fetchPaperActionUsers,
     PaperActionUsers
 } from '../services/api';
-import { ImplementabilityAction } from '../types/paper'; // Import from types/paper.ts
+import { ImplementabilityAction, OwnerSettableImplementabilityStatus } from '../types/paper'; // Import status type
 
 export type ActiveTab = 'paperInfo' | 'details' | 'upvotes' | 'implementability' | 'admin';
 
@@ -31,7 +31,8 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
     const [actionUsersError, setActionUsersError] = useState<string | null>(null);
 
     const [showConfirmRemoveModal, setShowConfirmRemoveModal] = useState<boolean>(false);
-    const [showConfirmStatusModal, setShowConfirmStatusModal] = useState<{ show: boolean; status: 'confirmed_non_implementable' | 'implementable' | null }>({ show: false, status: null });
+    // Modal state for owner status actions: DB statuses confirmed_non_implementable or confirmed_implementable
+    const [showConfirmStatusModal, setShowConfirmStatusModal] = useState<{ show: boolean; status: OwnerSettableImplementabilityStatus | null }>({ show: false, status: null });
 
     const loadPaperAndActions = useCallback(async () => {
         if (!paperId) {
@@ -117,21 +118,21 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         }
     }, [paperId, currentUser, isVoting, setPaper, setUpdateError, setActionUsers, setActionUsersError, setIsVoting]);
 
-    const handleSetImplementabilityStatus = useCallback(async (isImplementable: boolean) => {
+    const handleSetImplementabilityStatus = useCallback(async (status: OwnerSettableImplementabilityStatus) => {
         if (!paperId || !currentUser || isUpdatingStatus) return;
         setIsUpdatingStatus(true);
         setUpdateError(null);
-        setShowConfirmStatusModal({ show: false, status: null }); // Close modal first
+        setShowConfirmStatusModal({ show: false, status: null }); // Close modal
         try {
-            const updatedPaper = await setImplementabilityInApi(paperId, isImplementable);
+            const updatedPaper = await setImplementabilityInApi(paperId, status);
             setPaper(updatedPaper);
         } catch (err) {
-            console.error(`Failed to set implementability status to ${isImplementable}:`, err);
-            setUpdateError(err instanceof Error ? err.message : `Failed to set status to ${isImplementable}.`);
+            console.error(`Failed to set implementability status to ${status}:`, err);
+            setUpdateError(err instanceof Error ? err.message : `Failed to set status to ${status}.`);
         } finally {
             setIsUpdatingStatus(false);
         }
-    }, [paperId, currentUser, isUpdatingStatus, setPaper, setUpdateError, setShowConfirmStatusModal]);
+    }, [paperId, currentUser, isUpdatingStatus, setPaper, setUpdateError]);
 
     const handleRemovePaper = useCallback(async () => {
         if (!paperId || !currentUser || isRemoving) return;
@@ -149,8 +150,9 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
     }, [paperId, currentUser, isRemoving, navigate, setUpdateError, setIsRemoving, setShowConfirmRemoveModal]);
 
     // --- Modal Openers ---
-    const openConfirmStatusModal = (status: 'confirmed_non_implementable' | 'implementable') => {
-        setShowConfirmStatusModal({ show: true, status: status });
+    // Open modal with the specific owner DB status to confirm
+    const openConfirmStatusModal = (status: OwnerSettableImplementabilityStatus) => {
+        setShowConfirmStatusModal({ show: true, status });
     };
 
     const openConfirmRemoveModal = () => {

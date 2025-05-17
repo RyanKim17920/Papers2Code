@@ -1,0 +1,9 @@
+fastapi
+uvicorn[standard]
+python-jose[cryptography]
+pymongo
+passlib[bcrypt]
+requests
+python-dotenv
+dateutils
+slowapi

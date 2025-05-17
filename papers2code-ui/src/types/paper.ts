@@ -46,14 +46,14 @@ export interface Paper {
     implementationNotes: string | null;
     implementationSteps: ImplementationStep[] | null;
     isImplementable: boolean;
-    nonImplementableStatus: 'implementable' | 'flagged_non_implementable' | 'confirmed_non_implementable';
+    nonImplementableStatus: 'implementable' | 'flagged_non_implementable' | 'confirmed_non_implementable' | 'confirmed_implementable' | 'voting'; // Added 'confirmed_implementable' and 'voting'
     nonImplementableReason: string | null;
     nonImplementableConfirmedBy: string | null;
     upvoteCount: number;
-    nonImplementableVotes: number;
-    disputeImplementableVotes: number;
+    nonImplementableVotes: number; // Count of "Not Implementable" votes (Thumbs Down)
+    disputeImplementableVotes: number; // Count of "Is Implementable" votes (Thumbs Up)
     currentUserVote: 'up' | 'none';
-    currentUserImplementabilityVote: 'up' | 'down' | 'none'; // 'up' = flagged non-implementable, 'down' = disputed flag
+    currentUserImplementabilityVote: 'up' | 'down' | 'none'; // 'up' = Voted "Is Implementable" (Thumbs Up), 'down' = Voted "Not Implementable" (Thumbs Down)
     created_at: string;
     updated_at: string;
     tasks?: string[]; // Add optional tasks property
@@ -61,6 +61,9 @@ export interface Paper {
 
 // Define the specific actions for implementability voting (matching backend)
 export type ImplementabilityAction = 'confirm' | 'dispute' | 'retract';
+
+// Define the possible statuses an owner can set
+export type OwnerSettableImplementabilityStatus = 'confirmed_implementable' | 'confirmed_non_implementable' | 'voting';
 
 export interface PaperSummary {
     id: string;

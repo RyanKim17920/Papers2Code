@@ -1,6 +1,6 @@
 from flask import jsonify, request, session, current_app
 from . import papers_bp # Import the blueprint instance
-from ..extensions import limiter, mongo, csrf
+from ..extensions import limiter
 from ..models import transform_paper, get_papers_collection, get_removed_papers_collection, get_user_actions_collection
 from ..utils import login_required, owner_required
 from ..config import Config
@@ -19,12 +19,14 @@ import traceback
 def flag_paper_implementability(paper_id):
     try:
         user_id_str = session['user'].get('id')
-        if not user_id_str: return jsonify({"error": "User ID not found in session"}), 401
+        if not user_id_str:
+            return jsonify({"error": "User ID not found in session"}), 401
 
         try:
             user_obj_id = ObjectId(user_id_str)
             paper_obj_id = ObjectId(paper_id)
-        except InvalidId: return jsonify({"error": "Invalid paper or user ID format"}), 400
+        except InvalidId:
+            return jsonify({"error": "Invalid paper or user ID format"}), 400
 
         data = request.get_json()
         action = data.get('action') # 'confirm', 'dispute', 'retract'
@@ -35,7 +37,8 @@ def flag_paper_implementability(paper_id):
         papers_collection = get_papers_collection()
         user_actions_collection = get_user_actions_collection()
         paper = papers_collection.find_one({"_id": paper_obj_id})
-        if not paper: return jsonify({"error": "Paper not found"}), 404
+        if not paper:
+            return jsonify({"error": "Paper not found"}), 404
 
         # Prevent voting if owner already confirmed non-implementable
         if paper.get("nonImplementableStatus") == Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB and paper.get("nonImplementableConfirmedBy") == "owner":
@@ -61,55 +64,57 @@ def flag_paper_implementability(paper_id):
                 return jsonify({"error": "No existing vote to retract."}), 400
 
             action_to_perform = 'delete'
-            if current_action_type == 'confirm_non_implementable':
+            # Current logic for retracting based on stored actionType is correct.
+            # nonImplementableVotes corresponds to 'confirm_non_implementable' (now "Not Implementable" vote)
+            # disputeImplementableVotes corresponds to 'dispute_non_implementable' (now "Is Implementable" vote)
+            if current_action_type == 'confirm_non_implementable': # User retracts "Not Implementable" vote
                 increment["nonImplementableVotes"] = -1
-            elif current_action_type == 'dispute_non_implementable':
+            elif current_action_type == 'dispute_non_implementable': # User retracts "Is Implementable" vote
                 increment["disputeImplementableVotes"] = -1
             needs_status_check = True
             print(f"User {user_id_str} retracting {current_action_type} vote for paper {paper_id}")
 
-        elif action == 'confirm': # Thumbs Up (Confirm Non-Implementable)
-            new_action_type = 'confirm_non_implementable'
+        elif action == 'confirm': # User clicks Thumbs Up, meaning "Is Implementable"
+            new_action_type = 'dispute_non_implementable' # Store as this type for "Is Implementable"
             if current_action_type == new_action_type:
-                return jsonify({"error": "You have already voted thumbs up (confirm non-implementability)."}), 400
+                return jsonify({"error": "You have already voted this paper as 'Is Implementable'."}), 400
 
-            if current_action_doc: # Switching vote from dispute to confirm
+            if current_action_doc: # Switching vote from "Not Implementable" to "Is Implementable"
                 action_to_perform = 'update'
-                increment["nonImplementableVotes"] = 1
-                increment["disputeImplementableVotes"] = -1
-                print(f"User {user_id_str} switching vote to confirm (up) for paper {paper_id}")
-            else: # New confirm vote
+                increment["disputeImplementableVotes"] = 1 # Add to "Is Implementable" votes
+                increment["nonImplementableVotes"] = -1   # Remove from "Not Implementable" votes
+                print(f"User {user_id_str} switching vote to 'Is Implementable' (Thumbs Up) for paper {paper_id}")
+            else: # New "Is Implementable" vote
                 action_to_perform = 'insert'
-                increment["nonImplementableVotes"] = 1
-                print(f"User {user_id_str} voting confirm (up) for paper {paper_id}")
+                increment["disputeImplementableVotes"] = 1
+                print(f"User {user_id_str} voting 'Is Implementable' (Thumbs Up) for paper {paper_id}")
+            
+            # Voting "Is Implementable" contributes to potentially reverting a "flagged" status.
+            # It does not by itself flag the paper.
+            needs_status_check = True
 
-            # If paper is currently implementable, flag it
+        elif action == 'dispute': # User clicks Thumbs Down, meaning "Not Implementable"
+            new_action_type = 'confirm_non_implementable' # Store as this type for "Not Implementable"
+            if current_action_type == new_action_type:
+                return jsonify({"error": "You have already voted this paper as 'Not Implementable'."}), 400
+
+            if current_action_doc: # Switching vote from "Is Implementable" to "Not Implementable"
+                action_to_perform = 'update'
+                increment["nonImplementableVotes"] = 1     # Add to "Not Implementable" votes
+                increment["disputeImplementableVotes"] = -1 # Remove from "Is Implementable" votes
+                print(f"User {user_id_str} switching vote to 'Not Implementable' (Thumbs Down) for paper {paper_id}")
+            else: # New "Not Implementable" vote
+                 action_to_perform = 'insert'
+                 increment["nonImplementableVotes"] = 1
+                 print(f"User {user_id_str} voting 'Not Implementable' (Thumbs Down) for paper {paper_id}")
+
+            # If paper is currently implementable, the first "Not Implementable" vote flags it.
             if paper.get("nonImplementableStatus", Config.STATUS_IMPLEMENTABLE) == Config.STATUS_IMPLEMENTABLE:
                 update["$set"]["nonImplementableStatus"] = Config.STATUS_FLAGGED_NON_IMPLEMENTABLE
                 if not paper.get("nonImplementableFlaggedBy"): # Record first flagger
                      update["$set"]["nonImplementableFlaggedBy"] = user_obj_id
                 new_status = Config.STATUS_FLAGGED_NON_IMPLEMENTABLE
-                print(f"Paper {paper_id} status changed to flagged_non_implementable")
-            needs_status_check = True
-
-        elif action == 'dispute': # Thumbs Down (Dispute Non-Implementability)
-            new_action_type = 'dispute_non_implementable'
-            if current_action_type == new_action_type:
-                return jsonify({"error": "You have already voted thumbs down (dispute non-implementability)."}), 400
-
-            # Can only dispute if it's currently flagged
-            if paper.get("nonImplementableStatus") != Config.STATUS_FLAGGED_NON_IMPLEMENTABLE:
-                 return jsonify({"error": "Paper is not currently flagged as non-implementable."}), 400
-
-            if current_action_doc: # Switching vote from confirm to dispute
-                action_to_perform = 'update'
-                increment["nonImplementableVotes"] = -1
-                increment["disputeImplementableVotes"] = 1
-                print(f"User {user_id_str} switching vote to dispute (down) for paper {paper_id}")
-            else: # New dispute vote
-                 action_to_perform = 'insert'
-                 increment["disputeImplementableVotes"] = 1
-                 print(f"User {user_id_str} voting dispute (down) for paper {paper_id}")
+                print(f"Paper {paper_id} status changed to flagged_non_implementable due to 'Not Implementable' vote")
             needs_status_check = True
 
         # --- Perform Action on user_actions collection ---
@@ -158,63 +163,87 @@ def flag_paper_implementability(paper_id):
         else:
              # If no paper update needed yet (e.g., retracting only vote), refetch paper
              paper = papers_collection.find_one({"_id": paper_obj_id})
-             if not paper: return jsonify({"error": "Failed to refetch paper after action."}), 500
+             if not paper:
+                 return jsonify({"error": "Failed to refetch paper after action."}), 500
              new_status = paper.get("nonImplementableStatus")
 
 
         # --- Check Thresholds ---
         final_status_update = {}
-        if needs_status_check and new_status == Config.STATUS_FLAGGED_NON_IMPLEMENTABLE:
-            confirm_votes = paper.get("nonImplementableVotes", 0)
-            dispute_votes = paper.get("disputeImplementableVotes", 0)
-            threshold = current_app.config.get('NON_IMPLEMENTABLE_CONFIRM_THRESHOLD', 3)
-            print(f"Checking thresholds for paper {paper_id}: Confirm(Up)={confirm_votes}, Dispute(Down)={dispute_votes}, Threshold={threshold}")
+        # Get current vote counts from the paper document, which includes the latest increments
+        votes_not_implementable = paper.get("nonImplementableVotes", 0)
+        votes_is_implementable = paper.get("disputeImplementableVotes", 0)
 
-            # Condition to confirm non-implementability by community
-            if confirm_votes >= dispute_votes + threshold:
-                final_status_update["$set"] = {
-                    "is_implementable": False,
-                    "nonImplementableStatus": Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB,
-                    "status": Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE, # Display status
-                    "nonImplementableConfirmedBy": "community"
-                }
-                print(f"Paper {paper_id} confirmed non-implementable by community vote threshold.")
+        # Only proceed with threshold checks if the status is currently flagged or still implementable (to catch first flag)
+        if needs_status_check and paper.get("nonImplementableConfirmedBy") != "owner": # Don't override owner's direct confirmation with community vote
+            if new_status == Config.STATUS_FLAGGED_NON_IMPLEMENTABLE or new_status == Config.STATUS_IMPLEMENTABLE:
+                non_impl_threshold = current_app.config.get('NON_IMPLEMENTABLE_CONFIRM_THRESHOLD', 3)
+                impl_threshold = current_app.config.get('IMPLEMENTABLE_CONFIRM_THRESHOLD', 3) # Get new threshold
+                print(f"Checking thresholds for paper {paper_id}: Votes Not Implementable={votes_not_implementable}, Votes Is Implementable={votes_is_implementable}, NonImplThreshold={non_impl_threshold}, ImplThreshold={impl_threshold}")
 
-            # Condition to revert back to implementable
-            elif dispute_votes >= confirm_votes:
-                 final_status_update["$set"] = {
-                     "is_implementable": True,
-                     "nonImplementableStatus": Config.STATUS_IMPLEMENTABLE,
-                     "status": Config.STATUS_NOT_STARTED # Reset display status
-                 }
-                 final_status_update["$unset"] = {
-                     "nonImplementableVotes": "", "disputeImplementableVotes": "",
-                     "nonImplementableFlaggedBy": "", "nonImplementableConfirmedBy": ""
-                 }
-                 # Delete related actions
-                 delete_result = user_actions_collection.delete_many({
-                     "paperId": paper_obj_id,
-                     "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
-                 })
-                 print(f"Paper {paper_id} reverted to implementable by vote threshold. Deleted {delete_result.deleted_count} status actions.")
-
+                # Condition to confirm non-implementability by community
+                if votes_not_implementable >= votes_is_implementable + non_impl_threshold:
+                    final_status_update["$set"] = {
+                        "is_implementable": False,
+                        "nonImplementableStatus": Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB,
+                        "status": Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE,
+                        "nonImplementableConfirmedBy": "community"
+                    }
+                    print(f"Paper {paper_id} confirmed non-implementable by community vote threshold.")
+                # Condition to confirm implementability by community
+                elif votes_is_implementable >= votes_not_implementable + impl_threshold:
+                    final_status_update["$set"] = {
+                        "is_implementable": True,
+                        "nonImplementableStatus": Config.STATUS_CONFIRMED_IMPLEMENTABLE_DB, # New DB status
+                        "status": Config.STATUS_CONFIRMED_IMPLEMENTABLE, # New display status
+                        "nonImplementableConfirmedBy": "community"
+                    }
+                    final_status_update.setdefault("$unset", {}).update({
+                        "nonImplementableVotes": "", 
+                        "disputeImplementableVotes": "",
+                        "nonImplementableFlaggedBy": ""
+                    })
+                    # Delete related voting actions as status is now community confirmed implementable
+                    user_actions_collection.delete_many({
+                        "paperId": paper_obj_id,
+                        "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
+                    })
+                    print(f"Paper {paper_id} confirmed implementable by community vote threshold. Votes reset.")
+                # Condition to revert back to implementable from flagged_non_implementable
+                elif new_status == Config.STATUS_FLAGGED_NON_IMPLEMENTABLE and votes_is_implementable >= votes_not_implementable:
+                    final_status_update["$set"] = {
+                        "is_implementable": True,
+                        "nonImplementableStatus": Config.STATUS_IMPLEMENTABLE,
+                        "status": Config.STATUS_NOT_STARTED
+                    }
+                    final_status_update.setdefault("$unset", {}).update({
+                        "nonImplementableVotes": "", "disputeImplementableVotes": "",
+                        "nonImplementableFlaggedBy": "", "nonImplementableConfirmedBy": ""
+                    })
+                    user_actions_collection.delete_many({
+                        "paperId": paper_obj_id,
+                        "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
+                    })
+                    print(f"Paper {paper_id} reverted to implementable from flagged status by vote. Votes reset.")
+        
         # Apply final status update if threshold met
         if final_status_update:
-             if not final_status_update.get("$set"): final_status_update.pop("$set", None)
-             if not final_status_update.get("$unset"): final_status_update.pop("$unset", None)
-             if final_status_update: # Check if still needed
-                 updated_paper = papers_collection.find_one_and_update(
-                     {"_id": paper_obj_id}, final_status_update, return_document=ReturnDocument.AFTER
-                 )
-             else: # If update became empty (e.g., only unset)
-                 updated_paper = paper # Use previous state
+            if not final_status_update.get("$set"):
+                final_status_update.pop("$set", None)
+            if not final_status_update.get("$unset"):
+                final_status_update.pop("$unset", None)
+            if final_status_update: # Check if still needed
+                updated_paper = papers_collection.find_one_and_update(
+                    {"_id": paper_obj_id}, final_status_update, return_document=ReturnDocument.AFTER
+                )
+            else: 
+                updated_paper = paper 
         else:
-             updated_paper = paper # Use the paper state after initial increments/status change
-
+            updated_paper = paper
+        
         if updated_paper:
             return jsonify(transform_paper(updated_paper, user_id_str))
         else:
-            # Fallback fetch if final update failed
             final_paper_doc = papers_collection.find_one({"_id": paper_obj_id})
             return jsonify(transform_paper(final_paper_doc, user_id_str)) if final_paper_doc else jsonify({"error": "Failed to retrieve final paper status."}), 500
 
@@ -238,64 +267,81 @@ def set_paper_implementability(paper_id):
             return jsonify({"error": "Invalid paper ID format"}), 400
 
         data = request.get_json()
-        set_implementable = data.get('isImplementable')
+        status_to_set = data.get('statusToSet') # e.g., 'confirmed_implementable', 'confirmed_non_implementable', 'voting'
 
-        if not isinstance(set_implementable, bool):
-            return jsonify({"error": "Invalid value for isImplementable. Must be true or false."}), 400
+        valid_statuses = [
+            Config.STATUS_CONFIRMED_IMPLEMENTABLE_DB, 
+            Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB, 
+            'voting' # Special keyword to reset to community voting
+        ]
+        if status_to_set not in valid_statuses:
+            return jsonify({"error": f"Invalid value for statusToSet. Must be one of: {valid_statuses}"}), 400
 
         papers_collection = get_papers_collection()
         user_actions_collection = get_user_actions_collection()
-
         update = { "$set": {}, "$unset": {} }
 
-        if set_implementable: # Owner sets to Implementable
+        if status_to_set == Config.STATUS_CONFIRMED_IMPLEMENTABLE_DB:
             update["$set"] = {
                 "is_implementable": True,
-                "nonImplementableStatus": Config.STATUS_IMPLEMENTABLE,
-                "status": Config.STATUS_NOT_STARTED
+                "nonImplementableStatus": Config.STATUS_CONFIRMED_IMPLEMENTABLE_DB,
+                "status": Config.STATUS_CONFIRMED_IMPLEMENTABLE, # Display status
+                "nonImplementableConfirmedBy": "owner"
             }
             update["$unset"] = {
                 "nonImplementableVotes": "", "disputeImplementableVotes": "",
-                "nonImplementableFlaggedBy": "", "nonImplementableConfirmedBy": ""
+                "nonImplementableFlaggedBy": ""
             }
-            print(f"Owner setting paper {paper_id} to IMPLEMENTABLE.")
-        else: # Owner sets to Non-Implementable
+            print(f"Owner setting paper {paper_id} to CONFIRMED_IMPLEMENTABLE.")
+        elif status_to_set == Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB:
             update["$set"] = {
                 "is_implementable": False,
                 "nonImplementableStatus": Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB,
                 "status": Config.STATUS_CONFIRMED_NON_IMPLEMENTABLE, # Display status
                 "nonImplementableConfirmedBy": "owner"
             }
-            update["$unset"] = { # Clear community votes/flags
+            update["$unset"] = {
                 "nonImplementableVotes": "", "disputeImplementableVotes": "",
                 "nonImplementableFlaggedBy": ""
             }
-            print(f"Owner setting paper {paper_id} to NON-IMPLEMENTABLE.")
+            print(f"Owner setting paper {paper_id} to CONFIRMED_NON-IMPLEMENTABLE.")
+        elif status_to_set == 'voting': # Owner resets to allow community voting
+            update["$set"] = {
+                "is_implementable": True, 
+                "nonImplementableStatus": Config.STATUS_IMPLEMENTABLE, 
+                "status": Config.STATUS_NOT_STARTED 
+            }
+            update["$unset"] = {
+                "nonImplementableVotes": "", "disputeImplementableVotes": "",
+                "nonImplementableFlaggedBy": "", "nonImplementableConfirmedBy": ""
+            }
+            print(f"Owner resetting paper {paper_id} to community voting.")
 
-        if not update["$set"]: del update["$set"]
-        if not update["$unset"]: del update["$unset"]
-
-        # Delete relevant community actions regardless of owner action
+        # Delete relevant community voting actions if owner is confirming a status or resetting
         delete_result = user_actions_collection.delete_many({
             "paperId": paper_obj_id,
             "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
         })
-        print(f"Owner action: Deleted {delete_result.deleted_count} status actions for paper {paper_id}.")
+        print(f"Owner action for paper {paper_id}: Deleted {delete_result.deleted_count} community voting actions.")
+
+        if not update.get("$set"):
+            del update["$set"]
+        if not update.get("$unset"):
+            del update["$unset"]
 
         updated_paper = papers_collection.find_one_and_update(
             {"_id": paper_obj_id}, update, return_document=ReturnDocument.AFTER
         )
 
         if updated_paper:
-            print(f"Owner set implementability for paper {paper_id} to {set_implementable}")
-            # Pass owner's user ID to transform_paper if needed, otherwise session user ID
+            print(f"Owner set implementability for paper {paper_id} to {status_to_set}")
             return jsonify(transform_paper(updated_paper, session.get('user', {}).get('id')))
         else:
             if papers_collection.count_documents({"_id": paper_obj_id}) == 0:
                  return jsonify({"error": "Paper not found"}), 404
             else:
-                 print(f"Error: Failed to update paper {paper_id} after owner action.")
-                 return jsonify({"error": "Failed to update paper implementability status"}), 500
+                 print(f"Error: Failed to update paper {paper_id} after owner action for status {status_to_set}.")
+                 return jsonify({"error": "Failed to update paper implementability status by owner"}), 500
 
     except Exception as e:
         print(f"Error setting implementability for paper {paper_id} by owner: {e}")
@@ -310,22 +356,26 @@ def set_paper_implementability(paper_id):
 
 def remove_paper(paper_id):
     try:
-        try: obj_id = ObjectId(paper_id)
-        except InvalidId: return jsonify({"error": "Invalid paper ID format"}), 400
+        try:
+            obj_id = ObjectId(paper_id)
+        except InvalidId:
+            return jsonify({"error": "Invalid paper ID format"}), 400
 
         papers_collection = get_papers_collection()
         removed_papers_collection = get_removed_papers_collection()
         user_actions_collection = get_user_actions_collection()
 
         paper_to_remove = papers_collection.find_one({"_id": obj_id})
-        if not paper_to_remove: return jsonify({"error": "Paper not found"}), 404
+        if not paper_to_remove:
+            return jsonify({"error": "Paper not found"}), 404
 
         # --- Move to removed collection ---
         removed_doc = paper_to_remove.copy()
         removed_doc["original_id"] = removed_doc.pop("_id")
         removed_doc["removedAt"] = datetime.utcnow()
         removed_doc["removedBy"] = {"userId": session['user'].get('id'), "username": session['user'].get('username')}
-        if "pwc_url" in removed_doc: removed_doc["original_pwc_url"] = removed_doc["pwc_url"] # Keep original PWC URL if exists
+        if "pwc_url" in removed_doc:
+            removed_doc["original_pwc_url"] = removed_doc["pwc_url"] # Keep original PWC URL if exists
 
         insert_result = removed_papers_collection.insert_one(removed_doc)
         print(f"Paper {paper_id} moved to removed_papers collection with new ID {insert_result.inserted_id}")

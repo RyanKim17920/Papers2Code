@@ -1,13 +1,11 @@
 // src/services/auth.ts
-
-// Define the expected user structure based on backend session data
 export interface UserProfile {
     id: string;
     username: string;
     avatarUrl?: string | null;
     name?: string | null;
-    isOwner?: boolean; // <-- Keep this for potential future use
-    isAdmin?: boolean; // <-- Add this line for admin privileges
+    isOwner?: boolean;
+    isAdmin?: boolean;
 }
 
 const API_BASE_URL = 'http://localhost:5000'; // Use root URL

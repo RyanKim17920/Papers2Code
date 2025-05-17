@@ -144,7 +144,7 @@ def get_paper_actions(paper_id):
         ))
 
         if not actions:
-            return jsonify({"upvotes": [], "confirmations": [], "disputes": []}), 200
+            return jsonify({"upvotes": [], "votedNotImplementable": [], "votedIsImplementable": []}), 200
 
         # Get unique user IDs involved
         user_ids = list(set(action['userId'] for action in actions if 'userId' in action))
@@ -161,7 +161,7 @@ def get_paper_actions(paper_id):
                     } for user in user_details_list}
 
         # Categorize actions
-        result = {"upvotes": [], "confirmations": [], "disputes": []}
+        result = {"upvotes": [], "votedIsImplementable": [], "votedNotImplementable": []} # Swapped keys for clarity
         for action in actions:
             user_id_str = str(action.get('userId'))
             user_info = user_map.get(user_id_str)
@@ -171,10 +171,10 @@ def get_paper_actions(paper_id):
             action_type = action.get('actionType')
             if action_type == 'upvote':
                 result["upvotes"].append(user_info)
-            elif action_type == 'confirm_non_implementable':
-                result["confirmations"].append(user_info)
-            elif action_type == 'dispute_non_implementable':
-                result["disputes"].append(user_info)
+            elif action_type == 'dispute_non_implementable': # User voted "Is Implementable" (Thumbs Up)
+                result["votedIsImplementable"].append(user_info)
+            elif action_type == 'confirm_non_implementable': # User voted "Not Implementable" (Thumbs Down)
+                result["votedNotImplementable"].append(user_info)
 
         return jsonify(result), 200
 

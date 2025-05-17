@@ -1,0 +1,27 @@
+[project]
+name = "papers-2-code"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "bson>=0.5.10",
+    "dateutils>=0.6.12",
+    "dotenv>=0.9.9",
+    "fastapi>=0.115.12",
+    "flask>=3.1.0",
+    "flask-core>=2.9.0",
+    "flask-cors>=5.0.1",
+    "flask-limiter>=3.12",
+    "flask-pymongo>=3.0.1",
+    "flask-talisman>=1.1.0",
+    "flask-wtf>=1.2.2",
+    "passlib[bcrypt]>=1.7.4",
+    "pymongo>=4.12.1",
+    "python-dotenv>=1.1.0",
+    "python-jose[cryptography]>=3.4.0",
+    "requests>=2.32.3",
+    "slowapi>=0.1.9",
+    "uvicorn[standard]>=0.34.2",
+    "waitress>=3.0.2",
+]

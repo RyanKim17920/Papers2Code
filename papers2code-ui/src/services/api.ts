@@ -1,7 +1,6 @@
 // src/services/api.ts
-import { Paper } from '../types/paper';
-import { getCsrfToken } from './auth'; // Import the helper function
-import { UserProfile } from './auth'; // Ensure UserProfile is imported
+import { Paper, OwnerSettableImplementabilityStatus } from '../types/paper';
+import { getCsrfToken, UserProfile } from './auth'; // Import the helper function
 
 const API_BASE_URL = 'http://localhost:5000';
 const PAPERS_PREFIX = '/api'; // Prefix for paper-related API calls
@@ -15,8 +14,8 @@ export interface AdvancedPaperFilters {
 // --- NEW: Type for the response from the /actions endpoint ---
 export interface PaperActionUsers {
   upvotes: UserProfile[];
-  confirmations: UserProfile[];
-  disputes: UserProfile[];
+  votedIsImplementable: UserProfile[];  // Users who voted "Is Implementable" (Thumbs Up)
+  votedNotImplementable: UserProfile[]; // Users who voted "Not Implementable" (Thumbs Down)
 }
 // --- End NEW ---
 
@@ -145,28 +144,23 @@ export const flagImplementabilityInApi = async (
 // --- NEW: Function for owner to force set implementability ---
 export const setImplementabilityInApi = async (
   paperId: string,
-  isImplementable: boolean
+  statusToSet: OwnerSettableImplementabilityStatus // Use the new type
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/set_implementability`;
-  console.log(`Owner setting implementability to ${isImplementable} for paper:`, url);
+  console.log(`Owner setting implementability to ${statusToSet} for paper:`, url);
 
-  const csrfToken = getCsrfToken(); // Get token
-  console.log("CSRF Token retrieved for setImplementabilityInApi:", csrfToken);
-
+  const csrfToken = getCsrfToken(); 
   const headers: HeadersInit = {
     'Content-Type': 'application/json',
   };
   if (csrfToken) {
     headers['X-CSRFToken'] = csrfToken;
-    console.log("X-CSRFToken header added to request.");
-  } else {
-    console.warn("CSRF Token is missing, X-CSRFToken header NOT added.");
   }
 
   const response = await fetch(url, {
     method: 'POST',
     headers: headers,
-    body: JSON.stringify({ isImplementable }),
+    body: JSON.stringify({ statusToSet }), // Send statusToSet
     credentials: 'include',
   });
 
@@ -271,8 +265,8 @@ export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActio
       console.log(`Fetched action users for paper ${paperId}:`, data);
       // Ensure arrays exist even if empty
       data.upvotes = data.upvotes || [];
-      data.confirmations = data.confirmations || [];
-      data.disputes = data.disputes || [];
+      data.votedIsImplementable = data.votedIsImplementable || [];  // Swapped from votedNotImplementable
+      data.votedNotImplementable = data.votedNotImplementable || []; // Swapped from votedIsImplementable
       return data;
   } catch (error) {
       console.error(`Error fetching action users for paper ${paperId}:`, error);

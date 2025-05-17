@@ -50,10 +50,10 @@ def transform_paper(paper_doc, current_user_id=None):
                 action_type = action_doc.get("actionType")
                 if action_type == 'upvote':
                     current_user_vote = 'up'
-                elif action_type == 'confirm_non_implementable':
-                    current_user_implementability_vote = 'up' # Map confirm -> up
-                elif action_type == 'dispute_non_implementable':
-                    current_user_implementability_vote = 'down' # Map dispute -> down
+                elif action_type == 'dispute_non_implementable': # Stored as 'dispute_non_implementable' for "Is Implementable" (Thumbs Up)
+                    current_user_implementability_vote = 'up' 
+                elif action_type == 'confirm_non_implementable': # Stored as 'confirm_non_implementable' for "Not Implementable" (Thumbs Down)
+                    current_user_implementability_vote = 'down'
                 # Add more elif for future action types if needed
         except InvalidId:
             print(f"Warning: Invalid current_user_id '{current_user_id}' passed to transform_paper for paper {paper_doc.get('_id')}")
@@ -79,9 +79,9 @@ def transform_paper(paper_doc, current_user_id=None):
         # --- Implementability Fields ---
         "isImplementable": paper_doc.get("is_implementable", True),
         "nonImplementableStatus": paper_doc.get("nonImplementableStatus", "implementable"),
-        "nonImplementableVotes": paper_doc.get("nonImplementableVotes", 0),
-        "disputeImplementableVotes": paper_doc.get("disputeImplementableVotes", 0),
-        "currentUserImplementabilityVote": current_user_implementability_vote,
+        "nonImplementableVotes": paper_doc.get("nonImplementableVotes", 0),       # Votes for "Not Implementable" (Thumbs Down)
+        "disputeImplementableVotes": paper_doc.get("disputeImplementableVotes", 0), # Votes for "Is Implementable" (Thumbs Up)
+        "currentUserImplementabilityVote": current_user_implementability_vote, # 'up' for "Is Implementable", 'down' for "Not Implementable"
         "nonImplementableConfirmedBy": paper_doc.get("nonImplementableConfirmedBy"),
         # --- End Implementability Fields ---
         "implementationStatus": paper_doc.get("status", STATUS_NOT_STARTED),

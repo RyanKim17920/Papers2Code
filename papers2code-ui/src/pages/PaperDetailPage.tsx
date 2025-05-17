@@ -4,6 +4,7 @@ import { useParams, Link } from 'react-router-dom';
 import { usePaperDetail } from '../hooks/usePaperDetail';
 import type { ActiveTab as ActiveTabType } from '../hooks/usePaperDetail';
 import { UserProfile } from '../services/auth';
+import type { OwnerSettableImplementabilityStatus } from '../types/paper';
 
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmationModal from '../components/common/ConfirmationModal';
@@ -134,8 +135,8 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             paper={paper}
                             currentUser={currentUser}
                             onPaperUpdate={reloadPaper}
-                            setUpdateError={setUpdateError} // Pass setUpdateError to OwnerActions
-                            openConfirmStatusModal={openConfirmStatusModal}
+                            setUpdateError={setUpdateError}
+                            openConfirmStatusModal={openConfirmStatusModal as (status: OwnerSettableImplementabilityStatus) => void}
                             openConfirmRemoveModal={openConfirmRemoveModal}
                             isUpdatingStatus={isUpdatingStatus}
                             isRemoving={isRemoving}
@@ -161,20 +162,33 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             <ConfirmationModal
                 isOpen={showConfirmStatusModal.show}
                 onClose={closeConfirmStatusModal}
-                onConfirm={() => {
-                    if (showConfirmStatusModal.status) {
-                        const shouldBeImplementable = showConfirmStatusModal.status === 'implementable';
-                        handleSetImplementabilityStatus(shouldBeImplementable);
-                    }
-                }}
-                title={`Confirm Status: ${showConfirmStatusModal.status === 'implementable' ? 'Implementable' : 'Non-Implementable'}`}
-                confirmText={`Yes, Confirm ${showConfirmStatusModal.status === 'implementable' ? 'Implementable' : 'Non-Implementable'}`}
-                confirmButtonClass={showConfirmStatusModal.status === 'implementable' ? 'button-secondary' : 'button-warning'}
+                onConfirm={() => showConfirmStatusModal.status && handleSetImplementabilityStatus(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus)}
+                title={`Confirm Status: ${
+                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' ? 'Implementable' :
+                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' ? 'Non-Implementable' :
+                    'Revert to Voting'
+                }`}
+                confirmText={`Yes, ${
+                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' ? 'Confirm Implementable' :
+                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' ? 'Confirm Non-Implementable' :
+                    'Revert to Voting'
+                }`}
+                confirmButtonClass={
+                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' ? 'button-secondary' :
+                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' ? 'button-warning' :
+                    'button-secondary'
+                }
                 isConfirming={isUpdatingStatus}
             >
-                <p>Are you sure you want to set the status of this paper to <strong>{showConfirmStatusModal.status === 'implementable' ? 'Implementable' : 'Confirmed Non-Implementable'}</strong>?</p>
-                {showConfirmStatusModal.status === 'confirmed_non_implementable' && <p>This indicates the paper is unsuitable for implementation on this platform.</p>}
-                {showConfirmStatusModal.status === 'implementable' && <p>This will revert any previous non-implementable flags or confirmations.</p>}
+                {(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' && (
+                    <p>Are you sure you want to set the status to <strong>Confirmed Implementable</strong>? Community voting will be disabled.</p>
+                )}
+                {(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' && (
+                    <p>Are you sure you want to set the status to <strong>Confirmed Non-Implementable</strong>? Community voting will be disabled.</p>
+                )}
+                {(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'voting' && (
+                    <p>Are you sure you want to revert to <strong>community voting</strong>? Community voting will be re-enabled.</p>
+                )}
             </ConfirmationModal>
         </div>
     );

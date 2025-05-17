@@ -1,14 +1,35 @@
 import React from 'react';
-import { Paper } from '../../../../types/paper'; // Assuming Paper type is defined
-import { getStatusClass } from '../../../../utils/statusUtils'; // Assuming you'll create this
+import { Paper, ImplementationStatus } from '../../../../types/paper'; // Import ImplementationStatus
 import './PaperMetadata.css';
 import { Author } from '../../../../types/paper';
-
 interface PaperMetadataProps {
     paper: Paper;
 }
 
 const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
+    // --- Determine Display Status, Class, and Symbol (mimicking PaperCard.tsx) ---
+    let displayStatus: string | null | undefined = paper.implementationStatus;
+    let statusClass = 'status-default'; // Default class
+    let statusSymbol = '⏳'; // Default symbol, often for 'Not Started' or undefined states
+
+    if (paper.nonImplementableStatus === 'confirmed_non_implementable') {
+        displayStatus = ImplementationStatus.ConfirmedNonImplementable;
+        statusClass = 'status-non-implementable';
+        statusSymbol = '🚫';
+    } else if (paper.implementationStatus === ImplementationStatus.Completed) {
+        displayStatus = ImplementationStatus.Completed;
+        statusClass = 'status-completed';
+        statusSymbol = '✅';
+    } else if (paper.implementationStatus === ImplementationStatus.ImplementationInProgress) {
+        displayStatus = ImplementationStatus.ImplementationInProgress;
+        statusClass = 'status-in-progress';
+        statusSymbol = '🚧';
+    } else if (paper.implementationStatus === ImplementationStatus.NeedsCode) {
+        // displayStatus is already paper.implementationStatus (e.g., "Needs Code")
+        statusClass = 'status-needs-code'; // Specific class for NeedsCode
+        statusSymbol = '❓'; // Specific symbol for NeedsCode
+    }
+
     return (
         <div className="paper-meta">
             <p>
@@ -27,8 +48,9 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
             {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}
             <p>
                 <strong>Status:</strong>
-                <span className={`status ${getStatusClass(paper.implementationStatus)}`}>
-                    {paper.implementationStatus || 'Unknown'}
+                <span className={`status ${statusClass}`}>
+                    <span className="status-symbol">{statusSymbol}</span>
+                    {displayStatus || 'Unknown'}
                 </span>
             </p>
             <p>

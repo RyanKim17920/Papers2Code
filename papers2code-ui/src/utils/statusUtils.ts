@@ -15,17 +15,30 @@ export const getStatusClass = (status: string | undefined | null): string => {
             return 'status-in-progress';
         case 'Completed':
             return 'status-completed';
-        // Add more cases for other statuses if needed
-        // e.g., for nonImplementableStatus:
-        case 'flagged_non_implementable':
-            return 'status-flagged-non-implementable';
         case 'confirmed_non_implementable':
             return 'status-confirmed-non-implementable';
-        case 'pending_community_confirmation':
-            return 'status-pending-confirmation';
-        case 'implementable': // Explicitly implementable
-            return 'status-implementable';
         default:
             return 'status-unknown'; // Fallback for any other status
+    }
+};
+
+/**
+ * Returns an emoji symbol based on the paper's implementation status.
+ * @param status - The implementation status string (e.g., 'Not Started', 'In Progress', 'Completed').
+ * @returns A string containing an emoji symbol for the status.
+ */
+export const getStatusSymbol = (status: string | undefined | null): string => {
+    if (!status) return '';
+    switch (status) {
+        case 'Not Started':
+            return '⏳';
+        case 'In Progress':
+            return '🚧';
+        case 'Completed':
+            return '✅';
+        case 'confirmed_non_implementable':
+            return '🚫';
+        default:
+            return '';
     }
 };
