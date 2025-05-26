@@ -1,17 +1,47 @@
-from fastapi import FastAPI, Request, HTTPException # MODIFIED: Added HTTPException
+from fastapi import FastAPI, Request, HTTPException, APIRouter, status # MODIFIED: Added APIRouter, status
+from fastapi.middleware.cors import CORSMiddleware # ADDED: For CORS
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware # For HSTS
 from fastapi.responses import JSONResponse # For custom error handling
-import logging # ADDED: Standard Python logging
+from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint # ADDED
+from starlette.responses import Response as StarletteResponse # ADDED
+import logging # Ensure logging is imported and active
+from contextlib import asynccontextmanager # ADDED: For lifespan event handler
 
 from .shared import ensure_db_indexes, config_settings # MODIFIED: Added config_settings import
-from .routers import users, auth, admin, user_profile, research_fields, conference_series, conferences, proceedings, links, stats
+# from .routers import users, auth, admin, user_profile, research_fields, conference_series, conferences, proceedings, links, stats # Commented out missing routers
+from .routers import auth_routes # Corrected import for auth_routes
 
-# Import the new specialized paper routers
+# Import the paper routers
 from .routers import paper_views_router, paper_actions_router, paper_moderation_router
+
+# ADDED: CSRF constants (ensure these match auth_routes.py)
+CSRF_TOKEN_COOKIE_NAME = "csrf_token_cookie"
+CSRF_TOKEN_HEADER_NAME = "X-CSRFToken"
+
+# ADDED: CSRF Protection Middleware
+class CSRFProtectMiddleware(BaseHTTPMiddleware):
+    async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> StarletteResponse:
+        # Paths that do not require CSRF protection
+        exempt_paths = ["/api/auth/csrf-token", "/api/auth/github/login", "/api/auth/github/callback", "/docs", "/openapi.json"]
+        if request.url.path in exempt_paths or request.method in ("GET", "HEAD", "OPTIONS"):
+            response = await call_next(request)
+            return response
+
+        csrf_token_cookie = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
+        csrf_token_header = request.headers.get(CSRF_TOKEN_HEADER_NAME)
+
+        if not csrf_token_cookie or not csrf_token_header or csrf_token_cookie != csrf_token_header:
+            return JSONResponse(
+                status_code=status.HTTP_403_FORBIDDEN,
+                content={"detail": "CSRF token mismatch or missing."}
+            )
+        
+        response = await call_next(request)
+        return response
 
 # Initialize Limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"]) # MODIFIED: Using fixed default limits for now
@@ -21,24 +51,84 @@ limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "5
 # more sophisticated handlers (e.g., rotating file handlers, external logging services),
 # and configuring log levels via environment variables.
 
-logging.basicConfig(level=logging.INFO) # Set default level to INFO
-logger = logging.getLogger("papers2code_fastapi")
+# Determine log level: use APP_LOG_LEVEL if set, otherwise base on ENV_TYPE
+if config_settings.APP_LOG_LEVEL:
+    try:
+        log_level_str = config_settings.APP_LOG_LEVEL.upper()
+        app_log_level = getattr(logging, log_level_str) # Convert string to logging level
+    except AttributeError:
+        app_log_level = logging.DEBUG # Default to DEBUG if invalid
+        _initial_log_level_warning = f"Warning: Invalid APP_LOG_LEVEL '{config_settings.APP_LOG_LEVEL}'. Defaulting to DEBUG."
+    else:
+        _initial_log_level_warning = None
+else:
+    app_log_level = logging.DEBUG if config_settings.ENV_TYPE != "production" else logging.INFO
+    _initial_log_level_warning = None
 
-# If you want to set a different level for your app's logger specifically:
-# logger.setLevel(logging.DEBUG) # Example: Set to DEBUG for more verbose output from your app
+logging.basicConfig(level=app_log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
-# Example of adding a handler for file logging (optional)
-# file_handler = logging.FileHandler("papers2code_fastapi.log")
-# formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s')
-# file_handler.setFormatter(formatter)
-# logger.addHandler(file_handler)
-# logging.getLogger().addHandler(file_handler) # Optionally add to root logger too
+# Now that basicConfig is called, we can use loggers.
+if _initial_log_level_warning:
+    logging.warning(_initial_log_level_warning) # Log the warning if it was set
+
+# Get the main application package logger and set its level
+# This will affect all child loggers like papers2code_app2.shared, papers2code_app2.routers.paper_views_router
+app_package_logger = logging.getLogger("papers2code_app2")
+app_package_logger.setLevel(app_log_level) # Explicitly set level for this logger and its children
+
+# Log the effective level being used by the application's root-ish logger
+app_package_logger.info(f"Logging level for 'papers2code_app2' and its children set to: {logging.getLevelName(app_package_logger.getEffectiveLevel())}")
+app_package_logger.debug("This is a test DEBUG log from 'papers2code_app2' logger in main.py after explicit level setting.")
+
+logger = logging.getLogger("papers2code_fastapi") # This is for main.py specific logs, if any.
+# Ensure our app's logger also respects the determined level
+logger.setLevel(app_log_level)
+logger.debug("This is a test DEBUG log from 'papers2code_fastapi' logger in main.py") # Added test debug log
+
+@asynccontextmanager
+async def lifespan(app: FastAPI):
+    # Code to run before the application starts serving requests
+    logger.info("Application startup: Ensuring database indexes...")
+    ensure_db_indexes()
+    logger.info("Database index check complete during lifespan startup")
+    yield
+    # Code to run when the application is shutting down
+    logger.info("Application shutdown in lifespan context")
 
 app = FastAPI(
-    title="Papers2Code Clone API",
-    description="API for a PapersWithCode-like platform, rebuilt with FastAPI.",
-    version="0.2.0"
+    title="Papers2Code API",
+    description="API for Papers2Code platform.",
+    version="0.2.0",
+    lifespan=lifespan
 )
+
+# --- CORS Middleware ---
+# Origins that are allowed to make cross-origin requests.
+# For development, you might allow "http://localhost:5173" (common Vite dev port)
+# or "*" to allow all origins (less secure, use with caution).
+# For production, specify your frontend's domain.
+origins = [
+    "http://localhost:5173",  # Assuming Vite UI runs on this port
+    "http://127.0.0.1:5173",
+    "http://localhost:3000",  # Common port for React/Next.js dev
+    "http://127.0.0.1:3000",
+    # Add your production frontend URL here if applicable
+    # e.g., "https://your-frontend-domain.com"
+]
+
+if config_settings.ENV_TYPE != "production":
+    origins.append("*") # Allow all for non-production for easier local dev
+
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=origins,  # List of origins that are allowed to make cross-origin requests.
+    allow_credentials=True,  # Support cookies/authorization headers.
+    allow_methods=["*"],  # Allow all methods (GET, POST, PUT, DELETE, etc.).
+    allow_headers=["*"],  # Allow all headers.
+)
+
+# ADDED: Add CSRFProtectMiddleware after CORS and before routes
+app.add_middleware(CSRFProtectMiddleware)
 
 # Add middleware
 app.state.limiter = limiter
@@ -54,6 +144,9 @@ async def add_security_headers(request: Request, call_next):
     response = await call_next(request)
     response.headers["X-Content-Type-Options"] = "nosniff"
     response.headers["X-Frame-Options"] = "DENY"
+    response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"  # ADDED
+    response.headers["Permissions-Policy"] = "geolocation=(), microphone=(), camera=()" # ADDED
+    response.headers["X-XSS-Protection"] = "1; mode=block"  # ADDED
 
     # Content-Security-Policy: This is a stricter policy.
     # Adjust based on your frontend's specific needs (CDNs, inline scripts/styles if absolutely necessary after build).
@@ -98,42 +191,54 @@ if config_settings.ENV_TYPE == "production":
     app.add_middleware(HTTPSRedirectMiddleware) # Uncomment if your app is served over HTTPS directly or X-Forwarded-Proto is set by proxy
 
 # Include routers
-# Include the new specialized paper routers
-app.include_router(paper_views_router.router)
-app.include_router(paper_actions_router.router)
-app.include_router(paper_moderation_router.router)
+# Create a parent router for /api endpoints
+api_router = APIRouter(prefix="/api")
 
-app.include_router(users.router)
-app.include_router(auth.router)
-app.include_router(admin.router)
-app.include_router(user_profile.router)
-app.include_router(research_fields.router)
-app.include_router(conference_series.router)
-app.include_router(conferences.router)
-app.include_router(proceedings.router)
-app.include_router(links.router)
-app.include_router(stats.router)
+# Include the paper routers into the api_router
+api_router.include_router(paper_views_router.router)
+api_router.include_router(paper_actions_router.router)
+api_router.include_router(paper_moderation_router.router)
 
-@app.on_event("startup")
-async def startup_event():
-    logger.info("Application startup: Ensuring database indexes...") # MODIFIED: Use logger
-    ensure_db_indexes()
-    logger.info("Database index check complete after call in startup_event.") # MODIFIED: Use logger
+# Include the auth_routes router into the api_router
+api_router.include_router(auth_routes.router) # MODIFIED: Moved auth_routes here
 
-@app.on_event("shutdown")
-async def shutdown_event():
-    logger.info("Application shutdown.") # MODIFIED: Use logger
+# Include the api_router into the main app
+app.include_router(api_router)
+
+# app.include_router(auth_routes.router) # COMMENTED OUT: Moved to api_router
+
+# app.include_router(users.router) # Commented out missing routers
+# app.include_router(admin.router) # Commented out missing routers
+# app.include_router(user_profile.router) # Commented out missing routers
+# app.include_router(research_fields.router) # Commented out missing routers
+# app.include_router(conference_series.router) # Commented out missing routers
+# app.include_router(conferences.router) # Commented out missing routers
+# app.include_router(proceedings.router) # Commented out missing routers
+# app.include_router(links.router) # Commented out missing routers
+# app.include_router(stats.router) # Commented out missing routers
+
+# Removed deprecated @app.on_event handlers - now using lifespan context manager instead
 
 # --- Generic Exception Handler ---
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True) # Log the full traceback
+    
+    # For production, do not send detailed exception info to the client
+    if config_settings.ENV_TYPE == "production":
+        error_content = {
+            "message": "An unexpected error occurred on the server. Please try again later.",
+            "error_id": str(getattr(request.state, 'request_id', 'N/A')) # Include a request ID if available
+        }
+    else: # For development/testing, include more detail
+        error_content = {
+            "message": "An unexpected error occurred on the server.",
+            "detail": str(exc),
+            "type": type(exc).__name__
+        }
     return JSONResponse(
         status_code=500,
-        content={
-            "message": "An unexpected error occurred on the server.",
-            "detail": str(exc) # In production, you might want to hide or simplify this detail.
-        },
+        content=error_content,
     )
 
 # --- HTTP Exception Handler (FastAPI's default is usually good, but can be customized) ---
@@ -148,7 +253,7 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 
 @app.get("/")
 async def root():
-    return {"message": "Welcome to the Papers2Code Clone API"}
+    return {"message": "Welcome to the Papers2Code API"}
 
 if __name__ == "__main__":
-    uvicorn.run("main:app", host="0.0.0.0", port=8000, reload=True)
+    uvicorn.run("papers2code_app2.main:app", host="0.0.0.0", port=5000, reload=True)

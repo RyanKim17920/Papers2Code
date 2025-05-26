@@ -16,17 +16,20 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ avatarUrl, username, className,
         setImageError(false); // Reset error state if avatarUrl changes
     }, [avatarUrl]);
 
+
     if (avatarUrl && !imageError) {
         return (
             <img
                 src={avatarUrl}
                 alt={`${username}'s avatar`}
                 className={className}
-                onError={() => setImageError(true)}
+                onError={(e) => {
+                    console.error("Image load error for:", avatarUrl, "Event:", e);
+                    setImageError(true);
+                }}
             />
         );
     }
-    // @ts-expect-error: if it works then don't fix it
     return <FaUserCircle className={`${className} ${iconClassName || 'default-avatar-icon'}`} />;
 };
 

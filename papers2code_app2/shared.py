@@ -1,124 +1,200 @@
-from pymongo import MongoClient, DESCENDING, ASCENDING
-from bson import ObjectId
-from typing import Dict, Any, Optional
-from datetime import datetime
 import os
+import logging
+from typing import Optional, Any, Dict
+from pymongo import MongoClient, DESCENDING, ASCENDING
+from pymongo.database import Database
+from bson import ObjectId
+from bson.errors import InvalidId
+from dotenv import load_dotenv
+from pydantic_settings import BaseSettings, SettingsConfigDict
+from pydantic import Field
+from datetime import datetime
 
-# --- Configuration Settings ---
-# In a production FastAPI application, Pydantic's BaseSettings would be used here
-# to load configuration from environment variables and .env files.
-# For simplicity in this migration, we are using a class and os.getenv directly.
+# Explicitly load .env here if not relying solely on pydantic_settings for early access
+# or if needing to debug raw os.getenv values before pydantic model instantiation.
+# However, pydantic_settings with SettingsConfigDict(env_file=".env") should handle it.
+# For robust debugging, let's ensure it's loaded if we want to print raw env vars.
+env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+loaded_env = load_dotenv(dotenv_path=env_path, override=True)
 
-class AppConfig:
-    # --- Environment Configuration ---
-    ENV_TYPE: str = os.getenv("ENV_TYPE", "development") # e.g., "development", "production", "testing"
+logger = logging.getLogger(__name__)
+logging.basicConfig(level=logging.INFO)
 
-    # --- Status Constants ---
-    STATUS_IMPLEMENTABLE: str = "implementable"
-    STATUS_FLAGGED_NON_IMPLEMENTABLE: str = "flagged_non_implementable"
-    # Using distinct DB status values for FastAPI to avoid conflicts if sharing DB during transition
-    STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: str = os.getenv("STATUS_CNI_DB_FASTAPI", "confirmed_non_implementable_fastapi")
-    STATUS_CONFIRMED_IMPLEMENTABLE_DB: str = os.getenv("STATUS_CI_DB_FASTAPI", "confirmed_implementable_fastapi")
-    
-    # Display statuses (consistent with Flask app)
-    STATUS_CONFIRMED_NON_IMPLEMENTABLE: str = "Confirmed Non-Implementable"
-    STATUS_CONFIRMED_IMPLEMENTABLE: str = "Confirmed Implementable"
-    STATUS_NOT_STARTED: str = "Not Started"
+# Log raw environment variables before Pydantic model instantiation for debugging
+logger.info(f"Raw os.getenv('ENV_TYPE'): {os.getenv('ENV_TYPE')}")
+logger.info(f"Raw os.getenv('MONGO_URI_DEV'): {os.getenv('MONGO_URI_DEV')}")
+logger.info(f"Raw os.getenv('MONGO_URI_PROD'): {os.getenv('MONGO_URI_PROD')}")
+logger.info(f"Raw os.getenv('MONGO_URI_PROD_TEST'): {os.getenv('MONGO_URI_PROD_TEST')}")
+logger.info(f"Raw os.getenv('STATUS_CNI_DB_FASTAPI'): {os.getenv('STATUS_CNI_DB_FASTAPI')}")
+logger.info(f"Raw os.getenv('ATLAS_SEARCH_INDEX_NAME'): {os.getenv('ATLAS_SEARCH_INDEX_NAME')}")
+logger.info(f"Raw os.getenv('ATLAS_SEARCH_SCORE_THRESHOLD'): {os.getenv('ATLAS_SEARCH_SCORE_THRESHOLD')}")
+logger.info(f"Raw os.getenv('ATLAS_SEARCH_OVERALL_LIMIT'): {os.getenv('ATLAS_SEARCH_OVERALL_LIMIT')}")
+logger.info(f"Raw os.getenv('ATLAS_SEARCH_TITLE_BOOST'): {os.getenv('ATLAS_SEARCH_TITLE_BOOST')}")
+logger.info(f"Raw os.getenv('FLASK_SECRET_KEY'): {os.getenv('FLASK_SECRET_KEY')}") # Log raw SECRET_KEY
+logger.info(f"Raw os.getenv('ALGORITHM'): {os.getenv('ALGORITHM')}") # Log raw ALGORITHM
+logger.info(f"Raw os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES'): {os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES')}") # Log raw ACCESS_TOKEN_EXPIRE_MINUTES
+logger.info(f"Raw os.getenv('REFRESH_TOKEN_EXPIRE_MINUTES'): {os.getenv('REFRESH_TOKEN_EXPIRE_MINUTES')}") # Log raw REFRESH_TOKEN_EXPIRE_MINUTES
+logger.info(f"Raw os.getenv('OWNER_GITHUB_USERNAME'): {os.getenv('OWNER_GITHUB_USERNAME')}") # Log raw OWNER_GITHUB_USERNAME
+logger.info(f"Raw os.getenv('GITHUB_CLIENT_ID'): {os.getenv('GITHUB_CLIENT_ID')}") # Log raw GITHUB_CLIENT_ID
+logger.info(f"Raw os.getenv('GITHUB_CLIENT_SECRET'): {os.getenv('GITHUB_CLIENT_SECRET')}") # Log raw GITHUB_CLIENT_SECRET
+logger.info(f"Raw os.getenv('FRONTEND_URL'): {os.getenv('FRONTEND_URL')}") # Log raw FRONTEND_URL
 
-    # --- Thresholds ---
-    NON_IMPLEMENTABLE_CONFIRM_THRESHOLD: int = int(os.getenv('NON_IMPLEMENTABLE_CONFIRM_THRESHOLD', 3))
-    IMPLEMENTABLE_CONFIRM_THRESHOLD: int = int(os.getenv('IMPLEMENTABLE_CONFIRM_THRESHOLD', 3))
+class AppSettings(BaseSettings):
+    ENV_TYPE: str = "DEV"
+    MONGO_URI_DEV: Optional[str] = None
+    MONGO_URI_PROD: Optional[str] = None
+    MONGO_URI_PROD_TEST: Optional[str] = None
+    FLASK_SECRET_KEY: Optional[str] = None # Add SECRET_KEY field
+    ALGORITHM: str = "HS256" # Add ALGORITHM field with a default
+    ACCESS_TOKEN_EXPIRE_MINUTES: int = 30 # Add ACCESS_TOKEN_EXPIRE_MINUTES with a default
+    REFRESH_TOKEN_EXPIRE_MINUTES: int = 10080 # Add REFRESH_TOKEN_EXPIRE_MINUTES, default 7 days
+    OWNER_GITHUB_USERNAME: Optional[str] = None # Add OWNER_GITHUB_USERNAME
+    APP_LOG_LEVEL: str = "INFO" # Default log level
 
-    # --- JWT Settings ---
-    # It's crucial to set FASTAPI_SECRET_KEY in your environment for production.
-    SECRET_KEY: str = os.getenv('FASTAPI_SECRET_KEY', "your-development-secret-key-please-change") 
-    ALGORITHM: str = "HS256"
-    ACCESS_TOKEN_EXPIRE_MINUTES: int = int(os.getenv('ACCESS_TOKEN_EXPIRE_MINUTES', 30))
-    REFRESH_TOKEN_EXPIRE_MINUTES: int = int(os.getenv('REFRESH_TOKEN_EXPIRE_MINUTES', 60 * 24 * 7)) # Default to 7 days
-    STATE_TOKEN_EXPIRE_MINUTES: int = int(os.getenv('STATE_TOKEN_EXPIRE_MINUTES', 5)) # For OAuth state CSRF protection
-
-    # --- GitHub OAuth ---
-    GITHUB_CLIENT_ID: Optional[str] = os.getenv('GITHUB_CLIENT_ID')
-    GITHUB_CLIENT_SECRET: Optional[str] = os.getenv('GITHUB_CLIENT_SECRET')
-    GITHUB_SCOPE: str = "read:user" # Standard scope for reading user profile
+    # GitHub OAuth Settings
+    GITHUB_CLIENT_ID: Optional[str] = None
+    GITHUB_CLIENT_SECRET: Optional[str] = None
     GITHUB_AUTHORIZE_URL: str = "https://github.com/login/oauth/authorize"
     GITHUB_ACCESS_TOKEN_URL: str = "https://github.com/login/oauth/access_token"
     GITHUB_API_USER_URL: str = "https://api.github.com/user"
-    # GITHUB_CALLBACK_URL is typically constructed dynamically in the auth router
-    # using request.url_for('github_callback'). If a fixed URL is needed due to proxy,
-    # it could be configured here e.g. os.getenv('GITHUB_CALLBACK_URL_FULL_PATH')
-
-    # --- Application Specific ---
-    OWNER_GITHUB_USERNAME: Optional[str] = os.getenv('OWNER_GITHUB_USERNAME')
-    FRONTEND_URL: str = os.getenv('FRONTEND_URL', 'http://localhost:5173') # Default for local dev
+    GITHUB_SCOPE: str = "user:email"
+    FRONTEND_URL: str = "http://localhost:5173" # Default for Vite, adjust if your UI runs elsewhere
     
-    # --- Search (e.g., MongoDB Atlas Search) ---
-    ATLAS_SEARCH_INDEX_NAME: str = os.getenv('ATLAS_SEARCH_INDEX_NAME', 'default')
+    STATUS_CNI_DB_FASTAPI: str = "implementable" # Default DB value if env var not set
 
-    # --- Database Configuration ---
-    MONGO_URI: str = os.getenv('MONGO_URI', "mongodb://localhost:27017/")
-    DB_NAME: str = os.getenv('DB_NAME', "papers2code_db_fastapi_dev") # Use a distinct DB name for FastAPI dev
-
-    # --- Rate Limiting (NEW) ---
-    # Example: "100/minute,2000/day" - loaded as a string, then parsed in main.py or wherever Limiter is initialized.
-    # For simplicity here, we'll define it as a list of strings directly, assuming it's set correctly in ENV.
-    # If set as a single string in ENV like "100/minute;50/hour", it would need parsing.
-    DEFAULT_RATE_LIMITS_STR: Optional[str] = os.getenv("DEFAULT_RATE_LIMITS", "200 per day;50 per hour")
+    # Status constants
+    STATUS_IMPLEMENTABLE: str = "implementable"
+    STATUS_FLAGGED_NON_IMPLEMENTABLE: str = "flagged_non_implementable"
+    STATUS_CONFIRMED_IMPLEMENTABLE_DB: str = "confirmed_implementable"
+    # STATUS_CNI_DB_FASTAPI is already present and used for STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB
     
-    @property
-    def DEFAULT_RATE_LIMITS(self) -> list[str]:
-        if self.DEFAULT_RATE_LIMITS_STR:
-            return [limit.strip() for limit in self.DEFAULT_RATE_LIMITS_STR.split(';')]
-        return ["200 per day", "50 per hour"] # Fallback default
+    # Voting Thresholds
+    NON_IMPLEMENTABLE_CONFIRM_THRESHOLD: int = 3 
+    IMPLEMENTABLE_CONFIRM_THRESHOLD: int = 2
 
-    def __init__(self):
-        # Basic validation on instantiation
-        if not self.MONGO_URI:
-            raise ValueError("No MONGO_URI found. Please set the MONGO_URI environment variable.")
-        if not self.GITHUB_CLIENT_ID or not self.GITHUB_CLIENT_SECRET:
-            print("Warning: GITHUB_CLIENT_ID or GITHUB_CLIENT_SECRET not found. GitHub OAuth will not function.")
-        if self.SECRET_KEY == "your-development-secret-key-please-change" and self.ENV_TYPE == 'production':
-            print("CRITICAL: Using default FASTAPI_SECRET_KEY in a production environment. Please set a strong secret.")
-        if not self.OWNER_GITHUB_USERNAME:
-            print("Warning: OWNER_GITHUB_USERNAME is not set. Owner-specific functionalities might be limited.")
+    # This will use the value of STATUS_CNI_DB_FASTAPI from .env or the default above
+    STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: str = Field(default_factory=lambda: os.getenv("STATUS_CNI_DB_FASTAPI", "confirmed_non_implementable"))
 
-config_settings = AppConfig()
+    # Atlas Search settings with defaults
+    ATLAS_SEARCH_INDEX_NAME: str = "default" # Default index name
+    ATLAS_SEARCH_SCORE_THRESHOLD: float = 0.5 # Default score threshold
+    ATLAS_SEARCH_OVERALL_LIMIT: int = 1000 # Default overall limit for search results
+    ATLAS_SEARCH_TITLE_BOOST: float = 3.0 # Default boost for title field
+
+    model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
+
+config_settings = AppSettings()
+
+# Log the settings loaded by Pydantic
+logger.info(f"Loaded config_settings.ENV_TYPE: {config_settings.ENV_TYPE}")
+logger.info(f"Loaded config_settings.MONGO_URI_DEV: {config_settings.MONGO_URI_DEV}")
+logger.info(f"Loaded config_settings.MONGO_URI_PROD: {config_settings.MONGO_URI_PROD}")
+logger.info(f"Loaded config_settings.MONGO_URI_PROD_TEST: {config_settings.MONGO_URI_PROD_TEST}")
+logger.info(f"Loaded config_settings.STATUS_CNI_DB_FASTAPI: {config_settings.STATUS_CNI_DB_FASTAPI}")
+logger.info(f"Loaded config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: {config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB}")
+logger.info(f"Loaded config_settings.ATLAS_SEARCH_INDEX_NAME: {config_settings.ATLAS_SEARCH_INDEX_NAME}")
+logger.info(f"Loaded config_settings.ATLAS_SEARCH_SCORE_THRESHOLD: {config_settings.ATLAS_SEARCH_SCORE_THRESHOLD}")
+logger.info(f"Loaded config_settings.ATLAS_SEARCH_OVERALL_LIMIT: {config_settings.ATLAS_SEARCH_OVERALL_LIMIT}")
+logger.info(f"Loaded config_settings.ATLAS_SEARCH_TITLE_BOOST: {config_settings.ATLAS_SEARCH_TITLE_BOOST}")
+logger.info(f"Loaded config_settings.SECRET_KEY: {config_settings.FLASK_SECRET_KEY}") # Log loaded SECRET_KEY
+logger.info(f"Loaded config_settings.ALGORITHM: {config_settings.ALGORITHM}") # Log loaded ALGORITHM
+logger.info(f"Loaded config_settings.ACCESS_TOKEN_EXPIRE_MINUTES: {config_settings.ACCESS_TOKEN_EXPIRE_MINUTES}") # Log loaded ACCESS_TOKEN_EXPIRE_MINUTES
+logger.info(f"Loaded config_settings.REFRESH_TOKEN_EXPIRE_MINUTES: {config_settings.REFRESH_TOKEN_EXPIRE_MINUTES}") # Log loaded REFRESH_TOKEN_EXPIRE_MINUTES
+logger.info(f"Loaded config_settings.OWNER_GITHUB_USERNAME: {config_settings.OWNER_GITHUB_USERNAME}") # Log loaded OWNER_GITHUB_USERNAME
+logger.info(f"Loaded config_settings.GITHUB_CLIENT_ID: {config_settings.GITHUB_CLIENT_ID}") # Log loaded GITHUB_CLIENT_ID
+logger.info(f"Loaded config_settings.GITHUB_CLIENT_SECRET: {'********' if config_settings.GITHUB_CLIENT_SECRET else None}") # Log loaded GITHUB_CLIENT_SECRET (masked)
+logger.info(f"Loaded config_settings.FRONTEND_URL: {config_settings.FRONTEND_URL}") # Log loaded FRONTEND_URL
+
+def get_mongo_uri_and_db_name(settings: AppSettings) -> tuple[str, str]:
+    env_type = settings.ENV_TYPE.upper()
+    uri: Optional[str] = None
+    db_name = "papers2code" # Use "papers2code" as the database name convention
+
+    logger.info(f"Determining MongoDB URI for ENV_TYPE: {env_type}, DB Name will be: {db_name}")
+
+    if env_type == "PROD":
+        uri = settings.MONGO_URI_PROD
+    elif env_type == "PROD_TEST":
+        uri = settings.MONGO_URI_PROD_TEST
+    elif env_type == "DEV":
+        uri = settings.MONGO_URI_DEV
+    else:
+        logger.warning(f"Unknown ENV_TYPE: '{settings.ENV_TYPE}'. Defaulting to DEV URI if available.")
+        uri = settings.MONGO_URI_DEV # Fallback to DEV URI
+        # db_name remains "papers2code"
+
+    if not uri:
+        logger.critical(f"CRITICAL: MongoDB URI for ENV_TYPE '{env_type}' is not set or resolved. Please check .env file for MONGO_URI_{env_type.upper()} or MONGO_URI_DEV as fallback.")
+        raise ValueError(f"MongoDB URI for ENV_TYPE '{env_type}' is not configured.")
+    
+    logger.info(f"Selected URI: {uri} for ENV_TYPE: {env_type}")
+    logger.info(f"Selected DB Name: {db_name} (overridden) for ENV_TYPE: {env_type}")
+    return uri, db_name
 
 # --- Database Connection ---
+client: Optional[MongoClient] = None
+db: Optional[Database] = None
+db_papers: Any = None
+db_user_actions: Any = None
+db_removed_papers: Any = None
+db_users: Any = None
+
 try:
-    print(f"Attempting to connect to MongoDB: {config_settings.MONGO_URI}, DB: {config_settings.DB_NAME}")
-    client = MongoClient(config_settings.MONGO_URI)
+    actual_mongo_uri, actual_db_name = get_mongo_uri_and_db_name(config_settings)
+    
+    logger.info(f"Attempting to connect to MongoDB URI: {actual_mongo_uri}, Database: {actual_db_name}")
+    client = MongoClient(actual_mongo_uri)
     # Ping the server to verify connection before proceeding
     client.admin.command('ping') 
-    print("MongoDB server ping successful.")
-    db = client[config_settings.DB_NAME]
-    print(f"Successfully connected to MongoDB database: '{config_settings.DB_NAME}'.")
-except Exception as e:
-    # This makes the error during initial DB connection very explicit.
-    print(f"CRITICAL: Failed to connect to MongoDB at {config_settings.MONGO_URI} (DB: {config_settings.DB_NAME}). Error: {e}")
-    print("Application will use mock collections. Some functionalities will be severely limited or non-operational.")
-    # Fallback to mock collections if connection fails, to allow code to run for demo/dev without DB
-    # This is primarily for development or CI environments where a DB might not be available.
+    logger.info("MongoDB server ping successful.")
+    db = client[actual_db_name]
+    logger.info(f"Successfully connected to MongoDB database: '{actual_db_name}'.")
+    
+    # Initialize collections after successful connection
+    db_papers = db["papers"]
+    db_user_actions = db["user_actions"]
+    db_removed_papers = db["removed_papers"]
+    db_users = db["users"]
 
-    print(f"WARNING: Failed to connect to MongoDB: {e}. Using mock collections.")
-    # Fallback to mock collections if connection fails, to allow code to run for demo
+except Exception as e:
+    logger.critical(f"CRITICAL: Failed to connect to MongoDB. URI attempted: {globals().get('actual_mongo_uri', 'Not determined')}, DB Name attempted: {globals().get('actual_db_name', 'Not determined')}. Error: {e}", exc_info=True)
+    logger.warning("Application will use mock collections. Some functionalities will be severely limited or non-operational.")
+    
     class MockCollection:
+        def __init__(self, name="mock"):
+            self._name = name
+            logger.info(f"MockCollection '{self._name}' initialized.")
         def find_one(self, *args, **kwargs) -> Optional[Dict[str, Any]]: return None
+        def find(self, *args, **kwargs): return iter([]) # Ensure find returns an iterable
+        def count_documents(self, *args, **kwargs) -> int: return 0
         def find_one_and_update(self, *args, **kwargs) -> Optional[Dict[str, Any]]: return None
         def update_one(self, *args, **kwargs): return type('UpdateResult', (), {'modified_count': 0})
         def insert_one(self, *args, **kwargs): return type('InsertOneResult', (), {'inserted_id': ObjectId()})
         def delete_one(self, *args, **kwargs): return type('DeleteResult', (), {'deleted_count': 0})
         def delete_many(self, *args, **kwargs): return type('DeleteResult', (), {'deleted_count': 0})
-    
-    db_papers = MockCollection()
-    db_user_actions = MockCollection()
-    db_removed_papers = MockCollection()
-    db_users = MockCollection()
-else:
-    db_papers = db["papers"]
-    db_user_actions = db["user_actions"]
-    db_removed_papers = db["removed_papers"]
-    db_users = db["users"]
+        def aggregate(self, *args, **kwargs): return iter([]) # Ensure aggregate returns an iterable
+        def index_information(self, *args, **kwargs): return {} # Mock index_information
+        def create_index(self, *args, **kwargs): pass # Mock create_index
+
+    # Fallback to mock collections if connection fails
+    db_papers = MockCollection("papers")
+    db_user_actions = MockCollection("user_actions")
+    db_removed_papers = MockCollection("removed_papers")
+    db_users = MockCollection("users")
+
+# Ensure collections are defined even if the 'else' block of the try-except was skipped
+# This is mostly for type hinting and ensuring the names are always available.
+if db_papers is None:
+    db_papers = MockCollection("papers_fallback")
+
+if db_user_actions is None:
+    db_user_actions = MockCollection("user_actions_fallback")
+
+if db_removed_papers is None:
+    db_removed_papers = MockCollection("removed_papers_fallback")
+
+if db_users is None:
+    db_users = MockCollection("users_fallback")
 
 def get_papers_collection_sync():
     return db_papers
@@ -130,126 +206,188 @@ def get_removed_papers_collection_sync():
     return db_removed_papers
 
 def get_users_collection_sync():
-    # Ensure db_users is defined in the fallback case as well
-    if "client" not in globals() or client is None: # Check if MongoDB connection failed
-        # Return a mock collection if real connection failed
-        return MockCollection() 
+    if "client" not in globals() or client is None:
+        return MockCollection()
     return db_users
 
-# --- transform_paper Placeholder ---
-# This function should mirror your existing Flask app's transform_paper.
-def transform_paper_sync(paper_doc: Optional[Dict[str, Any]], user_id_str: Optional[str]) -> Dict[str, Any]:
+def transform_paper_sync(paper_doc: Dict[str, Any], current_user_id_str: Optional[str] = None) -> Optional[Dict[str, Any]]:
+    """
+    Transforms a paper document from MongoDB to a dictionary suitable for PaperResponse,
+    handling potential missing fields and converting types where necessary.
+    Includes user-specific information like 'has_upvoted'.
+    """
     if not paper_doc:
-        return {} # Or raise an error, depending on expected behavior
-    
-    transformed = paper_doc.copy()
-    if "_id" in transformed:
-        transformed["id"] = str(transformed["_id"])
-        del transformed["_id"]
-    
-    # Add any other transformations your UI expects.
-    # For example, converting datetime objects to ISO strings if not handled by FastAPI's encoder.
-    for key, value in transformed.items():
-        if isinstance(value, datetime):
-            transformed[key] = value.isoformat()
-            
-    # Example: Add user-specific information if needed (though this is often handled client-side)
-    # if user_id_str:
-    # transformed['user_has_voted'] = ... # Logic based on user_id_str and paper_doc
+        return None
 
-    return transformed
+    # Ensure authors are a list of strings
+    authors_data = paper_doc.get("authors", [])
+    if authors_data and isinstance(authors_data, list) and all(isinstance(author, dict) for author in authors_data):
+        authors_list = [author.get("name") for author in authors_data if author.get("name")]
+    elif authors_data and isinstance(authors_data, list) and all(isinstance(author, str) for author in authors_data):
+        authors_list = authors_data
+    else:
+        authors_list = [] # Default to empty list if format is unexpected
+
+    # Convert ObjectId to string for id
+    paper_id = str(paper_doc["_id"]) if "_id" in paper_doc else None
+    if not paper_id:
+        return None # Should not happen if doc is from DB
+
+    # Handle potentially empty or invalid URL strings by converting them to None
+    url_pdf_value = paper_doc.get("urlPdf") # Already camelCase from DB or previous Pydantic model
+    url_abs_value = paper_doc.get("urlAbs")
+
+    # Convert empty strings or non-string values for URLs to None so Pydantic HttpUrl handles them correctly
+    transformed_url_pdf = str(url_pdf_value) if url_pdf_value and isinstance(url_pdf_value, str) and url_pdf_value.strip() else None
+    transformed_url_abs = str(url_abs_value) if url_abs_value and isinstance(url_abs_value, str) and url_abs_value.strip() else None
+
+    # so much random stuff added by copilot
+    # TODO: Review and clean up the code below this line if necessary
+    transformed_data = {
+        "id": paper_id,
+        "title": paper_doc.get("title"),
+        "authors": authors_list,
+        "publicationDate": paper_doc.get("publicationDate"),
+        "abstract": paper_doc.get("abstract"),
+        "arxivId": paper_doc.get("arxivId"),
+        "urlPdf": transformed_url_pdf, # Use the processed value
+        "urlAbs": transformed_url_abs, # Use the processed value
+        "tags": paper_doc.get("tags", []),
+        "publicationYear": paper_doc.get("publicationYear"),
+        "venue": paper_doc.get("venue"),
+        "citationsCount": paper_doc.get("citationsCount"),
+        "addedDate": paper_doc.get("addedDate", datetime.now()), # Default if missing
+        "lastModifiedDate": paper_doc.get("lastModifiedDate", datetime.now()), # Default if missing
+        "upvoteCount": paper_doc.get("upvoteCount", 0),
+        "viewCount": paper_doc.get("viewCount", 0),
+        "isNonImplementable": paper_doc.get("isNonImplementable", False),
+        "nonImplementableStatus": paper_doc.get("nonImplementableStatus", config_settings.STATUS_IMPLEMENTABLE),
+        "nonImplementableReason": paper_doc.get("nonImplementableReason"),
+        "hasUpvoted": False, # Default, will be updated below if user context is available
+        "hasSaved": False, # Default for saved status
+        "hasFlaggedNonImplementable": False, # Default for flagged status
+        "hasConfirmedNonImplementable": False, # Default for confirmed status
+        "hasDisputedNonImplementable": False, # Default for disputed status
+        "score": paper_doc.get("score"), # For Atlas Search results
+    }
+
+    # If user context is provided, check for user-specific actions
+    if current_user_id_str:
+        try:
+            user_obj_id = ObjectId(current_user_id_str)
+            user_actions_collection = get_user_actions_collection_sync()
+
+            # Check for upvote
+            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "upvote"}) > 0:
+                transformed_data["hasUpvoted"] = True
+            
+            # Check for saved (assuming 'save' is an actionType)
+            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "save"}) > 0:
+                transformed_data["hasSaved"] = True
+
+            # Check for non-implementable flags by the current user
+            # These action types are examples; adjust to your actual stored values
+            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "flag_non_implementable"}) > 0:
+                transformed_data["hasFlaggedNonImplementable"] = True
+            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "confirm_non_implementable"}) > 0:
+                transformed_data["hasConfirmedNonImplementable"] = True
+            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "dispute_non_implementable"}) > 0:
+                transformed_data["hasDisputedNonImplementable"] = True
+
+        except InvalidId:
+            logger.warning(f"Invalid current_user_id_str: {current_user_id_str} during transform_paper_sync for paper {paper_id}. Cannot determine user-specific actions.")
+        except Exception as e:
+            logger.error(f"Error checking user actions in transform_paper_sync for paper {paper_id}, user {current_user_id_str}: {e}", exc_info=True)
+
+    return transformed_data
+
 
 def ensure_db_indexes():
     """
-    Ensures that the required MongoDB indexes are created for all collections.
-    This function should be called on application startup.
+    Ensures that the necessary indexes are created in the MongoDB collections.
+    This function should be called at application startup.
     """
-    print("Ensuring MongoDB indexes...")
+    if "client" not in globals() or client is None or db is None:
+        logger.error("Database client or db object not initialized. Skipping index creation.")
+        return
+
     try:
-        papers_collection = get_papers_collection_sync()
-        users_collection = get_users_collection_sync()
-        user_actions_collection = get_user_actions_collection_sync()
-        removed_papers_collection = get_removed_papers_collection_sync() # Ensure this getter is available and works
-
-        # Index definitions: (keys, options)
-        # Note: Atlas Search indexes are managed via Atlas UI/API, not here.
-        index_definitions = {
-            papers_collection: [
-                (("pwc_url", ASCENDING), {"name": "pwc_url_1", "unique": True, "background": True}),
-                (("publication_date", DESCENDING), {"name": "publication_date_-1", "background": True}),
-                (("upvoteCount", DESCENDING), {"name": "upvoteCount_-1", "background": True, "sparse": True}),
-            ],
-            users_collection: [
-                (("githubId", ASCENDING), {"name": "githubId_1", "unique": True, "background": True}),
-                (("username", ASCENDING), {"name": "username_1", "unique": True, "background": True, "sparse": True}),
-            ],
-            user_actions_collection: [
-                ([
-                    ("userId", ASCENDING),
-                    ("paperId", ASCENDING),
-                    ("actionType", ASCENDING)
-                ], {"name": "userId_1_paperId_1_actionType_1", "unique": True, "background": True}),
-                (("paperId", ASCENDING), {"name": "paperId_1", "background": True}), # Changed name from paperId_1_actions to paperId_1
-            ],
-            removed_papers_collection: [
-                (("removedAt", DESCENDING), {"name": "removedAt_-1", "background": True}),
-                (("original_pwc_url", ASCENDING), {"name": "original_pwc_url_1", "background": True}),
-            ]
-        }
-
-        for collection, indexes_to_create in index_definitions.items():
-            if collection is None: # Skip if a collection getter returned None
-                actual_collection_name = "unknown"
-                if collection is papers_collection:
-                    actual_collection_name = "papers"
-                elif collection is users_collection:
-                    actual_collection_name = "users"
-                elif collection is user_actions_collection:
-                    actual_collection_name = "user_actions"
-                elif collection is removed_papers_collection:
-                    actual_collection_name = "removed_papers"
-
-                print(f"Skipping index creation for '{actual_collection_name}' collection as it was None.")
-                continue
+        # Index for users collection
+        if db_users is not None:
+            current_indexes_users = db_users.index_information()
+            if "username_1" not in current_indexes_users:
+                db_users.create_index([("username", ASCENDING)], unique=True, name="username_1")
+                logger.info("Created unique index on 'username' in 'users' collection.")
+            else:
+                logger.info("Index 'username_1' already exists in 'users' collection.")
             
-            # Ensure collection name is available for logging, even for mock collections
-            collection_name = getattr(collection, 'name', 'mock_collection_without_name')
+            if "githubId_1" not in current_indexes_users:
+                db_users.create_index([("githubId", ASCENDING)], unique=True, sparse=True, name="githubId_1")
+                logger.info("Created unique, sparse index on 'githubId' in 'users' collection.")
+            else:
+                logger.info("Index 'githubId_1' already exists in 'users' collection.")
 
-            existing_indexes = collection.index_information()
-            for keys, options in indexes_to_create:
-                index_name = options['name']
-                if index_name not in existing_indexes:
-                    print(f"Creating index '{index_name}' on collection '{collection_name}'...")
-                    collection.create_index(keys, **options)
-                    print(f"Index '{index_name}' created.")
-                else:
-                    print(f"Index '{index_name}' already exists on collection '{collection_name}'.")
+        # Indexes for papers collection
+        if db_papers is not None:
+            current_indexes_papers = db_papers.index_information()
+            if "primary_paper_id_1" not in current_indexes_papers:
+                db_papers.create_index([("primary_paper_id", ASCENDING)], name="primary_paper_id_1", sparse=True)
+                logger.info("Created sparse index on 'primary_paper_id' in 'papers' collection.")
+            else:
+                logger.info("Index 'primary_paper_id_1' already exists in 'papers' collection.")
 
-        # Verify Atlas Search Index (Informational)
-        atlas_search_index_name = getattr(config_settings, 'ATLAS_SEARCH_INDEX_NAME', 'default')
-        # Ensure papers_collection is not None before trying to use it
-        if papers_collection is not None:
-            papers_collection_name = getattr(papers_collection, 'name', 'papers (mock or unnamed)')
-            try:
-                list(papers_collection.aggregate([
-                    {"$search": {"index": atlas_search_index_name, "text": {"query": "test", "path": "title"}}},
-                    {"$limit": 1}
-                ]))
-                print(f"Atlas Search index '{atlas_search_index_name}' seems accessible on '{papers_collection_name}'.")
-            except Exception as search_err:
-                if "index not found" in str(search_err).lower() or (hasattr(search_err, 'details') and isinstance(search_err.details, dict) and "codeName" in search_err.details and search_err.details["codeName"] == "IndexNotFound"):
-                    print(f"Warning: Atlas Search index '{atlas_search_index_name}' not found or not configured correctly on '{papers_collection_name}'. Please create it in MongoDB Atlas.")
-                elif "unrecognized pipeline stage" in str(search_err).lower() or (hasattr(search_err, 'details') and isinstance(search_err.details, dict) and search_err.details.get("code") == 51265) : # 51265 is $search stage error if not on Atlas
-                    print(f"Info: $search stage for Atlas Search index '{atlas_search_index_name}' is likely unavailable (not running on Atlas or Search Nodes not provisioned) on '{papers_collection_name}'. This is expected if not using Atlas Search.")
-                else:
-                    print(f"Warning: Could not verify Atlas Search index '{atlas_search_index_name}' on '{papers_collection_name}': {search_err}")
-        else:
-            print("Skipping Atlas Search index check as papers_collection is None.")
-        
-        print("MongoDB index check complete.")
+            if "arxiv_id_1" not in current_indexes_papers:
+                db_papers.create_index([("arxiv_id", ASCENDING)], name="arxiv_id_1", sparse=True)
+                logger.info("Created sparse index on 'arxiv_id' in 'papers' collection.")
+            else:
+                logger.info("Index 'arxiv_id_1' already exists in 'papers' collection.")
+
+            if "created_at_-1" not in current_indexes_papers:
+                db_papers.create_index([("created_at", DESCENDING)], name="created_at_-1")
+                logger.info("Created descending index on 'created_at' in 'papers' collection.")
+            else:
+                logger.info("Index 'created_at_-1' already exists in 'papers' collection.")
+            
+            if "updated_at_-1" not in current_indexes_papers:
+                db_papers.create_index([("updated_at", DESCENDING)], name="updated_at_-1")
+                logger.info("Created descending index on 'updated_at' in 'papers' collection.")
+            else:
+                logger.info("Index 'updated_at_-1' already exists in 'papers' collection.")
+
+            if "internal_status_1" not in current_indexes_papers:
+                db_papers.create_index([("internal_status", ASCENDING)], name="internal_status_1", sparse=True)
+                logger.info("Created sparse index on 'internal_status' in 'papers' collection.")
+            else:
+                logger.info("Index 'internal_status_1' already exists in 'papers' collection.")
+            
+            if "is_public_1" not in current_indexes_papers:
+                db_papers.create_index([("is_public", ASCENDING)], name="is_public_1")
+                logger.info("Created index on 'is_public' in 'papers' collection.")
+            else:
+                logger.info("Index 'is_public_1' already exists in 'papers' collection.")        # Indexes for user_actions collection
+        if db_user_actions is not None:
+            current_indexes_actions = db_user_actions.index_information()
+            if "user_id_1_paper_id_1_action_type_1" not in current_indexes_actions:
+                db_user_actions.create_index(
+                    [("user_id", ASCENDING), ("paper_id", ASCENDING), ("action_type", ASCENDING)],
+                    unique=True,
+                    name="user_id_1_paper_id_1_action_type_1"
+                )
+                logger.info("Created unique compound index on 'user_id', 'paper_id', 'action_type' in 'user_actions' collection.")
+            else:
+                logger.info("Index 'user_id_1_paper_id_1_action_type_1' already exists in 'user_actions' collection.")
+            
+            if "paper_id_1_action_type_1" not in current_indexes_actions:
+                db_user_actions.create_index(
+                    [("paper_id", ASCENDING), ("action_type", ASCENDING)],
+                    name="paper_id_1_action_type_1"
+                )
+                logger.info("Created compound index on 'paper_id', 'action_type' in 'user_actions' collection.")
+            else:
+                logger.info("Index 'paper_id_1_action_type_1' already exists in 'user_actions' collection.")
+
+        logger.info("Database index check/creation process complete.")
 
     except Exception as e:
-        print(f"Error during MongoDB indexing: {e}")
-        import traceback
-        traceback.print_exc()
+        logger.error(f"Error during database index creation: {e}", exc_info=True)
 

@@ -1,72 +1,128 @@
 from pydantic import BaseModel, Field, EmailStr
+from pydantic.alias_generators import to_camel
 from typing import Literal, Optional, List
-from bson import ObjectId # Import ObjectId
+from bson import ObjectId
 from datetime import datetime
 
 # --- Pydantic ObjectId Handling ---
-# Pydantic doesn't have a native ObjectId type, so we create a custom one.
-# This allows validation and serialization of MongoDB ObjectIds.
 class PyObjectId(ObjectId):
     @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
+    def __get_pydantic_core_schema__(cls, _source_type, _handler):
+        from pydantic_core import core_schema
+        
+        def validate_from_str(value: str) -> ObjectId:
+            if not ObjectId.is_valid(value):
+                raise ValueError("Invalid ObjectId")
+            return ObjectId(value)
+        
+        return core_schema.union_schema([
+            core_schema.is_instance_schema(ObjectId),
+            core_schema.StringSchema(
+                pattern="^[0-9a-fA-F]{24}$",
+                to_python=validate_from_str
+            ),
+        ])
+    
     @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
+    def __get_pydantic_json_schema__(cls, _core_schema, handler):
+        return {'type': 'string'}
 
 # --- Request Models ---
 class FlagActionRequest(BaseModel):
     action: Literal['confirm', 'dispute', 'retract']
 
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
+
 class SetImplementabilityRequest(BaseModel):
-    statusToSet: str # Example values: 'confirmed_implementable_db', 'confirmed_non_implementable_db', 'voting'
+    status_to_set: str
+
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
 
 class VoteRequest(BaseModel):
-    voteType: Literal['up', 'none']
+    vote_type: Literal['up', 'none']
 
-# --- Response Models (Mirrors transform_paper output structure) ---
-# Define fields based on what `transform_paper` actually returns and what the client expects.
-# This is a simplified example; you'll need to expand it based on your `Paper` model.
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
+
+# --- Response Models ---
+class Author(BaseModel):
+    name: str
+
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
+
+class ImplementationStep(BaseModel):
+    id: int
+    name: str
+    description: str
+    status: str
+
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
+
 class PaperResponse(BaseModel):
-    id: str # MongoDB ObjectId as string
+    id: str
+    pwc_url: Optional[str] = None
+    arxiv_id: Optional[str] = None
     title: Optional[str] = None
-    # Add other fields from your Paper model that are sent to the client
-    # e.g., authors, abstract, url_pdf, is_implementable, nonImplementableStatus, etc.
-    is_implementable: Optional[bool] = None
-    nonImplementableStatus: Optional[str] = None
-    nonImplementableVotes: Optional[int] = 0
-    disputeImplementableVotes: Optional[int] = 0
-    nonImplementableFlaggedBy: Optional[PyObjectId] = None # Or str if you always convert
-    nonImplementableConfirmedBy: Optional[str] = None
-    status: Optional[str] = None # Display status
-    # ... other fields from transform_paper
+    abstract: Optional[str] = None
+    authors: Optional[List[Author]] = None
+    url_abs: Optional[str] = None
+    url_pdf: Optional[str] = None
+    date: Optional[str] = None
+    proceeding: Optional[str] = None
+    tasks: Optional[List[str]] = None
+    is_implementable: Optional[bool] = True
+    non_implementable_status: Optional[str] = "implementable"
+    non_implementable_votes: Optional[int] = 0
+    dispute_implementable_votes: Optional[int] = 0
+    current_user_implementability_vote: Optional[Literal['up', 'down', 'none']] = 'none'
+    non_implementable_confirmed_by: Optional[str] = None
+    implementation_status: Optional[str] = "Not Started"
+    implementation_steps: Optional[List[ImplementationStep]] = None
+    upvote_count: Optional[int] = 0
+    current_user_vote: Optional[Literal['up', 'none']] = 'none'
 
-    class Config:
-        json_encoders = {
-            ObjectId: str, # Ensure ObjectIds are serialized as strings
-            datetime: lambda dt: dt.isoformat() # Ensure datetimes are ISO strings
-        }
-        # If you use PyObjectId directly in your model fields (e.g., nonImplementableFlaggedBy: PyObjectId)
-        # and want to allow assignment from string in request bodies or when creating model instances:
-        # arbitrary_types_allowed = True 
+    model_config = {
+        "json_encoders": {
+            ObjectId: str,
+            datetime: lambda dt: dt.isoformat()
+        },
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
 
-# New models for get_paper_actions response
 class UserActionInfo(BaseModel):
     id: str
     username: str
-    avatarUrl: Optional[str] = None
+    avatar_url: Optional[str] = None
+
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
 
 class PaperActionsResponse(BaseModel):
     upvotes: List[UserActionInfo]
-    votedIsImplementable: List[UserActionInfo]
-    votedNotImplementable: List[UserActionInfo]
+    voted_is_implementable: List[UserActionInfo]
+    voted_not_implementable: List[UserActionInfo]
+
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
 
 class PaperListResponse(BaseModel):
     papers: List[PaperResponse]
@@ -74,41 +130,63 @@ class PaperListResponse(BaseModel):
     page: int
     page_size: int
 
-# --- User Model (for dependency injection, placeholder) ---
-class User(BaseModel): # Existing User model, ensure it has all necessary fields from GitHub + DB
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
+
+# --- User Model ---
+class User(BaseModel):
     id: Optional[PyObjectId] = Field(alias="_id", default=None)
-    githubId: int # Changed from Optional[int] to int, as it's a primary identifier from GitHub
+    github_id: int
     username: str
-    avatarUrl: Optional[str] = None
+    avatar_url: Optional[str] = None
     name: Optional[str] = None
     email: Optional[EmailStr] = None
-    lastLogin: Optional[datetime] = None
-    createdAt: Optional[datetime] = None
+    last_login: Optional[datetime] = None
+    created_at: Optional[datetime] = None
+
+    model_config = {
+        "populate_by_name": True,
+        "arbitrary_types_allowed": True,
+        "json_encoders": {ObjectId: str},
+        "alias_generator": to_camel
+    }
+
+class UserResponse(User):
+    is_owner: bool
 
     class Config:
         populate_by_name = True
-        arbitrary_types_allowed = True # For PyObjectId
-        json_encoders = {ObjectId: str} # ObjectId is now defined
-
-class UserResponse(User): # Extends User, adds isOwner
-    isOwner: bool
+        arbitrary_types_allowed = True
+        json_encoders = {ObjectId: str}
+        alias_generator = to_camel
 
 class Token(BaseModel):
     access_token: str
     token_type: str
 
-class TokenResponse(Token): # Added to explicitly define the response for /refresh_token
+class TokenResponse(Token):
     pass
 
 class TokenData(BaseModel):
     username: Optional[str] = None
 
-class UserCreate(BaseModel): # For potential future local registration
+class UserCreate(BaseModel):
     username: str
     email: EmailStr
     password: str
 
-class UserLogin(BaseModel): # For potential future local login
-    username: str # or email
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }
+
+class UserLogin(BaseModel):
+    username: str
     password: str
 
+    model_config = {
+        "populate_by_name": True,
+        "alias_generator": to_camel
+    }

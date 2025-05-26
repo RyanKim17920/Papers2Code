@@ -19,9 +19,8 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   // ... existing useState and handleVoteClick ...
   const [isVoting, setIsVoting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
-
-  const authors = paper.authors.map(a => a.name).join(', ');
-
+  const authors = paper.authors.join(', ');
+  console.log(paper)
   const handleVoteClick = async () => {
     // ... existing vote logic ...
     if (isVoting) return; // Prevent multiple clicks
@@ -44,7 +43,7 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   };
 
   // --- Determine Display Status and Class ---
-  let displayStatus = paper.implementationStatus;
+  let displayStatus = paper.implementationStatus? paper.implementationStatus : ImplementationStatus.NeedsCode;
   let statusClass = 'status-default';
   let statusSymbol = '⏳'; // Default: Hourglass
 
@@ -78,7 +77,7 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
           <p className="authors">Authors: {authors}</p>
         </div>
         <div className="card-meta-bottom">
-          <p className="date">Date: {new Date(paper.date).toLocaleDateString()}</p>
+          <p className="date">Date: {new Date(paper.publicationDate).toLocaleDateString()}</p>
           {/* --- Use determined display status, class, and symbol --- */}
           <p className={`status ${statusClass}`}>
             <span className="status-symbol">{statusSymbol}</span>

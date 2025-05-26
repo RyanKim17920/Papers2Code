@@ -43,7 +43,6 @@ export interface Paper {
     pwcUrl: string | null;
     ownerId: number | null; // Added ownerId
     implementationStatus: string | null;
-    implementationNotes: string | null;
     implementationSteps: ImplementationStep[] | null;
     isImplementable: boolean;
     nonImplementableStatus: 'implementable' | 'flagged_non_implementable' | 'confirmed_non_implementable' | 'confirmed_implementable' | 'voting'; // Added 'confirmed_implementable' and 'voting'

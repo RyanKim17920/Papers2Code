@@ -105,7 +105,6 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         setIsVoting(true);
         setUpdateError(null);
         try {
-            console.log(`Sending implementability vote to API: paperId=${paperId}, action=${action}`);
             const updatedPaper = await flagImplementabilityInApi(paperId, action);
             setPaper(updatedPaper);
             fetchPaperActionUsers(paperId).then(setActionUsers).catch(err => setActionUsersError(err.message));

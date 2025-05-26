@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchPapersFromApi, voteOnPaperInApi } from '../services/api'; // Import voteOnPaperInApi
+import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters } from '../services/api'; // Import voteOnPaperInApi and AdvancedPaperFilters
 import { Paper } from '../types/paper';
 import useDebounce from './useDebounce';
 
@@ -24,14 +24,12 @@ export function usePaperList() {
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
 
-
   // --- NEW: State for advanced filters and visibility ---
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(initialAdvancedFilters);
   const [showAdvancedSearch, setShowAdvancedSearch] = useState<boolean>(false);
   // Use a separate state to "apply" filters, avoiding fetches on every keystroke in advanced fields
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState<AdvancedPaperFilters>(initialAdvancedFilters);
   // --- End NEW ---
-
 
   // Reset currentPage when search or sort changes
   useEffect(() => {
@@ -105,13 +103,12 @@ export function usePaperList() {
      }
   }, [debouncedSearchTerm, appliedAdvancedFilters]); // Depend on applied filters too
 
-
   const toggleAdvancedSearch = useCallback(() => {
     setShowAdvancedSearch(prev => !prev);
   }, []);
 
   const handleAdvancedFilterChange = useCallback((filterName: keyof AdvancedPaperFilters, value: string) => {
-      setAdvancedFilters(prev => ({ ...prev, [filterName]: value }));
+      setAdvancedFilters((prev: AdvancedPaperFilters) => ({ ...prev, [filterName]: value }));
   }, []);
 
   const applyAdvancedFilters = useCallback(() => {

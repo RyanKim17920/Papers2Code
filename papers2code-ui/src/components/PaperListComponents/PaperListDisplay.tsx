@@ -1,6 +1,7 @@
 import React from 'react';
 import { Paper } from '../../types/paper'; // Use full Paper type
 import PaperCard from './PaperCard';
+import { Typography } from '@mui/material'; // Import Typography from Material-UI
 
 interface PaperListDisplayProps {
   papers: Paper[]; // Use full Paper type
@@ -34,7 +35,11 @@ const PaperListDisplay: React.FC<PaperListDisplayProps> = ({ papers, debouncedSe
   if (debouncedSearchTerm) {
     return <p>No papers found matching "{debouncedSearchTerm}". Try refining your search.</p>;
   } else {
-    return <p>No papers available at the moment. Check back later!</p>;
+    return (
+      <Typography variant="subtitle1" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+        No papers available at the moment. Check back later!
+      </Typography>
+    );
   }
 };
 

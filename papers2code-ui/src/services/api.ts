@@ -69,11 +69,16 @@ export const fetchPapersFromApi = async (
     throw new Error(errorMsg);
   }
   const data = await response.json();
-  if (!data || !Array.isArray(data.papers) || typeof data.totalPages !== 'number') {
+  console.log(data)
+  // The API sends 'totalCount' based on the provided error log, not 'totalPages'.
+  // It also seems the API sends 'page' and 'pageSize', which are not directly used here
+  // but 'totalCount' is used to calculate 'totalPages'.
+  if (!data || !Array.isArray(data.papers) || typeof data.totalCount !== 'number') {
     console.error("Unexpected API response structure:", data);
     throw new Error("Invalid data structure received from API");
   }
-  return data;
+  const totalPages = Math.ceil(data.totalCount / limit);
+  return { papers: data.papers, totalPages };
 };
 
 // --- fetchPaperByIdFromApi ---

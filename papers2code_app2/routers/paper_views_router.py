@@ -1,135 +1,228 @@
-from fastapi import APIRouter, Depends, HTTPException, Query, Request, status
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
 from typing import Optional
+from pymongo import DESCENDING, ASCENDING
 from pymongo.errors import OperationFailure
+from bson import ObjectId
+from bson.errors import InvalidId
+from dateutil.parser import parse as parse_date
+from dateutil.parser._parser import ParserError
+import shlex
 from slowapi import Limiter
 from slowapi.util import get_remote_address
+import logging
 
-from ..schemas import PaperResponse, PapersResponse, User, PyObjectId
+from ..schemas_papers import PaperResponse, PaginatedPaperResponse
+from ..schemas_minimal import User
 from ..shared import (
     get_papers_collection_sync,
     transform_paper_sync,
     config_settings
 )
-from ..auth import get_current_user_optional_placeholder
+from ..auth import get_current_user_optional
 
 router = APIRouter(
     prefix="/papers",
     tags=["paper-views"],
 )
 
+logger = logging.getLogger(__name__)
+
 limiter = Limiter(key_func=get_remote_address)
 
-# Original Flask: @limiter.limit("60 per minute")
-@router.get("/", response_model=PapersResponse)
-@limiter.limit("60/minute")
+@router.get("", response_model=PaginatedPaperResponse)
+@limiter.limit("100/minute")
 async def get_papers(
-    request: Request,  # For rate limiting
-    s: Optional[str] = Query(None, description='Search query for Atlas Search. Supports field-specific searches like \'title:"Deep Learning" AND authors:"Yann LeCun"\' or general text search.'),
-    page: int = Query(1, ge=1, description="Page number for pagination."),
-    limit: int = Query(10, ge=1, le=100, description="Number of items per page."),
-    sort_by: Optional[str] = Query("publication_date", description="Field to sort by. Default is 'publication_date'. Other options: 'title', 'citations', 'score' (if search query 's' is provided)."),
-    sort_order: Optional[str] = Query("desc", description="Sort order: 'asc' or 'desc'. Default is 'desc'."),
-    current_user: Optional[User] = Depends(get_current_user_optional_placeholder)
+    request: Request,
+    limit: int = Query(12, gt=0),
+    page: int = Query(1, gt=0),
+    search: Optional[str] = Query(None, alias="search"),
+    sort: str = Query("newest", pattern="^(newest|oldest|upvotes)$", alias="sort"),
+    startDate: Optional[str] = Query(None, alias="startDate"),
+    endDate: Optional[str] = Query(None, alias="endDate"),
+    searchAuthors: Optional[str] = Query(None, alias="searchAuthors"),
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
-    user_id_str = current_user.id if current_user else None
-    papers_collection = get_papers_collection_sync()
-    skip = (page - 1) * limit
-
-    query_filter = {}
-    search_pipeline = []
-
-    # Default sort order
-    sort_field = sort_by if sort_by else "publication_date"
-    sort_direction = -1 if sort_order == "desc" else 1
-
-    if s:  # Atlas Search path
-        search_stage = {
-            "$search": {
-                "index": config_settings.ATLAS_SEARCH_INDEX_NAME,
-            }
-        }
-
-        if any(op in s for op in [":", "AND", "OR", "NOT", "(", ")"]):
-            search_stage["$search"]["text"] = {
-                "query": s,
-                "path": {"wildcard": "*"}
-            }
-        else:
-            search_stage["$search"]["text"] = {
-                "query": s,
-                "path": {"wildcard": "*"}
-            }
-
-        search_pipeline.append(search_stage)
-
-        if sort_field == "score":
-            search_pipeline.append({
-                "$addFields": {
-                    "score": {"$meta": "searchScore"}
-                }
-            })
-
-        sort_stage = {"$sort": {sort_field: sort_direction}}
-        search_pipeline.append(sort_stage)
-
-        search_pipeline.extend([
-            {"$skip": skip},
-            {"$limit": limit}
-        ])
-
-        count_pipeline_stages = []
-        count_pipeline_stages.append(search_stage)
-        count_pipeline_stages.append({"$count": "total_count"})
-
-        try:
-            cursor = papers_collection.aggregate(search_pipeline)
-            papers_list = await cursor.to_list(length=limit)
-
-            count_cursor = papers_collection.aggregate(count_pipeline_stages)
-            count_result = await count_cursor.to_list(length=1)
-            total_papers = count_result[0]["total_count"] if count_result and "total_count" in count_result[0] else 0
-
-        except OperationFailure as e:
-            print(f"Atlas Search OperationFailure: {e.details}")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Search query failed: {e.details.get('errmsg', 'Unknown search error')}")
-        except Exception as e:
-            print(f"Error during Atlas Search aggregation: {e}")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Error processing search results.")
-
-    else:  # No search query 's', use regular find with filters
-        cursor = papers_collection.find(query_filter).sort(sort_field, sort_direction).skip(skip).limit(limit)
-        papers_list = await cursor.to_list(length=limit)
-        total_papers = await papers_collection.count_documents(query_filter)
-
-    transformed_papers = [transform_paper_sync(paper, user_id_str) for paper in papers_list]
-
-    return PapersResponse(
-        papers=transformed_papers,
-        total_papers=total_papers,
-        page=page,
-        limit=limit,
-        sort_by=sort_field,
-        sort_order=sort_order
-    )
-
-# Original Flask: @limiter.limit("60 per minute")
-@router.get("/{paper_id}", response_model=PaperResponse)
-@limiter.limit("60/minute")
-async def get_paper_by_id(
-    request: Request,  # For rate limiting
-    paper_id: str,
-    current_user: Optional[User] = Depends(get_current_user_optional_placeholder)
-):
-    user_id_str = current_user.id if current_user else None
     try:
-        obj_id = PyObjectId(paper_id)
-    except ValueError:
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper ID format")
+        start_date_obj = None
+        end_date_obj = None
+        try:
+            if startDate:
+                start_date_obj = parse_date(startDate).replace(hour=0, minute=0, second=0, microsecond=0)
+            if endDate:
+                end_date_obj = parse_date(endDate).replace(hour=23, minute=59, second=59, microsecond=999999)
+        except ParserError:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid date format. Please use YYYY-MM-DD or similar.")
 
-    papers_collection = get_papers_collection_sync()
-    paper = await papers_collection.find_one({"_id": obj_id})
+        skip = (page - 1) * limit
+        papers_cursor = None
+        total_count = 0
+        current_user_id_str = str(current_user.id) if current_user else None
+        papers_collection = get_papers_collection_sync()
 
-    if paper:
-        return transform_paper_sync(paper, user_id_str)
-    raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Paper with id {paper_id} not found")
+        search_term_cleaned = search.strip() if search else None
+        search_authors_cleaned = searchAuthors.strip() if searchAuthors else None
+
+        is_search_active = bool(search_term_cleaned or start_date_obj or end_date_obj or search_authors_cleaned)
+
+        if is_search_active:
+            atlas_search_index_name = config_settings.ATLAS_SEARCH_INDEX_NAME
+            score_threshold = config_settings.ATLAS_SEARCH_SCORE_THRESHOLD
+            overall_limit = config_settings.ATLAS_SEARCH_OVERALL_LIMIT
+
+            must_clauses = []
+            should_clauses = []
+            filter_clauses = []
+
+            if search_term_cleaned:
+                try:
+                    terms = shlex.split(search_term_cleaned)
+                except ValueError:
+                    terms = search_term_cleaned.split()
+                
+                must_clauses.extend([
+                    {
+                        "text": {
+                            "query": t,
+                            "path": ["title", "abstract"],
+                            "fuzzy": {"maxEdits": 1, "prefixLength": 1}
+                        }
+                    } for t in terms
+                ])
+                should_clauses.append({
+                    "text": {
+                        "query": search_term_cleaned,
+                        "path": "title",
+                        "score": {"boost": {"value": config_settings.ATLAS_SEARCH_TITLE_BOOST}}
+                    }
+                })
+
+            date_range_query = {}
+            if start_date_obj:
+                date_range_query["gte"] = start_date_obj
+            if end_date_obj:
+                date_range_query["lte"] = end_date_obj
+            if date_range_query:
+                filter_clauses.append({"range": {"path": "publication_date", **date_range_query}})
+
+            if search_authors_cleaned:
+                 filter_clauses.append({"text": {"query": search_authors_cleaned, "path": "authors"}})
+            
+            search_operator = {"index": atlas_search_index_name, "compound": {}}
+            if must_clauses:
+                search_operator["compound"]["must"] = must_clauses
+            if should_clauses:
+                search_operator["compound"]["should"] = should_clauses
+            if filter_clauses:
+                search_operator["compound"]["filter"] = filter_clauses
+
+            if not must_clauses and not should_clauses and not filter_clauses:
+                 is_search_active = False 
+            elif not must_clauses and not should_clauses:
+                 search_operator["compound"].pop("must", None)
+                 search_operator["compound"].pop("should", None)
+                 if not filter_clauses:
+                    is_search_active = False
+
+            if is_search_active:
+                search_pipeline_stages = [{"$search": search_operator}]
+                if search_term_cleaned:
+                    search_pipeline_stages.extend([
+                        {"$addFields": {"score": {"$meta": "searchScore"}, "highlights": {"$meta": "searchHighlights"}}},
+                        {"$match": {"score": {"$gt": score_threshold}}}
+                    ])
+                    sort_stage = {"$sort": {"score": DESCENDING, "publication_date": DESCENDING}}
+                else: 
+                    sort_stage = {"$sort": {"publication_date": DESCENDING}}
+                search_pipeline_stages.append(sort_stage)
+                search_pipeline_stages.append({"$limit": overall_limit})
+
+                facet_pipeline = search_pipeline_stages + [
+                    {"$facet": {
+                        "paginatedResults": [{"$skip": skip}, {"$limit": limit}],
+                        "totalCount": [{"$count": 'count'}]
+                    }}
+                ]
+                try:
+                    results = list(papers_collection.aggregate(facet_pipeline, allowDiskUse=True))
+                    if results and results[0]:
+                        total_count = results[0]['totalCount'][0]['count'] if results[0]['totalCount'] else 0
+                        papers_cursor = results[0]['paginatedResults']
+                    else:
+                        papers_cursor = []
+                        total_count = 0
+                except OperationFailure as op_error_detail:
+                     logger.exception("Search operation failed in get_papers")
+                     raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Search operation failed: {str(op_error_detail)}")
+                except Exception as agg_error:
+                    logger.exception("Failed to execute search query in get_papers")
+                    raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to execute search query: {str(agg_error)}")
+
+        if not is_search_active:
+            base_filter = {
+                "nonImplementableStatus": {"$ne": config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB}
+            }
+            logger.debug(f"Using base_filter: {base_filter}")
+            logger.debug(f"Value of config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: {config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB}")
+
+            # === Temporary Debugging: Count all documents ===
+            try:
+                count_all_docs = papers_collection.count_documents({})
+                logger.debug(f"Total documents in 'papers' collection (empty filter): {count_all_docs}")
+            except Exception as e:
+                logger.error(f"Error counting all documents: {e}", exc_info=True)
+            # === End Temporary Debugging ===
+
+            if sort == 'oldest':
+                sort_criteria = [("publication_date", ASCENDING)]
+            elif sort == 'upvotes':
+                sort_criteria = [("upvoteCount", DESCENDING), ("publication_date", DESCENDING)]
+            else:
+                sort_criteria = [("publication_date", DESCENDING)]
+            try:
+                total_count = papers_collection.count_documents(base_filter)
+                logger.debug(f"Total papers found with base_filter: {total_count}")
+                if total_count > 0:
+                     papers_cursor = papers_collection.find(base_filter).sort(sort_criteria).skip(skip).limit(limit)
+                else:
+                     papers_cursor = []
+            except Exception as db_error:
+                 logger.exception("Failed to retrieve paper data in get_papers")
+                 raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve paper data: {str(db_error)}")
+
+        total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
+        papers_list = [transformed for paper in papers_cursor if (transformed := transform_paper_sync(paper, current_user_id_str)) is not None] if papers_cursor else []
+
+        return PaginatedPaperResponse(papers=papers_list, total_count=total_count, page=page, page_size=limit, has_more=(page < total_pages))
+
+    except HTTPException:
+        raise
+    except Exception as general_error:
+        logger.exception("An internal server error occurred in get_papers")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An internal server error occurred: {str(general_error)}")
+
+@router.get("/{paper_id}", response_model=PaperResponse)
+@limiter.limit("100/minute")
+async def get_paper_by_id(
+    request: Request,
+    paper_id: str,
+    current_user: Optional[User] = Depends(get_current_user_optional)
+):
+    try:
+        try: 
+            obj_id = ObjectId(paper_id)
+        except InvalidId: 
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper ID format")
+
+        papers_collection = get_papers_collection_sync()
+        paper_doc = papers_collection.find_one({"_id": obj_id})
+        if paper_doc:
+            current_user_id_str = str(current_user.id) if current_user else None
+            return transform_paper_sync(paper_doc, current_user_id_str)
+        else: 
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
+    except HTTPException:
+        raise
+    except Exception as general_error:
+        logger.exception("An internal server error occurred in get_paper_by_id")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An internal server error occurred: {str(general_error)}")
 

@@ -3,6 +3,7 @@ uvicorn[standard]
 python-jose[cryptography]
 pymongo
 passlib[bcrypt]
+pydantic[email]
 requests
 python-dotenv
 dateutils

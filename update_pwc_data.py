@@ -14,7 +14,7 @@ from pymongo.errors import BulkWriteError
 from dotenv import load_dotenv
 import time # For timing operations
 from tqdm import tqdm
-from datetime import datetime # <-- Import datetime
+from datetime import datetime, timezone # <-- Import datetime
 
 # --- Configuration ---
 # Reuse constants from process_pwc_data.py
@@ -263,7 +263,7 @@ def main_update():
                 {"_id": paper['_id']},
                 {"$set": {
                     "status": "Code Available", # Or your preferred status
-                    "lastUpdated": datetime.utcnow()
+                    "lastUpdated": datetime.now(timezone.utc)
                  }
                 }
             )
@@ -319,8 +319,8 @@ def main_update():
                 pl.lit("Needs Code").alias("status"),
                 pl.lit(True).alias("is_implementable"),
                 pl.lit(0).cast(pl.Int64).alias("upvoteCount"), # Assuming new papers start with 0 votes
-                pl.lit(datetime.utcnow()).alias("createdAt"), # Add creation timestamp
-                pl.lit(datetime.utcnow()).alias("lastUpdated")
+                pl.lit(datetime.now(timezone.utc)).alias("createdAt"), # Add creation timestamp
+                pl.lit(datetime.now(timezone.utc)).alias("lastUpdated")
             ])
             .filter(pl.col("publication_date").is_not_null())
         )

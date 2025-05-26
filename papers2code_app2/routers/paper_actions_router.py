@@ -1,22 +1,22 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query # Added Query
+from fastapi import APIRouter, Depends, HTTPException, status, Request
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
+from bson import ObjectId
 from bson.errors import InvalidId
-from datetime import datetime
-from typing import List, Optional # Restored List, Optional
+from datetime import datetime, timezone
+import logging
 from slowapi import Limiter
-from slowapi.util import get_remote_address 
+from slowapi.util import get_remote_address
 
-from ..schemas import (
-    PaperResponse, User, VoteRequest, UserActionInfo, PyObjectId
-)
+from ..schemas_papers import PaperResponse, PaperVoteRequest, PaperActionsSummaryResponse, PaperActionDetail
+from ..schemas_minimal import User, UserMinimal
 from ..shared import (
     get_papers_collection_sync,
     get_user_actions_collection_sync,
-    get_users_collection_sync, 
+    get_users_collection_sync,
     transform_paper_sync
 )
-from ..auth import get_current_user_placeholder
+from ..auth import get_current_user
 
 router = APIRouter(
     prefix="/papers",
@@ -24,167 +24,188 @@ router = APIRouter(
 )
 
 limiter = Limiter(key_func=get_remote_address)
+logger = logging.getLogger(__name__)
 
-# Original Flask: @limiter.limit("100 per minute")
 @router.post("/{paper_id}/vote", response_model=PaperResponse)
-@limiter.limit("100/minute")
+@limiter.limit("60/minute")
 async def vote_on_paper(
-    request: Request, # For rate limiting
+    request: Request,  # For limiter
     paper_id: str,
-    vote_request: VoteRequest,
-    current_user: User = Depends(get_current_user_placeholder)
+    payload: PaperVoteRequest,  # Use a Pydantic model for the request body
+    current_user: User = Depends(get_current_user)
 ):
-    user_id_str = current_user.id
     try:
-        user_obj_id = PyObjectId(user_id_str)
-        paper_obj_id = PyObjectId(paper_id)
-    except (InvalidId, ValueError):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
+        user_id_str = str(current_user.id)
+        if not user_id_str:
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
-    papers_collection = get_papers_collection_sync()
-    user_actions_collection = get_user_actions_collection_sync()
+        try:
+            user_obj_id = ObjectId(user_id_str)
+            paper_obj_id = ObjectId(paper_id)
+        except InvalidId:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
 
-    action_type = "upvote" if vote_request.vote_type == "upvote" else "downvote"
-    vote_change = 1 if action_type == "upvote" else -1
+        papers_collection = get_papers_collection_sync()
+        user_actions_collection = get_user_actions_collection_sync()
 
-    # Check if paper exists
-    paper = await papers_collection.find_one({"_id": paper_obj_id})
-    if not paper:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
+        paper = papers_collection.find_one({"_id": paper_obj_id})
+        if not paper:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
 
-    # Check for existing vote by this user on this paper
-    existing_action = await user_actions_collection.find_one({
-        "userId": user_obj_id,
-        "paperId": paper_obj_id,
-        "actionType": {"$in": ["upvote", "downvote"]}
-    })
+        vote_type = payload.vote_type
 
-    paper_update_ops = {"$inc": {}}
-    user_action_op = None # 'insert', 'update', 'delete'
-    new_action_document = None
-    action_to_delete_id = None
+        if vote_type not in ['up', 'none']:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid vote type. Must be 'up' or 'none'.")
 
-    if existing_action:
-        if existing_action["actionType"] == action_type: # User is retracting their vote
-            paper_update_ops["$inc"]["vote_score"] = -vote_change
-            user_action_op = 'delete'
-            action_to_delete_id = existing_action["_id"]
-        else: # User is changing their vote (e.g., from downvote to upvote)
-            paper_update_ops["$inc"]["vote_score"] = 2 * vote_change # Nullify previous, apply new
-            user_action_op = 'update'
-            # Update existing action to the new type
-            # new_action_document will be used for $set in update_one for user_actions
-            new_action_document = {"actionType": action_type, "createdAt": datetime.utcnow()}
-    else: # New vote
-        paper_update_ops["$inc"]["vote_score"] = vote_change
-        user_action_op = 'insert'
-        new_action_document = {
+        action_type = 'upvote'
+        existing_action = user_actions_collection.find_one({
             "userId": user_obj_id,
             "paperId": paper_obj_id,
-            "actionType": action_type,
-            "createdAt": datetime.utcnow()
-        }
-    
-    # Perform user action operation
-    action_successful = False
-    try:
-        if user_action_op == 'insert':
-            result = await user_actions_collection.insert_one(new_action_document)
-            action_successful = result.inserted_id is not None
-        elif user_action_op == 'update':
-            result = await user_actions_collection.update_one(
-                {"_id": existing_action["_id"]},
-                {"$set": new_action_document}
-            )
-            action_successful = result.modified_count == 1
-        elif user_action_op == 'delete':
-            result = await user_actions_collection.delete_one({"_id": action_to_delete_id})
-            action_successful = result.deleted_count == 1
-        else: # Should not happen
-            action_successful = True # No action needed
-    except DuplicateKeyError: # Safeguard, should be caught by find_one logic
-        print(f"DuplicateKeyError for user {user_id_str} paper {paper_id} action {action_type}. Concurrent action likely.")
-        action_successful = False
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail="Concurrent vote detected. Please try again.")
+            "actionType": action_type
+        })
+        updated_paper_doc = None
+        if vote_type == 'up':
+            if not existing_action:
+                try:
+                    insert_result = user_actions_collection.insert_one({
+                        "userId": user_obj_id,
+                        "paperId": paper_obj_id,
+                        "actionType": action_type,
+                        "createdAt": datetime.now(timezone.utc)
+                    })
+                    if insert_result.inserted_id:
+                        updated_paper_doc = papers_collection.find_one_and_update(
+                            {"_id": paper_obj_id},
+                            {"$inc": {"upvoteCount": 1}},
+                            return_document=ReturnDocument.AFTER
+                        )
+                    else:
+                        updated_paper_doc = paper
+                except DuplicateKeyError:
+                    logger.warning(f"Duplicate key error on upvoting paper {paper_id} by user {user_id_str}. Action likely exists.")
+                    updated_paper_doc = paper
+            else:
+                updated_paper_doc = paper
 
-    if not action_successful:
-        current_paper_state = await papers_collection.find_one({"_id": paper_obj_id})
-        if not current_paper_state: # Should not happen if paper existed initially
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process vote and refetch paper.")
-        return transform_paper_sync(current_paper_state, user_id_str)
+        elif vote_type == 'none':
+            if existing_action:
+                delete_result = user_actions_collection.delete_one({"_id": existing_action["_id"]})
+                if delete_result.deleted_count == 1:
+                    updated_paper_doc = papers_collection.find_one_and_update(
+                        {"_id": paper_obj_id},
+                        {"$inc": {"upvoteCount": -1}},
+                        return_document=ReturnDocument.AFTER
+                    )
+                    if updated_paper_doc and updated_paper_doc.get("upvoteCount", 0) < 0:
+                        papers_collection.update_one({"_id": paper_obj_id}, {"$set": {"upvoteCount": 0}})
+                        if updated_paper_doc:
+                            updated_paper_doc["upvoteCount"] = 0
+                else:
+                    updated_paper_doc = paper
+            else:
+                updated_paper_doc = paper
 
-    # Update paper's vote_score
-    updated_paper_doc = await papers_collection.find_one_and_update(
-        {"_id": paper_obj_id},
-        paper_update_ops,
-        return_document=ReturnDocument.AFTER
-    )
+        if not updated_paper_doc:
+            updated_paper_doc = papers_collection.find_one({"_id": paper_obj_id})
+            if not updated_paper_doc:
+                logger.error(f"Paper {paper_id} not found after voting operation.")
+                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after voting operation")
 
-    if not updated_paper_doc:
-        check_paper_exists = await papers_collection.find_one({"_id": paper_obj_id})
-        if not check_paper_exists:
-            if user_action_op == 'insert' and result.inserted_id:
-                await user_actions_collection.delete_one({"_id": result.inserted_id})
-            elif user_action_op == 'update' and existing_action:
-                pass
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found during vote update, possibly deleted.")
-        else:
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update paper vote score after successful action logging.")
+        return transform_paper_sync(updated_paper_doc, user_id_str)
 
-    return transform_paper_sync(updated_paper_doc, user_id_str)
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("An internal server error occurred during voting.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal server error occurred during voting."
+        )
 
-# Original Flask: @limiter.limit("60 per minute")
-@router.get("/{paper_id}/actions", response_model=List[UserActionInfo])
-@limiter.limit("60/minute")
+@router.get("/{paper_id}/actions", response_model=PaperActionsSummaryResponse)
+@limiter.limit("100/minute")
 async def get_paper_actions(
-    request: Request, # For rate limiting
-    paper_id: str,
-    action_type: Optional[str] = Query(None, description="Filter by action type (e.g., 'upvote', 'downvote', 'confirm_non_implementable')"),
-    limit: int = Query(10, ge=1, le=100),
-    page: int = Query(1, ge=1)
+    request: Request,  # For limiter
+    paper_id: str
 ):
     try:
-        paper_obj_id = PyObjectId(paper_id)
-    except (InvalidId, ValueError):
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper ID format")
+        try:
+            paper_obj_id = ObjectId(paper_id)
+        except InvalidId:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper ID format")
 
-    user_actions_collection = get_user_actions_collection_sync()
-    users_collection = get_users_collection_sync()
+        papers_collection = get_papers_collection_sync()
+        if papers_collection.count_documents({"_id": paper_obj_id}) == 0:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
 
-    query = {"paperId": paper_obj_id}
-    if action_type:
-        query["actionType"] = action_type
+        user_actions_collection = get_user_actions_collection_sync()
+        users_collection = get_users_collection_sync()
 
-    skip = (page - 1) * limit
-    actions_cursor = user_actions_collection.find(query).sort("createdAt", -1).skip(skip).limit(limit)
-    actions = await actions_cursor.to_list(length=limit)
+        actions_cursor = user_actions_collection.find(
+            {"paperId": paper_obj_id}
+        )
 
-    user_action_infos = []
-    for action in actions:
-        user_id = action.get("userId")
-        user_info = None
-        if user_id:
-            try:
-                user_obj_id_for_lookup = PyObjectId(str(user_id))
-                user_data = await users_collection.find_one({"_id": user_obj_id_for_lookup}, {"username": 1, "avatarUrl": 1, "_id": 1})
-                if user_data:
-                    user_info = User(
-                        id=str(user_data["_id"]),
-                        username=user_data.get("username", "Unknown User"),
-                        avatarUrl=user_data.get("avatarUrl")
-                    )
-                else:
-                     user_info = User(id=str(user_id), username="User not found", avatarUrl=None)
-            except (InvalidId, ValueError):
-                user_info = User(id=str(user_id), username="Invalid user ID format", avatarUrl=None)
-        else:
-            user_info = User(id="anonymous", username="Anonymous", avatarUrl=None)
+        actions = list(actions_cursor)
 
-        user_action_infos.append(UserActionInfo(
-            user=user_info,
-            actionType=action.get("actionType"),
-            createdAt=action.get("createdAt")
+        if not actions:
+            return PaperActionsSummaryResponse(paper_id=paper_id, upvotes=[], saves=[], implementability_flags=[])
+
+        user_ids = list(set(action['userId'] for action in actions if 'userId' in action))
+
+        user_details_list = list(users_collection.find(
+            {"_id": {"$in": user_ids}},
+            {"_id": 1, "username": 1, "avatarUrl": 1, "githubUsername": 1}
         ))
-    
-    return user_action_infos
+
+        user_map = {str(user['_id']): UserMinimal(
+            id=str(user['_id']),
+            username=user.get('username', 'Unknown'),
+            avatar_url=user.get('avatarUrl'),
+        ) for user in user_details_list}
+
+        upvotes_details = []
+        saves_details = []
+        implementability_flags_details = []
+
+        for action in actions:
+            user_id_obj = action.get('userId')
+            if not user_id_obj:
+                continue
+            user_info = user_map.get(str(user_id_obj))
+            if not user_info:
+                continue
+
+            action_type = action.get('actionType')
+            created_at = action.get('createdAt', datetime.now(timezone.utc))
+
+            action_detail = PaperActionDetail(
+                user_id=str(user_info.id),
+                username=user_info.username,
+                avatar_url=user_info.avatar_url,
+                action_type=action_type,
+                created_at=created_at
+            )
+
+            if action_type == 'upvote':
+                upvotes_details.append(action_detail)
+            elif action_type == 'dispute_non_implementable':
+                implementability_flags_details.append(action_detail)
+            elif action_type == 'confirm_non_implementable':
+                implementability_flags_details.append(action_detail)
+
+        return PaperActionsSummaryResponse(
+            paper_id=paper_id,
+            upvotes=upvotes_details,
+            saves=saves_details,
+            implementability_flags=implementability_flags_details
+        )
+
+    except HTTPException:
+        raise
+    except Exception:
+        logger.exception("An internal server error occurred while fetching paper actions.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal server error occurred while fetching paper actions."
+        )
 

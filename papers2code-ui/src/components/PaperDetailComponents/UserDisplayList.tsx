@@ -19,7 +19,6 @@ export const UserDisplayList: React.FC<UserDisplayListProps> = ({
     error,
     emptyMessage = "No users found for this action."
 }) => {
-    console.log("Upvoter users data:", users);
 // ... then render <UserDisplayList users={upvoterUsers} ... />
     return (
         <div className="user-display-list">
