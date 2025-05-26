@@ -10,7 +10,7 @@ from jose import jwt, JWTError
 import secrets
 import logging
 
-from ..schemas_minimal import User as UserSchema, TokenResponse, UserMinimal as UserResponseModel, CsrfToken
+from ..schemas_minimal import UserSchema, TokenResponse, UserMinimal, CsrfToken
 from ..shared import get_users_collection_sync, config_settings
 from ..auth import create_access_token, get_current_user, SECRET_KEY, ALGORITHM, create_refresh_token
 
@@ -259,7 +259,7 @@ async def get_current_user_api(current_user: UserSchema = Depends(get_current_us
     
     logger.info(f"User {current_user.username} is_owner status: {is_owner}")
 
-    user_response_data = UserResponseModel(
+    user_response_data = UserMinimal(
         id=str(current_user.id),
         username=current_user.username,
         name=current_user.name,

@@ -1,29 +1,20 @@
 from pydantic import BaseModel, Field, HttpUrl
 from pydantic.alias_generators import to_camel
 from typing import Optional
-from datetime import datetime, timezone
+from datetime import datetime
 
-# --- Simplified Models for Authentication ---
+# --- Simplified Models for Authentication & User Representation ---
 
-class UserBase(BaseModel):
+class UserSchema(BaseModel): # Model returned by get_current_user
+    """Schema for representing the currently authenticated user, often returned by endpoints like get_current_user."""
+    id: Optional[str] = Field(None, alias='_id') # MongoDB ObjectId as string
+    github_id: int
     username: str
     name: Optional[str] = None
     avatar_url: Optional[HttpUrl] = None
     bio: Optional[str] = None
     is_admin: Optional[bool] = False
     is_owner: Optional[bool] = False
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class UserCreate(UserBase):
-    github_id: int
-
-class UserSchema(UserBase): # Model returned by get_current_user
-    id: Optional[str] = Field(None, alias='_id')
-    github_id: int
     created_at: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
 
@@ -35,18 +26,8 @@ class UserSchema(UserBase): # Model returned by get_current_user
         }
     }
 
-class User(UserBase): # Used for DB representation
-    id: Optional[str] = Field(None, alias='_id')
-    github_id: int
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    last_login_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
 class UserMinimal(BaseModel): # Response model for /me endpoint
+    """Minimal user information, suitable for public display or a /me endpoint."""
     id: Optional[str] = None
     username: str
     name: Optional[str] = None
@@ -60,6 +41,7 @@ class UserMinimal(BaseModel): # Response model for /me endpoint
     }
 
 class Token(BaseModel):
+    """Schema for an access token."""
     access_token: str
     token_type: str
 
@@ -69,17 +51,11 @@ class Token(BaseModel):
     }
 
 class TokenResponse(Token):
+    """Response schema for operations returning a token."""
     pass
 
-class TokenData(BaseModel):
-    username: Optional[str] = None
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
 class CsrfToken(BaseModel):
+    """Schema for a CSRF token."""
     csrf_token: str
 
     model_config = {

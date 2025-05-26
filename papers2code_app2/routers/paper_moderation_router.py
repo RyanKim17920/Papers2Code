@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
@@ -10,9 +10,9 @@ from slowapi.util import get_remote_address
 import logging
 
 from ..schemas_papers import (
-    FlagActionRequest, PaperResponse, SetImplementabilityRequest
+    PaperResponse, SetImplementabilityRequest
 )
-from ..schemas_minimal import User
+from ..schemas_minimal import UserSchema
 from ..shared import (
     get_papers_collection_sync,
     get_user_actions_collection_sync,
@@ -35,8 +35,8 @@ logger = logging.getLogger(__name__)
 async def flag_paper_implementability(
     request: Request,
     paper_id: str,
-    payload: FlagActionRequest,
-    current_user: User = Depends(get_current_user)
+    action: str = Body(..., embed=True, pattern="^(confirm|dispute|retract)$"),
+    current_user: UserSchema = Depends(get_current_user)
 ):
     try:
         user_id_str = str(current_user.id)
@@ -59,8 +59,6 @@ async def flag_paper_implementability(
                 status_code=status.HTTP_400_BAD_REQUEST,
                 detail=f"Invalid ID format: {ve}"
             )
-
-        action = payload.action
 
         papers_collection = get_papers_collection_sync()
         user_actions_collection = get_user_actions_collection_sync()
@@ -264,9 +262,9 @@ async def flag_paper_implementability(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Paper not found after operations"
                 )
-            return transform_paper_sync(final_paper, user_id_str)
+            return transform_paper_sync(final_paper, user_id_str, detail_level="full")
         else:
-            return transform_paper_sync(paper, user_id_str)
+            return transform_paper_sync(paper, user_id_str, detail_level="full")
 
     except HTTPException:
         raise
@@ -289,7 +287,7 @@ async def set_paper_implementability(
     request: Request,
     paper_id: str,
     payload: SetImplementabilityRequest,
-    current_user: User = Depends(get_current_owner)
+    current_user: UserSchema = Depends(get_current_owner)
 ):
     try:
         user_id_str = str(current_user.id)
@@ -360,7 +358,7 @@ async def set_paper_implementability(
                     status_code=status.HTTP_404_NOT_FOUND,
                     detail="Paper not found after update"
                 )
-            return transform_paper_sync(updated_paper, user_id_str)
+            return transform_paper_sync(updated_paper, user_id_str, detail_level="full")
 
         except Exception as e:
             print(f"Error updating paper implementability: {e}")
@@ -383,7 +381,7 @@ async def set_paper_implementability(
 async def delete_paper(
     request: Request,
     paper_id: str,
-    current_user: User = Depends(get_current_owner)
+    current_user: UserSchema = Depends(get_current_owner)
 ):
     try:
         user_id_str = str(current_user.id)

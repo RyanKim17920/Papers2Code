@@ -7,7 +7,7 @@ from bson.errors import InvalidId
 import logging
 
 from .shared import config_settings, get_users_collection_sync
-from .schemas_minimal import User as UserSchema
+from .schemas_minimal import UserSchema
 
 logger = logging.getLogger(__name__)
 

@@ -210,97 +210,128 @@ def get_users_collection_sync():
         return MockCollection()
     return db_users
 
-def transform_paper_sync(paper_doc: Dict[str, Any], current_user_id_str: Optional[str] = None) -> Optional[Dict[str, Any]]:
+def transform_paper_sync(
+    paper_doc: Dict[str, Any],
+    current_user_id_str: Optional[str] = None,
+    detail_level: str = "full"  # Combined parameter
+) -> Optional[Dict[str, Any]]:
     """
     Transforms a paper document from MongoDB to a dictionary suitable for PaperResponse,
     handling potential missing fields and converting types where necessary.
-    Includes user-specific information like 'has_upvoted'.
+    Aligns with Pydantic schemas (BasePaper, PaperResponse) and aims for functional parity
+    with the old Flask transform_paper function where schemas overlap.
+
+    Args:
+        paper_doc: The paper document from MongoDB.
+        current_user_id_str: Optional ID of the current user for user-specific fields.
+        detail_level: Controls the level of detail to include. "full" or "summary".
+                      If "full", aggregate votes are also fetched.
     """
     if not paper_doc:
         return None
 
     # Ensure authors are a list of strings
-    authors_data = paper_doc.get("authors", [])
+    authors_data = paper_doc.get("authors", []) 
     if authors_data and isinstance(authors_data, list) and all(isinstance(author, dict) for author in authors_data):
         authors_list = [author.get("name") for author in authors_data if author.get("name")]
     elif authors_data and isinstance(authors_data, list) and all(isinstance(author, str) for author in authors_data):
         authors_list = authors_data
     else:
-        authors_list = [] # Default to empty list if format is unexpected
+        authors_list = []
 
-    # Convert ObjectId to string for id
     paper_id = str(paper_doc["_id"]) if "_id" in paper_doc else None
     if not paper_id:
-        return None # Should not happen if doc is from DB
+        return None
 
-    # Handle potentially empty or invalid URL strings by converting them to None
-    url_pdf_value = paper_doc.get("urlPdf") # Already camelCase from DB or previous Pydantic model
-    url_abs_value = paper_doc.get("urlAbs")
+    url_pdf_value = paper_doc.get("urlPdf") 
+    url_abs_value = paper_doc.get("urlAbs") 
+    pwc_url_value = paper_doc.get("pwcUrl") 
 
-    # Convert empty strings or non-string values for URLs to None so Pydantic HttpUrl handles them correctly
     transformed_url_pdf = str(url_pdf_value) if url_pdf_value and isinstance(url_pdf_value, str) and url_pdf_value.strip() else None
     transformed_url_abs = str(url_abs_value) if url_abs_value and isinstance(url_abs_value, str) and url_abs_value.strip() else None
+    transformed_pwc_url = str(pwc_url_value) if pwc_url_value and isinstance(pwc_url_value, str) and pwc_url_value.strip() else None
 
-    # so much random stuff added by copilot
-    # TODO: Review and clean up the code below this line if necessary
+    publication_date_val = paper_doc.get("publicationDate")
+
+    # Initialize with fields common to "summary" and "full", or specific to "summary"
     transformed_data = {
         "id": paper_id,
         "title": paper_doc.get("title"),
         "authors": authors_list,
-        "publicationDate": paper_doc.get("publicationDate"),
-        "abstract": paper_doc.get("abstract"),
-        "arxivId": paper_doc.get("arxivId"),
-        "urlPdf": transformed_url_pdf, # Use the processed value
-        "urlAbs": transformed_url_abs, # Use the processed value
-        "tags": paper_doc.get("tags", []),
-        "publicationYear": paper_doc.get("publicationYear"),
-        "venue": paper_doc.get("venue"),
-        "citationsCount": paper_doc.get("citationsCount"),
-        "addedDate": paper_doc.get("addedDate", datetime.now()), # Default if missing
-        "lastModifiedDate": paper_doc.get("lastModifiedDate", datetime.now()), # Default if missing
-        "upvoteCount": paper_doc.get("upvoteCount", 0),
-        "viewCount": paper_doc.get("viewCount", 0),
-        "isNonImplementable": paper_doc.get("isNonImplementable", False),
-        "nonImplementableStatus": paper_doc.get("nonImplementableStatus", config_settings.STATUS_IMPLEMENTABLE),
-        "nonImplementableReason": paper_doc.get("nonImplementableReason"),
-        "hasUpvoted": False, # Default, will be updated below if user context is available
-        "hasSaved": False, # Default for saved status
-        "hasFlaggedNonImplementable": False, # Default for flagged status
-        "hasConfirmedNonImplementable": False, # Default for confirmed status
-        "hasDisputedNonImplementable": False, # Default for disputed status
-        "score": paper_doc.get("score"), # For Atlas Search results
+        "publication_date": publication_date_val,
+        "upvote_count": paper_doc.get("upvoteCount", 0),
+        "status": paper_doc.get("status", "Not Started"),
+        "current_user_vote": None,  # Populated later if user is logged in
     }
 
-    # If user context is provided, check for user-specific actions
-    if current_user_id_str:
-        try:
-            user_obj_id = ObjectId(current_user_id_str)
-            user_actions_collection = get_user_actions_collection_sync()
+    if detail_level == "full":
+        # Add fields specific to "full" detail
+        transformed_data["pwc_url"] = transformed_pwc_url
+        transformed_data["arxiv_id"] = paper_doc.get("arxivId")
+        transformed_data["abstract"] = paper_doc.get("abstract")
+        transformed_data["url_abs"] = transformed_url_abs
+        transformed_data["url_pdf"] = transformed_url_pdf
+        transformed_data["venue"] = paper_doc.get("venue")
+        transformed_data["tags"] = paper_doc.get("tasks", [])
+        # Initialize aggregate/detailed vote fields for "full" view
+        transformed_data["non_implementable_votes"] = 0
+        transformed_data["dispute_implementable_votes"] = 0
+        transformed_data["current_user_implementability_vote"] = None
 
-            # Check for upvote
-            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "upvote"}) > 0:
-                transformed_data["hasUpvoted"] = True
-            
-            # Check for saved (assuming 'save' is an actionType)
-            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "save"}) > 0:
-                transformed_data["hasSaved"] = True
+    try:
+        user_actions_collection = get_user_actions_collection_sync()
+        # paper_obj_id is needed for all database interactions related to this paper
+        paper_obj_id = paper_doc["_id"] if isinstance(paper_doc.get("_id"), ObjectId) else ObjectId(paper_id)
 
-            # Check for non-implementable flags by the current user
-            # These action types are examples; adjust to your actual stored values
-            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "flag_non_implementable"}) > 0:
-                transformed_data["hasFlaggedNonImplementable"] = True
-            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "confirm_non_implementable"}) > 0:
-                transformed_data["hasConfirmedNonImplementable"] = True
-            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_doc["_id"], "actionType": "dispute_non_implementable"}) > 0:
-                transformed_data["hasDisputedNonImplementable"] = True
+        # Fetch current_user_vote (upvote status) if a user is logged in
+        # This is done for both "summary" and "full" detail_level
+        if current_user_id_str:
+            user_obj_id = ObjectId(current_user_id_str) # Can throw InvalidId here
+            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_obj_id, "actionType": "upvote"}) > 0:
+                transformed_data["current_user_vote"] = "up"
+        
+        if detail_level == "full":
+            # Fetch aggregate votes (non_implementable_votes, dispute_implementable_votes)
+            non_implementable_action_types = ["confirm_non_implementable", "flag_non_implementable"]
+            count_non_impl = user_actions_collection.count_documents(
+                {"paperId": paper_obj_id, "actionType": {"$in": non_implementable_action_types}}
+            )
+            transformed_data["non_implementable_votes"] = count_non_impl
 
-        except InvalidId:
-            logger.warning(f"Invalid current_user_id_str: {current_user_id_str} during transform_paper_sync for paper {paper_id}. Cannot determine user-specific actions.")
-        except Exception as e:
-            logger.error(f"Error checking user actions in transform_paper_sync for paper {paper_id}, user {current_user_id_str}: {e}", exc_info=True)
+            dispute_action_type = "dispute_non_implementable"
+            count_dispute_impl = user_actions_collection.count_documents(
+                {"paperId": paper_obj_id, "actionType": dispute_action_type}
+            )
+            transformed_data["dispute_implementable_votes"] = count_dispute_impl
 
+            # Fetch user-specific implementability vote
+            if current_user_id_str: # User must be logged in
+                _user_obj_id_for_impl_vote = ObjectId(current_user_id_str)
+
+                implementability_action_types_map = {
+                    "dispute_non_implementable": "up",
+                    "flag_non_implementable": "down",
+                    "confirm_non_implementable": "down",
+                    "confirm_implementable": "up"
+                }
+                
+                user_implementability_action = user_actions_collection.find_one(
+                    {"userId": _user_obj_id_for_impl_vote, "paperId": paper_obj_id, "actionType": {"$in": list(implementability_action_types_map.keys())}},
+                    sort=[("timestamp", DESCENDING)] 
+                )
+                
+                if user_implementability_action:
+                    action_type = user_implementability_action.get("actionType")
+                    transformed_data["current_user_implementability_vote"] = implementability_action_types_map.get(action_type)
+                
+    except InvalidId:
+        logger.warning(f"Invalid ObjectId for paper_id: {paper_id} or user_id: {current_user_id_str}. User-specific data might be incomplete.")
+        pass
+    except Exception as e:
+        logger.error(f"Error during user-specific data or aggregate fetching for paper {paper_id}: {e}", exc_info=True)
+        pass
+        
     return transformed_data
-
 
 def ensure_db_indexes():
     """

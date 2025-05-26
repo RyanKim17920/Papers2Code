@@ -1,0 +1,12 @@
+{
+    "version": "0.2.0", // It's good practice to include the version
+    "configurations": [
+        {
+            "type": "msedge",
+            "name": "Launch Frontend UI (Edge)", // More descriptive name
+            "request": "launch",
+            "url": "http://localhost:5173/", 
+            "webRoot": "${workspaceFolder}/papers2code-ui" // Using ${workspaceFolder}
+        }
+    ]
+}

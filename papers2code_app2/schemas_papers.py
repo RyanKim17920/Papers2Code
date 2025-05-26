@@ -1,52 +1,25 @@
-from pydantic import BaseModel, Field, HttpUrl
+from pydantic import BaseModel, Field, HttpUrl, computed_field
 from pydantic.alias_generators import to_camel
 from typing import List, Optional
-from datetime import datetime, timezone
+from datetime import datetime
 
-# --- Base Models ---
+# --- Base Models for Paper Representation ---
 class BasePaper(BaseModel):
-    title: str
-    authors: List[str]
-    publication_date: Optional[datetime] = None
-    abstract: Optional[str] = None
-    arxiv_id: Optional[str] = None
-    doi: Optional[str] = None
-    url_pdf: Optional[HttpUrl] = None
-    url_abs: Optional[HttpUrl] = None
-    tags: Optional[List[str]] = []
-    # New fields for advanced filtering
-    publication_year: Optional[int] = None
-    venue: Optional[str] = None
-    citations_count: Optional[int] = None
-    # Fields for tracking and moderation
-    added_by_username: Optional[str] = None
-    added_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    last_modified_date: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-    is_approved: bool = False
-    approved_by_username: Optional[str] = None
-    approval_date: Optional[datetime] = None
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class PaperCreate(BasePaper):
-    pass
-
-class PaperUpdate(BaseModel):
+    """Base schema for core paper attributes, based on the provided dictionary structure."""
+    pwc_url: Optional[HttpUrl] = Field(None, alias="pwcUrl")
+    arxiv_id: Optional[str] = Field(None, alias="arxivId")
     title: Optional[str] = None
-    authors: Optional[List[str]] = None
-    publication_date: Optional[datetime] = None
     abstract: Optional[str] = None
-    arxiv_id: Optional[str] = None
-    doi: Optional[str] = None
-    url_pdf: Optional[HttpUrl] = None
-    url_abs: Optional[HttpUrl] = None
-    tags: Optional[List[str]] = None
-    publication_year: Optional[int] = None
-    venue: Optional[str] = None
-    citations_count: Optional[int] = None
+    authors: Optional[List[str]] = None
+    url_abs: Optional[HttpUrl] = Field(None, alias="urlAbs")
+    url_pdf: Optional[HttpUrl] = Field(None, alias="urlPdf")
+    publication_date: Optional[datetime] = Field(None, alias="date")
+    venue: Optional[str] = Field(None, alias="proceeding")
+    tags: Optional[List[str]] = Field([], alias="tasks")
+
+    # --- Implementability Fields ---
+    upvote_count: int = Field(0, alias="upvoteCount")
+    status:str = Field("Not Started", alias="status")
 
     model_config = {
         "populate_by_name": True,
@@ -54,7 +27,20 @@ class PaperUpdate(BaseModel):
     }
 
 class PaperResponse(BasePaper):
-    id: str # MongoDB ObjectId as string
+    """Schema for representing a paper when returned by API endpoints, including its ID and user-specific interaction details."""
+    id: str
+    current_user_implementability_vote: Optional[str] = Field(None, alias="currentUserImplementabilityVote")
+    current_user_vote: Optional[str] = Field(None, alias="currentUserVote")
+
+    # Aggregated counts - to be populated by backend logic from user actions
+    non_implementable_votes: int = Field(0, alias="nonImplementableVotes")
+    dispute_implementable_votes: int = Field(0, alias="disputeImplementableVotes")
+
+    @computed_field(alias="isImplementable")
+    @property
+    def is_implementable(self) -> bool:
+        """Determines if the paper is currently considered implementable based on its status."""
+        return self.status != "Not Implementable"
 
     model_config = {
         "populate_by_name": True,
@@ -62,80 +48,10 @@ class PaperResponse(BasePaper):
         "json_encoders": {
             datetime: lambda dt: dt.isoformat(),
         }
-    }
-
-# --- Models for Paper Actions (Likes, Saves) ---
-class UserActionBase(BaseModel):
-    user_id: str
-    paper_id: str
-    action_type: str # e.g., 'like', 'save'
-    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class UserActionCreate(UserActionBase):
-    pass
-
-class UserActionResponse(UserActionBase):
-    id: str # MongoDB ObjectId as string
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel,
-        "json_encoders": {
-            datetime: lambda dt: dt.isoformat(),
-        }
-    }
-
-# --- Models for Paper Views ---
-class PaperViewBase(BaseModel):
-    paper_id: str
-    user_id: Optional[str] = None
-    session_id: Optional[str] = None
-    viewed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class PaperViewCreate(PaperViewBase):
-    pass
-
-class PaperViewResponse(PaperViewBase):
-    id: str # MongoDB ObjectId as string
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel,
-        "json_encoders": {
-            datetime: lambda dt: dt.isoformat(),
-        }
-    }
-
-# --- Advanced Search and Filtering Models ---
-class AdvancedPaperFilters(BaseModel):
-    title: Optional[str] = None
-    authors: Optional[List[str]] = None
-    publication_year_min: Optional[int] = None
-    publication_year_max: Optional[int] = None
-    venue: Optional[str] = None
-    arxiv_id: Optional[str] = None
-    doi: Optional[str] = None
-    tags: Optional[List[str]] = None
-    is_approved: Optional[bool] = None
-    sort_by: Optional[str] = 'publication_date'
-    sort_order: Optional[str] = 'desc'
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
     }
 
 class PaginatedPaperResponse(BaseModel):
+    """Schema for responses that return a paginated list of papers."""
     papers: List[PaperResponse]
     total_count: int
     page: int
@@ -147,41 +63,9 @@ class PaginatedPaperResponse(BaseModel):
         "alias_generator": to_camel
     }
 
-class PaperVoteRequest(BaseModel):
-    vote_type: str # 'up' or 'none'
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class ArxivPaperRequest(BaseModel):
-    arxiv_id: str
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class FlagActionRequest(BaseModel):
-    action: str # e.g., 'confirm', 'dispute', 'retract'
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class BulkActionRequest(BaseModel):
-    paper_ids: List[str]
-    action: str # e.g., 'approve', 'unapprove'
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
 class SetImplementabilityRequest(BaseModel):
-    status: str # e.g., 'confirmed_non_implementable', 'disputed_non_implementable', 'neutral'
+    """Request schema for setting or updating the implementability status of a paper."""
+    status: str
     reason: Optional[str] = None
 
     model_config = {
@@ -189,17 +73,8 @@ class SetImplementabilityRequest(BaseModel):
         "alias_generator": to_camel
     }
 
-class BulkActionResponse(BaseModel):
-    successful_ids: List[str]
-    failed_ids: List[str]
-    message: str
-
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
-
-class PaperActionDetail(BaseModel):
+class PaperActionUserDetail(BaseModel):
+    """Schema for detailed information about a user who performed an action on a paper."""
     user_id: str
     username: str
     avatar_url: Optional[HttpUrl] = None
@@ -215,10 +90,11 @@ class PaperActionDetail(BaseModel):
     }
 
 class PaperActionsSummaryResponse(BaseModel):
+    """Response schema summarizing various user actions associated with a paper."""
     paper_id: str
-    upvotes: List[PaperActionDetail] = []
-    saves: List[PaperActionDetail] = [] # Assuming you might want to track saves too
-    implementability_flags: List[PaperActionDetail] = [] # For confirm/dispute non-implementable
+    upvotes: List[PaperActionUserDetail] = []
+    saves: List[PaperActionUserDetail] = []
+    implementability_flags: List[PaperActionUserDetail] = []
 
     model_config = {
         "populate_by_name": True,

@@ -20,7 +20,6 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   const [isVoting, setIsVoting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
   const authors = paper.authors.join(', ');
-  console.log(paper)
   const handleVoteClick = async () => {
     // ... existing vote logic ...
     if (isVoting) return; // Prevent multiple clicks

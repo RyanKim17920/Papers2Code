@@ -53,7 +53,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         reloadPaper,
         setUpdateError, // Added setUpdateError to destructuring
     } = usePaperDetail(paperId, currentUser);
-
+    console.log(paper)
     // Determine if the current user is an admin
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
 

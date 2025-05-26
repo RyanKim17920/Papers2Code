@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from pymongo import ReturnDocument
 from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
@@ -8,8 +8,8 @@ import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from ..schemas_papers import PaperResponse, PaperVoteRequest, PaperActionsSummaryResponse, PaperActionDetail
-from ..schemas_minimal import User, UserMinimal
+from ..schemas_papers import PaperResponse, PaperActionsSummaryResponse, PaperActionUserDetail
+from ..schemas_minimal import UserSchema, UserMinimal
 from ..shared import (
     get_papers_collection_sync,
     get_user_actions_collection_sync,
@@ -31,8 +31,8 @@ logger = logging.getLogger(__name__)
 async def vote_on_paper(
     request: Request,  # For limiter
     paper_id: str,
-    payload: PaperVoteRequest,  # Use a Pydantic model for the request body
-    current_user: User = Depends(get_current_user)
+    vote_type: str = Body(..., embed=True, pattern="^(up|none)$"),
+    current_user: UserSchema = Depends(get_current_user)
 ):
     try:
         user_id_str = str(current_user.id)
@@ -51,11 +51,6 @@ async def vote_on_paper(
         paper = papers_collection.find_one({"_id": paper_obj_id})
         if not paper:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
-
-        vote_type = payload.vote_type
-
-        if vote_type not in ['up', 'none']:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid vote type. Must be 'up' or 'none'.")
 
         action_type = 'upvote'
         existing_action = user_actions_collection.find_one({
@@ -111,7 +106,7 @@ async def vote_on_paper(
                 logger.error(f"Paper {paper_id} not found after voting operation.")
                 raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after voting operation")
 
-        return transform_paper_sync(updated_paper_doc, user_id_str)
+        return transform_paper_sync(updated_paper_doc, user_id_str, detail_level="full")
 
     except HTTPException:
         raise
@@ -178,7 +173,7 @@ async def get_paper_actions(
             action_type = action.get('actionType')
             created_at = action.get('createdAt', datetime.now(timezone.utc))
 
-            action_detail = PaperActionDetail(
+            action_detail = PaperActionUserDetail(
                 user_id=str(user_info.id),
                 username=user_info.username,
                 avatar_url=user_info.avatar_url,

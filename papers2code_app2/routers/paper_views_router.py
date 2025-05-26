@@ -12,7 +12,7 @@ from slowapi.util import get_remote_address
 import logging
 
 from ..schemas_papers import PaperResponse, PaginatedPaperResponse
-from ..schemas_minimal import User
+from ..schemas_minimal import UserSchema
 from ..shared import (
     get_papers_collection_sync,
     transform_paper_sync,
@@ -40,7 +40,7 @@ async def get_papers(
     startDate: Optional[str] = Query(None, alias="startDate"),
     endDate: Optional[str] = Query(None, alias="endDate"),
     searchAuthors: Optional[str] = Query(None, alias="searchAuthors"),
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[UserSchema] = Depends(get_current_user_optional)
 ):
     try:
         start_date_obj = None
@@ -115,12 +115,25 @@ async def get_papers(
             if filter_clauses:
                 search_operator["compound"]["filter"] = filter_clauses
 
-            if not must_clauses and not should_clauses and not filter_clauses:
+            # Add mustNot to filter out non-implementable papers by status
+            if config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB:
+                search_operator["compound"].setdefault("mustNot", []).append({
+                    "text": { # Assuming 'status' field is indexed as text or compatible
+                        "query": config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB,
+                        "path": "status" # Actual DB field name for status
+                    }
+                })
+
+            if not search_operator["compound"].get("must") and \
+               not search_operator["compound"].get("should") and \
+               not search_operator["compound"].get("filter") and \
+               not search_operator["compound"].get("mustNot"):
                  is_search_active = False 
             elif not must_clauses and not should_clauses:
                  search_operator["compound"].pop("must", None)
                  search_operator["compound"].pop("should", None)
-                 if not filter_clauses:
+                 # Check if only filter or mustNot clauses are present
+                 if not filter_clauses and not search_operator["compound"].get("mustNot"):
                     is_search_active = False
 
             if is_search_active:
@@ -130,9 +143,9 @@ async def get_papers(
                         {"$addFields": {"score": {"$meta": "searchScore"}, "highlights": {"$meta": "searchHighlights"}}},
                         {"$match": {"score": {"$gt": score_threshold}}}
                     ])
-                    sort_stage = {"$sort": {"score": DESCENDING, "publication_date": DESCENDING}}
+                    sort_stage = {"$sort": {"score": DESCENDING, "publicationDate": DESCENDING}} # Use publicationDate
                 else: 
-                    sort_stage = {"$sort": {"publication_date": DESCENDING}}
+                    sort_stage = {"$sort": {"publicationDate": DESCENDING}} # Use publicationDate
                 search_pipeline_stages.append(sort_stage)
                 search_pipeline_stages.append({"$limit": overall_limit})
 
@@ -159,7 +172,7 @@ async def get_papers(
 
         if not is_search_active:
             base_filter = {
-                "nonImplementableStatus": {"$ne": config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB}
+                "status": {"$ne": config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB} # Use status and DB value
             }
             logger.debug(f"Using base_filter: {base_filter}")
             logger.debug(f"Value of config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: {config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB}")
@@ -173,11 +186,11 @@ async def get_papers(
             # === End Temporary Debugging ===
 
             if sort == 'oldest':
-                sort_criteria = [("publication_date", ASCENDING)]
+                sort_criteria = [("publicationDate", ASCENDING)] # Use publicationDate
             elif sort == 'upvotes':
-                sort_criteria = [("upvoteCount", DESCENDING), ("publication_date", DESCENDING)]
-            else:
-                sort_criteria = [("publication_date", DESCENDING)]
+                sort_criteria = [("upvoteCount", DESCENDING), ("publicationDate", DESCENDING)] # Use upvoteCount and publicationDate
+            else: # Default is 'newest'
+                sort_criteria = [("publicationDate", DESCENDING)] # Use publicationDate
             try:
                 total_count = papers_collection.count_documents(base_filter)
                 logger.debug(f"Total papers found with base_filter: {total_count}")
@@ -190,7 +203,11 @@ async def get_papers(
                  raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"Failed to retrieve paper data: {str(db_error)}")
 
         total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
-        papers_list = [transformed for paper in papers_cursor if (transformed := transform_paper_sync(paper, current_user_id_str)) is not None] if papers_cursor else []
+        transformed_papers = [
+            transform_paper_sync(paper, current_user_id_str, detail_level="summary") 
+            for paper in papers_cursor
+        ]
+        papers_list = [transformed for transformed in transformed_papers if transformed is not None]
 
         return PaginatedPaperResponse(papers=papers_list, total_count=total_count, page=page, page_size=limit, has_more=(page < total_pages))
 
@@ -205,7 +222,7 @@ async def get_papers(
 async def get_paper_by_id(
     request: Request,
     paper_id: str,
-    current_user: Optional[User] = Depends(get_current_user_optional)
+    current_user: Optional[UserSchema] = Depends(get_current_user_optional)
 ):
     try:
         try: 
@@ -217,7 +234,11 @@ async def get_paper_by_id(
         paper_doc = papers_collection.find_one({"_id": obj_id})
         if paper_doc:
             current_user_id_str = str(current_user.id) if current_user else None
-            return transform_paper_sync(paper_doc, current_user_id_str)
+            transformed_paper = transform_paper_sync(paper_doc, current_user_id_str, detail_level="full")
+            if not transformed_paper:
+                logger.error(f"Failed to transform paper_doc for paper_id: {paper_id}, even though document was found.")
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process paper data.")
+            return transformed_paper
         else: 
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
     except HTTPException:
