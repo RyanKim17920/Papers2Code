@@ -14,9 +14,9 @@ const initialAdvancedFilters: AdvancedPaperFilters = {
   searchAuthors: '',
 };
 
-export function usePaperList() {
+export function usePaperList(authLoading?: boolean) { // authLoading is optional
   const [papers, setPapers] = useState<Paper[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true);
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Keep internal isLoading for paper fetching
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
@@ -39,7 +39,7 @@ export function usePaperList() {
   // API Fetching Logic
   useEffect(() => {
     const loadPapers = async () => {
-      setIsLoading(true);
+      setIsLoading(true); // Use internal isLoading
       setError(null);
 
       // Determine if any search (basic or advanced) is active
@@ -75,13 +75,20 @@ export function usePaperList() {
         setPapers([]);
         setTotalPages(1);
       } finally {
-        setIsLoading(false);
+        setIsLoading(false); // Use internal isLoading
       }
     };
 
-    loadPapers();
-    // Dependencies: include appliedAdvancedFilters
-  }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters]);
+    // Only attempt to load papers if authLoading is false (meaning auth process is complete)
+    // or if authLoading is undefined (for components that might use this hook without auth context)
+    if (authLoading === false) {
+      loadPapers();
+    } else if (authLoading === undefined) { // Fallback if authLoading is not provided
+        console.warn('usePaperList: authLoading prop not provided, fetching papers immediately.');
+        loadPapers();
+    }
+    // Add authLoading to the dependency array
+  }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters, authLoading]);
 
   // Handlers
   const handleSearchChange = useCallback((newSearchTerm: string) => {

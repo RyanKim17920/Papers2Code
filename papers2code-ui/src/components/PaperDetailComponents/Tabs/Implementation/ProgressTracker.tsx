@@ -1,24 +1,35 @@
 import React from 'react';
-import { ImplementationStep } from '../../../../types/paper';
+import { ImplementationStep, ProgressStatus } from '../../../../types/paper'; // Import ProgressStatus
 import './ProgressTracker.css'; // Add styles
 
 interface ProgressTrackerProps {
   steps: ImplementationStep[];
   paperId: string;
-  onStepUpdate: (paperId: string, stepId: number, newStatus: ImplementationStep['status']) => void; // Callback to update status
+  onStepUpdate: (paperId: string, stepId: number, newStatus: ProgressStatus) => void; // Use ProgressStatus
 }
 
 const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, paperId, onStepUpdate }) => {
 
-  // Basic handler - in a real app, you might have dropdowns or confirmation
-  const handleStatusChange = (stepId: number, currentStatus: ImplementationStep['status']) => {
-    // Simple cycle for demo: pending -> in-progress -> completed -> skipped -> pending
-    let nextStatus: ImplementationStep['status'] = 'pending';
-    if (currentStatus === 'pending') nextStatus = 'in_progress';
-    else if (currentStatus === 'in_progress') nextStatus = 'completed';
-    else if (currentStatus === 'completed') nextStatus = 'skipped';
-    else if (currentStatus === 'skipped') nextStatus = 'pending';
+  const handleStatusChange = (stepId: number, currentStatus: ProgressStatus) => {
+    let nextStatus: ProgressStatus;
 
+    switch (currentStatus) {
+      case 'Not Started':
+        nextStatus = 'Started';
+        break;
+      case 'Started':
+        nextStatus = 'Work in Progress';
+        break;
+      case 'Work in Progress':
+        nextStatus = 'Completed';
+        break;
+      case 'Completed':
+        nextStatus = 'Not Started'; // Cycle back for demo purposes
+        break;
+      default:
+        nextStatus = 'Not Started'; // Default for any unexpected status
+        break;
+    }
     onStepUpdate(paperId, stepId, nextStatus);
   };
 
@@ -27,7 +38,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({ steps, paperId, onSte
       <h4>Implementation Progress</h4>
       <ul>
         {steps.map((step) => (
-          <li key={step.id} className={`step-item stastus-${step.status}`}>
+          <li key={step.id} className={`step-item status-${step.status.replace(/\s+/g, '-').toLowerCase()}`}>
             <span className="step-name">{step.name}</span>
             <span className="step-description">{step.description}</span>
             <button

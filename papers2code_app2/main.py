@@ -35,9 +35,10 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
         csrf_token_header = request.headers.get(CSRF_TOKEN_HEADER_NAME)
 
         if not csrf_token_cookie or not csrf_token_header or csrf_token_cookie != csrf_token_header:
-            return JSONResponse(
+            # MODIFIED: Raise HTTPException instead of returning JSONResponse directly
+            raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                content={"detail": "CSRF token mismatch or missing."}
+                detail="CSRF token mismatch or missing."
             )
         
         response = await call_next(request)
@@ -116,15 +117,12 @@ origins = [
     # e.g., "https://your-frontend-domain.com"
 ]
 
-if config_settings.ENV_TYPE != "production":
-    origins.append("*") # Allow all for non-production for easier local dev
-
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,  # List of origins that are allowed to make cross-origin requests.
     allow_credentials=True,  # Support cookies/authorization headers.
-    allow_methods=["*"],  # Allow all methods (GET, POST, PUT, DELETE, etc.).
-    allow_headers=["*"],  # Allow all headers.
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],  # Explicitly list allowed methods
+    allow_headers=["Content-Type", "X-CSRFToken", "Authorization", "Accept", "Access-Control-Allow-Origin", "Vary"],  # Added Access-Control-Allow-Origin and Vary
 )
 
 # ADDED: Add CSRFProtectMiddleware after CORS and before routes
@@ -149,7 +147,7 @@ async def add_security_headers(request: Request, call_next):
     response.headers["X-XSS-Protection"] = "1; mode=block"  # ADDED
 
     # Content-Security-Policy: This is a stricter policy.
-    # Adjust based on your frontend's specific needs (CDNs, inline scripts/styles if absolutely necessary after build).
+    # Adjust based on your frontend's spedcific needs (CDNs, inline scripts/styles if absolutely necessary after build).
     # For Vite in dev, you might need 'unsafe-inline' for styles and 'unsafe-eval' for scripts.
     # This policy is geared towards a production build.
     if config_settings.ENV_TYPE == "production":
@@ -222,33 +220,52 @@ app.include_router(api_router)
 # --- Generic Exception Handler ---
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
-    logger.error(f"Unhandled exception: {exc}", exc_info=True) # Log the full traceback
+    logger.error(f"Unhandled exception: {exc}", exc_info=True)
     
-    # For production, do not send detailed exception info to the client
-    if config_settings.ENV_TYPE == "production":
-        error_content = {
-            "message": "An unexpected error occurred on the server. Please try again later.",
-            "error_id": str(getattr(request.state, 'request_id', 'N/A')) # Include a request ID if available
-        }
-    else: # For development/testing, include more detail
-        error_content = {
-            "message": "An unexpected error occurred on the server.",
-            "detail": str(exc),
-            "type": type(exc).__name__
-        }
+    response_headers = {}
+    request_origin = request.headers.get("origin")
+    # 'origins' list is defined globally in this file
+    if request_origin and request_origin in origins:
+        response_headers["Access-Control-Allow-Origin"] = request_origin
+        response_headers["Access-Control-Allow-Credentials"] = "true" # Matches CORSMiddleware config
+
+        # Add/update Vary header
+        existing_vary_values = [v.strip() for v in response_headers.get("Vary", "").split(",") if v.strip()]
+        if "Origin" not in existing_vary_values:
+            existing_vary_values.append("Origin")
+        response_headers["Vary"] = ", ".join(existing_vary_values)
+            
     return JSONResponse(
-        status_code=500,
-        content=error_content,
+        status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+        content={"detail": "Internal server error"},
+        headers=response_headers,
     )
 
 # --- HTTP Exception Handler (FastAPI's default is usually good, but can be customized) ---
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     logger.warning(f"HTTP Exception: {exc.status_code} {exc.detail} for {request.method} {request.url.path}")
+    
+    response_headers = {}
+    if exc.headers: # Preserve original headers from HTTPException, if any
+        response_headers.update(exc.headers)
+
+    request_origin = request.headers.get("origin")
+    # 'origins' list is defined globally in this file
+    if request_origin and request_origin in origins:
+        response_headers["Access-Control-Allow-Origin"] = request_origin
+        response_headers["Access-Control-Allow-Credentials"] = "true" # Matches CORSMiddleware config
+
+        # Add/update Vary header
+        existing_vary_values = [v.strip() for v in response_headers.get("Vary", "").split(",") if v.strip()]
+        if "Origin" not in existing_vary_values:
+            existing_vary_values.append("Origin")
+        response_headers["Vary"] = ", ".join(existing_vary_values)
+
     return JSONResponse(
         status_code=exc.status_code,
-        content={"detail": exc.detail, "message": "An HTTP error occurred."},
-        headers=exc.headers,
+        content={"detail": exc.detail},
+        headers=response_headers,
     )
 
 @app.get("/")

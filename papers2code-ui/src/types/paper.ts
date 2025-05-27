@@ -1,4 +1,8 @@
 // src/types/paper.ts (Review and adjust if needed)
+export type Status = 'Not Implementable' | 'Not Started' | 'Started' | 'Waiting for Author Response' | 'Work in Progress' | 'Completed' | 'Official Code Posted';
+
+// New type for the status of an implementation step
+export type ProgressStatus = 'Not Started' | 'Started' | 'Work in Progress' | 'Completed';
 
 export interface Author { // This interface might be used for detailed views or future enhancements
     // If author objects are never fetched with an ID from this API, 'id' might be removed or sourced differently.
@@ -6,71 +10,39 @@ export interface Author { // This interface might be used for detailed views or 
     name: string;
 }
 
-export enum ImplementationStatus {
-    //NotStarted = 'Not Started',
-    ContactingAuthor = 'Contacting Author',
-    DefiningRequirements = 'Defining Requirements',
-    ImplementationInProgress = 'Implementation In Progress',
-    AnnotatingCode = 'Annotating Code',
-    Completed = 'Completed',
-    AuthorDeclined = 'Author Declined (Proceeding)',
-    AwaitingReview = 'Awaiting Review',
-    NeedsCode = 'Needs Code',
-    ConfirmedNonImplementable = 'Confirmed Non-Implementable', // <-- NEW STATUS
-}
-
 export interface ImplementationStep {
     id: number;
     order: number;
     name: string;
     description: string | null;
-    status: 'pending' | 'in_progress' | 'completed' | 'skipped';
+    status: ProgressStatus; // Use the new ProgressStatus type
     github_url: string | null;
     created_at: string;
     updated_at: string;
 }
 
 export interface Paper {
-    // Fields from schemas_papers.py::PaperResponse (camelCased)
+    // Fields from schemas_papers.py::PaperResponse (and BasePaper, camelCased)
     id: string;
-    title: string;
-    authors: string[] | null; // MAJOR CHANGE: Was Author[] | null
-    publicationDate?: string | null; // RENAMED from 'date' (from publication_date)
-    abstract?: string | null;
-    arxivId?: string | null; // Was arxivId
-    doi?: string | null; // ADDED
-    urlAbs?: string | null;
-    urlPdf?: string | null;
-    tags?: string[] | null; // This aligns with backend 'tags'
-    publicationYear?: number | null; // ADDED
-    venue?: string | null; // ADDED
-    citationsCount?: number | null; // ADDED (from citations_count)
-    addedByUsername?: string | null; // ADDED
-    addedDate?: string | null; // RENAMED from 'created_at' (from added_date)
-    lastModifiedDate?: string | null; // RENAMED from 'updated_at' (from last_modified_date)
-    isApproved?: boolean; // ADDED
-    approvedByUsername?: string | null; // ADDED
-    approvalDate?: string | null; // ADDED
+    pwcUrl?: string | null; // from pwc_url
+    arxivId?: string | null; // from arxiv_id
+    title?: string | null; // from title (was string)
+    abstract?: string | null; // from abstract
+    authors: string[] | null; // from authors
+    urlAbs?: string | null; // from url_abs
+    urlPdf?: string | null; // from url_pdf
+    publicationDate?: string | null; // from publication_date (aliased to publicationDate in backend)
+    proceeding?: string | null; // from venue (aliased to proceeding in backend)
+    tasks?: string[] | null; // from tags (aliased to tasks in backend)
+    upvoteCount: number; // from upvote_count (was optional)
+    status: Status; // Use the new Status type
+    currentUserImplementabilityVote?: 'up' | 'down' | 'none'; // from current_user_implementability_vote
+    currentUserVote?: 'up' | 'none'; // from current_user_vote
+    nonImplementableVotes: number; // from non_implementable_votes (was optional)
+    disputeImplementableVotes: number; // from dispute_implementable_votes (was optional)
+    isImplementable: boolean; // from computed is_implementable (was optional)
 
-    // Existing frontend fields NOT in schemas_papers.py::PaperResponse - ensure they are optional
-    proceeding?: string | null;
-    pwcUrl?: string | null;
-    ownerId?: number | null;
-    implementationStatus?: string | null; // Or use ImplementationStatus enum, ensure it's optional
-    implementationSteps?: ImplementationStep[] | null;
-    isImplementable?: boolean; // This was boolean, backend has no direct equivalent in BasePaper
-    nonImplementableStatus?: 'implementable' | 'flagged_non_implementable' | 'confirmed_non_implementable' | 'confirmed_implementable' | 'voting';
-    nonImplementableReason?: string | null;
-    nonImplementableConfirmedBy?: string | null;
-    upvoteCount?: number;
-    nonImplementableVotes?: number;
-    disputeImplementableVotes?: number;
-    currentUserVote?: 'up' | 'none';
-    currentUserImplementabilityVote?: 'up' | 'down' | 'none';
-    
-    // 'tasks' was optional. If 'tags' is the backend equivalent, prefer 'tags'.
-    // If 'tasks' is different and needed, it remains optional.
-    tasks?: string[]; // Keep if distinct from tags, otherwise rely on tags.
+    //citationsCount?: number | null;
 }
 
 // Define the specific actions for implementability voting (matching backend)
@@ -85,7 +57,7 @@ export interface PaperSummary {
     title: string;
     authors: Author[]; // Kept as Author[] for summaries
     date: string;
-    implementationStatus: ImplementationStatus | string;
+    status: Status; // Use the new Status type
     isImplementable: boolean;
 }
 

@@ -7,7 +7,11 @@ import PaginationControls from '../components/PaperListComponents/Search/Paginat
 import AdvancedSearchForm from '../components/PaperListComponents/Search/AdvancedSearchForm'; // <-- Import Advanced Form
 import './PaperListPage.css';
 
-const PaperListPage: React.FC = () => {
+interface PaperListPageProps { // Create an interface for props
+  authLoading: boolean;
+}
+
+const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // Destructure authLoading
   const {
     papers,
     isLoading,
@@ -32,7 +36,7 @@ const PaperListPage: React.FC = () => {
     applyAdvancedFilters,
     clearAdvancedFilters,
     // --- End NEW ---
-  } = usePaperList();
+  } = usePaperList(authLoading); // Pass authLoading to the hook
 
   // Determine if any search criteria is active for the ListControls component
   const isAnySearchActive = !!debouncedSearchTerm ||

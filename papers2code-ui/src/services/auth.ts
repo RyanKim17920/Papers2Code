@@ -71,15 +71,39 @@ export const getCsrfToken = (): string | null => {
 // Function to fetch and store CSRF token
 export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
     try {
-        const response = await apiClient.get<{ csrf_token: string }>(CSRF_API_ENDPOINT);
-        if (response.data && response.data.csrf_token) {
-            localStorage.setItem('csrfToken', response.data.csrf_token);
-            console.log('CSRF token fetched and stored:', response.data.csrf_token);
-            return response.data.csrf_token;
+        console.log('Attempting to fetch CSRF token from:', CSRF_API_ENDPOINT);
+        // MODIFIED: Update type to expect csrfToken (camelCase) based on observed log
+        const response = await apiClient.get<{ csrfToken: string }>(CSRF_API_ENDPOINT);
+        console.log('Response received from CSRF token endpoint:', response);
+
+        // MODIFIED: Check for csrfToken (camelCase) based on observed log
+        if (response.data && response.data.csrfToken) {
+            localStorage.setItem('csrfToken', response.data.csrfToken);
+            console.log('CSRF token fetched and stored successfully:', response.data.csrfToken);
+            return response.data.csrfToken;
         }
+        // This log indicates the expected property was not found.
+        // The property name in response.data might be different (e.g. case or underscore)
+        console.warn('CSRF token not found using key \'csrfToken\' in response data from ' + CSRF_API_ENDPOINT + '. Actual response data:', response.data);
         return null;
-    } catch (error) {
-        console.error('Error fetching CSRF token:', error);
+    } catch (error: unknown) {
+        console.error('Error fetching CSRF token from ' + CSRF_API_ENDPOINT + ':', error);
+        if (axios.isAxiosError(error)) {
+            console.error('Axios error details:', {
+                message: error.message,
+                config: error.config,
+                code: error.code,
+                request: error.request ? 'Exists' : 'Does not exist',
+                response: error.response ? {
+                    data: error.response.data,
+                    status: error.response.status,
+                    headers: error.response.headers,
+                } : 'No response object',
+            });
+            if (error.response) {
+                console.error('Error response data specifically:', error.response.data);
+            }
+        }
         return null;
     }
 };

@@ -69,7 +69,8 @@ export const fetchPapersFromApi = async (
     throw new Error(errorMsg);
   }
   const data = await response.json();
-  console.log(data)
+  console.log('fetched data: ')
+  console.log(data);
   // The API sends 'totalCount' based on the provided error log, not 'totalPages'.
   // It also seems the API sends 'page' and 'pageSize', which are not directly used here
   // but 'totalCount' is used to calculate 'totalPages'.
@@ -142,7 +143,7 @@ export const flagImplementabilityInApi = async (
   }
 
   const updatedPaper: Paper = await response.json();
-  console.log(`Action '${action}' successful for paper ${paperId}. New status: ${updatedPaper.nonImplementableStatus}`);
+  console.log(`Action '${action}' successful for paper ${paperId}. New status: ${updatedPaper.status}`);
   return updatedPaper;
 };
 

@@ -13,13 +13,13 @@ class BasePaper(BaseModel):
     authors: Optional[List[str]] = None
     url_abs: Optional[HttpUrl] = Field(None, alias="urlAbs")
     url_pdf: Optional[HttpUrl] = Field(None, alias="urlPdf")
-    publication_date: Optional[datetime] = Field(None, alias="date")
+    publication_date: Optional[datetime] = Field(None, alias="publicationDate")
     venue: Optional[str] = Field(None, alias="proceeding")
     tags: Optional[List[str]] = Field([], alias="tasks")
 
     # --- Implementability Fields ---
     upvote_count: int = Field(0, alias="upvoteCount")
-    status:str = Field("Not Started", alias="status")
+    status: str = Field("Not Started", alias="status")
 
     model_config = {
         "populate_by_name": True,

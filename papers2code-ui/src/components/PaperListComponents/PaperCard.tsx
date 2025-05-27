@@ -1,8 +1,7 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Paper, ImplementationStatus } from '../../types/paper'; // Import ImplementationStatus
+import { Paper, Status } from '../../types/paper'; // Ensure Status is imported
 import './PaperCard.css';
-
 
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -16,12 +15,10 @@ interface PaperCardProps {
 }
 
 const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
-  // ... existing useState and handleVoteClick ...
   const [isVoting, setIsVoting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
-  const authors = paper.authors.join(', ');
+  const authors = paper.authors?.join(', ');
   const handleVoteClick = async () => {
-    // ... existing vote logic ...
     if (isVoting) return; // Prevent multiple clicks
 
     setIsVoting(true);
@@ -42,32 +39,49 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   };
 
   // --- Determine Display Status and Class ---
-  let displayStatus = paper.implementationStatus? paper.implementationStatus : ImplementationStatus.NeedsCode;
-  let statusClass = 'status-default';
-  let statusSymbol = '⏳'; // Default: Hourglass
+  const displayStatus: Status = paper.status;
+  let statusClass = 'status-default'; // Default class for unhandled or generic statuses
+  let statusSymbol = '⏳'; // Default symbol
 
-  if (paper.nonImplementableStatus === 'confirmed_non_implementable') {
-      displayStatus = ImplementationStatus.ConfirmedNonImplementable;
+  switch (paper.status) {
+    case 'Not Implementable':
       statusClass = 'status-non-implementable';
-      statusSymbol = '🚫'; // Symbol: Prohibited / Stop
-  } else if (paper.implementationStatus === ImplementationStatus.Completed) {
-      displayStatus = ImplementationStatus.Completed;
+      statusSymbol = '🚫';
+      break;
+    case 'Completed':
       statusClass = 'status-completed';
-      statusSymbol = '✅'; // Symbol: Check Mark
-  } else if (paper.implementationStatus === ImplementationStatus.ImplementationInProgress) {
-      displayStatus = ImplementationStatus.ImplementationInProgress;
+      statusSymbol = '✅';
+      break;
+    case 'Work in Progress':
       statusClass = 'status-in-progress';
-      statusSymbol = '🚧'; // Symbol: Construction / In Progress
-  } else if (paper.implementationStatus === ImplementationStatus.NeedsCode) {
-      statusClass = 'status-needs-code'; // Add specific class if needed
-      statusSymbol = '❓'; // Symbol: Question Mark / Needs Info
-  } // Add more else if for other specific statuses if needed // Add more else if for other specific statuses if needed
+      statusSymbol = '🚧';
+      break;
+    case 'Not Started':
+      // Assuming 'Not Started' is the new 'NeedsCode'
+      statusClass = 'status-needs-code'; 
+      statusSymbol = '⏳';
+      break;
+    case 'Started':
+      statusClass = 'status-started'; // You might want a specific class or reuse 'status-in-progress'
+      statusSymbol = '🛠️'; // Example: Hammer and wrench
+      break;
+    case 'Waiting for Author Response':
+      statusClass = 'status-waiting';
+      statusSymbol = '💬'; // Example: Speech bubble
+      break;
+    case 'Official Code Posted':
+      statusClass = 'status-official-code';
+      statusSymbol = '🎉'; // Example: Party popper
+      break;
+    // No default case needed if paper.status is always one of the Status union types
+    // and we intend to use the status string directly for displayStatus.
+    // If specific display strings are needed (e.g., "Waiting on Author" for 'Waiting for Author Response'),
+    // you would set `displayStatus = "Waiting on Author";` in the respective case.
+  }
   // --- End Determine Status and Class ---
-
 
   return (
     <div className="paper-card">
-      {/* ... Title and Meta Top ... */}
       <h3>
         <Link to={`/paper/${paper.id}`}>{paper.title}</Link>
       </h3>
@@ -76,15 +90,13 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
           <p className="authors">Authors: {authors}</p>
         </div>
         <div className="card-meta-bottom">
-          <p className="date">Date: {new Date(paper.publicationDate).toLocaleDateString()}</p>
-          {/* --- Use determined display status, class, and symbol --- */}
+          <p className="date">Date: {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}</p>
           <p className={`status ${statusClass}`}>
             <span className="status-symbol">{statusSymbol}</span>
             <span className="status-text">{displayStatus}</span>
           </p>
         </div>
       </div>
-      {/* ... Actions ... */}
       <div className="card-actions">
         <div className="vote-section">
            <button

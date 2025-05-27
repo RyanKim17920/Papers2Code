@@ -66,7 +66,7 @@ function App() {
 
         <main className="app-main">
           <Routes>
-            <Route path="/" element={<PaperListPage />} />
+            <Route path="/" element={<PaperListPage authLoading={authLoading} />} />
             <Route
               path="/paper/:paperId"
               element={<PaperDetailPage currentUser={currentUser} />}

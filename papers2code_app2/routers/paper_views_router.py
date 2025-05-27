@@ -208,7 +208,6 @@ async def get_papers(
             for paper in papers_cursor
         ]
         papers_list = [transformed for transformed in transformed_papers if transformed is not None]
-
         return PaginatedPaperResponse(papers=papers_list, total_count=total_count, page=page, page_size=limit, has_more=(page < total_pages))
 
     except HTTPException:

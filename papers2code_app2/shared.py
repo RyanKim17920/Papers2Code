@@ -19,7 +19,7 @@ loaded_env = load_dotenv(dotenv_path=env_path, override=True)
 
 logger = logging.getLogger(__name__)
 logging.basicConfig(level=logging.INFO)
-
+"""
 # Log raw environment variables before Pydantic model instantiation for debugging
 logger.info(f"Raw os.getenv('ENV_TYPE'): {os.getenv('ENV_TYPE')}")
 logger.info(f"Raw os.getenv('MONGO_URI_DEV'): {os.getenv('MONGO_URI_DEV')}")
@@ -38,7 +38,7 @@ logger.info(f"Raw os.getenv('OWNER_GITHUB_USERNAME'): {os.getenv('OWNER_GITHUB_U
 logger.info(f"Raw os.getenv('GITHUB_CLIENT_ID'): {os.getenv('GITHUB_CLIENT_ID')}") # Log raw GITHUB_CLIENT_ID
 logger.info(f"Raw os.getenv('GITHUB_CLIENT_SECRET'): {os.getenv('GITHUB_CLIENT_SECRET')}") # Log raw GITHUB_CLIENT_SECRET
 logger.info(f"Raw os.getenv('FRONTEND_URL'): {os.getenv('FRONTEND_URL')}") # Log raw FRONTEND_URL
-
+"""
 class AppSettings(BaseSettings):
     ENV_TYPE: str = "DEV"
     MONGO_URI_DEV: Optional[str] = None
@@ -84,7 +84,7 @@ class AppSettings(BaseSettings):
     model_config = SettingsConfigDict(env_file=".env", extra="ignore", case_sensitive=False)
 
 config_settings = AppSettings()
-
+"""
 # Log the settings loaded by Pydantic
 logger.info(f"Loaded config_settings.ENV_TYPE: {config_settings.ENV_TYPE}")
 logger.info(f"Loaded config_settings.MONGO_URI_DEV: {config_settings.MONGO_URI_DEV}")
@@ -104,7 +104,7 @@ logger.info(f"Loaded config_settings.OWNER_GITHUB_USERNAME: {config_settings.OWN
 logger.info(f"Loaded config_settings.GITHUB_CLIENT_ID: {config_settings.GITHUB_CLIENT_ID}") # Log loaded GITHUB_CLIENT_ID
 logger.info(f"Loaded config_settings.GITHUB_CLIENT_SECRET: {'********' if config_settings.GITHUB_CLIENT_SECRET else None}") # Log loaded GITHUB_CLIENT_SECRET (masked)
 logger.info(f"Loaded config_settings.FRONTEND_URL: {config_settings.FRONTEND_URL}") # Log loaded FRONTEND_URL
-
+"""
 def get_mongo_uri_and_db_name(settings: AppSettings) -> tuple[str, str]:
     env_type = settings.ENV_TYPE.upper()
     uri: Optional[str] = None
