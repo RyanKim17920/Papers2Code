@@ -92,10 +92,10 @@ export const ImplementabilityTab: React.FC<ImplementabilityTabProps> = ({
                         {!isAdminSetStatus && paper.implementabilityStatus === 'voting' && (
                             <>
                                 <p>
-                                    Use <FaThumbsUp /> if you believe this paper <strong>can</strong> be reasonably implemented.
+                                    Use <FaThumbsUp /> if you believe this paper <strong>can</strong> be reasonably implemented (assumptions about missing information, lack of training data, etc. are fine).
                                 </p>
                                 <p>
-                                    Use <FaThumbsDown /> if you believe this paper <strong>cannot</strong> be reasonably implemented.
+                                    Use <FaThumbsDown /> if you believe this paper <strong>cannot</strong> be reasonably implemented in any way (not code-related at all like surveys).
                                 </p>
                             </>
                         )}

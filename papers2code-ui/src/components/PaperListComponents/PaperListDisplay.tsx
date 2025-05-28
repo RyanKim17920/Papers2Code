@@ -33,7 +33,11 @@ const PaperListDisplay: React.FC<PaperListDisplayProps> = ({ papers, debouncedSe
 
   // Display messages for no papers found or no search term
   if (debouncedSearchTerm) {
-    return <p>No papers found matching "{debouncedSearchTerm}". Try refining your search.</p>;
+    return (
+      <Typography variant="subtitle1" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
+        No papers found matching "{debouncedSearchTerm}". Try refining your search.
+      </Typography>
+    );
   } else {
     return (
       <Typography variant="subtitle1" color="text.secondary" sx={{ textAlign: 'center', mt: 4 }}>
