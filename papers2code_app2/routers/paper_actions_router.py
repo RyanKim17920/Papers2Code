@@ -1,6 +1,4 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
-from pymongo import ReturnDocument
-from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 from bson.errors import InvalidId
 from datetime import datetime, timezone
@@ -14,9 +12,11 @@ from ..shared import (
     IMPL_STATUS_COMMUNITY_IMPLEMENTABLE,
     IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
 )
-from ..database import get_papers_collection_sync, get_user_actions_collection_sync, get_users_collection_sync
+from ..database import get_papers_collection_sync, get_user_actions_collection_sync, get_users_collection_sync # Keep for get_paper_actions for now
 from ..utils import transform_paper_sync
 from ..auth import get_current_user
+from ..services.paper_action_service import PaperActionService
+from ..services.exceptions import PaperNotFoundException, AlreadyVotedException, VoteProcessingException, InvalidActionException # Added InvalidActionException
 
 router = APIRouter(
     prefix="/papers",
@@ -39,193 +39,74 @@ async def vote_on_paper(
     logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
     logger.info(f"Vote request for paper_id: {paper_id}. Parsed vote_type: {vote_type}. User ID: {current_user.id}")
 
+    paper_action_service = PaperActionService() # Instantiate the service
+
     try:
         user_id_str = str(current_user.id)
         if not user_id_str:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
-        try:
-            user_obj_id = ObjectId(user_id_str)
-            paper_obj_id = ObjectId(paper_id)
-        except InvalidId:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
-
-        papers_collection = get_papers_collection_sync()
-        user_actions_collection = get_user_actions_collection_sync()
-
-        paper = papers_collection.find_one({"_id": paper_obj_id})
-        if not paper:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
-
-        action_type = 'upvote'
-        existing_action = user_actions_collection.find_one({
-            "userId": user_obj_id,
-            "paperId": paper_obj_id,
-            "actionType": action_type
-        })
-        logger.info(f"Checked for existing upvote for paper {paper_id} by user {user_id_str}. Found: {existing_action is not None}") # ADDED LOG
-        updated_paper_doc = None
-        if vote_type == 'up':
-            if not existing_action:
-                try:
-                    logger.info(f"Attempting to insert new upvote for paper {paper_id} by user {user_id_str}.") # ADDED LOG
-                    insert_result = user_actions_collection.insert_one({
-                        "userId": user_obj_id,
-                        "paperId": paper_obj_id,
-                        "actionType": action_type,
-                        "createdAt": datetime.now(timezone.utc)
-                    })
-                    if insert_result.inserted_id:
-                        updated_paper_doc = papers_collection.find_one_and_update(
-                            {"_id": paper_obj_id},
-                            {"$inc": {"upvoteCount": 1}},
-                            return_document=ReturnDocument.AFTER
-                        )
-                    else:
-                        updated_paper_doc = paper
-                except DuplicateKeyError as e: # MODIFIED LINE
-                    logger.warning(
-                        f"Duplicate key error on upvoting paper {paper_id} by user {user_id_str}. "
-                        f"Action likely exists. This was caught by try-except. Details: {e}" # MODIFIED LINE
-                    )
-                    updated_paper_doc = paper
-            else:
-                logger.info(f"User {user_id_str} has already upvoted paper {paper_id}. No action taken.") # ADDED LOG
-                updated_paper_doc = paper
-
-        elif vote_type == 'none':
-            if existing_action:
-                logger.info(f"Attempting to remove upvote for paper {paper_id} by user {user_id_str}.") # ADDED LOG
-                delete_result = user_actions_collection.delete_one({"_id": existing_action["_id"]})
-                if delete_result.deleted_count == 1:
-                    logger.info(f"Successfully removed upvote for paper {paper_id} by user {user_id_str}.") # ADDED LOG
-                    updated_paper_doc = papers_collection.find_one_and_update(
-                        {"_id": paper_obj_id},
-                        {"$inc": {"upvoteCount": -1}},
-                        return_document=ReturnDocument.AFTER
-                    )
-                    if updated_paper_doc and updated_paper_doc.get("upvoteCount", 0) < 0:
-                        papers_collection.update_one({"_id": paper_obj_id}, {"$set": {"upvoteCount": 0}})
-                        if updated_paper_doc:
-                            updated_paper_doc["upvoteCount"] = 0
-                else:
-                    logger.warning(f"Attempted to remove upvote for paper {paper_id} by user {user_id_str}, but delete_count was {delete_result.deleted_count}.") # ADDED LOG
-                    updated_paper_doc = paper
-            else:
-                logger.info(f"No existing upvote to remove for paper {paper_id} by user {user_id_str}. No action taken.") # ADDED LOG
-                updated_paper_doc = paper
+        updated_paper_doc = paper_action_service.record_vote(
+            paper_id=paper_id,
+            user_id=user_id_str,
+            vote_type=vote_type
+        )
 
         if not updated_paper_doc:
-            updated_paper_doc = papers_collection.find_one({"_id": paper_obj_id})
-            if not updated_paper_doc:
-                logger.error(f"Paper {paper_id} not found after voting operation.")
-                raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after voting operation")
+            # This case should ideally be handled by exceptions from the service
+            logger.error(f"Paper {paper_id} not found after voting operation, service returned None unexpectedly.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after voting operation")
 
         return transform_paper_sync(updated_paper_doc, user_id_str, detail_level="full")
 
+    except PaperNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except AlreadyVotedException as e:
+        # For "already voted" when trying to upvote, or "not voted" when trying to remove,
+        # the service currently returns the paper state without error.
+        # If we want to return a specific HTTP status for these, we'd adjust the service or handle here.
+        # For now, assuming the service handles it by returning current paper, which is then transformed.
+        # This part of the code might not be hit if the service doesn't raise AlreadyVotedException for "no action needed" cases.
+        # However, if it *does* raise for an actual issue (e.g. trying to vote 'up' when already voted 'up' and this is an error condition)
+        logger.warning(f"AlreadyVotedException for paper {paper_id}, user {current_user.id}: {e}")
+        # We might want to return a 200 with current paper state or a 409 Conflict.
+        # For now, let's assume the service handles returning the paper, and we transform it.
+        # If the service raised it as a true error, re-raise as HTTP 409.
+        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
+    except VoteProcessingException as e:
+        logger.error(f"VoteProcessingException for paper {paper_id}, user {current_user.id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
+    except InvalidId:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
     except HTTPException:
         raise
     except Exception:
-        logger.exception("An internal server error occurred during voting.")
+        logger.exception("An internal server error occurred during voting in the router.")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal server error occurred during voting."
         )
 
 @router.get("/{paper_id}/actions", response_model=PaperActionsSummaryResponse)
-@limiter.limit("100/minute")
+@limiter.limit("100/minute") # Keep limiter if needed
 async def get_paper_actions(
     request: Request,  # For limiter
     paper_id: str
 ):
+    logger.info(f"Router: Received request to get actions for paper_id: {paper_id}")
+    paper_action_service = PaperActionService()
+
     try:
-        try:
-            paper_obj_id = ObjectId(paper_id)
-        except InvalidId:
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper ID format")
-
-        papers_collection = get_papers_collection_sync()
-        if papers_collection.count_documents({"_id": paper_obj_id}) == 0:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
-
-        user_actions_collection = get_user_actions_collection_sync()
-        users_collection = get_users_collection_sync()
-
-        actions_cursor = user_actions_collection.find(
-            {"paperId": paper_obj_id}
-        )
-
-        actions = list(actions_cursor)
-        logger.info(f"Fetched {len(actions)} actions for paper_id={paper_id} from DB")  # ADDED LOG
-        logger.info(f"Actions data: {actions}")  # ADDED LOG
-        if not actions:
-            return PaperActionsSummaryResponse(paper_id=paper_id, upvotes=[], saves=[], implementability_flags=[])
-
-        user_ids = list(set(action['userId'] for action in actions if 'userId' in action))
-
-        user_details_list = list(users_collection.find(
-            {"_id": {"$in": user_ids}},
-            {"_id": 1, "username": 1, "avatarUrl": 1, "githubUsername": 1}
-        ))
-
-        user_map = {str(user['_id']): UserMinimal(
-            id=str(user['_id']),
-            username=user.get('username', 'Unknown'),
-            avatar_url=user.get('avatarUrl'),
-        ) for user in user_details_list}
-
-        upvotes_details = []
-        saves_details = []
-        implementability_flags_details = []
-
-        for action in actions:
-            user_id_obj = action.get('userId')
-            if not user_id_obj:
-                continue
-            user_info = user_map.get(str(user_id_obj))
-            if not user_info:
-                continue
-
-            action_type = action.get('actionType')
-            logger.info(f"Processing action from DB for paper_id={paper_id}, user_id={user_info.id if user_info else 'Unknown'}, actionType='{action_type}'") # ADDED LOG
-            created_at = action.get('createdAt', datetime.now(timezone.utc))
-
-            action_detail = PaperActionUserDetail(
-                user_id=str(user_info.id),
-                username=user_info.username,
-                avatar_url=user_info.avatar_url,
-                action_type=action_type, # Keep original action_type from DB for now
-                created_at=created_at
-            )
-            
-            if action_type == 'upvote':
-                upvotes_details.append(action_detail)
-            # MODIFIED: Use the correct action types from paper_moderation_router
-            elif action_type == IMPL_STATUS_COMMUNITY_IMPLEMENTABLE:
-                action_detail.action_type = 'Implementable' # Modify for frontend response
-                implementability_flags_details.append(action_detail)
-            elif action_type == IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE:
-                action_detail.action_type = 'Not Implementable' # Modify for frontend response
-                implementability_flags_details.append(action_detail)
-            # Legacy action types - keep for compatibility if old data exists
-            elif action_type in ['Implementable','confirm_implementable', 'dispute_not_implementable']: # Older values
-                action_detail.action_type = 'Implementable' 
-                implementability_flags_details.append(action_detail)
-            elif action_type in ['Not Implementable','confirm_not_implementable', 'dispute_implementable']: # Older values
-                action_detail.action_type = 'Not Implementable'
-                implementability_flags_details.append(action_detail)
-
-        return PaperActionsSummaryResponse(
-            paper_id=paper_id,
-            upvotes=upvotes_details,
-            saves=saves_details,
-            implementability_flags=implementability_flags_details
-        )
-
-    except HTTPException:
-        raise
-    except Exception:
-        logger.exception("An internal server error occurred while fetching paper actions.")
+        actions_summary = paper_action_service.get_paper_actions(paper_id)
+        return actions_summary
+    except PaperNotFoundException as e:
+        logger.warning(f"Router: PaperNotFoundException for paper_id {paper_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidActionException as e: # Example if service raises this for bad paper_id format
+        logger.warning(f"Router: InvalidActionException for paper_id {paper_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e: # Catch-all for other unexpected service errors
+        logger.exception(f"Router: Unexpected error fetching actions for paper_id {paper_id}: {e}")
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal server error occurred while fetching paper actions."

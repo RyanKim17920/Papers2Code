@@ -19,6 +19,16 @@ const ImplementabilityNotice: React.FC<ImplementabilityNoticeProps> = ({ paper }
         );
     }
 
+    if (paper.implementabilityStatus === "Admin Implementable") {
+        return (
+            <div className="implementable-notice confirmed">
+                <strong>Confirmed Implementable</strong>.
+                This paper has been confirmed as suitable for implementation on this platform.
+            </div>
+        );
+    }
+
+
     // Case 2: Paper is currently considered implementable (paper.isImplementable === true),
     // but there are "Not Implementable" votes, indicating it's flagged by the community.
     if (paper.nonImplementableVotes > 0) {

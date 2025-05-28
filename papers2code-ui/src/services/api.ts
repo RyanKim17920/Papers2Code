@@ -137,26 +137,7 @@ export const setImplementabilityInApi = async (
   adminStatus: AdminSettableImplementabilityStatus // This is 'Admin Implementable', 'Admin Not Implementable', or 'voting'
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/set_implementability`;
-  
-  // REMOVED Translation logic: adminStatus is now sent directly.
-  // let backendStatus: \'confirmed_non_implementable\' | \'confirmed_implementable\' | \'voting\';
-  // switch (adminStatus) {
-  //   case \'Admin Implementable\':
-  //     backendStatus = \'confirmed_implementable\';
-  //     break;
-  //   case \'Admin Not Implementable\':
-  //     backendStatus = \'confirmed_non_implementable\';
-  //     break;
-  //   case \'voting\':
-  //     backendStatus = \'voting\';
-  //     break;
-  //   default:
-  //     console.error(\'Invalid adminStatus provided to setImplementabilityInApi:\', adminStatus);
-  //     throw new Error(\'Invalid admin status for API call\');
-  // }
 
-  // console.log(`Owner setting implementability to ${adminStatus} (backend: ${backendStatus}) for paper:`, url);
-  // UPDATED: Log and send adminStatus directly as statusToSet
   console.log(`Owner setting implementability to ${adminStatus} for paper:`, url);
 
   const csrfToken = getCsrfToken(); 
