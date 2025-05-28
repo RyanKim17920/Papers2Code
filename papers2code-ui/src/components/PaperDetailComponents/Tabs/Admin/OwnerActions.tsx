@@ -66,13 +66,12 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
     };
 
     const getEffectiveImplementabilityText = () => {
-        // paper.implementabilityStatus holds backend values like 'confirmed_implementable', 'confirmed_not_implementable', 'voting'
         switch (paper.implementabilityStatus) {
             case 'Admin Not Implementable':
                 return 'Implementable (Admin Set)';
             case 'Admin Implementable':
                 return 'Not-Implementable (Admin Set)';
-            case 'voting':
+            case 'Voting':
                 return 'Community Voting Active';
             default:
                 console.warn("Unexpected paper.implementabilityStatus in OwnerActions: ", paper.implementabilityStatus);
@@ -106,11 +105,11 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                     </button>
                     <button
                         className="btn button-secondary"
-                        onClick={() => handleImplementabilityAction('voting')}
+                        onClick={() => handleImplementabilityAction('Voting')}
                         // Compare paper.implementabilityStatus (backend value) with the corresponding backend string literal
-                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'voting'}
+                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'Voting'}
                     >
-                        {isUpdatingStatus && actionClicked === 'voting' ? 'Processing...' : 'Revert to Voting'}
+                        {isUpdatingStatus && actionClicked === 'Voting' ? 'Processing...' : 'Revert to Voting'}
                     </button>
                     <p className="warning-text">
                         Current status: {getEffectiveImplementabilityText()}

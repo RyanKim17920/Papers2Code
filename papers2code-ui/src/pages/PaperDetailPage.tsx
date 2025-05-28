@@ -185,7 +185,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' && (
                     <p>Are you sure you want to set the status to <strong>Confirmed Not-Implementable</strong>? Community voting will be disabled.</p>
                 )}
-                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'voting' && (
+                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Voting' && (
                     <p>Are you sure you want to revert to <strong>community voting</strong>? Community voting will be re-enabled.</p>
                 )}
             </ConfirmationModal>

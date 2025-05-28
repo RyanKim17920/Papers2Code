@@ -11,7 +11,8 @@ import secrets
 import logging
 
 from ..schemas_minimal import UserSchema, TokenResponse, UserMinimal, CsrfToken
-from ..shared import get_users_collection_sync, config_settings
+from ..shared import config_settings
+from ..database import get_users_collection_sync
 from ..auth import create_access_token, get_current_user, SECRET_KEY, ALGORITHM, create_refresh_token
 
 logger = logging.getLogger(__name__)
@@ -46,13 +47,16 @@ async def github_login(request: Request, response: Response):
     state_token_payload = {"state_val": state_value, "sub": "oauth_state_marker"}
     state_jwt = create_access_token(data=state_token_payload, expires_delta=timedelta(minutes=10))
 
-    github_authorize_url = getattr(config_settings, 'GITHUB_AUTHORIZE_URL', "https://github.com/login/oauth/authorize")
-    github_client_id = getattr(config_settings, 'GITHUB_CLIENT_ID', None)
-    github_scope = getattr(config_settings, 'GITHUB_SCOPE', "user:email")
+    github_authorize_url = config_settings.GITHUB.AUTHORIZE_URL
+    github_client_id = config_settings.GITHUB.CLIENT_ID
+    github_scope = config_settings.GITHUB.SCOPE
     
-    if not github_client_id:
-        logger.error("GITHUB_CLIENT_ID is not configured.")
-        raise HTTPException(status_code=500, detail="Authentication service is misconfigured.")
+    if github_client_id is None:
+        logger.error("GITHUB.CLIENT_ID is not found in configuration (is None). Check .env file or environment variables.")
+        raise HTTPException(status_code=500, detail="Authentication service is misconfigured (GitHub Client ID not set).")
+    elif not github_client_id: # Catches empty string ""
+        logger.error("GITHUB.CLIENT_ID is configured but is an empty string. Check .env file.")
+        raise HTTPException(status_code=500, detail="Authentication service is misconfigured (GitHub Client ID is empty).")
 
     try:
         redirect_uri = str(request.url_for('github_callback_endpoint'))
@@ -86,7 +90,7 @@ async def github_login(request: Request, response: Response):
 @router.get("/github/callback", name="github_callback_endpoint")
 async def github_callback(code: str, state: str, request: Request):
     state_jwt_from_cookie = request.cookies.get(OAUTH_STATE_COOKIE_NAME)
-    frontend_url = getattr(config_settings, 'FRONTEND_URL', "/")
+    frontend_url = config_settings.FRONTEND_URL
     callback_path = "/api/auth/github/callback"
 
     if not state_jwt_from_cookie:
@@ -109,13 +113,24 @@ async def github_callback(code: str, state: str, request: Request):
         error_response.delete_cookie(OAUTH_STATE_COOKIE_NAME, httponly=True, samesite="lax", path=callback_path, secure=True if config_settings.ENV_TYPE == "production" else False)
         return error_response
 
-    github_access_token_url = getattr(config_settings, 'GITHUB_ACCESS_TOKEN_URL', "https://github.com/login/oauth/access_token")
-    github_client_id = getattr(config_settings, 'GITHUB_CLIENT_ID', None)
-    github_client_secret = getattr(config_settings, 'GITHUB_CLIENT_SECRET', None)
-    github_api_user_url = getattr(config_settings, 'GITHUB_API_USER_URL', "https://api.github.com/user")
+    github_access_token_url = config_settings.GITHUB.ACCESS_TOKEN_URL
+    github_client_id = config_settings.GITHUB.CLIENT_ID
+    github_client_secret = config_settings.GITHUB.CLIENT_SECRET
+    github_api_user_url = config_settings.GITHUB.API_USER_URL
+
+    # Specific logging for configuration issues
+    if github_client_id is None:
+        logger.error("GitHub OAuth Callback: GITHUB.CLIENT_ID is not found in configuration (is None). Check .env file or environment variables.")
+    elif not github_client_id: # Empty string
+        logger.error("GitHub OAuth Callback: GITHUB.CLIENT_ID is configured but is an empty string. Check .env file.")
+
+    if github_client_secret is None:
+        logger.error("GitHub OAuth Callback: GITHUB.CLIENT_SECRET is not found in configuration (is None). Check .env file or environment variables.")
+    elif not github_client_secret: # Empty string
+        logger.error("GitHub OAuth Callback: GITHUB.CLIENT_SECRET is configured but is an empty string. Check .env file.")
 
     if not github_client_id or not github_client_secret:
-        logger.error("GitHub client ID or secret not configured for callback.")
+        logger.error("GitHub client ID or secret not configured or empty for callback. Check .env file.") # Updated general log
         error_response = RedirectResponse(f"{frontend_url}/?login_error=auth_misconfigured")
         error_response.delete_cookie(OAUTH_STATE_COOKIE_NAME, httponly=True, samesite="lax", path=callback_path, secure=True if config_settings.ENV_TYPE == "production" else False)
         return error_response
@@ -254,7 +269,7 @@ async def get_current_user_api(current_user: UserSchema = Depends(get_current_us
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Not authenticated")
 
-    owner_username = getattr(config_settings, 'OWNER_GITHUB_USERNAME', None)
+    owner_username = config_settings.OWNER_GITHUB_USERNAME 
     is_owner = owner_username is not None and current_user.username == owner_username
     
     logger.info(f"User {current_user.username} is_owner status: {is_owner}")

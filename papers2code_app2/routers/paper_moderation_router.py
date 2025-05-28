@@ -14,12 +14,22 @@ from ..schemas_papers import (
 )
 from ..schemas_minimal import UserSchema
 from ..shared import (
+    config_settings,
+    # Import the constants
+    IMPL_STATUS_VOTING,
+    IMPL_STATUS_COMMUNITY_IMPLEMENTABLE,
+    IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE,
+    IMPL_STATUS_ADMIN_IMPLEMENTABLE,
+    IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE,
+    MAIN_STATUS_NOT_IMPLEMENTABLE, # Import new constant
+    MAIN_STATUS_NOT_STARTED # Import new constant
+)
+from ..database import (
     get_papers_collection_sync,
     get_user_actions_collection_sync,
-    get_removed_papers_collection_sync,
-    transform_paper_sync,
-    config_settings
+    get_removed_papers_collection_sync
 )
+from ..utils import transform_paper_sync
 from ..auth import get_current_user, get_current_owner
 
 router = APIRouter(
@@ -29,13 +39,6 @@ router = APIRouter(
 
 limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
-
-# Implementability Status Constants
-IMPL_STATUS_VOTING = "voting" # MODIFIED to lowercase "voting"
-IMPL_STATUS_COMMUNITY_IMPLEMENTABLE = "Community Implementable"
-IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE = "Community Not Implementable"
-IMPL_STATUS_ADMIN_IMPLEMENTABLE = "Admin Implementable"
-IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE = "Admin Not Implementable"
 
 async def _recalculate_and_update_community_status(paper_id_obj: ObjectId, papers_collection, paper_doc_for_votes=None):
     """
@@ -67,10 +70,10 @@ async def _recalculate_and_update_community_status(paper_id_obj: ObjectId, paper
         is_implementable_votes = current_paper_doc.get("isImplementableVotes", 0)
 
         calculated_status_based_on_votes = IMPL_STATUS_VOTING # Default for community vote outcome
-        if not_implementable_votes >= config_settings.NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD and \
+        if not_implementable_votes >= config_settings.VOTING.NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD and \
            not_implementable_votes > is_implementable_votes:
             calculated_status_based_on_votes = IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
-        elif is_implementable_votes >= config_settings.IMPLEMENTABLE_CONFIRM_THRESHOLD and \
+        elif is_implementable_votes >= config_settings.VOTING.IMPLEMENTABLE_CONFIRM_THRESHOLD and \
              is_implementable_votes > not_implementable_votes:
             calculated_status_based_on_votes = IMPL_STATUS_COMMUNITY_IMPLEMENTABLE
         
@@ -85,13 +88,13 @@ async def _recalculate_and_update_community_status(paper_id_obj: ObjectId, paper
     # Adjust main 'status' based on the effective_implementability_status
     new_main_status = current_main_status
     if effective_implementability_status in [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]:
-        if current_main_status != 'Not Implementable':
-            new_main_status = 'Not Implementable'
+        if current_main_status != MAIN_STATUS_NOT_IMPLEMENTABLE:
+            new_main_status = MAIN_STATUS_NOT_IMPLEMENTABLE
     # If it was "Not Implementable" (due to community or admin) and now it's not because effective_implementability_status changed
     elif current_db_implementability_status in [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE] and \
          effective_implementability_status not in [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]:
-        if current_main_status == 'Not Implementable':
-            new_main_status = 'Not Started' # Revert to default
+        if current_main_status == MAIN_STATUS_NOT_IMPLEMENTABLE:
+            new_main_status = MAIN_STATUS_NOT_STARTED # Revert to default
 
     if new_main_status != current_main_status:
         update_fields["status"] = new_main_status
@@ -302,14 +305,14 @@ async def set_paper_implementability(
         new_main_status = current_main_status
 
         if status_to_set_by_admin == IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE:
-            if current_main_status != 'Not Implementable':
-                new_main_status = 'Not Implementable'
+            if current_main_status != MAIN_STATUS_NOT_IMPLEMENTABLE:
+                new_main_status = MAIN_STATUS_NOT_IMPLEMENTABLE
         elif status_to_set_by_admin == IMPL_STATUS_ADMIN_IMPLEMENTABLE or status_to_set_by_admin == IMPL_STATUS_VOTING:
             # If admin is making it implementable or reverting to voting,
             # and current main status is 'Not Implementable' (possibly from a previous state),
             # then revert main status to 'Not Started'.
-            if current_main_status == 'Not Implementable':
-                new_main_status = 'Not Started'
+            if current_main_status == MAIN_STATUS_NOT_IMPLEMENTABLE:
+                new_main_status = MAIN_STATUS_NOT_STARTED
         
         if new_main_status != current_main_status:
             db_update_payload["status"] = new_main_status

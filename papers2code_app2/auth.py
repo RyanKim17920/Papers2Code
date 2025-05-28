@@ -6,7 +6,8 @@ from bson import ObjectId
 from bson.errors import InvalidId
 import logging
 
-from .shared import config_settings, get_users_collection_sync
+from .shared import config_settings
+from .database import get_users_collection_sync
 from .schemas_minimal import UserSchema
 
 logger = logging.getLogger(__name__)
@@ -148,21 +149,4 @@ async def get_current_owner(current_user: UserSchema = Depends(get_current_user)
             detail="This action requires owner privileges."
         )
     logger.info(f"User {current_user.username} is confirmed as owner.")
-    return current_user
-
-async def get_current_user_placeholder() -> UserSchema:
-    mock_user = {
-        "_id": "507f1f77bcf86cd799439011",
-        "githubId": 12345,
-        "username": "test_user",
-        "avatarUrl": "https://example.com/avatar.jpg",
-        "name": "Test User",
-        "email": "test@example.com"
-    }
-    return UserSchema(**mock_user)
-
-async def owner_required(current_user: UserSchema = Depends(get_current_user)):
-    owner_username = getattr(config_settings, 'OWNER_GITHUB_USERNAME', None)
-    if not owner_username or current_user.username != owner_username:
-        raise HTTPException(status_code=status.HTTP_403_FORBIDDEN, detail="Not an owner")
     return current_user

@@ -50,7 +50,7 @@ export const ImplementabilityTab: React.FC<ImplementabilityTabProps> = ({
     } else if (paper.implementabilityStatus === 'Community Not Implementable') {
         statusMessage = "Community Consensus: Not Implementable. You can vote 'Is Implementable' to help reach a different consensus, or 'Not Implementable' to reinforce this status.";
         statusMessageType = 'warning';
-    } else if (paper.implementabilityStatus === 'voting') {
+    } else if (paper.implementabilityStatus === 'Voting') {
         statusMessage = "Community Voting In Progress: Is this paper reasonably implementable?";
         statusMessageType = 'info';
     }
@@ -89,7 +89,7 @@ export const ImplementabilityTab: React.FC<ImplementabilityTabProps> = ({
             {showVotingControls ? (
                 <>
                     <div className="implementability-explanation">
-                        {!isAdminSetStatus && paper.implementabilityStatus === 'voting' && (
+                        {!isAdminSetStatus && paper.implementabilityStatus === 'Voting' && (
                             <>
                                 <p>
                                     Use <FaThumbsUp /> if you believe this paper <strong>can</strong> be reasonably implemented (assumptions about missing information, lack of training data, etc. are fine).

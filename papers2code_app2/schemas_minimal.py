@@ -1,7 +1,8 @@
 from pydantic import BaseModel, Field, HttpUrl
-from pydantic.alias_generators import to_camel
 from typing import Optional
 from datetime import datetime
+# Import shared configurations from schemas_papers
+from .schemas_papers import camel_case_config, camel_case_config_with_datetime
 
 # --- Simplified Models for Authentication & User Representation ---
 
@@ -18,13 +19,7 @@ class UserSchema(BaseModel): # Model returned by get_current_user
     created_at: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel,
-        "json_encoders": {
-            datetime: lambda dt: dt.isoformat(),
-        }
-    }
+    model_config = camel_case_config_with_datetime
 
 class UserMinimal(BaseModel): # Response model for /me endpoint
     """Minimal user information, suitable for public display or a /me endpoint."""
@@ -35,20 +30,14 @@ class UserMinimal(BaseModel): # Response model for /me endpoint
     is_owner: Optional[bool] = None
     is_admin: Optional[bool] = None
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
+    model_config = camel_case_config
 
 class Token(BaseModel):
     """Schema for an access token."""
     access_token: str
     token_type: str
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
+    model_config = camel_case_config
 
 class TokenResponse(Token):
     """Response schema for operations returning a token."""
@@ -58,7 +47,4 @@ class CsrfToken(BaseModel):
     """Schema for a CSRF token."""
     csrf_token: str
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
+    model_config = camel_case_config

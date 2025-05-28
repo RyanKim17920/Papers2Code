@@ -40,7 +40,7 @@ export interface Paper {
     currentUserVote?: 'up' | 'none'; // from current_user_vote
     nonImplementableVotes: number; // from not_implementable_votes (was optional)
     isImplementableVotes: number; // from implementable_votes (was optional)
-    implementabilityStatus: 'voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'; // DO NOT CHANGE
+    implementabilityStatus: 'Voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'; // DO NOT CHANGE
 }
 
 // Define the specific actions for implementability voting (matching backend)

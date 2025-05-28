@@ -1,7 +1,34 @@
-from pydantic import BaseModel, Field, HttpUrl, computed_field
+from pydantic import BaseModel, Field, HttpUrl, computed_field, ConfigDict
 from pydantic.alias_generators import to_camel
-from typing import List, Optional
+from typing import List, Optional, Literal
 from datetime import datetime
+
+# --- Reusable Model Configurations ---
+camel_case_config = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+)
+
+camel_case_config_with_datetime = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    json_encoders={datetime: lambda dt: dt.isoformat()},
+)
+
+set_implementability_config = ConfigDict(
+    populate_by_name=True,
+    alias_generator=to_camel,
+    allow_population_by_field_name=True,
+)
+
+# --- Type Definitions for Literal Strings ---
+ImplementabilityStatusType = Literal[
+    "Voting",
+    "Community Not Implementable",
+    "Community Implementable",
+    "Admin Not Implementable",
+    "Admin Implementable"
+]
 
 # --- Base Models for Paper Representation ---
 class BasePaper(BaseModel):
@@ -20,12 +47,9 @@ class BasePaper(BaseModel):
     # --- Implementability Fields ---
     upvote_count: int = Field(0, alias="upvoteCount")
     status: str = Field("Not Started", alias="status")
-    implementability_status: str = Field("Voting", alias="implementabilityStatus") # 'voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'
+    implementability_status: ImplementabilityStatusType = Field("Voting", alias="implementabilityStatus") # 'voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
+    model_config = camel_case_config
 
 class PaperResponse(BasePaper):
     """Schema for representing a paper when returned by API endpoints, including its ID and user-specific interaction details."""
@@ -36,7 +60,6 @@ class PaperResponse(BasePaper):
     # Aggregated counts - to be populated by backend logic from user actions
     not_implementable_votes: int = Field(0, alias="nonImplementableVotes")
     implementable_votes: int = Field(0, alias="isImplementableVotes")
-    # owner_set_implementability_status is inherited from BasePaper
 
     @computed_field(alias="isImplementable")
     @property
@@ -44,13 +67,7 @@ class PaperResponse(BasePaper):
         """Determines if the paper is currently considered implementable based on its status."""
         return self.status != "Not Implementable"
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel,
-        "json_encoders": {
-            datetime: lambda dt: dt.isoformat(),
-        }
-    }
+    model_config = camel_case_config_with_datetime
 
 class PaginatedPaperResponse(BaseModel):
     """Schema for responses that return a paginated list of papers."""
@@ -60,21 +77,14 @@ class PaginatedPaperResponse(BaseModel):
     page_size: int
     has_more: bool
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
+    model_config = camel_case_config
 
 class SetImplementabilityRequest(BaseModel):
     """Request schema for setting or updating the implementability status of a paper."""
     status_to_set: str = Field(..., alias="statusToSet") # MODIFIED: Changed field name and added alias
     reason: Optional[str] = None
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel,
-        "allow_population_by_field_name": True # Added to allow population by status_to_set
-    }
+    model_config = set_implementability_config
 
 class PaperActionUserDetail(BaseModel):
     """Schema for detailed information about a user who performed an action on a paper."""
@@ -84,13 +94,7 @@ class PaperActionUserDetail(BaseModel):
     action_type: str
     created_at: datetime
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel,
-        "json_encoders": {
-            datetime: lambda dt: dt.isoformat(),
-        }
-    }
+    model_config = camel_case_config_with_datetime
 
 class PaperActionsSummaryResponse(BaseModel):
     """Response schema summarizing various user actions associated with a paper."""
@@ -99,7 +103,4 @@ class PaperActionsSummaryResponse(BaseModel):
     saves: List[PaperActionUserDetail] = []
     implementability_flags: List[PaperActionUserDetail] = []
 
-    model_config = {
-        "populate_by_name": True,
-        "alias_generator": to_camel
-    }
+    model_config = camel_case_config

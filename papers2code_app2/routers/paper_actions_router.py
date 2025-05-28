@@ -11,11 +11,11 @@ from slowapi.util import get_remote_address
 from ..schemas_papers import PaperResponse, PaperActionsSummaryResponse, PaperActionUserDetail
 from ..schemas_minimal import UserSchema, UserMinimal
 from ..shared import (
-    get_papers_collection_sync,
-    get_user_actions_collection_sync,
-    get_users_collection_sync,
-    transform_paper_sync
+    IMPL_STATUS_COMMUNITY_IMPLEMENTABLE,
+    IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
 )
+from ..database import get_papers_collection_sync, get_user_actions_collection_sync, get_users_collection_sync
+from ..utils import transform_paper_sync
 from ..auth import get_current_user
 
 router = APIRouter(
@@ -63,10 +63,12 @@ async def vote_on_paper(
             "paperId": paper_obj_id,
             "actionType": action_type
         })
+        logger.info(f"Checked for existing upvote for paper {paper_id} by user {user_id_str}. Found: {existing_action is not None}") # ADDED LOG
         updated_paper_doc = None
         if vote_type == 'up':
             if not existing_action:
                 try:
+                    logger.info(f"Attempting to insert new upvote for paper {paper_id} by user {user_id_str}.") # ADDED LOG
                     insert_result = user_actions_collection.insert_one({
                         "userId": user_obj_id,
                         "paperId": paper_obj_id,
@@ -81,16 +83,22 @@ async def vote_on_paper(
                         )
                     else:
                         updated_paper_doc = paper
-                except DuplicateKeyError:
-                    logger.warning(f"Duplicate key error on upvoting paper {paper_id} by user {user_id_str}. Action likely exists.")
+                except DuplicateKeyError as e: # MODIFIED LINE
+                    logger.warning(
+                        f"Duplicate key error on upvoting paper {paper_id} by user {user_id_str}. "
+                        f"Action likely exists. This was caught by try-except. Details: {e}" # MODIFIED LINE
+                    )
                     updated_paper_doc = paper
             else:
+                logger.info(f"User {user_id_str} has already upvoted paper {paper_id}. No action taken.") # ADDED LOG
                 updated_paper_doc = paper
 
         elif vote_type == 'none':
             if existing_action:
+                logger.info(f"Attempting to remove upvote for paper {paper_id} by user {user_id_str}.") # ADDED LOG
                 delete_result = user_actions_collection.delete_one({"_id": existing_action["_id"]})
                 if delete_result.deleted_count == 1:
+                    logger.info(f"Successfully removed upvote for paper {paper_id} by user {user_id_str}.") # ADDED LOG
                     updated_paper_doc = papers_collection.find_one_and_update(
                         {"_id": paper_obj_id},
                         {"$inc": {"upvoteCount": -1}},
@@ -101,8 +109,10 @@ async def vote_on_paper(
                         if updated_paper_doc:
                             updated_paper_doc["upvoteCount"] = 0
                 else:
+                    logger.warning(f"Attempted to remove upvote for paper {paper_id} by user {user_id_str}, but delete_count was {delete_result.deleted_count}.") # ADDED LOG
                     updated_paper_doc = paper
             else:
+                logger.info(f"No existing upvote to remove for paper {paper_id} by user {user_id_str}. No action taken.") # ADDED LOG
                 updated_paper_doc = paper
 
         if not updated_paper_doc:
@@ -167,10 +177,6 @@ async def get_paper_actions(
         upvotes_details = []
         saves_details = []
         implementability_flags_details = []
-
-        # Constants for action types stored by paper_moderation_router.py
-        IMPL_STATUS_COMMUNITY_IMPLEMENTABLE = "Community Implementable"
-        IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE = "Community Not Implementable"
 
         for action in actions:
             user_id_obj = action.get('userId')

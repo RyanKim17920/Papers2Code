@@ -20,7 +20,7 @@ export type ActiveTab = 'paperInfo' | 'details' | 'upvotes' | 'implementability'
 
 // Define the type for the status that can be set by an admin/owner.
 // These are the values that will be displayed in the UI and passed to handleSetImplementabilityStatus.
-export type AdminSettableImplementabilityStatus = 'Admin Not Implementable' | 'Admin Implementable' | 'voting';
+export type AdminSettableImplementabilityStatus = 'Admin Not Implementable' | 'Admin Implementable' | 'Voting';
 
 export function usePaperDetail(paperId: string | undefined, currentUser: UserProfile | null) {
     const navigate = useNavigate();

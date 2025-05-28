@@ -10,8 +10,11 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response as StarletteResponse # ADDED
 import logging # Ensure logging is imported and active
 from contextlib import asynccontextmanager # ADDED: For lifespan event handler
+from typing import Optional, Dict # ADDED: For type hinting
 
-from .shared import ensure_db_indexes, config_settings # MODIFIED: Added config_settings import
+# MODIFIED: Import ensure_db_indexes from database.py
+from .database import ensure_db_indexes 
+from .shared import config_settings # MODIFIED: config_settings is still needed from shared
 # from .routers import users, auth, admin, user_profile, research_fields, conference_series, conferences, proceedings, links, stats # Commented out missing routers
 from .routers import auth_routes # Corrected import for auth_routes
 
@@ -48,9 +51,9 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"]) # MODIFIED: Using fixed default limits for now
 
 # --- Logging Configuration ---
-# Basic configuration for logging. For production, consider structured logging (e.g., JSON),
-# more sophisticated handlers (e.g., rotating file handlers, external logging services),
-# and configuring log levels via environment variables.
+# MOVED from shared.py: BasicConfig should ideally be called once, e.g. in main.py
+logging.basicConfig(level=logging.INFO) 
+
 
 # Determine log level: use APP_LOG_LEVEL if set, otherwise base on ENV_TYPE
 if config_settings.APP_LOG_LEVEL:
@@ -65,8 +68,6 @@ if config_settings.APP_LOG_LEVEL:
 else:
     app_log_level = logging.DEBUG if config_settings.ENV_TYPE != "production" else logging.INFO
     _initial_log_level_warning = None
-
-logging.basicConfig(level=app_log_level, format='%(asctime)s - %(name)s - %(levelname)s - %(message)s')
 
 # Now that basicConfig is called, we can use loggers.
 if _initial_log_level_warning:
@@ -105,17 +106,24 @@ app = FastAPI(
 
 # --- CORS Middleware ---
 # Origins that are allowed to make cross-origin requests.
-# For development, you might allow "http://localhost:5173" (common Vite dev port)
-# or "*" to allow all origins (less secure, use with caution).
-# For production, specify your frontend's domain.
-origins = [
-    "http://localhost:5173",  # Assuming Vite UI runs on this port
+
+# Start with common development origins
+origins_set = {
+    "http://localhost:5173",    # Common Vite dev port
     "http://127.0.0.1:5173",
-    "http://localhost:3000",  # Common port for React/Next.js dev
+    "http://localhost:3000",    # Common port for React/Next.js dev
     "http://127.0.0.1:3000",
-    # Add your production frontend URL here if applicable
-    # e.g., "https://your-frontend-domain.com"
-]
+}
+
+# Add the configured FRONTEND_URL from settings
+if config_settings.FRONTEND_URL:
+    origins_set.add(config_settings.FRONTEND_URL)
+
+origins = list(origins_set) # Convert set to list for CORSMiddleware
+
+# Log the origins being used (ensure logger is configured before this line if used here, it is)
+logger.info(f"Allowed CORS origins: {origins}")
+
 
 app.add_middleware(
     CORSMiddleware,
@@ -217,23 +225,29 @@ app.include_router(api_router)
 
 # Removed deprecated @app.on_event handlers - now using lifespan context manager instead
 
+# --- Helper function for CORS headers in exceptions ---
+def _prepare_cors_headers_for_exceptions(request: Request, initial_headers: Optional[Dict[str, str]] = None) -> Dict[str, str]:
+    headers = initial_headers.copy() if initial_headers else {}
+    request_origin = request.headers.get("origin")
+    
+    # 'origins' is the global list defined above
+    if request_origin and request_origin in origins:
+        headers["Access-Control-Allow-Origin"] = request_origin
+        headers["Access-Control-Allow-Credentials"] = "true" # Matches CORSMiddleware config
+
+        # Add/update Vary header
+        existing_vary_values = [v.strip() for v in headers.get("Vary", "").split(",") if v.strip()]
+        if "Origin" not in existing_vary_values:
+            existing_vary_values.append("Origin")
+        headers["Vary"] = ", ".join(existing_vary_values)
+    return headers
+
 # --- Generic Exception Handler ---
 @app.exception_handler(Exception)
 async def generic_exception_handler(request: Request, exc: Exception):
     logger.error(f"Unhandled exception: {exc}", exc_info=True)
     
-    response_headers = {}
-    request_origin = request.headers.get("origin")
-    # 'origins' list is defined globally in this file
-    if request_origin and request_origin in origins:
-        response_headers["Access-Control-Allow-Origin"] = request_origin
-        response_headers["Access-Control-Allow-Credentials"] = "true" # Matches CORSMiddleware config
-
-        # Add/update Vary header
-        existing_vary_values = [v.strip() for v in response_headers.get("Vary", "").split(",") if v.strip()]
-        if "Origin" not in existing_vary_values:
-            existing_vary_values.append("Origin")
-        response_headers["Vary"] = ", ".join(existing_vary_values)
+    response_headers = _prepare_cors_headers_for_exceptions(request)
             
     return JSONResponse(
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
@@ -246,21 +260,7 @@ async def generic_exception_handler(request: Request, exc: Exception):
 async def http_exception_handler(request: Request, exc: HTTPException):
     logger.warning(f"HTTP Exception: {exc.status_code} {exc.detail} for {request.method} {request.url.path}")
     
-    response_headers = {}
-    if exc.headers: # Preserve original headers from HTTPException, if any
-        response_headers.update(exc.headers)
-
-    request_origin = request.headers.get("origin")
-    # 'origins' list is defined globally in this file
-    if request_origin and request_origin in origins:
-        response_headers["Access-Control-Allow-Origin"] = request_origin
-        response_headers["Access-Control-Allow-Credentials"] = "true" # Matches CORSMiddleware config
-
-        # Add/update Vary header
-        existing_vary_values = [v.strip() for v in response_headers.get("Vary", "").split(",") if v.strip()]
-        if "Origin" not in existing_vary_values:
-            existing_vary_values.append("Origin")
-        response_headers["Vary"] = ", ".join(existing_vary_values)
+    response_headers = _prepare_cors_headers_for_exceptions(request, exc.headers)
 
     return JSONResponse(
         status_code=exc.status_code,

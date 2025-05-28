@@ -14,10 +14,11 @@ import logging
 from ..schemas_papers import PaperResponse, PaginatedPaperResponse
 from ..schemas_minimal import UserSchema
 from ..shared import (
-    get_papers_collection_sync,
-    transform_paper_sync,
-    config_settings
+    config_settings,
+    MAIN_STATUS_NOT_IMPLEMENTABLE # Import the constant
 )
+from ..database import get_papers_collection_sync
+from ..utils import transform_paper_sync
 from ..auth import get_current_user_optional
 
 router = APIRouter(
@@ -116,7 +117,7 @@ async def get_papers(
                 search_operator["compound"]["filter"] = filter_clauses
 
             # Add mustNot to filter out non-implementable papers by status
-            if config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB:
+            if config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB: # This now defaults to MAIN_STATUS_NOT_IMPLEMENTABLE
                 search_operator["compound"].setdefault("mustNot", []).append({
                     "text": { # Assuming 'status' field is indexed as text or compatible
                         "query": config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB,
