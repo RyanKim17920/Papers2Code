@@ -68,9 +68,9 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
     const getEffectiveImplementabilityText = () => {
         // paper.implementabilityStatus holds backend values like 'confirmed_implementable', 'confirmed_not_implementable', 'voting'
         switch (paper.implementabilityStatus) {
-            case 'confirmed_implementable':
+            case 'Admin Not Implementable':
                 return 'Implementable (Admin Set)';
-            case 'confirmed_not_implementable':
+            case 'Admin Implementable':
                 return 'Not-Implementable (Admin Set)';
             case 'voting':
                 return 'Community Voting Active';
@@ -92,7 +92,7 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                         className="btn button-warning"
                         onClick={() => handleImplementabilityAction('Admin Not Implementable')}
                         // Compare paper.implementabilityStatus (backend value) with the corresponding backend string literal
-                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'confirmed_not_implementable'}
+                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'Community Not Implementable'}
                     >
                         {isUpdatingStatus && actionClicked === 'Admin Not Implementable' ? 'Processing...' : 'Force Not-Implementable'}
                     </button>
@@ -100,7 +100,7 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                         className="btn button-secondary"
                         onClick={() => handleImplementabilityAction('Admin Implementable')}
                         // Compare paper.implementabilityStatus (backend value) with the corresponding backend string literal
-                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'confirmed_implementable'}
+                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'Community Implementable'}
                     >
                         {isUpdatingStatus && actionClicked === 'Admin Implementable' ? 'Processing...' : 'Force Implementable'}
                     </button>

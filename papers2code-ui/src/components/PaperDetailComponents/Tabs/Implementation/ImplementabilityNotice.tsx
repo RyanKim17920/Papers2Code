@@ -10,7 +10,7 @@ interface ImplementabilityNoticeProps {
 const ImplementabilityNotice: React.FC<ImplementabilityNoticeProps> = ({ paper }) => {
     // Case 1: Paper is confirmed as Not Implementable
     // This is determined by paper.isImplementable === false (backend status is 'Not Implementable')
-    if (paper.isImplementable === false) {
+    if (paper.status === "Not Implementable") {
         return (
             <div className="not-implementable-notice confirmed">
                 <strong>Confirmed Not-Implementable</strong>.
