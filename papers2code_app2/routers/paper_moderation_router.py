@@ -222,9 +222,11 @@ async def flag_paper_implementability(
             try:
                 insert_result = user_actions_collection.insert_one(new_action_doc)
                 action_update_successful = insert_result.inserted_id is not None
-            except DuplicateKeyError: # Should be rare if logic for existing vote is correct
-                logger.warning(f"DuplicateKeyError on insert for user action: {new_action_doc}")
-                action_update_successful = False # Or try to find and confirm
+            except DuplicateKeyError as e: # MODIFIED LINE
+                logger.warning(
+                    f"DuplicateKeyError on insert for user action. Attempted doc: {new_action_doc}. Details: {e}" # MODIFIED LINE
+                )
+                action_update_successful = False
         
         if not action_update_successful:
             # Log details if needed, or if specific error for user action failure
