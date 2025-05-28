@@ -41,19 +41,19 @@
     margin-left: 8px;
 }
 
-.status-default {
+.status-not-started {
     background-color: var(--grey-light-color, #f0f0f0);
     color: var(--grey-dark-color, #555);
     border: 1px solid var(--grey-color, #ccc);
 }
 
-.status-in-progress {
+.status-started, .status-waiting-author, status-in-progress {
     background-color: var(--info-light-color, #e7f3ff);
     color: var(--info-dark-color, #0056b3);
     border: 1px solid var(--info-color, #007bff);
 }
 
-.status-completed {
+.status-completed, .status-official-code {
     background-color: var(--success-light-color, #e6ffed);
     color: var(--success-dark-color, #1f7a3b);
     border: 1px solid var(--success-color, #28a745);

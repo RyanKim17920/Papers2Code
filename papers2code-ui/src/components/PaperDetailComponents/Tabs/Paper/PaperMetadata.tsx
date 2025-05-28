@@ -1,6 +1,8 @@
 import React from 'react';
 import { Paper, Status } from '../../../../types/paper'; // Import Status
 import './PaperMetadata.css';
+import { getStatusClass, getStatusSymbol } from '../../../../utils/statusUtils'; // Import utility function for status symbol
+import { stat } from 'fs';
 interface PaperMetadataProps {
     paper: Paper;
 }
@@ -11,37 +13,9 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
     let statusClass = 'status-default'; 
     let statusSymbol = '⏳'; 
 
-    switch (paper.status) {
-        case 'Not Implementable':
-            statusClass = 'status-not-implementable';
-            statusSymbol = '🚫';
-            break;
-        case 'Completed':
-            statusClass = 'status-completed';
-            statusSymbol = '✅';
-            break;
-        case 'Work in Progress':
-            statusClass = 'status-in-progress';
-            statusSymbol = '🚧';
-            break;
-        case 'Not Started':
-            statusClass = 'status-needs-code'; 
-            statusSymbol = '⏳';
-            break;
-        case 'Started':
-            statusClass = 'status-started'; 
-            statusSymbol = '🛠️'; 
-            break;
-        case 'Waiting for Author Response':
-            statusClass = 'status-waiting';
-            statusSymbol = '💬'; 
-            break;
-        case 'Official Code Posted':
-            statusClass = 'status-official-code';
-            statusSymbol = '🎉'; 
-            break;
-        // No default needed as paper.status should always be a valid Status type
-    }
+    statusClass = getStatusClass(displayStatus);
+    statusSymbol = getStatusSymbol(displayStatus);
+    
 
     return (
         <div className="paper-meta">

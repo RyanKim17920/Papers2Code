@@ -1,43 +1,55 @@
 // src/utils/statusUtils.ts
-
+import { Status } from '../types/paper';
 /**
  * Returns a CSS class string based on the paper's implementation status.
- * @param status - The implementation status string (e.g., 'Not Started', 'In Progress', 'Completed').
+ * @param status - The implementation status string.
  * @returns A string containing CSS class(es) for styling.
  */
-export const getStatusClass = (status: string | undefined | null): string => {
-    if (!status) return 'status-unknown'; // Default class if status is undefined or null
+export const getStatusClass = (status: Status | undefined | null): string => {
+    if (!status) return 'status-unknown';
 
     switch (status) {
+        case 'Not Implementable':
+            return 'status-not-implementable';
         case 'Not Started':
             return 'status-not-started';
-        case 'In Progress':
+        case 'Started':
+            return 'status-started';
+        case 'Waiting for Author Response':
+            return 'status-waiting-author';
+        case 'Work in Progress':
             return 'status-in-progress';
         case 'Completed':
             return 'status-completed';
-        case 'confirmed_not_implementable':
-            return 'status-confirmed-not-implementable';
+        case 'Official Code Posted':
+            return 'status-official-code';
         default:
-            return 'status-unknown'; // Fallback for any other status
+            return 'status-unknown';
     }
 };
 
 /**
  * Returns an emoji symbol based on the paper's implementation status.
- * @param status - The implementation status string (e.g., 'Not Started', 'In Progress', 'Completed').
+ * @param status - The implementation status string.
  * @returns A string containing an emoji symbol for the status.
  */
-export const getStatusSymbol = (status: string | undefined | null): string => {
+export const getStatusSymbol = (status: Status | undefined | null): string => {
     if (!status) return '';
     switch (status) {
+        case 'Not Implementable':
+            return '🚫';
         case 'Not Started':
             return '⏳';
-        case 'In Progress':
+        case 'Started':
+            return '🚀';
+        case 'Waiting for Author Response':
+            return '✉️';
+        case 'Work in Progress':
             return '🚧';
         case 'Completed':
             return '✅';
-        case 'confirmed_not_implementable':
-            return '🚫';
+        case 'Official Code Posted':
+            return '📦';
         default:
             return '';
     }
