@@ -1,16 +1,19 @@
-import React, { useState } from 'react'; // Added useState
-import { Paper } from '../../../../types/paper'; // Corrected import path
-import { UserProfile } from '../../../../services/auth'; // Corrected import path
-import { updatePaperStatusInApi } from '../../../../services/api'; // Changed from apiService to a direct import
-import { getStatusClass } from '../../../../utils/statusUtils'; // Import shared getStatusClass
-import './OwnerActions.css';
+import React, { useState, useEffect } from 'react';
+// Import the backend-compatible status type if available, or use string literals directly for comparison.
+// For now, we assume paper.implementabilityStatus is already correctly typed with backend values.
+import { Paper } from '../../../../types/paper'; 
+import { AdminSettableImplementabilityStatus } from '../../../../hooks/usePaperDetail';
+import { UserProfile } from '../../../../services/auth';
+import { updatePaperStatusInApi } from '../../../../services/api';
+import { getStatusClass } from '../../../../utils/statusUtils';
+// import './OwnerActions.css'; // Assuming this will be fixed or is not critical for this change
 
 interface OwnerActionsProps {
     paper: Paper;
     currentUser: UserProfile | null;
     onPaperUpdate: (updatedPaper: Paper) => void;
     setUpdateError: (error: string | null) => void;
-    openConfirmStatusModal: (status: 'confirmed_non_implementable' | 'confirmed_implementable' | 'voting') => void;
+    openConfirmStatusModal: (status: AdminSettableImplementabilityStatus) => void; 
     openConfirmRemoveModal: () => void;
     isUpdatingStatus: boolean;
     isRemoving: boolean;
@@ -23,31 +26,58 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
     setUpdateError,
     openConfirmStatusModal,
     openConfirmRemoveModal,
-    isUpdatingStatus, // This is for implementability status (e.g., confirm non-implementable)
+    isUpdatingStatus,
     isRemoving
 }) => {
-    // New state for implementation status updates (Not Started, In Progress, Completed)
     const [isUpdatingImplStatus, setIsUpdatingImplStatus] = useState<boolean>(false);
+    const [actionClicked, setActionClicked] = useState<AdminSettableImplementabilityStatus | null>(null);
 
-    const handleUpdatePaperStatus = async (status: string) => {
-        if (!currentUser || !paper.id) return; // Keep basic guard for currentUser and paper.id
-        setIsUpdatingImplStatus(true); // Set loading for implementation status update
+    useEffect(() => {
+        if (!isUpdatingStatus) {
+            setActionClicked(null);
+        }
+    }, [isUpdatingStatus]);
+
+    const handleUpdatePaperStatus = async (newStatus: string) => {
+        if (!currentUser || !paper.id) return;
+        setIsUpdatingImplStatus(true);
         setUpdateError(null);
         try {
-            // Changed from apiService.updatePaperStatus to updatePaperStatusInApi
-            const updatedPaper = await updatePaperStatusInApi(paper.id, status, currentUser.id);
+            const updatedPaper = await updatePaperStatusInApi(paper.id, newStatus, currentUser.id);
             if (updatedPaper) {
                 onPaperUpdate(updatedPaper);
             }
         } catch (err) {
-            // Type assertion for err if specific error structure is known, otherwise use Error
             if (err instanceof Error) {
                 setUpdateError(err.message || 'Failed to update paper status');
             } else {
                 setUpdateError('An unknown error occurred while updating paper status');
             }
         } finally {
-            setIsUpdatingImplStatus(false); // Clear loading for implementation status update
+            setIsUpdatingImplStatus(false);
+        }
+    };
+
+    const handleImplementabilityAction = (status: AdminSettableImplementabilityStatus) => {
+        if (!isUpdatingStatus) {
+            setActionClicked(status);
+            openConfirmStatusModal(status);
+        }
+    };
+
+    const getEffectiveImplementabilityText = () => {
+        // paper.implementabilityStatus holds backend values like 'confirmed_implementable', 'confirmed_not_implementable', 'voting'
+        switch (paper.implementabilityStatus) {
+            case 'confirmed_implementable':
+                return 'Implementable (Admin Set)';
+            case 'confirmed_not_implementable':
+                return 'Not-Implementable (Admin Set)';
+            case 'voting':
+                return 'Community Voting Active';
+            default:
+                console.warn("Unexpected paper.implementabilityStatus in OwnerActions: ", paper.implementabilityStatus);
+                // Provide a fallback display for any other status that might appear
+                return paper.implementabilityStatus ? String(paper.implementabilityStatus).replace(/[_-]/g, ' ').replace(/\b\w/g, l => l.toUpperCase()) : 'Unknown';
         }
     };
 
@@ -60,27 +90,31 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                     <h4>Implementability Status Management</h4>
                     <button
                         className="btn button-warning"
-                        onClick={() => openConfirmStatusModal('confirmed_non_implementable')}
-                        disabled={isUpdatingStatus || paper.nonImplementableStatus === 'confirmed_non_implementable'}
+                        onClick={() => handleImplementabilityAction('Admin Not Implementable')}
+                        // Compare paper.implementabilityStatus (backend value) with the corresponding backend string literal
+                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'confirmed_not_implementable'}
                     >
-                        {isUpdatingStatus && paper.nonImplementableStatus !== 'confirmed_non_implementable' ? 'Processing...' : 'Force Non-Implementable'}
+                        {isUpdatingStatus && actionClicked === 'Admin Not Implementable' ? 'Processing...' : 'Force Not-Implementable'}
                     </button>
                     <button
                         className="btn button-secondary"
-                        onClick={() => openConfirmStatusModal('confirmed_implementable')}
-                        disabled={isUpdatingStatus || paper.nonImplementableStatus === 'confirmed_implementable'}
+                        onClick={() => handleImplementabilityAction('Admin Implementable')}
+                        // Compare paper.implementabilityStatus (backend value) with the corresponding backend string literal
+                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'confirmed_implementable'}
                     >
-                        {isUpdatingStatus && paper.nonImplementableStatus !== 'confirmed_implementable' ? 'Processing...' : 'Force Implementable'}
+                        {isUpdatingStatus && actionClicked === 'Admin Implementable' ? 'Processing...' : 'Force Implementable'}
                     </button>
                     <button
                         className="btn button-secondary"
-                        onClick={() => openConfirmStatusModal('voting')}
-                        // Enable revert only when currently in a confirmed state
-                        disabled={isUpdatingStatus || (paper.nonImplementableStatus !== 'confirmed_non_implementable' && paper.nonImplementableStatus !== 'confirmed_implementable')}
+                        onClick={() => handleImplementabilityAction('voting')}
+                        // Compare paper.implementabilityStatus (backend value) with the corresponding backend string literal
+                        disabled={isUpdatingStatus || paper.implementabilityStatus === 'voting'}
                     >
-                        {isUpdatingStatus && paper.nonImplementableStatus === 'voting' ? 'Processing...' : 'Revert to Voting'}
+                        {isUpdatingStatus && actionClicked === 'voting' ? 'Processing...' : 'Revert to Voting'}
                     </button>
                     <p className="warning-text">
+                        Current status: {getEffectiveImplementabilityText()}
+                        <br />
                         Force or lock implementability status, or revert to community voting.
                     </p>
                 </div>
@@ -90,23 +124,23 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                     <button
                         className={`btn button-secondary ${getStatusClass('Not Started')}`}
                         onClick={() => handleUpdatePaperStatus('Not Started')}
-                        disabled={isUpdatingImplStatus || paper.implementationStatus === 'Not Started'}
+                        disabled={isUpdatingImplStatus || paper.status === 'Not Started'}
                     >
-                        {isUpdatingImplStatus && paper.implementationStatus !== 'Not Started' ? 'Processing...' : 'Mark as Not Started'}
+                        {isUpdatingImplStatus && paper.status !== 'Not Started' ? 'Processing...' : 'Mark as Not Started'}
                     </button>
                     <button
-                        className={`btn button-secondary ${getStatusClass('In Progress')}`}
-                        onClick={() => handleUpdatePaperStatus('In Progress')}
-                        disabled={isUpdatingImplStatus || paper.implementationStatus === 'In Progress'}
+                        className={`btn button-secondary ${getStatusClass('Work in Progress')}`}
+                        onClick={() => handleUpdatePaperStatus('Work in Progress')}
+                        disabled={isUpdatingImplStatus || paper.status === 'Work in Progress'}
                     >
-                        {isUpdatingImplStatus && paper.implementationStatus !== 'In Progress' ? 'Processing...' : 'Mark as In Progress'}
+                        {isUpdatingImplStatus && paper.status !== 'Work in Progress' ? 'Processing...' : 'Mark as In Progress'}
                     </button>
                     <button
                         className={`btn button-success ${getStatusClass('Completed')}`}
                         onClick={() => handleUpdatePaperStatus('Completed')}
-                        disabled={isUpdatingImplStatus || paper.implementationStatus === 'Completed'}
+                        disabled={isUpdatingImplStatus || paper.status === 'Completed'}
                     >
-                        {isUpdatingImplStatus && paper.implementationStatus !== 'Completed' ? 'Processing...' : 'Mark as Completed'}
+                        {isUpdatingImplStatus && paper.status !== 'Completed' ? 'Processing...' : 'Mark as Completed'}
                     </button>
                 </div>
                 

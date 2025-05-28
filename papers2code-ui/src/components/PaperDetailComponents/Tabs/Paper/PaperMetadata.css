@@ -59,7 +59,7 @@
     border: 1px solid var(--success-color, #28a745);
 }
 
-.status-non-implementable { /* For confirmed non-implementable */
+.status-not-implementable { /* For confirmed non-implementable */
     background-color: var(--danger-light-color, #ffebee);
     color: var(--danger-dark-color, #c62828);
     border: 1px solid var(--danger-color, #e53935);

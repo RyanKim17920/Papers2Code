@@ -2,9 +2,8 @@ import React from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 import { usePaperDetail } from '../hooks/usePaperDetail';
-import type { ActiveTab as ActiveTabType } from '../hooks/usePaperDetail';
+import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../hooks/usePaperDetail';
 import { UserProfile } from '../services/auth';
-import type { OwnerSettableImplementabilityStatus } from '../types/paper';
 
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmationModal from '../components/common/ConfirmationModal';
@@ -53,6 +52,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         reloadPaper,
         setUpdateError, // Added setUpdateError to destructuring
     } = usePaperDetail(paperId, currentUser);
+    console.log(paper);
     // Determine if the current user is an admin
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
 
@@ -135,7 +135,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             currentUser={currentUser}
                             onPaperUpdate={reloadPaper}
                             setUpdateError={setUpdateError}
-                            openConfirmStatusModal={openConfirmStatusModal as (status: OwnerSettableImplementabilityStatus) => void}
+                            openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
                             openConfirmRemoveModal={openConfirmRemoveModal}
                             isUpdatingStatus={isUpdatingStatus}
                             isRemoving={isRemoving}
@@ -161,31 +161,31 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             <ConfirmationModal
                 isOpen={showConfirmStatusModal.show}
                 onClose={closeConfirmStatusModal}
-                onConfirm={() => showConfirmStatusModal.status && handleSetImplementabilityStatus(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus)}
+                onConfirm={() => showConfirmStatusModal.status && handleSetImplementabilityStatus(showConfirmStatusModal.status as AdminSettableImplementabilityStatus)}
                 title={`Confirm Status: ${
-                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' ? 'Implementable' :
-                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' ? 'Non-Implementable' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' ? 'Implementable' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' ? 'Not-Implementable' :
                     'Revert to Voting'
                 }`}
                 confirmText={`Yes, ${
-                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' ? 'Confirm Implementable' :
-                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' ? 'Confirm Non-Implementable' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' ? 'Confirm Implementable' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' ? 'Confirm Not-Implementable' :
                     'Revert to Voting'
                 }`}
                 confirmButtonClass={
-                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' ? 'button-secondary' :
-                    (showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' ? 'button-warning' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' ? 'button-secondary' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' ? 'button-warning' :
                     'button-secondary'
                 }
                 isConfirming={isUpdatingStatus}
             >
-                {(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_implementable' && (
+                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' && (
                     <p>Are you sure you want to set the status to <strong>Confirmed Implementable</strong>? Community voting will be disabled.</p>
                 )}
-                {(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'confirmed_non_implementable' && (
-                    <p>Are you sure you want to set the status to <strong>Confirmed Non-Implementable</strong>? Community voting will be disabled.</p>
+                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' && (
+                    <p>Are you sure you want to set the status to <strong>Confirmed Not-Implementable</strong>? Community voting will be disabled.</p>
                 )}
-                {(showConfirmStatusModal.status as OwnerSettableImplementabilityStatus) === 'voting' && (
+                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'voting' && (
                     <p>Are you sure you want to revert to <strong>community voting</strong>? Community voting will be re-enabled.</p>
                 )}
             </ConfirmationModal>

@@ -34,7 +34,7 @@ const PaperTabs: React.FC<PaperTabsProps> = ({ activeTab, setActiveTab, paper, i
                 className={`tab-button ${activeTab === 'implementability' ? 'active' : ''}`}
                 onClick={() => setActiveTab('implementability')}
             >
-                Implementability Votes ({paper.nonImplementableVotes + paper.disputeImplementableVotes})
+                Implementability Votes ({paper.nonImplementableVotes + paper.isImplementableVotes})
             </button>
             {isOwner && (
                 <button

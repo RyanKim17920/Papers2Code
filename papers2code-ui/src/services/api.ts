@@ -1,9 +1,25 @@
 // src/services/api.ts
-import { Paper, OwnerSettableImplementabilityStatus } from '../types/paper';
-import { getCsrfToken, UserProfile } from './auth'; // Import the helper function
+import { Paper, AdminSettableImplementabilityStatus } from '../types/paper';
+import { getCsrfToken, UserProfile } from './auth';
 
 const API_BASE_URL = 'http://localhost:5000';
 const PAPERS_PREFIX = '/api'; // Prefix for paper-related API calls
+
+// --- NEW: Custom Error Classes ---
+export class AuthenticationError extends Error {
+  constructor(message?: string) {
+    super(message || "Authentication required.");
+    this.name = "AuthenticationError";
+  }
+}
+
+export class CsrfError extends Error {
+  constructor(message?: string) {
+    super(message || "CSRF token validation failed.");
+    this.name = "CsrfError";
+  }
+}
+// --- End NEW ---
 
 export interface AdvancedPaperFilters {
   startDate?: string; // Expecting YYYY-MM-DD string format
@@ -58,25 +74,13 @@ export const fetchPapersFromApi = async (
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers?${params.toString()}`;
   console.log("Fetching from API:", url);
   const response = await fetch(url, { credentials: 'include' });
-  if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && errorData.error) {
-        errorMsg = `API Error (${response.status}): ${errorData.error}`;
-      }
-    } catch (e) { console.error("Failed to parse error response:", e); }
-    throw new Error(errorMsg);
-  }
-  const data = await response.json();
-  console.log('fetched data: ')
-  console.log(data);
-  // The API sends 'totalCount' based on the provided error log, not 'totalPages'.
-  // It also seems the API sends 'page' and 'pageSize', which are not directly used here
-  // but 'totalCount' is used to calculate 'totalPages'.
+  // MODIFIED: Use handleApiResponse
+  const data = await handleApiResponse<{ papers: Paper[]; totalCount: number }>(response);
+  // console.log('fetched data: ') // Optional: keep for debugging if needed
+  // console.log(data);
   if (!data || !Array.isArray(data.papers) || typeof data.totalCount !== 'number') {
-    console.error("Unexpected API response structure:", data);
-    throw new Error("Invalid data structure received from API");
+    console.error("Unexpected API response structure after handleApiResponse:", data);
+    throw new Error("Invalid data structure received from API after handling");
   }
   const totalPages = Math.ceil(data.totalCount / limit);
   return { papers: data.papers, totalPages };
@@ -85,19 +89,10 @@ export const fetchPapersFromApi = async (
 // --- fetchPaperByIdFromApi ---
 export const fetchPaperByIdFromApi = async (id: string): Promise<Paper | undefined> => {
   const response = await fetch(`${API_BASE_URL}${PAPERS_PREFIX}/papers/${id}`, { credentials: 'include' });
+  // Specific handling for 404 before global handler, if desired (e.g., return undefined directly)
   if (response.status === 404) return undefined;
-  if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && errorData.error) {
-        errorMsg = `API Error (${response.status}): ${errorData.error}`;
-      }
-    } catch (e) { console.error("Failed to parse error response for fetchPaperByIdFromApi:", e); }
-    throw new Error(errorMsg);
-  }
-  const data: Paper = await response.json();
-  return data;
+  // MODIFIED: Use handleApiResponse for other cases
+  return handleApiResponse<Paper>(response);
 };
 
 // --- Placeholder update functions ---
@@ -130,19 +125,8 @@ export const flagImplementabilityInApi = async (
     credentials: 'include',
   });
 
-  if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && errorData.error) {
-        errorMsg = `API Error (${response.status}): ${errorData.error}`;
-      }
-    } catch (e) { console.error("Failed to parse error response:", e); }
-    console.error(`Failed action '${action}' on implementability:`, errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  const updatedPaper: Paper = await response.json();
+  // MODIFIED: Use handleApiResponse
+  const updatedPaper = await handleApiResponse<Paper>(response);
   console.log(`Action '${action}' successful for paper ${paperId}. New status: ${updatedPaper.status}`);
   return updatedPaper;
 };
@@ -150,10 +134,30 @@ export const flagImplementabilityInApi = async (
 // --- NEW: Function for owner to force set implementability ---
 export const setImplementabilityInApi = async (
   paperId: string,
-  statusToSet: OwnerSettableImplementabilityStatus // Use the new type
+  adminStatus: AdminSettableImplementabilityStatus // This is 'Admin Implementable', 'Admin Not Implementable', or 'voting'
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/set_implementability`;
-  console.log(`Owner setting implementability to ${statusToSet} for paper:`, url);
+  
+  // REMOVED Translation logic: adminStatus is now sent directly.
+  // let backendStatus: \'confirmed_non_implementable\' | \'confirmed_implementable\' | \'voting\';
+  // switch (adminStatus) {
+  //   case \'Admin Implementable\':
+  //     backendStatus = \'confirmed_implementable\';
+  //     break;
+  //   case \'Admin Not Implementable\':
+  //     backendStatus = \'confirmed_non_implementable\';
+  //     break;
+  //   case \'voting\':
+  //     backendStatus = \'voting\';
+  //     break;
+  //   default:
+  //     console.error(\'Invalid adminStatus provided to setImplementabilityInApi:\', adminStatus);
+  //     throw new Error(\'Invalid admin status for API call\');
+  // }
+
+  // console.log(`Owner setting implementability to ${adminStatus} (backend: ${backendStatus}) for paper:`, url);
+  // UPDATED: Log and send adminStatus directly as statusToSet
+  console.log(`Owner setting implementability to ${adminStatus} for paper:`, url);
 
   const csrfToken = getCsrfToken(); 
   const headers: HeadersInit = {
@@ -166,23 +170,11 @@ export const setImplementabilityInApi = async (
   const response = await fetch(url, {
     method: 'POST',
     headers: headers,
-    body: JSON.stringify({ statusToSet }), // Send statusToSet
+    body: JSON.stringify({ statusToSet: adminStatus }), // Send adminStatus directly
     credentials: 'include',
   });
 
-  if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && errorData.error) {
-        errorMsg = `API Error (${response.status}): ${errorData.error}`;
-      }
-    } catch (e) { console.error("Failed to parse error response:", e); }
-    console.error(`Failed owner action setImplementability:`, errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  const updatedPaper: Paper = await response.json();
+  const updatedPaper = await handleApiResponse<Paper>(response);
   console.log(`Owner action setImplementability successful for paper ${paperId}.`);
   return updatedPaper;
 };
@@ -199,25 +191,13 @@ export const voteOnPaperInApi = async (
     method: 'POST',
     headers: {
       'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRFToken': csrfToken }) // Add token header if available
-    },
-    body: JSON.stringify({ voteType }),
+      ...(csrfToken && { 'X-CSRFToken': csrfToken })    },
+    body: JSON.stringify({ vote_type: voteType }), // MODIFIED: Changed voteType to vote_type
     credentials: 'include',
   });
 
-  if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && errorData.error) {
-        errorMsg = `API Error (${response.status}): ${errorData.error}`;
-      }
-    } catch (e) { console.error("Failed to parse error response:", e); }
-    console.error("Failed to vote on paper:", errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  const updatedPaper: Paper = await response.json();
+  // MODIFIED: Use handleApiResponse
+  const updatedPaper = await handleApiResponse<Paper>(response);
   console.log(`Vote successful for paper ${paperId}. New count: ${updatedPaper.upvoteCount}, Your vote: ${updatedPaper.currentUserVote}`);
   return updatedPaper;
 };
@@ -236,47 +216,69 @@ export const removePaperFromApi = async (paperId: string): Promise<void> => {
     },
   });
 
-  if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && errorData.error) {
-        errorMsg = `API Error (${response.status}): ${errorData.error}`;
-      }
-    } catch (e) { console.error("Failed to parse error response:", e); }
-    console.error("Failed to remove paper:", errorMsg);
-    throw new Error(errorMsg);
+  // MODIFIED: Use handleApiResponse. It will return null for 204 or throw for errors.
+  await handleApiResponse<void>(response); 
+  // Original success logging can remain if specific status codes (200, 207) are meaningful beyond just "ok"
+  // but the primary success/failure is handled by handleApiResponse.
+  // MODIFIED: Check response.ok instead of specific statuses, as handleApiResponse now throws for non-ok responses.
+  if (response.ok) { 
+      console.log(`Paper ${paperId} removed successfully or request accepted.`);
   }
-
-  if (response.status === 200 || response.status === 204 || response.status === 207) {
-    console.log(`Paper ${paperId} removed successfully.`);
-    return;
-  } else {
-    console.warn(`Unexpected success status code ${response.status} during paper removal.`);
-    throw new Error(`Unexpected status code ${response.status} after removing paper.`);
-  }
+  // No need for an else to throw error, as handleApiResponse does that.
 };
 
 // --- NEW: Function to fetch users who performed actions on a paper ---
 export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActionUsers> => {
+  const url = `${API_BASE_URL}/api/papers/${paperId}/actions`; // Ensure PAPERS_PREFIX is used if intended
+  console.log("Fetching paper action users from:", url);
+  // try/catch block is fine here if you want to add specific logging for this call before re-throwing
   try {
-      const response = await fetch(`${API_BASE_URL}/api/papers/${paperId}/actions`, {
+      const response = await fetch(url, {
           credentials: 'include',
       });
-      if (!response.ok) {
-          const errorData = await response.json().catch(() => ({})); // Try to get error details
-          throw new Error(`API Error (${response.status}): ${errorData.error || response.statusText}`);
+      // MODIFIED: Use handleApiResponse
+      const rawData = await handleApiResponse<any>(response); // Get raw data first
+      console.log(`Fetched raw action users for paper ${paperId}:`, rawData);
+
+      // Transform rawData into PaperActionUsers
+      const transformedData: PaperActionUsers = {
+        upvotes: [],
+        votedIsImplementable: [],
+        votedNotImplementable: [],
+      };
+
+      if (rawData.upvotes && Array.isArray(rawData.upvotes)) {
+        transformedData.upvotes = rawData.upvotes.map((action: any) => ({
+          id: action.userId,
+          username: action.username,
+          avatarUrl: action.avatarUrl,
+          // Add other UserProfile fields if necessary, mapping from action
+        }));
       }
-      const data: PaperActionUsers = await response.json();
-      console.log(`Fetched action users for paper ${paperId}:`, data);
-      // Ensure arrays exist even if empty
-      data.upvotes = data.upvotes || [];
-      data.votedIsImplementable = data.votedIsImplementable || [];  // Swapped from votedNotImplementable
-      data.votedNotImplementable = data.votedNotImplementable || []; // Swapped from votedIsImplementable
-      return data;
+
+      if (rawData.implementabilityFlags && Array.isArray(rawData.implementabilityFlags)) {
+        rawData.implementabilityFlags.forEach((action: any) => {
+          const userProfile: UserProfile = {
+            id: action.userId,
+            username: action.username,
+            avatarUrl: action.avatarUrl,
+            // Add other UserProfile fields if necessary
+          };
+          // ADD THIS LOG:
+          console.log(`Processing actionType: '${action.actionType}' for user ${action.username}`);
+          if (action.actionType === 'Implementable') { // User voted "Is Implementable"
+            transformedData.votedIsImplementable.push(userProfile);
+          } else if (action.actionType === 'Not Implementable') { // User voted "Not Implementable"
+            transformedData.votedNotImplementable.push(userProfile);
+          }
+        });
+      }
+      
+      console.log(`Transformed action users for paper ${paperId}:`, transformedData);
+      return transformedData;
   } catch (error) {
-      console.error(`Error fetching action users for paper ${paperId}:`, error);
-      throw error; // Re-throw to be handled by the component
+      console.error(`Error fetching action users for paper ${paperId} (caught in function):`, error);
+      throw error; // Re-throw to be handled by the calling component/hook
   }
 };
 // --- End NEW ---
@@ -307,20 +309,58 @@ export const updatePaperStatusInApi = async (
     credentials: 'include',
   });
 
-  if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && errorData.error) {
-        errorMsg = `API Error (${response.status}): ${errorData.error}`;
-      }
-    } catch (e) { console.error("Failed to parse error response:", e); }
-    console.error(`Failed to update paper implementation status:`, errorMsg);
-    throw new Error(errorMsg);
-  }
-
-  const updatedPaper: Paper = await response.json();
+  // MODIFIED: Use handleApiResponse
+  const updatedPaper = await handleApiResponse<Paper>(response);
   console.log(`Paper ${paperId} implementation status updated successfully to ${status}.`);
   return updatedPaper;
 };
 // --- End NEW ---
+
+// NEW: Private helper function to handle API responses and 401 errors
+async function handleApiResponse<T>(response: Response): Promise<T> {
+  if (response.status === 401) {
+    console.warn('API request unauthorized (401).');
+    // Throw an error to stop further processing in the calling function
+    // MODIFIED: Throw AuthenticationError instead of generic Error and remove automatic redirection/logout
+    throw new AuthenticationError('Unauthorized. Please log in.'); 
+  }
+  // NEW: Handle 403 specifically for CSRF or other permission issues
+  if (response.status === 403) {
+    let errorMsg = `API Forbidden: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      if (errorData && (errorData.detail || errorData.error)) {
+        errorMsg = `API Forbidden (${response.status}): ${errorData.detail || errorData.error}`;
+        // Assuming CSRF errors might include a specific message in 'detail'
+        if (errorData.detail && errorData.detail.toLowerCase().includes('csrf')) {
+          throw new CsrfError(errorMsg);
+        }
+      }
+    } catch (e) {
+      // If parsing errorData fails, or if it's not a CsrfError, throw a generic CsrfError or rethrow
+      if (e instanceof CsrfError) throw e;
+      console.error("Failed to parse 403 error response JSON or not a CSRF error:", e);
+    }
+    // If it wasn't identified as a CsrfError specifically, throw a generic error for 403
+    throw new Error(errorMsg); 
+  }
+  if (!response.ok) {
+    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
+    try {
+      const errorData = await response.json();
+      // FastAPI often uses 'detail' for error messages
+      if (errorData && (errorData.detail || errorData.error)) { 
+        errorMsg = `API Error (${response.status}): ${errorData.detail || errorData.error}`;
+      }
+    } catch (e) {
+      // If parsing errorData fails, stick with the original errorMsg
+      console.error("Failed to parse error response JSON:", e);
+    }
+    throw new Error(errorMsg);
+  }
+  // Handle cases like 204 No Content where response.json() would fail
+  if (response.status === 204) {
+    return null as T; // Or an appropriate empty value based on expected type T
+  }
+  return response.json() as Promise<T>; // Parse and return JSON for other successful responses
+}

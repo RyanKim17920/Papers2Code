@@ -6,6 +6,8 @@ import PaperDetailPage from './pages/PaperDetailPage';
 import logo from './images/papers2codelogo.png';
 import { UserProfile, checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './services/auth';
 import UserAvatar from './components/UserAvatar'; // Import the UserAvatar component
+import { ModalProvider } from './context/ModalContext'; // Import ModalProvider
+import LoginPromptModal from './components/common/LoginPromptModal'; // Import LoginPromptModal
 import './App.css';
 
 function App() {
@@ -32,54 +34,58 @@ function App() {
   };
 
   return (
-    <Router>
-      <div className="app-container">
-        <header className="app-header">
-          <Link to="/" className="logo-link">
-            <img src={logo} alt="Papers To Code Community Logo" className="app-logo" />
-          </Link>
-          <nav className="main-nav">
-            {/* Add other nav links here if needed */}
-          </nav>
-          <div className="auth-section">
-            {authLoading ? (
-              <span className="auth-loading">Loading...</span>
-            ) : currentUser ? (
-              <div className="user-info">
-                <UserAvatar
-                  avatarUrl={currentUser.avatarUrl}
-                  username={currentUser.username}
-                  className="user-avatar" // This class is defined in UserAvatar.css
-                />
-                <span className="username">{currentUser.username}</span>
-                <button onClick={handleLogout} className="auth-button logout-button">
-                  Logout
+    <ModalProvider>
+      <Router>
+        <div className="app-container">
+          <header className="app-header">
+            <Link to="/" className="logo-link">
+              <img src={logo} alt="Papers To Code Community Logo" className="app-logo" />
+            </Link>
+            <nav className="main-nav">
+              {/* Add other nav links here if needed */}
+            </nav>
+            <div className="auth-section">
+              {authLoading ? (
+                <span className="auth-loading">Loading...</span>
+              ) : currentUser ? (
+                <div className="user-info">
+                  <UserAvatar
+                    avatarUrl={currentUser.avatarUrl}
+                    username={currentUser.username}
+                    className="user-avatar" // This class is defined in UserAvatar.css
+                  />
+                  <span className="username">{currentUser.username}</span>
+                  <button onClick={handleLogout} className="auth-button logout-button">
+                    Logout
+                  </button>
+                </div>
+              ) : (
+                <button onClick={redirectToGitHubLogin} className="auth-button connect-button">
+                  Connect with GitHub
                 </button>
-              </div>
-            ) : (
-              <button onClick={redirectToGitHubLogin} className="auth-button connect-button">
-                Connect with GitHub
-              </button>
-            )}
-          </div>
-        </header>
+              )}
+            </div>
+          </header>
 
-        <main className="app-main">
-          <Routes>
-            <Route path="/" element={<PaperListPage authLoading={authLoading} />} />
-            <Route
-              path="/paper/:paperId"
-              element={<PaperDetailPage currentUser={currentUser} />}
-            />
-            <Route path="*" element={<NotFoundPage />} />
-          </Routes>
-        </main>
+          <main className="app-main">
+            <Routes>
+              <Route path="/" element={<PaperListPage authLoading={authLoading} />} />
+              <Route
+                path="/paper/:paperId"
+                element={<PaperDetailPage currentUser={currentUser} />}
+              />
+              <Route path="*" element={<NotFoundPage />} />
+            </Routes>
+          </main>
 
-        <footer className="app-footer">
-          <p>© {new Date().getFullYear()} Papers2Code Community. Data sourced from PapersWithCode.</p>
-        </footer>
-      </div>
-    </Router>
+          <LoginPromptModal /> {/* Add LoginPromptModal here so it can be displayed globally */}
+
+          <footer className="app-footer">
+            <p>© {new Date().getFullYear()} Papers2Code Community. Data sourced from PapersWithCode.</p>
+          </footer>
+        </div>
+      </Router>
+    </ModalProvider>
   );
 }
 

@@ -15,8 +15,8 @@ export const getStatusClass = (status: string | undefined | null): string => {
             return 'status-in-progress';
         case 'Completed':
             return 'status-completed';
-        case 'confirmed_non_implementable':
-            return 'status-confirmed-non-implementable';
+        case 'confirmed_not_implementable':
+            return 'status-confirmed-not-implementable';
         default:
             return 'status-unknown'; // Fallback for any other status
     }
@@ -36,7 +36,7 @@ export const getStatusSymbol = (status: string | undefined | null): string => {
             return '🚧';
         case 'Completed':
             return '✅';
-        case 'confirmed_non_implementable':
+        case 'confirmed_not_implementable':
             return '🚫';
         default:
             return '';

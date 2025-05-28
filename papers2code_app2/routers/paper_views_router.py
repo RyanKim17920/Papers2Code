@@ -116,10 +116,10 @@ async def get_papers(
                 search_operator["compound"]["filter"] = filter_clauses
 
             # Add mustNot to filter out non-implementable papers by status
-            if config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB:
+            if config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB:
                 search_operator["compound"].setdefault("mustNot", []).append({
                     "text": { # Assuming 'status' field is indexed as text or compatible
-                        "query": config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB,
+                        "query": config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB,
                         "path": "status" # Actual DB field name for status
                     }
                 })
@@ -172,10 +172,10 @@ async def get_papers(
 
         if not is_search_active:
             base_filter = {
-                "status": {"$ne": config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB} # Use status and DB value
+                "status": {"$ne": config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB} # Use status and DB value
             }
             logger.debug(f"Using base_filter: {base_filter}")
-            logger.debug(f"Value of config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: {config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB}")
+            logger.debug(f"Value of config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB: {config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB}")
 
             # === Temporary Debugging: Count all documents ===
             try:

@@ -34,6 +34,11 @@ async def vote_on_paper(
     vote_type: str = Body(..., embed=True, pattern="^(up|none)$"),
     current_user: UserSchema = Depends(get_current_user)
 ):
+    # Log the raw request body first to see what's coming in before Pydantic validation
+    raw_body = await request.body()
+    logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
+    logger.info(f"Vote request for paper_id: {paper_id}. Parsed vote_type: {vote_type}. User ID: {current_user.id}")
+
     try:
         user_id_str = str(current_user.id)
         if not user_id_str:
@@ -141,7 +146,8 @@ async def get_paper_actions(
         )
 
         actions = list(actions_cursor)
-
+        logger.info(f"Fetched {len(actions)} actions for paper_id={paper_id} from DB")  # ADDED LOG
+        logger.info(f"Actions data: {actions}")  # ADDED LOG
         if not actions:
             return PaperActionsSummaryResponse(paper_id=paper_id, upvotes=[], saves=[], implementability_flags=[])
 
@@ -162,6 +168,10 @@ async def get_paper_actions(
         saves_details = []
         implementability_flags_details = []
 
+        # Constants for action types stored by paper_moderation_router.py
+        IMPL_STATUS_COMMUNITY_IMPLEMENTABLE = "Community Implementable"
+        IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE = "Community Not Implementable"
+
         for action in actions:
             user_id_obj = action.get('userId')
             if not user_id_obj:
@@ -171,21 +181,32 @@ async def get_paper_actions(
                 continue
 
             action_type = action.get('actionType')
+            logger.info(f"Processing action from DB for paper_id={paper_id}, user_id={user_info.id if user_info else 'Unknown'}, actionType='{action_type}'") # ADDED LOG
             created_at = action.get('createdAt', datetime.now(timezone.utc))
 
             action_detail = PaperActionUserDetail(
                 user_id=str(user_info.id),
                 username=user_info.username,
                 avatar_url=user_info.avatar_url,
-                action_type=action_type,
+                action_type=action_type, # Keep original action_type from DB for now
                 created_at=created_at
             )
-
+            
             if action_type == 'upvote':
                 upvotes_details.append(action_detail)
-            elif action_type == 'dispute_non_implementable':
+            # MODIFIED: Use the correct action types from paper_moderation_router
+            elif action_type == IMPL_STATUS_COMMUNITY_IMPLEMENTABLE:
+                action_detail.action_type = 'Implementable' # Modify for frontend response
                 implementability_flags_details.append(action_detail)
-            elif action_type == 'confirm_non_implementable':
+            elif action_type == IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE:
+                action_detail.action_type = 'Not Implementable' # Modify for frontend response
+                implementability_flags_details.append(action_detail)
+            # Legacy action types - keep for compatibility if old data exists
+            elif action_type in ['Implementable','confirm_implementable', 'dispute_not_implementable']: # Older values
+                action_detail.action_type = 'Implementable' 
+                implementability_flags_details.append(action_detail)
+            elif action_type in ['Not Implementable','confirm_not_implementable', 'dispute_implementable']: # Older values
+                action_detail.action_type = 'Not Implementable'
                 implementability_flags_details.append(action_detail)
 
         return PaperActionsSummaryResponse(

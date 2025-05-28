@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paper } from '../types/paper'; // Removed ImplementationStep if not used directly here
+import { Paper, ImplementabilityAction } from '../types/paper'; 
 import { UserProfile } from '../services/auth';
 import {
     fetchPaperByIdFromApi,
@@ -9,11 +9,18 @@ import {
     removePaperFromApi,
     voteOnPaperInApi,
     fetchPaperActionUsers,
-    PaperActionUsers
+    PaperActionUsers,
+    AuthenticationError,
+    CsrfError
 } from '../services/api';
-import { ImplementabilityAction, OwnerSettableImplementabilityStatus } from '../types/paper'; // Import status type
+
+import { useModal } from '../context/ModalContext';
 
 export type ActiveTab = 'paperInfo' | 'details' | 'upvotes' | 'implementability' | 'admin';
+
+// Define the type for the status that can be set by an admin/owner.
+// These are the values that will be displayed in the UI and passed to handleSetImplementabilityStatus.
+export type AdminSettableImplementabilityStatus = 'Admin Not Implementable' | 'Admin Implementable' | 'voting';
 
 export function usePaperDetail(paperId: string | undefined, currentUser: UserProfile | null) {
     const navigate = useNavigate();
@@ -31,8 +38,10 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
     const [actionUsersError, setActionUsersError] = useState<string | null>(null);
 
     const [showConfirmRemoveModal, setShowConfirmRemoveModal] = useState<boolean>(false);
-    // Modal state for owner status actions: DB statuses confirmed_non_implementable or confirmed_implementable
-    const [showConfirmStatusModal, setShowConfirmStatusModal] = useState<{ show: boolean; status: OwnerSettableImplementabilityStatus | null }>({ show: false, status: null });
+    // Ensure this uses the AdminSettableImplementabilityStatus type
+    const [showConfirmStatusModal, setShowConfirmStatusModal] = useState<{ show: boolean; status: AdminSettableImplementabilityStatus | null }>({ show: false, status: null });
+
+    const { showLoginPrompt } = useModal();
 
     const loadPaperAndActions = useCallback(async () => {
         if (!paperId) {
@@ -85,7 +94,11 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
     // --- Action Handlers ---
 
     const handleUpvote = useCallback(async (voteType: 'up' | 'none') => {
-        if (!paperId || !currentUser || isVoting) return;
+        if (!paperId || isVoting) return;
+        if (!currentUser) {
+            showLoginPrompt("Please connect with GitHub to upvote.");
+            return;
+        }
         setIsVoting(true);
         setUpdateError(null);
         try {
@@ -94,14 +107,23 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
             fetchPaperActionUsers(paperId).then(setActionUsers).catch(err => setActionUsersError(err.message));
         } catch (err) {
             console.error("Failed to upvote:", err);
-            setUpdateError(err instanceof Error ? err.message : "Failed to update vote.");
+            if (err instanceof AuthenticationError || err instanceof CsrfError) {
+                showLoginPrompt("Please connect with GitHub to upvote.");
+                setUpdateError(err.message); // Optionally set updateError as well
+            } else {
+                setUpdateError(err instanceof Error ? err.message : "Failed to update vote.");
+            }
         } finally {
             setIsVoting(false);
         }
-    }, [paperId, currentUser, isVoting, setPaper, setUpdateError, setActionUsers, setActionUsersError, setIsVoting]);
+    }, [paperId, currentUser, isVoting, setPaper, setUpdateError, setActionUsers, setActionUsersError, setIsVoting, showLoginPrompt]);
 
     const handleImplementabilityVote = useCallback(async (action: ImplementabilityAction) => {
-        if (!paperId || !currentUser || isVoting) return;
+        if (!paperId || isVoting) return;
+        if (!currentUser) {
+            showLoginPrompt("Please connect with GitHub to vote on implementability.");
+            return;
+        }
         setIsVoting(true);
         setUpdateError(null);
         try {
@@ -111,30 +133,49 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         } catch (err) {
             console.error("Failed to vote on implementability:", err);
             const errorMessage = err instanceof Error ? err.message : "Failed to update implementability vote.";
-            setUpdateError(`API Error: ${errorMessage}`);
+            if (err instanceof AuthenticationError || err instanceof CsrfError) {
+                showLoginPrompt("Please connect with GitHub to vote on implementability.");
+                setUpdateError(errorMessage);
+            } else {
+                setUpdateError(`API Error: ${errorMessage}`);
+            }
         } finally {
             setIsVoting(false);
         }
-    }, [paperId, currentUser, isVoting, setPaper, setUpdateError, setActionUsers, setActionUsersError, setIsVoting]);
+    }, [paperId, currentUser, isVoting, setPaper, setUpdateError, setActionUsers, setActionUsersError, setIsVoting, showLoginPrompt]);
 
-    const handleSetImplementabilityStatus = useCallback(async (status: OwnerSettableImplementabilityStatus) => {
-        if (!paperId || !currentUser || isUpdatingStatus) return;
+    const handleSetImplementabilityStatus = useCallback(async (status: AdminSettableImplementabilityStatus) => {
+        if (!paperId || isUpdatingStatus) return;
+        if (!currentUser) {
+            showLoginPrompt("Please connect with GitHub to set implementability status.");
+            return;
+        }
         setIsUpdatingStatus(true);
         setUpdateError(null);
         setShowConfirmStatusModal({ show: false, status: null }); // Close modal
         try {
+            // This will now cause a type error, which we will fix in api.ts next
             const updatedPaper = await setImplementabilityInApi(paperId, status);
             setPaper(updatedPaper);
         } catch (err) {
             console.error(`Failed to set implementability status to ${status}:`, err);
-            setUpdateError(err instanceof Error ? err.message : `Failed to set status to ${status}.`);
+            if (err instanceof AuthenticationError || err instanceof CsrfError) {
+                showLoginPrompt("Please connect with GitHub to set implementability status.");
+                setUpdateError(err.message);
+            } else {
+                setUpdateError(err instanceof Error ? err.message : `Failed to set status to ${status}.`);
+            }
         } finally {
             setIsUpdatingStatus(false);
         }
-    }, [paperId, currentUser, isUpdatingStatus, setPaper, setUpdateError]);
+    }, [paperId, currentUser, isUpdatingStatus, setPaper, setUpdateError, showLoginPrompt]);
 
     const handleRemovePaper = useCallback(async () => {
-        if (!paperId || !currentUser || isRemoving) return;
+        if (!paperId || isRemoving) return;
+        if (!currentUser) {
+            showLoginPrompt("Please connect with GitHub to remove this paper.");
+            return;
+        }
         setIsRemoving(true);
         setUpdateError(null);
         setShowConfirmRemoveModal(false); // Close modal first
@@ -143,14 +184,19 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
             navigate('/'); // Navigate to home or paper list page
         } catch (err) {
             console.error("Failed to remove paper:", err);
-            setUpdateError(err instanceof Error ? err.message : "Failed to remove paper.");
+            if (err instanceof AuthenticationError || err instanceof CsrfError) {
+                showLoginPrompt("Please connect with GitHub to remove this paper.");
+                setUpdateError(err.message);
+            } else {
+                setUpdateError(err instanceof Error ? err.message : "Failed to remove paper.");
+            }
             setIsRemoving(false); // Only set back if removal failed
-        }
-    }, [paperId, currentUser, isRemoving, navigate, setUpdateError, setIsRemoving, setShowConfirmRemoveModal]);
+        } 
+    }, [paperId, currentUser, isRemoving, navigate, setUpdateError, setIsRemoving, setShowConfirmRemoveModal, showLoginPrompt]);
 
     // --- Modal Openers ---
     // Open modal with the specific owner DB status to confirm
-    const openConfirmStatusModal = (status: OwnerSettableImplementabilityStatus) => {
+    const openConfirmStatusModal = (status: AdminSettableImplementabilityStatus) => {
         setShowConfirmStatusModal({ show: true, status });
     };
 

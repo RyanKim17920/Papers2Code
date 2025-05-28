@@ -4,10 +4,10 @@ from pymongo.errors import DuplicateKeyError
 from bson import ObjectId
 from bson.errors import InvalidId
 from datetime import datetime, timezone
-import traceback
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-import logging
+import logging # Ensure logging is imported
+import traceback
 
 from ..schemas_papers import (
     PaperResponse, SetImplementabilityRequest
@@ -30,256 +30,238 @@ router = APIRouter(
 limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
+# Implementability Status Constants
+IMPL_STATUS_VOTING = "voting" # MODIFIED to lowercase "voting"
+IMPL_STATUS_COMMUNITY_IMPLEMENTABLE = "Community Implementable"
+IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE = "Community Not Implementable"
+IMPL_STATUS_ADMIN_IMPLEMENTABLE = "Admin Implementable"
+IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE = "Admin Not Implementable"
+
+async def _recalculate_and_update_community_status(paper_id_obj: ObjectId, papers_collection, paper_doc_for_votes=None):
+    """
+    Recalculates and updates the community-driven implementability_status of a paper 
+    and its main 'status' based on its votes and thresholds.
+    If paper_doc_for_votes is provided, its vote counts are used. Otherwise, fetches the paper.
+    This function respects admin-set implementability statuses.
+    """
+    if paper_doc_for_votes:
+        current_paper_doc = paper_doc_for_votes
+    else:
+        current_paper_doc = papers_collection.find_one({"_id": paper_id_obj})
+
+    if not current_paper_doc:
+        logger.error(f"_recalculate_and_update_community_status: Paper {paper_id_obj} not found.")
+        return IMPL_STATUS_VOTING # Default or error state
+
+    current_db_implementability_status = current_paper_doc.get("implementability_status")
+    current_main_status = current_paper_doc.get("status")
+    
+    admin_override_statuses = [IMPL_STATUS_ADMIN_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]
+
+    update_fields = {}
+    new_calculated_community_status = current_db_implementability_status # Start with current
+
+    # Only proceed to calculate community status if not under admin override
+    if current_db_implementability_status not in admin_override_statuses:
+        not_implementable_votes = current_paper_doc.get("nonImplementableVotes", 0)
+        is_implementable_votes = current_paper_doc.get("isImplementableVotes", 0)
+
+        calculated_status_based_on_votes = IMPL_STATUS_VOTING # Default for community vote outcome
+        if not_implementable_votes >= config_settings.NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD and \
+           not_implementable_votes > is_implementable_votes:
+            calculated_status_based_on_votes = IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
+        elif is_implementable_votes >= config_settings.IMPLEMENTABLE_CONFIRM_THRESHOLD and \
+             is_implementable_votes > not_implementable_votes:
+            calculated_status_based_on_votes = IMPL_STATUS_COMMUNITY_IMPLEMENTABLE
+        
+        if current_db_implementability_status != calculated_status_based_on_votes:
+            update_fields["implementability_status"] = calculated_status_based_on_votes
+            new_calculated_community_status = calculated_status_based_on_votes # This is the new status being set
+
+    # Determine the effective implementability status for main status logic
+    # This will be the newly set community status, or the existing admin/community status if no change by votes
+    effective_implementability_status = new_calculated_community_status
+
+    # Adjust main 'status' based on the effective_implementability_status
+    new_main_status = current_main_status
+    if effective_implementability_status in [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]:
+        if current_main_status != 'Not Implementable':
+            new_main_status = 'Not Implementable'
+    # If it was "Not Implementable" (due to community or admin) and now it's not because effective_implementability_status changed
+    elif current_db_implementability_status in [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE] and \
+         effective_implementability_status not in [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]:
+        if current_main_status == 'Not Implementable':
+            new_main_status = 'Not Started' # Revert to default
+
+    if new_main_status != current_main_status:
+        update_fields["status"] = new_main_status
+
+    if update_fields:
+        update_fields["updated_at"] = datetime.now(timezone.utc)
+        papers_collection.update_one({"_id": paper_id_obj}, {"$set": update_fields})
+        # Return the status that was actually set or would be the new community status
+        return update_fields.get("implementability_status", effective_implementability_status)
+
+    # If no fields were updated, return the existing (or admin-locked) implementability status
+    return current_db_implementability_status
+
 @router.post("/{paper_id}/flag_implementability", response_model=PaperResponse)
 @limiter.limit("30/minute")
 async def flag_paper_implementability(
     request: Request,
     paper_id: str,
-    action: str = Body(..., embed=True, pattern="^(confirm|dispute|retract)$"),
+    action: str = Body(..., embed=True, pattern="^(confirm|dispute|retract)$"), # confirm = vote IS implementable, dispute = vote NOT implementable
     current_user: UserSchema = Depends(get_current_user)
 ):
     try:
         user_id_str = str(current_user.id)
         if not user_id_str:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User ID not found"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
         try:
             user_obj_id = ObjectId(user_id_str)
             paper_obj_id = ObjectId(paper_id)
         except InvalidId:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Invalid paper or user ID format"
-            )
-        except ValueError as ve:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid ID format: {ve}"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
+        except ValueError as ve: # Catch ObjectId's specific ValueError for invalid hex strings
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid ID format: {ve}")
+
 
         papers_collection = get_papers_collection_sync()
         user_actions_collection = get_user_actions_collection_sync()
 
         paper = papers_collection.find_one({"_id": paper_obj_id})
         if not paper:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Paper not found"
-            )
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
 
-        if paper.get("nonImplementableStatus") == config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB and \
-           paper.get("nonImplementableConfirmedBy") == "owner":
+        # Check if owner has locked the status via implementabilityStatus field
+        # Admin statuses indicate an override that disables community voting.
+        admin_override_statuses = [IMPL_STATUS_ADMIN_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]
+        if paper.get("implementability_status") in admin_override_statuses:
             raise HTTPException(
                 status_code=status.HTTP_400_BAD_REQUEST,
-                detail="Implementability status already confirmed by owner."
+                detail=f"Implementability status is locked by admin to '{paper.get("implementability_status")}'. Voting is disabled."
             )
 
         current_action_doc = user_actions_collection.find_one({
             "userId": user_obj_id,
             "paperId": paper_obj_id,
-            "actionType": {"$in": ["confirm_non_implementable", "dispute_non_implementable"]}
+            "actionType": {"$in": [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, "Not Implementable", "Implementable"]} # Include old values for transition if any
         })
-        logger.info(f"Flagging action: user_id_str='{user_id_str}', user_obj_id='{user_obj_id}', paper_obj_id='{paper_obj_id}', requested_action='{action}'")
-        logger.info(f"Found current_action_doc: {current_action_doc}")
-        current_action_type = current_action_doc.get("actionType") if current_action_doc else None
+        current_vote_type = None
+        if current_action_doc:
+            # Normalize current vote type for logic
+            if current_action_doc.get("actionType") in [IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, "Implementable"]:
+                current_vote_type = "confirm" # User previously voted "is implementable"
+            elif current_action_doc.get("actionType") in [IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, "Not Implementable"]:
+                current_vote_type = "dispute" # User previously voted "is not implementable"
+        
+        logger.info(f"Flagging action: user='{user_obj_id}', paper='{paper_obj_id}', requested_action='{action}', current_vote_type='{current_vote_type}'")
 
-        update_ops = {"$set": {}}
-        increment_ops = {}
-        needs_status_check = False
-        action_to_perform = None
-        new_action_type = None
+        paper_vote_update_ops = {"$inc": {}}
+        user_action_op = None # 'insert', 'update', 'delete'
+        new_user_action_type_for_db = None
 
         if action == 'retract':
             if not current_action_doc:
-                logger.error(f"No existing vote to retract for user '{user_obj_id}' on paper '{paper_obj_id}'. current_action_doc is None.")
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="No existing vote to retract."
-                )
-            action_to_perform = 'delete'
-            if current_action_type == 'confirm_non_implementable':
-                increment_ops["nonImplementableVotes"] = -1
-            elif current_action_type == 'dispute_non_implementable':
-                increment_ops["disputeImplementableVotes"] = -1
-            needs_status_check = True
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="No existing vote to retract.")
+            user_action_op = 'delete'
+            if current_vote_type == 'dispute': # Was "Not Implementable"
+                paper_vote_update_ops["$inc"]["nonImplementableVotes"] = -1
+            elif current_vote_type == 'confirm': # Was "Implementable"
+                paper_vote_update_ops["$inc"]["isImplementableVotes"] = -1
+        
+        elif action == 'confirm': # Vote FOR implementability
+            new_user_action_type_for_db = IMPL_STATUS_COMMUNITY_IMPLEMENTABLE # Store consistent value
+            if current_vote_type == 'confirm':
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You have already voted this paper as 'Implementable'.")
+            
+            paper_vote_update_ops["$inc"]["isImplementableVotes"] = 1
+            if current_action_doc: # User changing vote
+                user_action_op = 'update'
+                if current_vote_type == 'dispute': # Was "Not Implementable"
+                    paper_vote_update_ops["$inc"]["nonImplementableVotes"] = -1
+            else: # New vote
+                user_action_op = 'insert'
 
-        elif action == 'confirm':
-            new_action_type = 'dispute_non_implementable'
-            if current_action_type == new_action_type:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="You have already voted this paper as 'Is Implementable'."
-                )
-            if current_action_doc:
-                action_to_perform = 'update'
-                increment_ops["disputeImplementableVotes"] = 1
-                if current_action_type == 'confirm_non_implementable':
-                    increment_ops["nonImplementableVotes"] = -1
-            else:
-                action_to_perform = 'insert'
-                increment_ops["disputeImplementableVotes"] = 1
-            needs_status_check = True
+        elif action == 'dispute': # Vote AGAINST implementability
+            new_user_action_type_for_db = IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE # Store consistent value
+            if current_vote_type == 'dispute':
+                raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="You have already voted this paper as 'Not Implementable'.")
 
-        elif action == 'dispute':
-            new_action_type = 'confirm_non_implementable'
-            if current_action_type == new_action_type:
-                raise HTTPException(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    detail="You have already voted this paper as 'Not Implementable'."
-                )
-            if current_action_doc:
-                action_to_perform = 'update'
-                increment_ops["nonImplementableVotes"] = 1
-                if current_action_type == 'dispute_non_implementable':
-                    increment_ops["disputeImplementableVotes"] = -1
-            else:
-                action_to_perform = 'insert'
-                increment_ops["nonImplementableVotes"] = 1
-
-            if paper.get("nonImplementableStatus", config_settings.STATUS_IMPLEMENTABLE) == config_settings.STATUS_IMPLEMENTABLE:
-                update_ops["$set"]["nonImplementableStatus"] = config_settings.STATUS_FLAGGED_NON_IMPLEMENTABLE
-                update_ops["$set"]["nonImplementableFlaggedBy"] = user_obj_id
-                update_ops["$set"]["nonImplementableFlaggedAt"] = datetime.now(timezone.utc)
-            needs_status_check = True
+            paper_vote_update_ops["$inc"]["nonImplementableVotes"] = 1
+            if current_action_doc: # User changing vote
+                user_action_op = 'update'
+                if current_vote_type == 'confirm': # Was "Implementable"
+                    paper_vote_update_ops["$inc"]["isImplementableVotes"] = -1
+            else: # New vote
+                user_action_op = 'insert'
         else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid action: {action}"
-            )
+            # Should be caught by Body pattern, but as a safeguard
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid action: {action}")
 
         action_update_successful = False
-        if action_to_perform == 'delete':
+        now = datetime.now(timezone.utc)
+        if user_action_op == 'delete':
             delete_result = user_actions_collection.delete_one({"_id": current_action_doc["_id"]})
             action_update_successful = delete_result.deleted_count == 1
-        elif action_to_perform == 'update':
+        elif user_action_op == 'update':
             update_action_result = user_actions_collection.update_one(
                 {"_id": current_action_doc["_id"]},
-                {"$set": {"actionType": new_action_type, "updatedAt": datetime.now(timezone.utc)}}
+                {"$set": {"actionType": new_user_action_type_for_db, "updatedAt": now}}
             )
             action_update_successful = update_action_result.modified_count == 1
-        elif action_to_perform == 'insert':
-            new_action = {
-                "userId": user_obj_id,
-                "paperId": paper_obj_id,
-                "actionType": new_action_type,
-                "createdAt": datetime.now(timezone.utc)
+        elif user_action_op == 'insert':
+            new_action_doc = {
+                "userId": user_obj_id, "paperId": paper_obj_id,
+                "actionType": new_user_action_type_for_db, "createdAt": now, "updatedAt": now
             }
             try:
-                insert_result = user_actions_collection.insert_one(new_action)
+                insert_result = user_actions_collection.insert_one(new_action_doc)
                 action_update_successful = insert_result.inserted_id is not None
-            except DuplicateKeyError:
-                # Race condition: another request already inserted this action
-                # Check if the action now exists and handle accordingly
-                logger.warning(f"DuplicateKeyError during insert for user {user_obj_id} on paper {paper_obj_id} with action {new_action_type}. Another request may have created this action simultaneously.")
-                existing_action = user_actions_collection.find_one({
-                    "userId": user_obj_id,
-                    "paperId": paper_obj_id,
-                    "actionType": new_action_type
-                })
-                if existing_action:
-                    # Action was created by another request, consider it successful
-                    action_update_successful = True
-                    logger.info("Found existing action after DuplicateKeyError, treating as successful")
-                else:
-                    # Shouldn't happen, but log and fail gracefully
-                    logger.error("DuplicateKeyError occurred but no existing action found")
-                    action_update_successful = False
-
+            except DuplicateKeyError: # Should be rare if logic for existing vote is correct
+                logger.warning(f"DuplicateKeyError on insert for user action: {new_action_doc}")
+                action_update_successful = False # Or try to find and confirm
+        
         if not action_update_successful:
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to update user action."
-            )
+            # Log details if needed, or if specific error for user action failure
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to record vote action.")
 
-        paper_update_ops = {}
-        if increment_ops:
-            paper_update_ops["$inc"] = increment_ops
-        if update_ops["$set"]:
-            paper_update_ops["$set"] = update_ops["$set"]
-
-        if paper_update_ops:
-            updated_paper = papers_collection.find_one_and_update(
+        updated_paper_doc = None
+        if paper_vote_update_ops.get("$inc"): # Ensure there are vote changes
+            updated_paper_doc = papers_collection.find_one_and_update(
                 {"_id": paper_obj_id},
-                paper_update_ops,
+                {**paper_vote_update_ops, "$set": {"updated_at": now}}, # also update paper's updated_at
                 return_document=ReturnDocument.AFTER
             )
-            if not updated_paper:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to update paper after successful action."
-                )
+            if not updated_paper_doc:
+                # This would be a critical error, paper disappeared or update failed
+                logger.error(f"Failed to update paper {paper_obj_id} vote counts.")
+                raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to update paper vote counts.")
+        else: # No vote changes, e.g. retracting a non-existent vote (already handled) or other edge case
+            updated_paper_doc = paper # Use the initially fetched paper
 
-            if needs_status_check:
-                current_paper = papers_collection.find_one({"_id": paper_obj_id})
-                if not current_paper:
-                    raise HTTPException(
-                        status_code=status.HTTP_404_NOT_FOUND,
-                        detail="Paper not found during status check."
-                    )
-
-                non_implementable_votes = current_paper.get("nonImplementableVotes", 0)
-                dispute_votes = current_paper.get("disputeImplementableVotes", 0)
-
-                status_update = {}
-                current_status = current_paper.get("nonImplementableStatus")
-
-                if current_status == config_settings.STATUS_FLAGGED_NON_IMPLEMENTABLE and \
-                   non_implementable_votes >= config_settings.NON_IMPLEMENTABLE_CONFIRM_THRESHOLD and \
-                   dispute_votes < non_implementable_votes:
-                    status_update["nonImplementableStatus"] = config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB
-                    status_update["nonImplementableConfirmedBy"] = "community"
-                    status_update["isImplementable"] = False
-
-                elif current_status in [config_settings.STATUS_FLAGGED_NON_IMPLEMENTABLE,
-                                       config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB] and \
-                     dispute_votes >= config_settings.IMPLEMENTABLE_CONFIRM_THRESHOLD and \
-                     dispute_votes > non_implementable_votes:
-                    status_update["nonImplementableStatus"] = config_settings.STATUS_CONFIRMED_IMPLEMENTABLE_DB
-                    status_update["nonImplementableConfirmedBy"] = "community"
-                    status_update["isImplementable"] = True
-
-                elif (current_status != config_settings.STATUS_IMPLEMENTABLE) and \
-                     non_implementable_votes == 0 and dispute_votes == 0:
-                    status_update["nonImplementableStatus"] = config_settings.STATUS_IMPLEMENTABLE
-                    status_update["nonImplementableFlaggedBy"] = None
-                    status_update["nonImplementableConfirmedBy"] = None
-                    status_update["isImplementable"] = True
-
-                if status_update:
-                    status_update_result = papers_collection.update_one(
-                        {"_id": paper_obj_id},
-                        {"$set": status_update}
-                    )
-                    if status_update_result.modified_count != 1:
-                        print(f"Failed to update paper status for {paper_id}")
-
-            final_paper = papers_collection.find_one({"_id": paper_obj_id})
-            if not final_paper:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Paper not found after operations"
-                )
-            return transform_paper_sync(final_paper, user_id_str, detail_level="full")
-        else:
-            return transform_paper_sync(paper, user_id_str, detail_level="full")
+        # Recalculate and set the main implementability_status based on new vote counts
+        # This will also handle the main 'status' field update if necessary.
+        # Pass the updated_paper_doc to use its fresh vote counts.
+        await _recalculate_and_update_community_status(paper_obj_id, papers_collection, paper_doc_for_votes=updated_paper_doc)
+        
+        final_paper_doc = papers_collection.find_one({"_id": paper_obj_id}) # Fetch the latest state
+        if not final_paper_doc:
+            logger.error(f"Paper {paper_obj_id} not found after all operations in flag_implementability.")
+            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Paper data inconsistent after voting.")
+            
+        return transform_paper_sync(final_paper_doc, user_id_str, detail_level="full")
 
     except HTTPException:
         raise
-    except DuplicateKeyError:
+    except DuplicateKeyError: # Should be handled within insert logic if possible
         logger.error("Duplicate key error during flag_implementability.", exc_info=True)
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="A database error occurred (duplicate entry)."
-        )
-    except Exception:
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="A database error occurred (duplicate entry).")
+    except Exception as e:
         logger.exception("Unexpected error in flag_paper_implementability")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while flagging implementability."
-        )
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred: {e}")
+
 
 @router.post("/{paper_id}/set_implementability", response_model=PaperResponse)
 @limiter.limit("10/minute")
@@ -287,94 +269,81 @@ async def set_paper_implementability(
     request: Request,
     paper_id: str,
     payload: SetImplementabilityRequest,
-    current_user: UserSchema = Depends(get_current_owner)
+    current_user: UserSchema = Depends(get_current_owner) # Ensures only owner can call
 ):
     try:
-        user_id_str = str(current_user.id)
+        user_id_str = str(current_user.id) # For transform_paper_sync
         if not user_id_str:
-            raise HTTPException(
-                status_code=status.HTTP_401_UNAUTHORIZED,
-                detail="User ID not found"
-            )
+            raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found for token")
 
         try:
             paper_obj_id = ObjectId(paper_id)
         except (InvalidId, ValueError) as e:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid paper ID format: {e}"
-            )
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid paper ID format: {e}")
 
-        status_to_set = payload.status_to_set
+        status_to_set_by_admin = payload.status_to_set # Expect 'Admin Not Implementable', 'Admin Implementable', or 'voting'
 
         papers_collection = get_papers_collection_sync()
+        paper_to_update = papers_collection.find_one({"_id": paper_obj_id})
 
-        paper = papers_collection.find_one({"_id": paper_obj_id})
-        if not paper:
-            raise HTTPException(
-                status_code=status.HTTP_404_NOT_FOUND,
-                detail="Paper not found"
-            )
+        if not paper_to_update:
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found")
 
-        update_ops = {}
-        if status_to_set == config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB:
-            update_ops["nonImplementableStatus"] = config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB
-            update_ops["nonImplementableConfirmedBy"] = "owner"
-            update_ops["nonImplementableConfirmedAt"] = datetime.now(timezone.utc)
-            update_ops["isImplementable"] = False
-        elif status_to_set == config_settings.STATUS_CONFIRMED_IMPLEMENTABLE_DB:
-            update_ops["nonImplementableStatus"] = config_settings.STATUS_CONFIRMED_IMPLEMENTABLE_DB
-            update_ops["nonImplementableConfirmedBy"] = "owner"
-            update_ops["nonImplementableConfirmedAt"] = datetime.now(timezone.utc)
-            update_ops["isImplementable"] = True
-            update_ops["nonImplementableVotes"] = 0
-            update_ops["disputeImplementableVotes"] = 0
-        elif status_to_set == "voting" or status_to_set == config_settings.STATUS_FLAGGED_NON_IMPLEMENTABLE:
-            update_ops["nonImplementableStatus"] = config_settings.STATUS_FLAGGED_NON_IMPLEMENTABLE
-            update_ops["nonImplementableConfirmedBy"] = None
-            update_ops["nonImplementableConfirmedAt"] = None
-            update_ops["isImplementable"] = True
-        else:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail=f"Invalid status: {status_to_set}"
-            )
+        db_update_payload = {"updated_at": datetime.now(timezone.utc)}
+        
+        # Validate admin status values
+        valid_admin_settable_statuses = [IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE, IMPL_STATUS_ADMIN_IMPLEMENTABLE, IMPL_STATUS_VOTING]
+        if status_to_set_by_admin not in valid_admin_settable_statuses:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid status value: {status_to_set_by_admin}")
 
-        try:
-            result = papers_collection.update_one(
-                {"_id": paper_obj_id},
-                {"$set": update_ops}
-            )
+        db_update_payload["implementability_status"] = status_to_set_by_admin
+        
+        current_main_status = paper_to_update.get("status")
+        new_main_status = current_main_status
 
-            if result.modified_count != 1:
-                raise HTTPException(
-                    status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                    detail="Failed to update paper status."
-                )
+        if status_to_set_by_admin == IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE:
+            if current_main_status != 'Not Implementable':
+                new_main_status = 'Not Implementable'
+        elif status_to_set_by_admin == IMPL_STATUS_ADMIN_IMPLEMENTABLE or status_to_set_by_admin == IMPL_STATUS_VOTING:
+            # If admin is making it implementable or reverting to voting,
+            # and current main status is 'Not Implementable' (possibly from a previous state),
+            # then revert main status to 'Not Started'.
+            if current_main_status == 'Not Implementable':
+                new_main_status = 'Not Started'
+        
+        if new_main_status != current_main_status:
+            db_update_payload["status"] = new_main_status
+        
+        result = papers_collection.update_one(
+            {"_id": paper_obj_id},
+            {"$set": db_update_payload}
+        )
 
-            updated_paper = papers_collection.find_one({"_id": paper_obj_id})
-            if not updated_paper:
-                raise HTTPException(
-                    status_code=status.HTTP_404_NOT_FOUND,
-                    detail="Paper not found after update"
-                )
-            return transform_paper_sync(updated_paper, user_id_str, detail_level="full")
+        if result.modified_count == 0 and not result.matched_count: # Check if paper existed but nothing changed
+            # This case might occur if the status was already what admin tried to set it to.
+            # We still might need to recalculate if it was set to "voting".
+            pass # It's not an error if nothing changed, but flow continues.
 
-        except Exception as e:
-            print(f"Error updating paper implementability: {e}")
-            raise HTTPException(
-                status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to set implementability status."
-            )
+        # If owner reverted to 'voting', recalculate community status and potentially main status again
+        if status_to_set_by_admin == IMPL_STATUS_VOTING:
+            # _recalculate_and_update_community_status will fetch the paper with the new "voting" status
+            # and then apply community vote logic, including further main status update if needed.
+            await _recalculate_and_update_community_status(paper_obj_id, papers_collection) 
+
+        updated_paper = papers_collection.find_one({"_id": paper_obj_id})
+        if not updated_paper:
+            # This should ideally not happen if the update was successful or paper existed
+            logger.error(f"Paper {paper_obj_id} not found after admin set_implementability and potential recalculation.")
+            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after update.")
+            
+        return transform_paper_sync(updated_paper, user_id_str, detail_level="full")
 
     except HTTPException:
         raise
-    except Exception:
-        print(f"Error in set_paper_implementability: {traceback.format_exc()}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request."
-        )
+    except Exception as e:
+        import traceback # Import traceback for logging
+        logger.error(f"Error in set_paper_implementability: {traceback.format_exc()}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred: {e}")
 
 @router.delete("/{paper_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
@@ -404,10 +373,15 @@ async def delete_paper(
             )
 
         paper["removedAt"] = datetime.now(timezone.utc)
-        paper["removedBy"] = user_id_str
+        paper["removedBy"] = user_id_str # Store who removed it
         
+        # Add a timestamp for when the paper was last updated before removal
+        paper["updated_at_before_removal"] = paper.get("updated_at", datetime.now(timezone.utc))
+
+
         insert_result = removed_papers_collection.insert_one(paper)
         if not insert_result.inserted_id:
+            logger.error(f"Failed to archive paper {obj_id} before deletion.")
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
                 detail="Failed to archive paper before deletion"
@@ -415,19 +389,22 @@ async def delete_paper(
 
         delete_result = papers_collection.delete_one({"_id": obj_id})
         if delete_result.deleted_count != 1:
+            logger.error(f"Failed to delete paper {obj_id} after archiving. Deleted count: {delete_result.deleted_count}")
+            # This is a critical state - paper archived but not deleted. Manual intervention might be needed.
+            # For now, raise error. Consider how to handle this (e.g., attempt to remove from archive if deletion fails consistently)
             raise HTTPException(
                 status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-                detail="Failed to delete paper"
+                detail="Failed to delete paper after archiving"
             )
 
-        return None
+        return None # HTTP 204 No Content
 
     except HTTPException:
         raise
-    except Exception:
-        print(f"Error in delete_paper: {traceback.format_exc()}")
+    except Exception as e:
+        logger.error(f"Error in delete_paper: {traceback.format_exc()}", exc_info=True)
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An unexpected error occurred while processing your request."
+            detail=f"An unexpected error occurred during paper deletion: {e}"
         )
 

@@ -38,18 +38,13 @@ export interface Paper {
     status: Status; // Use the new Status type
     currentUserImplementabilityVote?: 'up' | 'down' | 'none'; // from current_user_implementability_vote
     currentUserVote?: 'up' | 'none'; // from current_user_vote
-    nonImplementableVotes: number; // from non_implementable_votes (was optional)
-    disputeImplementableVotes: number; // from dispute_implementable_votes (was optional)
-    isImplementable: boolean; // from computed is_implementable (was optional)
-
-    //citationsCount?: number | null;
+    nonImplementableVotes: number; // from not_implementable_votes (was optional)
+    isImplementableVotes: number; // from implementable_votes (was optional)
+    implementabilityStatus: 'voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'; // DO NOT CHANGE
 }
 
 // Define the specific actions for implementability voting (matching backend)
 export type ImplementabilityAction = 'confirm' | 'dispute' | 'retract';
-
-// Define the possible statuses an owner can set
-export type OwnerSettableImplementabilityStatus = 'confirmed_implementable' | 'confirmed_non_implementable' | 'voting';
 
 export interface PaperSummary {
     id: string;

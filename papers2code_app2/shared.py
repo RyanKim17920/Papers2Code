@@ -64,16 +64,16 @@ class AppSettings(BaseSettings):
 
     # Status constants
     STATUS_IMPLEMENTABLE: str = "implementable"
-    STATUS_FLAGGED_NON_IMPLEMENTABLE: str = "flagged_non_implementable"
+    STATUS_FLAGGED_NOT_IMPLEMENTABLE: str = "flagged_not_implementable"
     STATUS_CONFIRMED_IMPLEMENTABLE_DB: str = "confirmed_implementable"
-    # STATUS_CNI_DB_FASTAPI is already present and used for STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB
+    # STATUS_CNI_DB_FASTAPI is already present and used for STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB
     
     # Voting Thresholds
-    NON_IMPLEMENTABLE_CONFIRM_THRESHOLD: int = 3 
+    NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD: int = 3 
     IMPLEMENTABLE_CONFIRM_THRESHOLD: int = 2
 
     # This will use the value of STATUS_CNI_DB_FASTAPI from .env or the default above
-    STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: str = Field(default_factory=lambda: os.getenv("STATUS_CNI_DB_FASTAPI", "confirmed_non_implementable"))
+    STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB: str = Field(default_factory=lambda: os.getenv("STATUS_CNI_DB_FASTAPI", "confirmed_not_implementable"))
 
     # Atlas Search settings with defaults
     ATLAS_SEARCH_INDEX_NAME: str = "default" # Default index name
@@ -91,7 +91,7 @@ logger.info(f"Loaded config_settings.MONGO_URI_DEV: {config_settings.MONGO_URI_D
 logger.info(f"Loaded config_settings.MONGO_URI_PROD: {config_settings.MONGO_URI_PROD}")
 logger.info(f"Loaded config_settings.MONGO_URI_PROD_TEST: {config_settings.MONGO_URI_PROD_TEST}")
 logger.info(f"Loaded config_settings.STATUS_CNI_DB_FASTAPI: {config_settings.STATUS_CNI_DB_FASTAPI}")
-logger.info(f"Loaded config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB: {config_settings.STATUS_CONFIRMED_NON_IMPLEMENTABLE_DB}")
+logger.info(f"Loaded config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB: {config_settings.STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB}")
 logger.info(f"Loaded config_settings.ATLAS_SEARCH_INDEX_NAME: {config_settings.ATLAS_SEARCH_INDEX_NAME}")
 logger.info(f"Loaded config_settings.ATLAS_SEARCH_SCORE_THRESHOLD: {config_settings.ATLAS_SEARCH_SCORE_THRESHOLD}")
 logger.info(f"Loaded config_settings.ATLAS_SEARCH_OVERALL_LIMIT: {config_settings.ATLAS_SEARCH_OVERALL_LIMIT}")
@@ -274,9 +274,11 @@ def transform_paper_sync(
         transformed_data["venue"] = paper_doc.get("venue")
         transformed_data["tags"] = paper_doc.get("tasks", [])
         # Initialize aggregate/detailed vote fields for "full" view
-        transformed_data["non_implementable_votes"] = 0
-        transformed_data["dispute_implementable_votes"] = 0
+        transformed_data["not_implementable_votes"] = 0
+        transformed_data["implementable_votes"] = 0
         transformed_data["current_user_implementability_vote"] = None
+        # Ensure implementability_status is part of the transformation for full detail
+        transformed_data["implementability_status"] = paper_doc.get("implementability_status", "voting") # Default to 'voting' if not set
 
     try:
         user_actions_collection = get_user_actions_collection_sync()
@@ -286,50 +288,55 @@ def transform_paper_sync(
         # Fetch current_user_vote (upvote status) if a user is logged in
         # This is done for both "summary" and "full" detail_level
         if current_user_id_str:
-            user_obj_id = ObjectId(current_user_id_str) # Can throw InvalidId here
-            if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_obj_id, "actionType": "upvote"}) > 0:
-                transformed_data["current_user_vote"] = "up"
+            try:
+                user_obj_id = ObjectId(current_user_id_str)
+                if user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_obj_id, "actionType": "upvote"}) > 0:
+                    transformed_data["current_user_vote"] = "up"
+            except InvalidId:
+                logger.warning(f"Invalid ObjectId for current_user_id_str: {current_user_id_str} when fetching upvote. Skipping.")
         
         if detail_level == "full":
-            # Fetch aggregate votes (non_implementable_votes, dispute_implementable_votes)
-            non_implementable_action_types = ["confirm_non_implementable", "flag_non_implementable"]
+            # Fetch aggregate votes (not_implementable_votes, implementable_votes)
+            not_implementable_action_types = ["Community Not Implementable", "Community Implementablle "]
             count_non_impl = user_actions_collection.count_documents(
-                {"paperId": paper_obj_id, "actionType": {"$in": non_implementable_action_types}}
+                {"paperId": paper_obj_id, "actionType": {"$in": not_implementable_action_types}}
             )
-            transformed_data["non_implementable_votes"] = count_non_impl
+            transformed_data["not_implementable_votes"] = count_non_impl
 
-            dispute_action_type = "dispute_non_implementable"
-            count_dispute_impl = user_actions_collection.count_documents(
-                {"paperId": paper_obj_id, "actionType": dispute_action_type}
+            implementable_action_type = "Implementable" # Changed from dispute_action_type for clarity
+            count_impl = user_actions_collection.count_documents(
+                {"paperId": paper_obj_id, "actionType": implementable_action_type}
             )
-            transformed_data["dispute_implementable_votes"] = count_dispute_impl
+            transformed_data["implementable_votes"] = count_impl
 
             # Fetch user-specific implementability vote
             if current_user_id_str: # User must be logged in
-                _user_obj_id_for_impl_vote = ObjectId(current_user_id_str)
+                try:
+                    _user_obj_id_for_impl_vote = ObjectId(current_user_id_str)
 
-                implementability_action_types_map = {
-                    "dispute_non_implementable": "up",
-                    "flag_non_implementable": "down",
-                    "confirm_non_implementable": "down",
-                    "confirm_implementable": "up"
-                }
+                    implementability_action_types_map = {
+                        "Implementable": "up",
+                        "Community Implementable": "up",
+                        "Community Not Implementable": "down",
+                        "Not Implementable": "down",
+                    }
+                    
+                    user_implementability_action = user_actions_collection.find_one(
+                        {"userId": _user_obj_id_for_impl_vote, "paperId": paper_obj_id, "actionType": {"$in": list(implementability_action_types_map.keys())}},
+                        sort=[("timestamp", DESCENDING)] 
+                    )
+                    
+                    if user_implementability_action:
+                        action_type = user_implementability_action.get("actionType")
+                        transformed_data["current_user_implementability_vote"] = implementability_action_types_map.get(action_type)
+                except InvalidId:
+                    logger.warning(f"Invalid ObjectId for current_user_id_str: {current_user_id_str} when fetching implementability vote. Skipping.")
                 
-                user_implementability_action = user_actions_collection.find_one(
-                    {"userId": _user_obj_id_for_impl_vote, "paperId": paper_obj_id, "actionType": {"$in": list(implementability_action_types_map.keys())}},
-                    sort=[("timestamp", DESCENDING)] 
-                )
-                
-                if user_implementability_action:
-                    action_type = user_implementability_action.get("actionType")
-                    transformed_data["current_user_implementability_vote"] = implementability_action_types_map.get(action_type)
-                
-    except InvalidId:
-        logger.warning(f"Invalid ObjectId for paper_id: {paper_id} or user_id: {current_user_id_str}. User-specific data might be incomplete.")
-        pass
-    except Exception as e:
+    except Exception as e: # Catching general exceptions during DB interaction for votes
         logger.error(f"Error during user-specific data or aggregate fetching for paper {paper_id}: {e}", exc_info=True)
-        pass
+        # Re-raise the exception to make it visible instead of silently passing
+        # This will help in diagnosing if this block is indeed the source of the issue.
+        raise e 
         
     return transformed_data
 

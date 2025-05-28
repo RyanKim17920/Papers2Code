@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper } from '../../../../types/paper'; // Corrected import path
+import { Paper, ImplementabilityAction } from '../../../../types/paper'; // Ensure ImplementabilityAction is imported
 import { UserProfile } from '../../../../services/auth'; // Added import for UserProfile
 import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
@@ -11,8 +11,8 @@ interface ImplementabilityTabProps {
     paper: Paper;
     currentUser: UserProfile | null;
     isVoting: boolean;
-    handleImplementabilityVote: (voteType: 'confirm' | 'dispute' | 'retract') => void;
-    actionUsers: PaperActionUsers | null; // Changed ActionUsers to PaperActionUsers
+    handleImplementabilityVote: (voteType: ImplementabilityAction) => void; // Use ImplementabilityAction type
+    actionUsers: PaperActionUsers | null;
     isLoadingActionUsers: boolean;
     actionUsersError: string | null;
 }
@@ -27,81 +27,109 @@ export const ImplementabilityTab: React.FC<ImplementabilityTabProps> = ({
     isLoadingActionUsers,
     actionUsersError,
 }) => {
-    const isOwnerConfirmed = paper.nonImplementableConfirmedBy === 'owner';
-    const isCommunityConfirmedImplementable = paper.nonImplementableStatus === 'confirmed_implementable' && paper.nonImplementableConfirmedBy === 'community';
-    const isCommunityConfirmedNonImplementable = paper.nonImplementableStatus === 'confirmed_non_implementable' && paper.nonImplementableConfirmedBy === 'community';
+    // Determine UI behavior based on the new implementabilityStatus
+    const isAdminSetStatus = paper.implementabilityStatus === 'Admin Implementable' || paper.implementabilityStatus === 'Admin Not Implementable';
+    const showVotingControls = !isAdminSetStatus; // Voting controls are hidden if an admin has set the status
 
-    // Hide voting if owner has confirmed a status, or if community has confirmed it as implementable.
-    // Voting remains if community confirmed non-implementable, to allow disputes unless owner locks it.
-    const showVotingInterface = !isOwnerConfirmed && !isCommunityConfirmedImplementable;
-
-    // 'up' means user voted "Is Implementable" (Thumbs Up)
-    // 'down' means user voted "Not Implementable" (Thumbs Down)
-    const currentUserVotedIsImplementable = paper.currentUserImplementabilityVote === 'up'; 
+    // User's current vote state
+    const currentUserVotedIsImplementable = paper.currentUserImplementabilityVote === 'up';
     const currentUserVotedNotImplementable = paper.currentUserImplementabilityVote === 'down';
 
     let statusMessage = "";
-    if (isOwnerConfirmed) {
-        if (paper.nonImplementableStatus === 'confirmed_implementable') {
-            statusMessage = "Paper status confirmed as Implementable by Admin.";
-        } else if (paper.nonImplementableStatus === 'confirmed_non_implementable') {
-            statusMessage = "Paper status confirmed as Not Implementable by Admin.";
-        }
-    } else if (isCommunityConfirmedImplementable) {
-        statusMessage = "Paper status confirmed as Implementable by Community Vote.";
-    } else if (isCommunityConfirmedNonImplementable) {
-        statusMessage = "Paper status confirmed as Not Implementable by Community Vote. Admin can override or reset voting.";
+    let statusMessageType: 'info' | 'success' | 'warning' | 'error' = 'info';
+
+    if (paper.implementabilityStatus === 'Admin Implementable') {
+        statusMessage = "Admin Confirmed: This paper is Implementable. Community voting is disabled.";
+        statusMessageType = 'success';
+    } else if (paper.implementabilityStatus === 'Admin Not Implementable') {
+        statusMessage = "Admin Confirmed: This paper is Not Implementable. Community voting is disabled.";
+        statusMessageType = 'error';
+    } else if (paper.implementabilityStatus === 'Community Implementable') {
+        statusMessage = "Community Consensus: Implementable. You can change your vote if needed.";
+        statusMessageType = 'success';
+    } else if (paper.implementabilityStatus === 'Community Not Implementable') {
+        statusMessage = "Community Consensus: Not Implementable. You can vote 'Is Implementable' to help reach a different consensus, or 'Not Implementable' to reinforce this status.";
+        statusMessageType = 'warning';
+    } else if (paper.implementabilityStatus === 'voting') {
+        statusMessage = "Community Voting In Progress: Is this paper reasonably implementable?";
+        statusMessageType = 'info';
     }
 
+    const handleIsImplementableClick = () => {
+        if (currentUserVotedIsImplementable) {
+            handleImplementabilityVote('retract');
+        } else {
+            handleImplementabilityVote('confirm'); // 'confirm' for "Is Implementable"
+        }
+    };
+
+    const handleNotImplementableClick = () => {
+        if (currentUserVotedNotImplementable) {
+            handleImplementabilityVote('retract');
+        } else {
+            handleImplementabilityVote('dispute'); // 'dispute' for "Not Implementable"
+        }
+    };
+    
+    const showRetractButton = (currentUserVotedIsImplementable || currentUserVotedNotImplementable) && showVotingControls;
+
+    // Buttons are disabled if an API call is in progress or if admin has set the status.
+    const commonButtonDisabled = isVoting || isAdminSetStatus;
+
     return (
-        <div className="tab-pane-container">
+        <div className="tab-pane-container implementability-tab">
             <h3>Implementability Status</h3>
-            
+
             {statusMessage && (
-                <div className={`status-message ${isOwnerConfirmed ? 'owner-confirmed' : 'community-confirmed'}`}>
+                <div className={`status-message message-${statusMessageType} implementability-status-message`}>
                     <p>{statusMessage}</p>
                 </div>
             )}
 
-            {showVotingInterface ? (
+            {showVotingControls ? (
                 <>
                     <div className="implementability-explanation">
-                        <h4>Community Voting: Is this paper implementable?</h4>
-                        <p>
-                            Use <FaThumbsUp title="Vote Is Implementable Icon" /> if you think this paper <strong>can</strong> be reasonably implemented.
-                        </p>
-                        <p>
-                            Use <FaThumbsDown title="Vote Not Implementable Icon" /> if you think this paper <strong>cannot</strong> be reasonably implemented.
-                        </p>
-                        <p>
-                            Admins can confirm the status based on community feedback or reset voting.
-                        </p>
+                        {!isAdminSetStatus && paper.implementabilityStatus === 'voting' && (
+                            <>
+                                <p>
+                                    Use <FaThumbsUp /> if you believe this paper <strong>can</strong> be reasonably implemented.
+                                </p>
+                                <p>
+                                    Use <FaThumbsDown /> if you believe this paper <strong>cannot</strong> be reasonably implemented.
+                                </p>
+                            </>
+                        )}
+                         <p>Your vote contributes to the community consensus. Admins may also set a final status.</p>
                     </div>
                     <div className="tab-action-area">
                         {currentUser ? (
                             <>
-                                <VoteButton // Thumbs Up for "Is Implementable"
-                                    onClick={() => handleImplementabilityVote(currentUserVotedIsImplementable ? 'retract' : 'confirm')} 
-                                    disabled={isVoting || isCommunityConfirmedNonImplementable}
+                                <VoteButton
+                                    onClick={handleIsImplementableClick}
+                                    disabled={commonButtonDisabled}
                                     voted={currentUserVotedIsImplementable}
-                                    count={paper.disputeImplementableVotes} 
+                                    count={paper.isImplementableVotes}
                                     icon={<FaThumbsUp />}
                                     text="Is Implementable"
                                     className="thumbs-up"
-                                    title={isCommunityConfirmedNonImplementable ? "Community confirmed Non-Implementable. Admin can reset." : "Vote Is Implementable"}
+                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedIsImplementable ? "Retract 'Is Implementable' vote" : "Vote 'Is Implementable'")}
                                 />
-                                <VoteButton // Thumbs Down for "Not Implementable"
-                                    onClick={() => handleImplementabilityVote(currentUserVotedNotImplementable ? 'retract' : 'dispute')} 
-                                    disabled={isVoting}
+                                <VoteButton
+                                    onClick={handleNotImplementableClick}
+                                    disabled={commonButtonDisabled}
                                     voted={currentUserVotedNotImplementable}
                                     count={paper.nonImplementableVotes}
                                     icon={<FaThumbsDown />}
                                     text="Not Implementable"
                                     className="thumbs-down"
-                                    title="Vote Not Implementable"
+                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedNotImplementable ? "Retract 'Not Implementable' vote" : "Vote 'Not Implementable'")}
                                 />
-                                {(currentUserVotedIsImplementable || currentUserVotedNotImplementable) && (
-                                    <RetractVoteButton onClick={() => handleImplementabilityVote('retract')} disabled={isVoting} />
+                                {showRetractButton && (
+                                    <RetractVoteButton 
+                                        onClick={() => handleImplementabilityVote('retract')} 
+                                        disabled={commonButtonDisabled} 
+                                        title={isAdminSetStatus ? "Voting disabled by admin" : "Retract your current vote"}
+                                    />
                                 )}
                             </>
                         ) : (
@@ -111,14 +139,14 @@ export const ImplementabilityTab: React.FC<ImplementabilityTabProps> = ({
                     <div className="user-lists-grid">
                         <UserDisplayList
                             title="Voted Is Implementable By:"
-                            users={actionUsers?.votedIsImplementable} 
+                            users={actionUsers?.votedIsImplementable}
                             isLoading={isLoadingActionUsers}
                             error={actionUsersError}
                             emptyMessage="No votes for 'Is Implementable' yet."
                         />
                         <UserDisplayList
                             title="Voted Not Implementable By:"
-                            users={actionUsers?.votedNotImplementable} 
+                            users={actionUsers?.votedNotImplementable}
                             isLoading={isLoadingActionUsers}
                             error={actionUsersError}
                             emptyMessage="No votes for 'Not Implementable' yet."
@@ -126,11 +154,11 @@ export const ImplementabilityTab: React.FC<ImplementabilityTabProps> = ({
                     </div>
                 </>
             ) : (
-                <div className="voting-disabled-message">
-                    <p>Community voting is currently disabled for this paper due to its confirmed status.</p>
-                    {isOwnerConfirmed && <p>An Admin has set the final status.</p>}
-                    {isCommunityConfirmedImplementable && <p>The community has confirmed this paper as implementable.</p>}
-                </div>
+                // This block is effectively covered by the statusMessage when isAdminSetStatus is true
+                // If showVotingControls is false due to admin action, the statusMessage already explains it.
+                // Consider removing this else block if redundant with the message above.
+                // For now, let's keep it simple: if voting controls aren't shown, the message above should suffice.
+                null 
             )}
         </div>
     );

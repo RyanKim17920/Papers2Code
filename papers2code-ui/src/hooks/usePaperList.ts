@@ -1,7 +1,10 @@
 import { useState, useEffect, useCallback } from 'react';
-import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters } from '../services/api'; // Import voteOnPaperInApi and AdvancedPaperFilters
+// MODIFIED: Import AuthenticationError and CsrfError
+import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters, AuthenticationError, CsrfError } from '../services/api'; 
 import { Paper } from '../types/paper';
 import useDebounce from './useDebounce';
+// NEW: Import useModal hook
+import { useModal } from '../context/ModalContext';
 
 const DEBOUNCE_DELAY = 500;
 const ITEMS_PER_PAGE = 12;
@@ -23,6 +26,9 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
   const [sortPreference, setSortPreference] = useState<SortPreference>('newest'); // Use updated type
   const [currentPage, setCurrentPage] = useState(1);
   const [totalPages, setTotalPages] = useState(1);
+
+  // NEW: Get showLoginPrompt from useModal
+  const { showLoginPrompt } = useModal();
 
   // --- NEW: State for advanced filters and visibility ---
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(initialAdvancedFilters);
@@ -152,18 +158,31 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
 
   // --- NEW: Handle Vote Update ---
   const handleVote = useCallback(async (paperId: string, voteType: 'up' | 'none') => {
+    // NEW: Check for currentUser before making API call. 
+    // This hook doesn't have direct access to currentUser, so the calling component (PaperCard)
+    // should ideally perform this check. However, to ensure the modal is shown if an error occurs
+    // even if the component doesn't check, we handle errors here.
     try {
       const updatedPaper = await voteOnPaperInApi(paperId, voteType);
-      // Update the specific paper in the local state
       setPapers(currentPapers =>
         currentPapers.map(p => (p.id === paperId ? updatedPaper : p))
       );
     } catch (error) {
       console.error(`Failed to update vote for paper ${paperId}:`, error);
-      // Re-throw the error so the component can handle UI feedback
-      throw error;
+      // MODIFIED: Handle AuthenticationError and CsrfError by showing login prompt
+      if (error instanceof AuthenticationError || error instanceof CsrfError) {
+        showLoginPrompt("Please connect with GitHub to vote.");
+        // Optionally, set a local error state if needed by the calling component
+        // setError(error.message); 
+      } else if (error instanceof Error) {
+        setError(error.message); // Set a generic error for other issues
+      } else {
+        setError("An unknown error occurred while voting.");
+      }
+      // Do not re-throw if we handled it by showing the prompt, 
+      // unless the calling component needs to do further specific error handling.
     }
-  }, []); // No dependencies needed as it uses API and setPapers
+  }, [showLoginPrompt]); // Added showLoginPrompt to dependencies
 
   // Determine which sort option is effectively active for the dropdown UI
   const activeSortDisplay = debouncedSearchTerm ? 'relevance' : sortPreference;

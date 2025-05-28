@@ -20,6 +20,7 @@ class BasePaper(BaseModel):
     # --- Implementability Fields ---
     upvote_count: int = Field(0, alias="upvoteCount")
     status: str = Field("Not Started", alias="status")
+    implementability_status: str = Field("Voting", alias="implementabilityStatus") # 'voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'
 
     model_config = {
         "populate_by_name": True,
@@ -33,8 +34,9 @@ class PaperResponse(BasePaper):
     current_user_vote: Optional[str] = Field(None, alias="currentUserVote")
 
     # Aggregated counts - to be populated by backend logic from user actions
-    non_implementable_votes: int = Field(0, alias="nonImplementableVotes")
-    dispute_implementable_votes: int = Field(0, alias="disputeImplementableVotes")
+    not_implementable_votes: int = Field(0, alias="nonImplementableVotes")
+    implementable_votes: int = Field(0, alias="isImplementableVotes")
+    # owner_set_implementability_status is inherited from BasePaper
 
     @computed_field(alias="isImplementable")
     @property
@@ -65,12 +67,13 @@ class PaginatedPaperResponse(BaseModel):
 
 class SetImplementabilityRequest(BaseModel):
     """Request schema for setting or updating the implementability status of a paper."""
-    status: str
+    status_to_set: str = Field(..., alias="statusToSet") # MODIFIED: Changed field name and added alias
     reason: Optional[str] = None
 
     model_config = {
         "populate_by_name": True,
-        "alias_generator": to_camel
+        "alias_generator": to_camel,
+        "allow_population_by_field_name": True # Added to allow population by status_to_set
     }
 
 class PaperActionUserDetail(BaseModel):

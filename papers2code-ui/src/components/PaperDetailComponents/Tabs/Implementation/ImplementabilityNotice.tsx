@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaThumbsUp, FaThumbsDown } from 'react-icons/fa';
-import { Paper } from '../../../../types/paper'; // Assuming Paper type
+import { Paper } from '../../../../types/paper';
 import './ImplementabilityNotice.css';
 
 interface ImplementabilityNoticeProps {
@@ -8,36 +8,33 @@ interface ImplementabilityNoticeProps {
 }
 
 const ImplementabilityNotice: React.FC<ImplementabilityNoticeProps> = ({ paper }) => {
-    if (paper.nonImplementableStatus === 'confirmed_non_implementable') {
+    // Case 1: Paper is confirmed as Not Implementable
+    // This is determined by paper.isImplementable === false (backend status is 'Not Implementable')
+    if (paper.isImplementable === false) {
         return (
             <div className="not-implementable-notice confirmed">
-                <strong>Confirmed Non-Implementable</strong> by {paper.nonImplementableConfirmedBy || 'unknown'}.
+                <strong>Confirmed Not-Implementable</strong>.
                 This paper has been confirmed as not suitable for implementation on this platform.
             </div>
         );
     }
 
-    if (paper.nonImplementableStatus === 'flagged_non_implementable') {
+    // Case 2: Paper is currently considered implementable (paper.isImplementable === true),
+    // but there are "Not Implementable" votes, indicating it's flagged by the community.
+    if (paper.nonImplementableVotes > 0) {
         return (
             <div className="not-implementable-notice flagged">
-                <p><strong>Flagged as Potentially Non-Implementable</strong></p>
+                <p><strong>Flagged as Potentially Not-Implementable</strong></p>
                 <p>
-                    {paper.nonImplementableVotes} user(s) flagged this <FaThumbsUp />, {paper.disputeImplementableVotes} user(s) disagree <FaThumbsDown />.
-                    The owner can confirm or revert this status.
+                    {paper.nonImplementableVotes} user(s) voted it as Not Implementable <FaThumbsDown title="Not Implementable Votes" />.
+                    {' '}{paper.isImplementableVotes} user(s) voted it as Implementable <FaThumbsUp title="Is Implementable Votes" />.
                 </p>
             </div>
         );
     }
 
-    if (paper.nonImplementableStatus === 'implementable' && paper.isImplementable === false) {
-        return (
-            <div className="implementable-notice">
-                This paper was previously flagged or confirmed as non-implementable, but the status has been reverted. It is currently considered implementable.
-            </div>
-        );
-    }
-
-    return null; // No notice needed for other cases
+    // No notice needed if paper.isImplementable is true and nonImplementableVotes is 0.
+    return null;
 };
 
 export default ImplementabilityNotice;

@@ -13,7 +13,7 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
 
     switch (paper.status) {
         case 'Not Implementable':
-            statusClass = 'status-non-implementable';
+            statusClass = 'status-not-implementable';
             statusSymbol = '🚫';
             break;
         case 'Completed':
