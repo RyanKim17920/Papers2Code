@@ -98,9 +98,10 @@ class PaperActionUserDetail(BaseModel):
 
 class PaperActionsSummaryResponse(BaseModel):
     """Response schema summarizing various user actions associated with a paper."""
-    paper_id: str
-    upvotes: List[PaperActionUserDetail] = []
-    saves: List[PaperActionUserDetail] = []
-    implementability_flags: List[PaperActionUserDetail] = []
-
+    paper_id: str = Field(..., alias="paperId") # Explicit alias for consistency
+    upvotes: List[PaperActionUserDetail] = Field(default_factory=list, alias="upvotes")
+    saves: List[PaperActionUserDetail] = Field(default_factory=list, alias="saves") # Frontend might expect 'saves' or 'savedBy'
+    voted_is_implementable: List[PaperActionUserDetail] = Field(default_factory=list, alias="votedIsImplementable")
+    voted_not_implementable: List[PaperActionUserDetail] = Field(default_factory=list, alias="votedNotImplementable")
+    
     model_config = camel_case_config

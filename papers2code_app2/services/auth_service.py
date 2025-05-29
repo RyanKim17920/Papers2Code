@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status, Request, Response # Add Response here
+from fastapi import HTTPException, status, Request, Response, Depends # Add Depends here
 from fastapi.responses import RedirectResponse
 from jose import jwt, JWTError
 from bson import ObjectId
@@ -27,6 +27,9 @@ OAUTH_STATE_COOKIE_NAME = "oauth_state_token" # Define OAUTH_STATE_COOKIE_NAME
 CSRF_TOKEN_COOKIE_NAME = "csrf_token_cookie" # Define CSRF_TOKEN_COOKIE_NAME
 
 class AuthService:
+    def generate_csrf_token(self) -> str:
+        return secrets.token_hex(16)
+
     def get_user_details(self, current_user: UserSchema) -> UserMinimal:
         if not current_user:
             # This check might be redundant if get_current_user already raises
@@ -299,67 +302,172 @@ class AuthService:
             
             refresh_token_payload = {"sub": user_id_str}
             refresh_token = create_refresh_token(data=refresh_token_payload)
-            logger.debug(f"Access and refresh tokens created for user {username}.")
 
-            # 5. Generate CSRF token
-            csrf_token = self.generate_csrf_token()
-            logger.debug("CSRF token generated.")
-
-            # 6. Set cookies
-            cookie_secure_flag = True if config_settings.ENV_TYPE == "production" else False
-            cookie_samesite_policy = "lax" # Default to "lax"
-
-            access_token_path = "/"
-            refresh_token_path = "/api/auth/refresh_token"
-            csrf_token_path = "/"
-
-            logger.debug(f"Setting access_token_cookie: path={access_token_path}, secure={cookie_secure_flag}, httponly=True, samesite={cookie_samesite_policy}")
+            # 5. Set cookies on the RedirectResponse
             redirect_response.set_cookie(
-                key=ACCESS_TOKEN_COOKIE_NAME, value=access_token, httponly=True, samesite=cookie_samesite_policy,
-                max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60, path=access_token_path, secure=cookie_secure_flag,
+                key=ACCESS_TOKEN_COOKIE_NAME,
+                value=access_token,
+                httponly=True,
+                samesite="lax", # Consider "strict" if applicable
+                max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+                path="/", # Root path for API access
+                secure=True if config_settings.ENV_TYPE == "production" else False
             )
-            logger.debug(f"Setting refresh_token_cookie: path={refresh_token_path}, secure={cookie_secure_flag}, httponly=True, samesite={cookie_samesite_policy}")
             redirect_response.set_cookie(
-                key=REFRESH_TOKEN_COOKIE_NAME, value=refresh_token, httponly=True, samesite=cookie_samesite_policy,
-                max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60, path=refresh_token_path, secure=cookie_secure_flag,
+                key=REFRESH_TOKEN_COOKIE_NAME,
+                value=refresh_token,
+                httponly=True,
+                samesite="lax", # Consider "strict"
+                max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
+                path="/api/auth", # Scoped to auth routes, e.g., /api/auth/refresh
+                secure=True if config_settings.ENV_TYPE == "production" else False
             )
-            logger.debug(f"Setting csrf_token_cookie: path={csrf_token_path}, secure={cookie_secure_flag}, httponly=False, samesite={cookie_samesite_policy}")
-            redirect_response.set_cookie(
-                key=CSRF_TOKEN_COOKIE_NAME, value=csrf_token, httponly=False, samesite=cookie_samesite_policy,
-                max_age=3600 * 24 * 7, path=csrf_token_path, secure=cookie_secure_flag,
-            )
-            logger.debug("Authentication cookies (access, refresh, csrf) set on RedirectResponse.")
             
-            logger.info(f"GitHub OAuth callback successful for user {username}. Returning RedirectResponse to frontend: {frontend_url}")
-            # The redirect_response already has frontend_url set at the beginning.
-            # If an error occurred before this point, it would have returned a RedirectResponse to an error URL.
+            # Generate and set CSRF token cookie
+            csrf_token = secrets.token_hex(16)
+            redirect_response.set_cookie(
+                key=CSRF_TOKEN_COOKIE_NAME,
+                value=csrf_token,
+                httponly=False,  # CSRF token needs to be readable by JavaScript
+                samesite="lax",
+                max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60, # Match access token lifetime
+                path="/",
+                secure=True if config_settings.ENV_TYPE == "production" else False
+            )
+            logger.info(f"Successfully authenticated user {username}. Redirecting to frontend.")
             return redirect_response
 
-    def generate_csrf_token(self) -> str:
-        """Generates a CSRF token string."""
-        return secrets.token_hex(32) # Add import for secrets if not already at top level of service file
+    def clear_auth_cookies(self, response: Response):
+        """Clears all authentication-related cookies."""
+        cookie_secure_flag = True if config_settings.ENV_TYPE == "production" else False
+        cookie_samesite_policy = "lax" # Match the samesite policy used when setting
 
-    def logout_user(self, response: Response) -> None:
-        """Clears authentication-related cookies."""
         response.delete_cookie(
-            ACCESS_TOKEN_COOKIE_NAME,
-            path="/",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
-            httponly=True,
-            samesite="lax"
+            ACCESS_TOKEN_COOKIE_NAME, 
+            path="/", 
+            secure=cookie_secure_flag, 
+            httponly=True, 
+            samesite=cookie_samesite_policy
         )
         response.delete_cookie(
-            REFRESH_TOKEN_COOKIE_NAME,
-            path="/api/auth/refresh_token",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
-            httponly=True,
-            samesite="lax"
+            REFRESH_TOKEN_COOKIE_NAME, 
+            path="/api/auth", # Path where refresh token is set and used
+            secure=cookie_secure_flag, 
+            httponly=True, 
+            samesite=cookie_samesite_policy
         )
         response.delete_cookie(
-            CSRF_TOKEN_COOKIE_NAME,
-            path="/",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
-            httponly=False, # MODIFIED: Allow JS to read CSRF token if needed
-            samesite="lax"
+            CSRF_TOKEN_COOKIE_NAME, 
+            path="/", 
+            secure=cookie_secure_flag, 
+            httponly=False, # CSRF token is not httponly
+            samesite=cookie_samesite_policy
         )
+        # OAUTH_STATE_COOKIE_NAME is typically cleared specifically in the OAuth flow
+        # but can be included here for a more aggressive clear if needed, ensuring path matches.
+        # response.delete_cookie(
+        #     OAUTH_STATE_COOKIE_NAME,
+        #     path="/api/auth/github/callback", # Path where it was set
+        #     secure=cookie_secure_flag,
+        #     httponly=True,
+        #     samesite=cookie_samesite_policy
+        # )
+        logger.info("Cleared auth cookies (access, refresh, csrf).")
+
+
+    async def logout_user(self, request: Request, response: Response) -> dict: # Made async
+        access_token_value = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+        
+        # Invalidate tokens by clearing cookies
+        self.clear_auth_cookies(response) # Use the new centralized method
+        
+        # Optional: Add token to a denylist if you have one
+        # For now, just clearing cookies is the primary mechanism.
+        
+        if not access_token_value:
+            logger.info("Logout called but no access token cookie was found.")
+            # Even if no token, ensure cookies are cleared and return success.
+            return {"message": "Logged out successfully, no active session found or cookies already cleared."}
+
+        logger.info("User logged out successfully. Cookies cleared.")
+        return {"message": "Logged out successfully"}
+
+# Helper function (can be outside the class or static if preferred)
+async def get_current_user_optional(request: Request) -> UserMinimal | None: # Made async
+    token = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+    if not token:
+        return None
+    try:
+        payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
+        user_id: str = payload.get("sub")
+        username: str = payload.get("username")
+        github_id: int = payload.get("github_id")
+
+        if user_id is None or username is None: # github_id can be optional if not all users have it
+            logger.warning(f"Token payload missing sub or username. Payload: {payload}")
+            return None # Or raise specific error if strict validation needed
+
+        users_collection = await get_users_collection_async() # Changed to async
+        try:
+            user_obj_id = ObjectId(user_id)
+        except InvalidId:
+            logger.error(f"Invalid ObjectId format for user_id: {user_id} from token.")
+            return None # Invalid ID format
+
+        user_doc = await users_collection.find_one({"_id": user_obj_id}) # Changed to async
+        if user_doc is None:
+            logger.warning(f"User with ID {user_id} from token not found in DB.")
+            return None
+        
+        # Determine if the user is the owner
+        owner_username = config_settings.OWNER_GITHUB_USERNAME
+        is_owner = owner_username is not None and user_doc.get("username") == owner_username
+        logger.debug(f"Current user {user_doc.get('username')} is_owner status: {is_owner} (checked in get_current_user_optional)")
+
+
+        return UserMinimal(
+            id=str(user_doc["_id"]),
+            username=user_doc["username"],
+            name=user_doc.get("name"),
+            avatar_url=str(user_doc.get("avatarUrl")) if user_doc.get("avatarUrl") else None,
+            is_owner=is_owner,
+            is_admin=user_doc.get("is_admin", False)
+        )
+    except JWTError as e:
+        logger.error(f"JWTError during optional user retrieval: {e}")
+        return None
+    except Exception as e: # Catch broader exceptions during DB access or UserMinimal instantiation
+        logger.error(f"Unexpected error in get_current_user_optional: {e}")
+        return None
+
+async def get_current_active_user(current_user: UserMinimal | None = Depends(get_current_user_optional)) -> UserMinimal: # Made async
+    if not current_user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    # Additional checks for active status can be added here if needed (e.g., user.disabled)
+    return current_user
+
+# Dependency to get the current user, requiring authentication.
+# This is a common pattern for protected routes.
+# Note: The Depends(get_current_user_optional) was illustrative. 
+# For a route that *requires* auth, you'd typically have a get_current_active_user
+# that raises HTTPException if no user, and then Depends(get_current_active_user).
+
+# Example of a dependency that strictly requires an active user:
+async def require_current_user(request: Request) -> UserMinimal: # Made async
+    user = await get_current_user_optional(request) # Changed to async
+    if not user:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Not authenticated",
+            headers={"WWW-Authenticate": "Bearer"}, # Typically for Bearer tokens, but good for API context
+        )
+    # Here you could add checks like `if not user.is_active:`
+    return user
+
+# If you need a dependency that can be directly used in path operations:
+# current_user: UserMinimal = Depends(require_current_user)
 

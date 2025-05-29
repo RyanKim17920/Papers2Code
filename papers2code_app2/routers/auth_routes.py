@@ -27,18 +27,19 @@ REFRESH_TOKEN_COOKIE_NAME = "refresh_token" # Used for clearing on error/logout
 CSRF_TOKEN_COOKIE_NAME = "csrf_token_cookie" # Used for /csrf-token endpoint
 
 @router.get("/csrf-token", response_model=CsrfToken)
-async def get_csrf_token(request: Request, response: Response): # response is needed here to set cookie
-    # This endpoint is fine as is, sets a cookie on a direct response
-    csrf_token_value = auth_service.generate_csrf_token()
-    response.set_cookie(
-        key=CSRF_TOKEN_COOKIE_NAME,
-        value=csrf_token_value,
-        httponly=False, # Frontend JS needs to read this for X-CSRF-Token header
-        samesite="lax",
-        secure=True if config_settings.ENV_TYPE == "production" else False,
-        path="/",
-        max_age=3600 * 24 * 7 # 1 week
-    )
+async def get_csrf_token(request: Request, response: Response):
+    csrf_token_value = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
+    if not csrf_token_value:
+        csrf_token_value = auth_service.generate_csrf_token() # generate_csrf_token should be a method in AuthService
+        response.set_cookie(
+            key=CSRF_TOKEN_COOKIE_NAME,
+            value=csrf_token_value,
+            httponly=False, 
+            samesite="lax",
+            secure=True if config_settings.ENV_TYPE == "production" else False,
+            path="/",
+            max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 # Match access token lifetime or a reasonable session duration
+        )
     return {"csrf_token": csrf_token_value}
 
 @router.get("/github/login")
@@ -98,6 +99,19 @@ async def refresh_access_token_route(request: Request, response: Response): # re
     try:
         # AuthService.refresh_access_token now needs to set cookies on the passed 'response' object
         token_data_dict = await auth_service.refresh_access_token(request, response)
+        # Ensure CSRF token is also refreshed/re-set if access token is refreshed
+        csrf_token_value = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
+        if not csrf_token_value: # Or if you want to always refresh it alongside access token
+            csrf_token_value = auth_service.generate_csrf_token()
+        response.set_cookie(
+            key=CSRF_TOKEN_COOKIE_NAME,
+            value=csrf_token_value,
+            httponly=False,
+            samesite="lax",
+            secure=True if config_settings.ENV_TYPE == "production" else False,
+            path="/",
+            max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
         return TokenResponse(**token_data_dict) # FastAPI will serialize this
     except (InvalidTokenException, UserNotFoundException) as e:
         logout_response_content = {"detail": e.message}

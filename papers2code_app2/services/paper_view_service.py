@@ -1,10 +1,11 @@
 import logging
-from typing import List, Dict, Any, Optional, Tuple, Union
+import shlex
+from typing import List, Dict, Any, Optional, Tuple
 from bson import ObjectId # type: ignore
 from bson.errors import InvalidId # type: ignore
 from pymongo.errors import PyMongoError # type: ignore
 from pymongo import DESCENDING, ASCENDING # type: ignore
-from datetime import datetime, timezone, timedelta # Added timedelta
+from datetime import datetime, timedelta
 
 from ..database import (
     get_papers_collection_async,
@@ -72,130 +73,209 @@ class PaperViewService:
         self,
         skip: int = 0,
         limit: int = 20,
-        sort_by: str = "publication_date",
-        sort_order: str = "desc",
+        sort_by: str = "newest", # Default API sort_by, changed from publication_date
+        sort_order: str = "desc",        # Default API sort_order
         user_id: Optional[str] = None, # For potential user-specific filtering/ranking in future
+        search_query: Optional[str] = None, # For 'search' functionality (title, abstract)
+        author: Optional[str] = None, # For 'searchAuthors' functionality
+        start_date: Optional[str] = None, # For 'startDate' (publicationDate filter)
+        end_date: Optional[str] = None,   # For 'endDate' (publicationDate filter)
+        # The following filters are kept assuming their fields are in BasePaper.
+        # If not, they should also be removed or handled.
         main_status: Optional[str] = None,
         impl_status: Optional[str] = None,
-        min_impl_votes: Optional[int] = None,
-        min_not_impl_votes: Optional[int] = None,
-        search_query: Optional[str] = None,
         tags: Optional[List[str]] = None,
-        min_stars: Optional[int] = None,
-        max_stars: Optional[int] = None,
-        min_update_days: Optional[int] = None, # Days since last update
-        max_update_days: Optional[int] = None, # Days since last update
-        min_creation_days: Optional[int] = None, # Days since creation
-        max_creation_days: Optional[int] = None, # Days since creation
         has_official_impl: Optional[bool] = None,
-        has_community_impl: Optional[bool] = None, # Placeholder, requires complex logic
-        venue: Optional[str] = None,
-        author: Optional[str] = None,
-        year: Optional[int] = None,
+        venue: Optional[str] = None
+        # Removed parameters based on fields not in BasePaper or not yet supported by frontend:
+        # min_impl_votes, min_not_impl_votes, min_stars, max_stars,
+        # min_update_days, max_update_days, min_creation_days, max_creation_days,
+        # has_community_impl, year (replaced by start_date/end_date)
     ) -> Tuple[List[Dict[str, Any]], int]:
         """
         Retrieves a list of papers with pagination, sorting, and filtering.
+        Simplified to reflect currently supported fields and frontend capabilities.
         """
-        self.logger.debug(f"Service: Fetching papers list. Skip: {skip}, Limit: {limit}, SortBy: {sort_by}, SortOrder: {sort_order}, User: {user_id}, Filters: {{...}}")
+        self.logger.debug(
+            f"Service: Fetching papers list. Skip: {skip}, Limit: {limit}, SortBy: {sort_by}, "
+            f"SortOrder: {sort_order}, User: {user_id}, SearchQuery: '{search_query}', Author: '{author}', "
+            f"Filters: main_status='{main_status}', impl_status='{impl_status}', tags='{tags}', "
+            f"has_official_impl='{has_official_impl}', venue='{venue}', "
+            f"start_date='{start_date}', end_date='{end_date}'"
+        )
 
-        query: Dict[str, Any] = {}
+        pipeline: List[Dict[str, Any]] = []
+        mongo_filter_conditions: List[Dict[str, Any]] = [] # For $match stage after $search or for find()
+        is_atlas_search_active = False
+        atlas_search_index_name = "default" # Make configurable if needed
+        atlas_overall_limit = 2400 # Make configurable if needed
 
-        # Apply filters
+        # 1. Populate mongo_filter_conditions from various non-text filters
         if main_status:
-            query["main_status"] = main_status
+            mongo_filter_conditions.append({"status": main_status})
         if impl_status:
-            query["implementability.status"] = impl_status
-        if min_impl_votes is not None:
-            query["implementability.votes_for_implementable"] = {"$gte": min_impl_votes}
-        if min_not_impl_votes is not None:
-            query["implementability.votes_for_not_implementable"] = {"$gte": min_not_impl_votes}
-        
-        if search_query:            
-            query["$or"] = [
-                {"title": {"$regex": search_query, "$options": "i"}},
-                {"abstract": {"$regex": search_query, "$options": "i"}},
-                # Assuming authors_display_name is an array of strings like ["Author A, Author B", "Author C"]
-                # or a single string. If it's an array of objects, path needs to be adjusted.
-                {"authors_display_name": {"$regex": search_query, "$options": "i"}} 
-            ]
+            mongo_filter_conditions.append({"implementabilityStatus": impl_status})
         if tags:
-            query["tags"] = {"$in": tags} 
+            mongo_filter_conditions.append({"tasks": {"$in": tags}})
+        if venue:
+            mongo_filter_conditions.append({"proceeding": {"$regex": venue, "$options": "i"}})
 
-        if min_stars is not None and max_stars is not None:
-            query["stars"] = {"$gte": min_stars, "$lte": max_stars}
-        elif min_stars is not None:
-            query["stars"] = {"$gte": min_stars}
-        elif max_stars is not None:
-            query["stars"] = {"$lte": max_stars}
-
-        now = datetime.now(timezone.utc)
-        # Date-based filtering - Placeholder logic, needs schema alignment
-        # Example: if 'last_update_date' is stored as datetime
-        if min_update_days is not None:
-            query["last_update_date"] = {"$gte": now - timedelta(days=min_update_days)}
-        if max_update_days is not None:
-            query["last_update_date"] = {"$lte": now - timedelta(days=max_update_days)}
-        if min_creation_days is not None:
-            query["creation_date"] = {"$gte": now - timedelta(days=min_creation_days)}
-        if max_creation_days is not None:
-            query["creation_date"] = {"$lte": now - timedelta(days=max_creation_days)}
+        date_filter_parts = {}
+        try:
+            if start_date:
+                dt_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                date_filter_parts["$gte"] = dt_start
+            if end_date:
+                dt_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+                if dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0:
+                    dt_end = dt_end.replace(hour=23, minute=59, second=59, microsecond=999999)
+                date_filter_parts["$lte"] = dt_end
+            if date_filter_parts:
+                mongo_filter_conditions.append({"publicationDate": date_filter_parts})
+        except ValueError as e:
+            self.logger.warning(f"Invalid date format for start_date/end_date: {e}. Date filter will be ignored.")
 
         if has_official_impl is not None:
-            # Assumes 'links.official_github_url' stores the official link URL string
             if has_official_impl:
-                query["links.official_github_url"] = {"$exists": True, "$ne": "", "$ne": None}
+                mongo_filter_conditions.append({"pwcUrl": {"$exists": True, "$ne": "", "$ne": None}})
             else:
-                query["$or"] = [
-                    {"links.official_github_url": {"$exists": False}},
-                    {"links.official_github_url": ""},
-                    {"links.official_github_url": None}
-                ]
+                mongo_filter_conditions.append({
+                    "$or": [{"pwcUrl": {"$exists": False}}, {"pwcUrl": ""}, {"pwcUrl": None}]
+                })
+
+        # 2. Build Atlas $search stage if search_query or author are present
+        atlas_compound_must: List[Dict[str, Any]] = []
+        atlas_compound_should: List[Dict[str, Any]] = []
+        atlas_compound_filter: List[Dict[str, Any]] = []
+
+        if search_query:
+            is_atlas_search_active = True
+            try:
+                search_terms = shlex.split(search_query)
+            except ValueError:
+                search_terms = search_query.split()
+                self.logger.warning(f"shlex split failed for search_query '{search_query}', using simple split.")
+            
+            for term in search_terms:
+                atlas_compound_must.append({
+                    "text": {"query": term, "path": ["title", "abstract"], "fuzzy": {"maxEdits": 1, "prefixLength": 1}}
+                })
+            atlas_compound_should.append({ # Boost title matches more
+                "text": {"query": search_query, "path": "title", "score": {"boost": {"value": 5}}} # Increased boost to 5
+            })
+
+        if author:
+            is_atlas_search_active = True
+            # Add author to the 'filter' part of the compound query if it's a text search on authors
+            # Or, if 'authors' is an array of strings and you want exact matches, consider 'term' or 'terms' operator
+            atlas_compound_filter.append({"text": {"query": author, "path": "authors"}}) 
         
-        # has_community_impl is more complex. 
-        # It might require a join/lookup or a denormalized field on the paper document.
-        # For now, this filter is a placeholder and won't work without schema support or a more complex query.
-        if has_community_impl is not None:
-            self.logger.warning("Filtering by 'has_community_impl' is not fully implemented and may not work as expected.")
-            # Example: query["has_community_links_flag"] = has_community_impl # if such a flag exists
+        if is_atlas_search_active:
+            search_stage_compound: Dict[str, Any] = {}
+            if atlas_compound_must: search_stage_compound["must"] = atlas_compound_must
+            if atlas_compound_should: search_stage_compound["should"] = atlas_compound_should
+            if atlas_compound_filter: search_stage_compound["filter"] = atlas_compound_filter
+            
+            if not search_stage_compound:
+                self.logger.warning("Atlas search marked active but no search clauses generated. Falling back.")
+                is_atlas_search_active = False
+            else:
+                search_stage: Dict[str, Any] = {
+                    "$search": {"index": atlas_search_index_name, "compound": search_stage_compound}
+                }
+                if search_query: # Add highlight only if main text search was done
+                    search_stage["$search"]["highlight"] = {"path": ["title", "abstract"]}
+                pipeline.append(search_stage)
 
-        if venue:
-            query["venue"] = {"$regex": venue, "$options": "i"}
-        if author: 
-            # This assumes 'authors_parsed' is an array of arrays of strings, e.g., [["First Last"], ["Another One"]]
-            # Or 'authors_display_name' is an array of strings like ["Name1", "Name2"]
-            # Adjust path and query structure based on your actual schema for authors.
-            # If 'authors_display_name' is a single string, this won't work directly.
-            query["authors_display_name"] = {"$regex": author, "$options": "i"} # Simple regex match on display names
+        # 3. Add $match stage for all other (non-text) filters if Atlas Search is active
+        if is_atlas_search_active and mongo_filter_conditions:
+            pipeline.append({"$match": {"$and": mongo_filter_conditions}})
 
-        if year:
-            query["publication_date"] = {
-                "$gte": datetime(year, 1, 1, tzinfo=timezone.utc),
-                "$lt": datetime(year + 1, 1, 1, tzinfo=timezone.utc)
-            }
+        # 4. Add score field and filter by score threshold if Atlas search with search_query
+        if is_atlas_search_active and search_query:
+            pipeline.append({"$addFields": {"score": {"$meta": "searchScore"}}})
+            score_threshold = 3.0  # From old app, ensure it's a float
+            pipeline.append({"$match": {"score": {"$gt": score_threshold}}})
 
-        mongo_sort_order = DESCENDING if sort_order == "desc" else ASCENDING
-        sort_field = sort_by
-        # Map API sort_by fields to actual database field names if they differ
-        if sort_by == "publication_date": # Default
-            sort_field = "publication_date"
-        elif sort_by == "stars":
-            sort_field = "stars" # Assumes a direct field named 'stars'
-        elif sort_by == "last_update":
-            sort_field = "last_update_date" # Assumes 'last_update_date'
-        elif sort_by == "creation_date":
-            sort_field = "creation_date"
-        elif sort_by == "implementability_score":
-            sort_field = "implementability.score" # Example path
+        # 5. Sorting
+        sort_doc: Dict[str, Any] = {}
+        parsed_sort_order_val = DESCENDING if sort_order == "desc" else ASCENDING
+
+        if is_atlas_search_active and search_query and (sort_by == "relevance" or sort_by == "newest"):
+            # Sort by the 'score' field we added if search_query is active and relevance is requested
+            sort_doc = {"score": DESCENDING}
+        elif sort_by == "newest":
+            sort_doc = {"publicationDate": DESCENDING}
+        elif sort_by == "oldest":
+            sort_doc = {"publicationDate": ASCENDING}
+        elif sort_by == "upvotes":
+            sort_doc = {"upvoteCount": parsed_sort_order_val}
+        elif sort_by == "publication_date":
+            sort_doc = {"publicationDate": parsed_sort_order_val}
         elif sort_by == "title":
-            sort_field = "title_for_sort" # Assumes a case-insensitive sort field or use default title
-        # Add more valid sort fields as needed, otherwise, it might sort by a non-existent field or error.
-
+            sort_doc = {"title": parsed_sort_order_val}
+        else:
+            self.logger.warning(f"Unsupported sort_by value: '{sort_by}'. Defaulting to 'newest' or relevance.")
+            if is_atlas_search_active and search_query:
+                 sort_doc = {"score": DESCENDING} # Default to score if search active
+            else:
+                 sort_doc = {"publicationDate": DESCENDING} # Default to newest otherwise
+        
         papers_collection = await get_papers_collection_async()
+        papers_list: List[Dict[str, Any]] = []
+        total_papers: int = 0
+
         try:
-            self.logger.debug(f"Executing paper list query: {query} with sort: {sort_field} {mongo_sort_order}")
-            cursor = papers_collection.find(query).sort(sort_field, mongo_sort_order).skip(skip).limit(limit)
-            papers_list = await cursor.to_list(length=limit)
-            total_papers = await papers_collection.count_documents(query)
+            if is_atlas_search_active:
+                if sort_doc: # Ensure sort_doc is not empty before adding $sort
+                    pipeline.append({"$sort": sort_doc})
+                
+                # Limit before facet for performance, then paginate within facet
+                pipeline.append({"$limit": atlas_overall_limit}) 
+                
+                facet_stage = {"$facet": {
+                    "paginatedResults": [{"$skip": skip}, {"$limit": limit}],
+                    "totalCount": [{"$count": "count"}]
+                }}
+                pipeline.append(facet_stage)
+                
+                self.logger.debug(f"Executing Atlas Search aggregation pipeline: {pipeline}")
+                agg_results_cursor = await papers_collection.aggregate(pipeline) # Added await
+                agg_results = await agg_results_cursor.to_list(length=None) 
+                
+                if agg_results and agg_results[0]:
+                    papers_list = agg_results[0].get('paginatedResults', [])
+                    total_papers_list = agg_results[0].get('totalCount', [])
+                    if total_papers_list:
+                        total_papers = total_papers_list[0].get('count', 0)
+                    else: # No documents matched the $search and subsequent $match stages
+                        total_papers = 0 
+                else: # Should not happen if aggregation runs, but good for safety
+                    papers_list = []
+                    total_papers = 0
+
+            else: # Standard find query (not Atlas Search)
+                # mongo_filter_conditions are used here
+                final_query = {"$and": mongo_filter_conditions} if mongo_filter_conditions else {}
+                
+                self.logger.debug(f"Executing standard find query: {final_query} with sort: {sort_doc}")
+                # pymongo's find().sort() can take a list of tuples or a dict for single field sort
+                # For multi-field sort, it must be a list of tuples.
+                # Our sort_doc is a dict, e.g. {"publicationDate": -1}
+                # If sort_doc can have multiple keys (it doesn't currently), convert to list of tuples
+                sort_criteria = list(sort_doc.items()) if sort_doc else None
+
+                cursor = papers_collection.find(final_query)
+                if sort_criteria:
+                    cursor = cursor.sort(sort_criteria)
+                cursor = cursor.skip(skip).limit(limit)
+                
+                papers_list = await cursor.to_list(length=limit)
+                total_papers = await papers_collection.count_documents(final_query)
+            
+            self.logger.debug(f"Service: Successfully fetched {len(papers_list)} papers. Total matching: {total_papers}")
+            return papers_list, total_papers
+
         except PyMongoError as e:
             self.logger.error(f"Service: Database error while fetching papers list: {e}", exc_info=True)
             raise DatabaseOperationException(f"Error fetching papers list: {e}")
@@ -203,175 +283,4 @@ class PaperViewService:
             self.logger.error(f"Service: Unexpected error during paper list retrieval: {e}", exc_info=True)
             raise ServiceException(f"An unexpected error occurred: {e}")
 
-        self.logger.debug(f"Service: Successfully fetched {len(papers_list)} papers. Total matching: {total_papers}")
-        return papers_list, total_papers
-
-    async def get_paper_details_with_community_links(self, paper_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
-        """
-        Retrieves a single paper by its ID, and also fetches its community-submitted links.
-        """
-        self.logger.debug(f"Service: Getting paper details and community links for paper_id: {paper_id}, user_id: {user_id}")
-        
-        paper_doc = await self.get_paper_by_id(paper_id, user_id) # Reuses the existing method
-
-        paper_links_collection = await get_paper_links_collection_async()
-        try:
-            obj_paper_id = ObjectId(paper_id) 
-            links_cursor = paper_links_collection.find({"paper_id": obj_paper_id, "is_approved": True})
-            community_links = await links_cursor.to_list(length=None) 
-        except InvalidId:
-            self.logger.error(f"Service: Invalid paper ID {paper_id} encountered unexpectedly in get_paper_details_with_community_links.")
-            raise PaperNotFoundException(f"Invalid paper ID format: {paper_id}")
-        except PyMongoError as e:
-            self.logger.error(f"Service: Database error fetching community links for paper {paper_id}: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error fetching community links for paper {paper_id}: {e}")
-
-        paper_doc["community_links"] = [
-            {
-                "link_id": str(link["_id"]),
-                "url": link["url"],
-                "description": link.get("description", ""),
-                "submitted_by": str(link["user_id"]), 
-                "submission_date": link["submission_date"],
-                "link_type": link.get("link_type", "other")
-            } for link in community_links
-        ]
-        
-        self.logger.debug(f"Service: Successfully fetched paper details with {len(community_links)} community links for paper_id: {paper_id}")
-        return paper_doc
-
-    async def get_papers_by_arxiv_ids(self, arxiv_ids: List[str]) -> List[Dict[str, Any]]:
-        """
-        Retrieves multiple papers based on a list of arXiv IDs.
-        """
-        self.logger.debug(f"Service: Attempting to get papers by arXiv IDs: {arxiv_ids}")
-        if not arxiv_ids:
-            return []
-
-        papers_collection = await get_papers_collection_async()
-        query = {"arxiv_id": {"$in": arxiv_ids}}
-        try:
-            cursor = papers_collection.find(query)
-            papers_list = await cursor.to_list(length=len(arxiv_ids))
-        except PyMongoError as e:
-            self.logger.error(f"Service: Database error while fetching papers by arXiv IDs: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error fetching papers by arXiv IDs: {e}")
-
-        self.logger.debug(f"Service: Successfully fetched {len(papers_list)} papers for arXiv IDs: {arxiv_ids}")
-        return papers_list
-
-    async def get_distinct_tags(self) -> List[str]:
-        """
-        Retrieves a list of all distinct tags present in the papers collection.
-        """
-        self.logger.debug("Service: Attempting to get distinct tags.")
-        papers_collection = await get_papers_collection_async()
-        try:
-            distinct_tags = await papers_collection.distinct("tags")
-        except PyMongoError as e:
-            self.logger.error(f"Service: Database error while fetching distinct tags: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error fetching distinct tags: {e}")
-        
-        filtered_tags = [tag for tag in distinct_tags if tag]
-        self.logger.debug(f"Service: Successfully fetched {len(filtered_tags)} distinct tags.")
-        return filtered_tags
-
-    async def get_distinct_venues(self) -> List[str]:
-        """
-        Retrieves a list of all distinct venues from the papers collection.
-        """
-        self.logger.debug("Service: Attempting to get distinct venues.")
-        papers_collection = await get_papers_collection_async()
-        try:
-            distinct_venues = await papers_collection.distinct("venue")
-        except PyMongoError as e:
-            self.logger.error(f"Service: Database error while fetching distinct venues: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error fetching distinct venues: {e}")
-
-        filtered_venues = [venue for venue in distinct_venues if venue] 
-        self.logger.debug(f"Service: Successfully fetched {len(filtered_venues)} distinct venues.")
-        return filtered_venues
-
-    async def get_distinct_authors(self) -> List[str]:
-        """
-        Retrieves a list of all distinct author display names.
-        """
-        self.logger.debug("Service: Attempting to get distinct authors.")
-        papers_collection = await get_papers_collection_async()
-        try:
-            # This assumes `authors_display_name` is an array of strings where each string can be a list of authors.
-            # Or it's a single string of authors. `distinct` on an array field flattens it.
-            distinct_authors_flat = await papers_collection.distinct("authors_display_name")
-        except PyMongoError as e:
-            self.logger.error(f"Service: Database error while fetching distinct authors: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error fetching distinct authors: {e}")
-
-        filtered_authors = [author for author in distinct_authors_flat if author and isinstance(author, str)]
-        self.logger.debug(f"Service: Successfully fetched {len(filtered_authors)} distinct authors.")
-        return filtered_authors
-
-    async def get_paper_count_by_status(self) -> Dict[str, int]:
-        """
-        Retrieves counts of papers grouped by their main_status and implementability.status.
-        """
-        self.logger.debug("Service: Getting paper counts by status.")
-        papers_collection = await get_papers_collection_async()
-        pipeline = [
-            {
-                "$facet": {
-                    "by_main_status": [
-                        {"$group": {"_id": "$main_status", "count": {"$sum": 1}}}
-                    ],
-                    "by_impl_status": [
-                        {"$group": {"_id": "$implementability.status", "count": {"$sum": 1}}}
-                    ]
-                }
-            }
-        ]
-        try:
-            results = await papers_collection.aggregate(pipeline).to_list(length=1)
-        except PyMongoError as e:
-            self.logger.error(f"Service: Database error while getting paper counts by status: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error getting paper counts by status: {e}")
-
-        status_counts: Dict[str, int] = {}
-        if results and results[0]:
-            for item in results[0].get("by_main_status", []):
-                if item["_id"]: 
-                    status_counts[f"main_{item['_id'].lower().replace(' ', '_')}"] = item["count"]
-            for item in results[0].get("by_impl_status", []):
-                if item["_id"]: 
-                     status_counts[f"impl_{item['_id'].lower().replace(' ', '_')}"] = item["count"]
-        
-        self.logger.debug(f"Service: Successfully fetched paper counts by status: {status_counts}")
-        return status_counts
-
-    async def record_paper_view(self, paper_id: str, user_id: Optional[str] = None, ip_address: Optional[str] = None) -> None:
-        """
-        Records a view for a given paper.
-        """
-        self.logger.debug(f"Service: Recording view for paper_id: {paper_id}, user_id: {user_id}, ip: {ip_address}")
-        try:
-            obj_paper_id = ObjectId(paper_id)
-        except InvalidId:
-            self.logger.warning(f"Service: Invalid paper ID format for view recording: {paper_id}")
-            raise PaperNotFoundException(f"Invalid paper ID format for view recording: {paper_id}")
-
-        papers_collection = await get_papers_collection_async()
-        try:
-            update_result = await papers_collection.update_one(
-                {"_id": obj_paper_id},
-                {"$inc": {"view_count": 1}, "$set": {"last_viewed_at": datetime.now(timezone.utc)}}
-            )
-            if update_result.matched_count == 0:
-                self.logger.warning(f"Service: Paper with ID {paper_id} not found during view recording.")
-                raise PaperNotFoundException(f"Paper with ID {paper_id} not found for view recording.")
-        except PyMongoError as e:
-            self.logger.error(f"Service: Database error while recording view for paper {paper_id}: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error recording view for paper {paper_id}: {e}")
-        except InvalidId: 
-             self.logger.warning(f"Service: Invalid user ID format for view recording: {user_id}")
-             pass 
-
-        self.logger.info(f"Service: View recorded successfully for paper_id: {paper_id}")
-        return
+    # ... any other methods ...

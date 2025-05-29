@@ -207,23 +207,23 @@ def ensure_db_indexes():
             else:
                 logger.info("Index 'primary_paper_id_1' already exists in 'papers' collection.")
 
-            if "arxiv_id_1" not in current_indexes_papers:
-                db_papers_sync.create_index([("arxiv_id", ASCENDING)], name="arxiv_id_1", sparse=True)
-                logger.info("Created sparse index on 'arxiv_id' in 'papers' collection.")
+            if "arxivId_1" not in current_indexes_papers: # Changed from arxiv_id
+                db_papers_sync.create_index([("arxivId", ASCENDING)], name="arxivId_1", sparse=True) # Changed from arxiv_id
+                logger.info("Created sparse index on 'arxivId' in 'papers' collection.")
             else:
-                logger.info("Index 'arxiv_id_1' already exists in 'papers' collection.")
+                logger.info("Index 'arxivId_1' already exists in 'papers' collection.")
 
-            if "created_at_-1" not in current_indexes_papers:
-                db_papers_sync.create_index([("created_at", DESCENDING)], name="created_at_-1")
-                logger.info("Created descending index on 'created_at' in 'papers' collection.")
+            if "creationDate_-1" not in current_indexes_papers: # Changed from created_at
+                db_papers_sync.create_index([("creationDate", DESCENDING)], name="creationDate_-1") # Changed from created_at
+                logger.info("Created descending index on 'creationDate' in 'papers' collection.")
             else:
-                logger.info("Index 'created_at_-1' already exists in 'papers' collection.")
+                logger.info("Index 'creationDate_-1' already exists in 'papers' collection.")
             
-            if "updated_at_-1" not in current_indexes_papers:
-                db_papers_sync.create_index([("updated_at", DESCENDING)], name="updated_at_-1")
-                logger.info("Created descending index on 'updated_at' in 'papers' collection.")
+            if "lastUpdateDate_-1" not in current_indexes_papers: # Changed from updated_at
+                db_papers_sync.create_index([("lastUpdateDate", DESCENDING)], name="lastUpdateDate_-1") # Changed from updated_at
+                logger.info("Created descending index on 'lastUpdateDate' in 'papers' collection.")
             else:
-                logger.info("Index 'updated_at_-1' already exists in 'papers' collection.")
+                logger.info("Index 'lastUpdateDate_-1' already exists in 'papers' collection.")
 
             if "status_1" not in current_indexes_papers:
                 db_papers_sync.create_index([("status", ASCENDING)], name="status_1", sparse=True)

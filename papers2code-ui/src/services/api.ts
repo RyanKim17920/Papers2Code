@@ -2,6 +2,18 @@
 import { Paper, AdminSettableImplementabilityStatus } from '../types/paper'; // AdminSettableImplementabilityStatus is imported
 import { getCsrfToken, UserProfile } from './auth';
 
+// Assuming UserProfile is defined in a types file, e.g., '../types/user'
+// For this example, let\'s define it here if not already imported.
+// Ideally, this UserProfile interface should be in a central types file (e.g., src/types/user.ts or src/types/paper.ts)
+export interface UserProfile {
+  id: string;
+  username: string;
+  avatarUrl?: string;
+  actionType?: string; // Optional: if you want to carry over the specific action
+  createdAt?: string;  // Optional: if you want to carry over the timestamp
+}
+// --- End UserProfile Definition ---
+
 const API_BASE_URL = 'http://localhost:5000';
 const PAPERS_PREFIX = '/api'; // Prefix for paper-related API calls
 
@@ -53,7 +65,7 @@ export const fetchPapersFromApi = async (
   params.append('limit', String(limit));
   params.append('page', String(page));
   if (searchTerm && searchTerm.trim()) {
-    params.append('search', searchTerm.trim());
+    params.append('searchQuery', searchTerm.trim()); // Changed 'search' to 'searchQuery'
   }
   if (sort) {
     params.append('sort', sort);
@@ -213,57 +225,35 @@ export const removePaperFromApi = async (paperId: string): Promise<void> => {
 
 // --- NEW: Function to fetch users who performed actions on a paper ---
 export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActionUsers> => {
-  const url = `${API_BASE_URL}/api/papers/${paperId}/actions`; // Ensure PAPERS_PREFIX is used if intended
+  const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/actions`;
   console.log("Fetching paper action users from:", url);
-  // try/catch block is fine here if you want to add specific logging for this call before re-throwing
-  try {
-      const response = await fetch(url, {
-          credentials: 'include',
-      });
-      // MODIFIED: Use handleApiResponse
-      const rawData = await handleApiResponse<any>(response); // Get raw data first
-      console.log(`Fetched raw action users for paper ${paperId}:`, rawData);
+  const response = await fetch(url, { credentials: 'include' });
 
-      // Transform rawData into PaperActionUsers
-      const transformedData: PaperActionUsers = {
-        upvotes: [],
-        votedIsImplementable: [],
-        votedNotImplementable: [],
-      };
+  // Use the BackendPaperActionsSummaryResponse type for the raw data
+  const rawData = await handleApiResponse<BackendPaperActionsSummaryResponse>(response);
+  console.log(`Fetched raw action users for paper ${paperId}: `, rawData); // This log is correct
 
-      if (rawData.upvotes && Array.isArray(rawData.upvotes)) {
-        transformedData.upvotes = rawData.upvotes.map((action: any) => ({
-          id: action.userId,
-          username: action.username,
-          avatarUrl: action.avatarUrl,
-          // Add other UserProfile fields if necessary, mapping from action
-        }));
-      }
+  // Helper function to map backend detail to frontend UserProfile
+  const mapToUserProfile = (detail: BackendPaperActionUserDetail): UserProfile => ({
+    id: detail.userId,
+    username: detail.username,
+    avatarUrl: detail.avatarUrl,
+    actionType: detail.actionType, // Carry over if UserProfile includes it
+    createdAt: detail.createdAt,   // Carry over if UserProfile includes it
+  });
 
-      if (rawData.implementabilityFlags && Array.isArray(rawData.implementabilityFlags)) {
-        rawData.implementabilityFlags.forEach((action: any) => {
-          const userProfile: UserProfile = {
-            id: action.userId,
-            username: action.username,
-            avatarUrl: action.avatarUrl,
-            // Add other UserProfile fields if necessary
-          };
-          // ADD THIS LOG:
-          console.log(`Processing actionType: '${action.actionType}' for user ${action.username}`);
-          if (action.actionType === 'Implementable') { // User voted "Is Implementable"
-            transformedData.votedIsImplementable.push(userProfile);
-          } else if (action.actionType === 'Not Implementable') { // User voted "Not Implementable"
-            transformedData.votedNotImplementable.push(userProfile);
-          }
-        });
-      }
-      
-      console.log(`Transformed action users for paper ${paperId}:`, transformedData);
-      return transformedData;
-  } catch (error) {
-      console.error(`Error fetching action users for paper ${paperId} (caught in function):`, error);
-      throw error; // Re-throw to be handled by the calling component/hook
-  }
+  // Perform the transformation
+  const transformedData: PaperActionUsers = {
+    upvotes: rawData.upvotes ? rawData.upvotes.map(mapToUserProfile) : [],
+    votedIsImplementable: rawData.votedIsImplementable ? rawData.votedIsImplementable.map(mapToUserProfile) : [],
+    votedNotImplementable: rawData.votedNotImplementable ? rawData.votedNotImplementable.map(mapToUserProfile) : [],
+    // If you add 'saves' to PaperActionUsers, map it here:
+    // saves: rawData.saves ? rawData.saves.map(mapToUserProfile) : [],
+  };
+
+  // This is the critical log. If it's still empty, the issue is subtle or console.log is misleading.
+  console.log(`Transformed action users for paper ${paperId} (within fetchPaperActionUsers): `, transformedData);
+  return transformedData;
 };
 // --- End NEW ---
 
@@ -300,51 +290,55 @@ export const updatePaperStatusInApi = async (
 };
 // --- End NEW ---
 
+// --- BEGIN ADDED TYPE DEFINITIONS ---
+// These interfaces define the expected structure of the raw JSON response
+// from the backend /actions endpoint, after camelCase conversion.
+
+interface BackendPaperActionUserDetail {
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  actionType?: string;
+  createdAt?: string; // Assuming datetime is serialized as string by the backend
+}
+
+interface BackendPaperActionsSummaryResponse {
+  paperId: string;
+  upvotes: BackendPaperActionUserDetail[];
+  saves: BackendPaperActionUserDetail[]; // Included to match backend, even if not fully used in PaperActionUsers yet
+  votedIsImplementable: BackendPaperActionUserDetail[];
+  votedNotImplementable: BackendPaperActionUserDetail[];
+}
+// --- END ADDED TYPE DEFINITIONS ---
+
 // NEW: Private helper function to handle API responses and 401 errors
 async function handleApiResponse<T>(response: Response): Promise<T> {
   if (response.status === 401) {
-    console.warn('API request unauthorized (401).');
-    // Throw an error to stop further processing in the calling function
-    // MODIFIED: Throw AuthenticationError instead of generic Error and remove automatic redirection/logout
-    throw new AuthenticationError('Unauthorized. Please log in.'); 
+    // Handle 401: e.g., redirect to login, clear session, throw specific error
+    console.error('Authentication error (401):', await response.text().catch(() => ""));
+    throw new AuthenticationError('User not authenticated or session expired.');
   }
-  // NEW: Handle 403 specifically for CSRF or other permission issues
-  if (response.status === 403) {
-    let errorMsg = `API Forbidden: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      if (errorData && (errorData.detail || errorData.error)) {
-        errorMsg = `API Forbidden (${response.status}): ${errorData.detail || errorData.error}`;
-        // Assuming CSRF errors might include a specific message in 'detail'
-        if (errorData.detail && errorData.detail.toLowerCase().includes('csrf')) {
-          throw new CsrfError(errorMsg);
-        }
-      }
-    } catch (e) {
-      // If parsing errorData fails, or if it's not a CsrfError, throw a generic CsrfError or rethrow
-      if (e instanceof CsrfError) throw e;
-      console.error("Failed to parse 403 error response JSON or not a CSRF error:", e);
+  if (response.status === 400) {
+    const errorData = await response.json().catch(() => ({ error: "Bad Request", description: "Unknown CSRF or validation error" }));
+    if (errorData.error === "CSRF validation failed") {
+      console.error('CSRF validation failed:', errorData.description);
+      throw new CsrfError(errorData.description || 'CSRF token missing or invalid.');
     }
-    // If it wasn't identified as a CsrfError specifically, throw a generic error for 403
-    throw new Error(errorMsg); 
+    // Handle other 400 errors if necessary
   }
   if (!response.ok) {
-    let errorMsg = `API Error: ${response.status} ${response.statusText}`;
-    try {
-      const errorData = await response.json();
-      // FastAPI often uses 'detail' for error messages
-      if (errorData && (errorData.detail || errorData.error)) { 
-        errorMsg = `API Error (${response.status}): ${errorData.detail || errorData.error}`;
-      }
-    } catch (e) {
-      // If parsing errorData fails, stick with the original errorMsg
-      console.error("Failed to parse error response JSON:", e);
-    }
-    throw new Error(errorMsg);
+    // Handle other errors (e.g., 404, 500)
+    const errorBody = await response.text().catch(() => `Status: ${response.status}`);
+    console.error(`API Error ${response.status}:`, errorBody);
+    throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
   }
-  // Handle cases like 204 No Content where response.json() would fail
-  if (response.status === 204) {
-    return null as T; // Or an appropriate empty value based on expected type T
-  }
-  return response.json() as Promise<T>; // Parse and return JSON for other successful responses
+  return response.json() as Promise<T>;
+}
+
+// Helper function to get CSRF token from cookie (implement according to your setup)
+function getCsrfToken(): string | null {
+  // Example: document.cookie.match(/csrftoken=([^;]+)/)?.[1] || null;
+  // This needs to be robustly implemented based on how your CSRF token cookie is named and stored.
+  const match = document.cookie.match(/csrftoken=([^;]+)/); // Adjust cookie name if different
+  return match ? match[1] : null;
 }

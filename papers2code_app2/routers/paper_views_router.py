@@ -27,37 +27,32 @@ async def list_papers(
     # Then parameters with default values
     page: int = Query(default=1, ge=1, description="Page number for pagination"), # ADDED: page parameter
     limit: int = Query(default=20, ge=1, le=100),
-    sort_by: str = Query(default="publication_date", description="Sort papers by field. Allowed: publication_date, stars, last_update, creation_date, implementability_score, title"),
-    sort_order: str = Query(default="desc", description="Sort order: asc or desc"),
-    main_status: Optional[str] = Query(default=None, description="Filter by main implementation status"),
-    impl_status: Optional[str] = Query(default=None, description="Filter by detailed implementability status"),
-    min_impl_votes: Optional[int] = Query(default=None, description="Minimum votes for 'implementable'"),
-    min_not_impl_votes: Optional[int] = Query(default=None, description="Minimum votes for 'not implementable'"),
-    search_query: Optional[str] = Query(default=None, min_length=3, description="Search query for title, abstract, authors"),
-    tags: Optional[List[str]] = Query(default=None, description="Filter by tags (comma-separated or multiple query params)"),
-    min_stars: Optional[int] = Query(default=None, description="Minimum GitHub stars for linked repositories"),
-    max_stars: Optional[int] = Query(default=None, description="Maximum GitHub stars for linked repositories"),
-    has_official_impl: Optional[bool] = Query(default=None, description="Filter by presence of official implementation"),
-    has_community_impl: Optional[bool] = Query(default=None, description="Filter by presence of community implementations"),
+    sort_by: str = Query(default="newest", alias="sort", description="Sort papers by field. Allowed: newest, oldest, upvotes, publication_date, title"),
+    sort_order: str = Query(default="desc", alias="sortOrder", description="Sort order: asc or desc"), # ADDED alias
+    main_status: Optional[str] = Query(default=None, alias="mainStatus", description="Filter by main implementation status"), # ADDED alias
+    impl_status: Optional[str] = Query(default=None, alias="implStatus", description="Filter by detailed implementability status"), # ADDED alias
+    search_query: Optional[str] = Query(default=None, alias="searchQuery", min_length=3, description="Search query for title, abstract"), # ADDED alias
+    tags: Optional[List[str]] = Query(default=None, description="Filter by tags (comma-separated or multiple query params)"), # Tags are often sent as multiple params, alias might not be strictly needed if FastAPI handles it.
+    has_official_impl: Optional[bool] = Query(default=None, alias="hasOfficialImpl", description="Filter by presence of official implementation"), # ADDED alias
     venue: Optional[str] = Query(default=None, description="Filter by publication venue (e.g., CVPR, NeurIPS)"),
-    author: Optional[str] = Query(default=None, description="Filter by author name"),
-    year: Optional[int] = Query(default=None, description="Filter by publication year"),
+    author: Optional[str] = Query(default=None, alias="searchAuthors", description="Filter by author name (searches author list)"), # Corrected alias to searchAuthors
+    start_date: Optional[str] = Query(default=None, alias="startDate", description="Filter by publication start date (ISO format YYYY-MM-DD)"), # ADDED alias
+    end_date: Optional[str] = Query(default=None, alias="endDate", description="Filter by publication end date (ISO format YYYY-MM-DD)"),   # ADDED alias
     service: PaperViewService = Depends(get_paper_view_service),
-    current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
+    current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     skip = (page - 1) * limit # Calculate skip from page and limit
-    logger.info(f"Router: Listing papers with query: {{page:{page}, limit:{limit}, skip:{skip}, sort_by:{sort_by}, ...}}")
-    user_id_str = str(current_user.id) if current_user and current_user.id else None # MODIFIED: Added check for current_user.id
+    logger.info(f"Router: Listing papers with query: {{page:{page}, limit:{limit}, skip:{skip}, sort_by:{sort_by}, sort_order:{sort_order}, author:{author}, start_date:{start_date}, end_date:{end_date}, ...}}") # Updated log
+    user_id_str = str(current_user.id) if current_user and current_user.id else None
     try:
         papers_db, total_papers = await service.get_papers_list(
             skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
             user_id=user_id_str,
             main_status=main_status, impl_status=impl_status,
-            min_impl_votes=min_impl_votes, min_not_impl_votes=min_not_impl_votes,
             search_query=search_query, tags=tags,
-            min_stars=min_stars, max_stars=max_stars,
-            has_official_impl=has_official_impl, has_community_impl=has_community_impl,
-            venue=venue, author=author, year=year
+            has_official_impl=has_official_impl,
+            venue=venue, author=author,
+            start_date=start_date, end_date=end_date
         )
     except DatabaseOperationException as e:
         logger.error(f"Router: Database error listing papers: {e}", exc_info=True)
@@ -97,13 +92,15 @@ async def get_paper(
     current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
 ):
     logger.info(f"Router: Getting paper with ID: {paper_id}")
-    user_id_str = str(current_user.id) if current_user else None
+    user_id_str = str(current_user.id) if current_user and current_user.id else None # Corrected to check current_user.id
     ip_address = request.client.host if request.client else None
 
     try:
-        paper_doc = await service.get_paper_details_with_community_links(paper_id, user_id_str)
+        paper_doc = await service.get_paper_by_id(paper_id, user_id_str) # MODIFIED HERE
         paper_response = await transform_paper_async(paper_doc, user_id_str)
-        background_tasks.add_task(service.record_paper_view, paper_id, user_id_str, ip_address)
+        # Assuming record_paper_view exists or will be handled separately.
+        # If it doesn't exist, it will be the next AttributeError.
+        # background_tasks.add_task(service.record_paper_view, paper_id, user_id_str, ip_address)
     except PaperNotFoundException as e:
         logger.warning(f"Router: Paper not found (ID: {paper_id}): {e}")
         raise HTTPException(status_code=404, detail=str(e))

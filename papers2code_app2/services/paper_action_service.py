@@ -141,7 +141,7 @@ class PaperActionService:
         self.logger.info(f"Service: Fetched {len(actions)} actions for paper_id={paper_id} from DB")
 
         if not actions:
-            return PaperActionsSummaryResponse(paper_id=paper_id, upvotes=[], saves=[], implementability_flags=[])
+            return PaperActionsSummaryResponse(paper_id=paper_id, upvotes=[], saves=[], voted_is_implementable=[], voted_not_implementable=[])
 
         valid_user_ids = []
         for action in actions:
@@ -168,8 +168,9 @@ class PaperActionService:
 
         upvotes_details = []
         saves_details = [] 
-        implementability_flags_details = []
-
+        voted_is_implementable = []
+        voted_not_implementable = []
+        print(actions)
         for action in actions:
             user_id_obj = action.get('userId')
             if not isinstance(user_id_obj, ObjectId) or str(user_id_obj) not in user_map:
@@ -209,17 +210,23 @@ class PaperActionService:
 
             if action_type == "upvote":
                 upvotes_details.append(action_detail)
-            elif action_type == "save": # Assuming 'save' is a possible action type
+            elif action_type == "save": # Potential future action 
                 saves_details.append(action_detail)
-            elif action_type in [IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE]: # Example for implementability
-                implementability_flags_details.append(action_detail)
-            # Add other action types as needed
-
+            elif action_type == IMPL_STATUS_COMMUNITY_IMPLEMENTABLE:
+                voted_is_implementable.append(action_detail)
+            elif action_type == IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE:
+                voted_not_implementable.append(action_detail)
+        print(PaperActionsSummaryResponse(
+            paper_id=paper_id,
+            upvotes=upvotes_details,
+            saves=saves_details, # Ensure this is handled or removed if not applicable
+            voted_is_implementable=voted_is_implementable,
+            voted_not_implementable=voted_not_implementable
+        ))
         return PaperActionsSummaryResponse(
             paper_id=paper_id,
             upvotes=upvotes_details,
             saves=saves_details, # Ensure this is handled or removed if not applicable
-            implementability_flags=implementability_flags_details # Ensure this is handled or removed
+            voted_is_implementable=voted_is_implementable,
+            voted_not_implementable=voted_not_implementable
         )
-
-# ... (rest of the file, if any, remains unchanged for now)
