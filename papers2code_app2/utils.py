@@ -123,8 +123,8 @@ async def transform_paper_async(
         "id": paper_id,
         "title": paper_doc.get("title"),
         "authors": _transform_authors(paper_doc.get("authors", [])),
-        "publicationDate": paper_doc.get("publication_date"), # MODIFIED: Was "publicationDate"
-        "upvoteCount": paper_doc.get("upvote_count", 0),       # MODIFIED: Was "upvoteCount"
+        "publication_date": paper_doc.get("publicationDate"), # MODIFIED: Was "publicationDate"
+        "upvote_count": paper_doc.get("upvoteCount", 0),       # MODIFIED: Was "upvoteCount"
         "status": paper_doc.get("status", "Not Started"),
     }
 
@@ -144,11 +144,11 @@ async def transform_paper_async(
             # else: keep default IMPL_STATUS_VOTING if value is unrecognized
 
         transformed_data.update({
-            "pwcUrl": _transform_url(paper_doc.get("pwc_url")),          # MODIFIED: Was "pwcUrl"
-            "arxivId": paper_doc.get("arxiv_id"),                        # MODIFIED: Was "arxivId"
+            "pwc_url": _transform_url(paper_doc.get("pwcUrl")),          # MODIFIED: Was "pwcUrl"
+            "arxiv_id": paper_doc.get("arxivId"),                        # MODIFIED: Was "arxivId"
             "abstract": paper_doc.get("abstract"),
-            "urlAbs": _transform_url(paper_doc.get("url_abs")),            # MODIFIED: Was "urlAbs"
-            "urlPdf": _transform_url(paper_doc.get("url_pdf")),            # MODIFIED: Was "urlPdf"
+            "url_abs": _transform_url(paper_doc.get("urlAbs")),            # MODIFIED: Was "urlAbs"
+            "url_pdf": _transform_url(paper_doc.get("urlPdf")),            # MODIFIED: Was "urlPdf"
             "venue": paper_doc.get("venue"), # Assumes DB field is "venue"
             "tags": paper_doc.get("tasks", []), # Assumes DB field is "tasks", Pydantic field "tags" has alias "tasks"
             "implementability_status": current_implementability_status,

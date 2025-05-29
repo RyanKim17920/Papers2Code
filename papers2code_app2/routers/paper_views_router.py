@@ -70,14 +70,12 @@ async def list_papers(
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching papers.")
 
     response_papers = []
-    logger.info("Old Response Papers: %s", response_papers) # MODIFIED: Added logging for old response papers
     for paper_db in papers_db:
         try:
             paper_response = await transform_paper_async(paper_db, user_id_str)
             response_papers.append(paper_response)
         except Exception as e:
             logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for list view: {e}", exc_info=True)
-    logger.info("Transformed Response Papers: %s", response_papers) # MODIFIED: Added logging for transformed response papers
     logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
     # MODIFIED: Return a dictionary matching PaginatedPaperResponse structure
     return {
