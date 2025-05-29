@@ -1,145 +1,244 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Query
-from typing import Optional
-from pymongo import DESCENDING, ASCENDING
-from pymongo.errors import OperationFailure
-from bson import ObjectId
-from bson.errors import InvalidId
-from dateutil.parser import parse as parse_date
-from dateutil.parser._parser import ParserError
-import shlex
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, BackgroundTasks
+from typing import List, Optional, Dict # MODIFIED: Removed Any
+
+from ..schemas_papers import PaperResponse, PaginatedPaperResponse # MODIFIED: Imported PaginatedPaperResponse
+from ..schemas_minimal import UserSchema as User # Using UserSchema as User for type hinting
+from ..services.paper_view_service import PaperViewService
+from ..services.exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
+from ..auth import get_current_user_optional # Changed from get_current_user
+from ..utils import transform_paper_async
 import logging
-
-from ..schemas_papers import PaperResponse, PaginatedPaperResponse
-from ..schemas_minimal import UserSchema
-from ..shared import (
-    config_settings,
-    MAIN_STATUS_NOT_IMPLEMENTABLE # Import the constant
-)
-from ..database import get_papers_collection_sync
-from ..utils import transform_paper_sync
-from ..auth import get_current_user_optional
-from ..services.paper_view_service import PaperViewService # Added
-from ..services.exceptions import (
-    PaperNotFoundException as ServicePaperNotFoundException, 
-    ServiceException as GeneralServiceException # Added
-)
-
-router = APIRouter(
-    prefix="/papers",
-    tags=["paper-views"],
-)
 
 logger = logging.getLogger(__name__)
 
-limiter = Limiter(key_func=get_remote_address)
+router = APIRouter(
+    prefix="/papers",
+    tags=["papers-view"],
+)
 
-@router.get("", response_model=PaginatedPaperResponse)
-@limiter.limit("100/minute")
-async def get_papers(
+# Dependency for PaperViewService
+def get_paper_view_service() -> PaperViewService:
+    return PaperViewService()
+
+@router.get("/", response_model=PaginatedPaperResponse) # MODIFIED: Changed response_model
+async def list_papers(
+    # Parameters without default values first
     request: Request,
-    limit: int = Query(12, gt=0),
-    page: int = Query(1, gt=0),
-    search: Optional[str] = Query(None, alias="search"),
-    sort: str = Query("newest", pattern="^(newest|oldest|upvotes)$", alias="sort"),
-    startDate: Optional[str] = Query(None, alias="startDate"),
-    endDate: Optional[str] = Query(None, alias="endDate"),
-    searchAuthors: Optional[str] = Query(None, alias="searchAuthors"),
-    current_user: Optional[UserSchema] = Depends(get_current_user_optional)
+    # Then parameters with default values
+    page: int = Query(default=1, ge=1, description="Page number for pagination"), # ADDED: page parameter
+    limit: int = Query(default=20, ge=1, le=100),
+    sort_by: str = Query(default="publication_date", description="Sort papers by field. Allowed: publication_date, stars, last_update, creation_date, implementability_score, title"),
+    sort_order: str = Query(default="desc", description="Sort order: asc or desc"),
+    main_status: Optional[str] = Query(default=None, description="Filter by main implementation status"),
+    impl_status: Optional[str] = Query(default=None, description="Filter by detailed implementability status"),
+    min_impl_votes: Optional[int] = Query(default=None, description="Minimum votes for 'implementable'"),
+    min_not_impl_votes: Optional[int] = Query(default=None, description="Minimum votes for 'not implementable'"),
+    search_query: Optional[str] = Query(default=None, min_length=3, description="Search query for title, abstract, authors"),
+    tags: Optional[List[str]] = Query(default=None, description="Filter by tags (comma-separated or multiple query params)"),
+    min_stars: Optional[int] = Query(default=None, description="Minimum GitHub stars for linked repositories"),
+    max_stars: Optional[int] = Query(default=None, description="Maximum GitHub stars for linked repositories"),
+    has_official_impl: Optional[bool] = Query(default=None, description="Filter by presence of official implementation"),
+    has_community_impl: Optional[bool] = Query(default=None, description="Filter by presence of community implementations"),
+    venue: Optional[str] = Query(default=None, description="Filter by publication venue (e.g., CVPR, NeurIPS)"),
+    author: Optional[str] = Query(default=None, description="Filter by author name"),
+    year: Optional[int] = Query(default=None, description="Filter by publication year"),
+    service: PaperViewService = Depends(get_paper_view_service),
+    current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
 ):
-    logger.info(f"Router: GET /papers request with params - page: {page}, limit: {limit}, search: '{search}', sort: '{sort}', etc.")
-    paper_view_service = PaperViewService()
-    current_user_id_str = str(current_user.id) if current_user else None
-
+    skip = (page - 1) * limit # Calculate skip from page and limit
+    logger.info(f"Router: Listing papers with query: {{page:{page}, limit:{limit}, skip:{skip}, sort_by:{sort_by}, ...}}")
+    user_id_str = str(current_user.id) if current_user and current_user.id else None # MODIFIED: Added check for current_user.id
     try:
-        # Date parsing is now handled by the service, but initial validation for format can remain or be moved.
-        # For now, let service handle parsing and its specific exceptions.
-        # try:
-        #     if startDate:
-        #         parse_date(startDate) # Quick validation of format before passing to service
-        #     if endDate:
-        #         parse_date(endDate)
-        # except ParserError:
-        #     raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid date format. Please use YYYY-MM-DD or similar.")
-
-        papers_list_docs, total_count = paper_view_service.get_papers_paginated(
-            limit=limit,
-            page=page,
-            search=search,
-            sort=sort,
-            start_date_str=startDate, # Pass original string names
-            end_date_str=endDate,
-            search_authors=searchAuthors
+        papers_db, total_papers = await service.get_papers_list(
+            skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
+            user_id=user_id_str,
+            main_status=main_status, impl_status=impl_status,
+            min_impl_votes=min_impl_votes, min_not_impl_votes=min_not_impl_votes,
+            search_query=search_query, tags=tags,
+            min_stars=min_stars, max_stars=max_stars,
+            has_official_impl=has_official_impl, has_community_impl=has_community_impl,
+            venue=venue, author=author, year=year
         )
+    except DatabaseOperationException as e:
+        logger.error(f"Router: Database error listing papers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except ServiceException as e:
+        logger.error(f"Router: Service error listing papers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Router: Unexpected error listing papers: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching papers.")
 
-        total_pages = (total_count + limit - 1) // limit if total_count > 0 else 1
-        
-        transformed_papers = [
-            transform_paper_sync(paper, current_user_id_str, detail_level="summary") 
-            for paper in papers_list_docs
-        ]
-        # Filter out None results from transformation, though ideally transform_paper_sync should always return a valid dict or raise
-        papers_list_transformed = [transformed for transformed in transformed_papers if transformed is not None]
-        
-        logger.info(f"Router: Returning {len(papers_list_transformed)} papers for page {page}, total_count: {total_count}")
-        return PaginatedPaperResponse(
-            papers=papers_list_transformed, 
-            total_count=total_count, 
-            page=page, 
-            page_size=limit, 
-            has_more=(page < total_pages)
-        )
-
-    except GeneralServiceException as e:
-        # Check if the message indicates an invalid date format to return 400
-        if "Invalid date format" in e.message:
-            logger.warning(f"Router: ServiceException (likely invalid date) in get_papers: {e.message}")
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
-        else:
-            logger.error(f"Router: GeneralServiceException in get_papers: {e.message}", exc_info=True)
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An error occurred while fetching papers: {e.message}")
-    except HTTPException: # Re-raise HTTPExceptions (e.g., from Depends or early validation)
-        raise
-    except Exception as general_error: # Catch-all for any other unexpected errors in the router layer
-        logger.exception("Router: An unexpected internal server error occurred in get_papers")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected internal server error occurred: {str(general_error)}")
+    response_papers = []
+    logger.info("Old Response Papers: %s", response_papers) # MODIFIED: Added logging for old response papers
+    for paper_db in papers_db:
+        try:
+            paper_response = await transform_paper_async(paper_db, user_id_str)
+            response_papers.append(paper_response)
+        except Exception as e:
+            logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for list view: {e}", exc_info=True)
+    logger.info("Transformed Response Papers: %s", response_papers) # MODIFIED: Added logging for transformed response papers
+    logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
+    # MODIFIED: Return a dictionary matching PaginatedPaperResponse structure
+    return {
+        "papers": response_papers,
+        "total_count": total_papers,
+        "page": page,
+        "page_size": limit, # FastAPI will use alias 'pageSize' due to model_config
+        "has_more": (skip + len(response_papers)) < total_papers
+    }
 
 @router.get("/{paper_id}", response_model=PaperResponse)
-@limiter.limit("100/minute")
-async def get_paper_by_id(
+async def get_paper(
+    # Parameters without default values first
     request: Request,
-    paper_id: str,
-    current_user: Optional[UserSchema] = Depends(get_current_user_optional)
+    background_tasks: BackgroundTasks,
+    # Then parameters with default values (Path also acts as a default here for DI)
+    paper_id: str = Path(..., description="The ID of the paper to retrieve"),
+    service: PaperViewService = Depends(get_paper_view_service),
+    current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
 ):
-    logger.info(f"Router: GET request for paper_id: {paper_id}")
-    paper_view_service = PaperViewService()
-    try:
-        paper_doc = paper_view_service.get_paper_by_id(paper_id)
-        
-        current_user_id_str = str(current_user.id) if current_user else None
-        transformed_paper = transform_paper_sync(paper_doc, current_user_id_str, detail_level="full")
-        
-        if not transformed_paper:
-            logger.error(f"Router: Failed to transform paper_doc for paper_id: {paper_id}, even though service returned a document.")
-            # This case should ideally not happen if paper_doc is valid and transform_paper_sync is robust.
-            # It implies an issue in transformation logic for a valid paper.
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to process paper data after retrieval.")
-        
-        logger.info(f"Router: Successfully processed and returning paper_id: {paper_id}")
-        return transformed_paper
+    logger.info(f"Router: Getting paper with ID: {paper_id}")
+    user_id_str = str(current_user.id) if current_user else None
+    ip_address = request.client.host if request.client else None
 
-    except ServicePaperNotFoundException as e: # Catch specific service exception
-        logger.warning(f"Router: PaperNotFoundException for paper_id {paper_id}: {e.message}") # Access e.message
-        # Determine status code based on the nature of PaperNotFoundException if it varies
-        # Check the actual message content from the exception definition
-        if "Invalid paper ID format" in e.message: # Match the message from PaperNotFoundException for invalid format
-            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=e.message)
-        else:
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=e.message)
-    except HTTPException: # Re-raise HTTPExceptions if they were raised by FastAPI/Starlette (e.g. validation errors)
-        raise
-    except Exception as general_error: # Catch any other unexpected errors
-        logger.exception(f"Router: An internal server error occurred in get_paper_by_id for paper_id: {paper_id}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An internal server error occurred: {str(general_error)}")
+    try:
+        paper_doc = await service.get_paper_details_with_community_links(paper_id, user_id_str)
+        paper_response = await transform_paper_async(paper_doc, user_id_str)
+        background_tasks.add_task(service.record_paper_view, paper_id, user_id_str, ip_address)
+    except PaperNotFoundException as e:
+        logger.warning(f"Router: Paper not found (ID: {paper_id}): {e}")
+        raise HTTPException(status_code=404, detail=str(e))
+    except DatabaseOperationException as e:
+        logger.error(f"Router: Database error getting paper (ID: {paper_id}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except ServiceException as e:
+        logger.error(f"Router: Service error getting paper (ID: {paper_id}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Router: Unexpected error getting paper (ID: {paper_id}): {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the paper.")
+    
+    logger.info(f"Router: Successfully fetched paper ID: {paper_id}")
+    return paper_response
+
+@router.get("/by_arxiv_ids/", response_model=List[PaperResponse])
+async def get_papers_by_arxiv_ids_route(
+    # Parameters without default values first (none here)
+    # Then parameters with default values
+    arxiv_ids: List[str] = Query(..., description="List of arXiv IDs to fetch papers for."),
+    service: PaperViewService = Depends(get_paper_view_service),
+    current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
+):
+    logger.info(f"Router: Getting papers by arXiv IDs: {arxiv_ids}")
+    if not arxiv_ids:
+        return []
+    user_id_str = str(current_user.id) if current_user else None
+    try:
+        papers_db = await service.get_papers_by_arxiv_ids(arxiv_ids)
+    except DatabaseOperationException as e:
+        logger.error(f"Router: Database error fetching by arXiv IDs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Router: Unexpected error fetching by arXiv IDs: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+
+    response_papers = []
+    for paper_db in papers_db:
+        try:
+            paper_response = await transform_paper_async(paper_db, user_id_str)
+            response_papers.append(paper_response)
+        except Exception as e:
+            logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for arXiv ID list: {e}", exc_info=True)
+    
+    logger.info(f"Router: Successfully fetched {len(response_papers)} papers by arXiv IDs.")
+    return response_papers
+
+@router.get("/meta/distinct_tags/", response_model=List[str])
+async def get_distinct_tags_route(
+    service: PaperViewService = Depends(get_paper_view_service)
+):
+    logger.info("Router: Getting distinct tags.")
+    try:
+        tags = await service.get_distinct_tags()
+    except DatabaseOperationException as e:
+        logger.error(f"Router: Database error fetching distinct tags: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Router: Unexpected error fetching distinct tags: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+    logger.info(f"Router: Successfully fetched {len(tags)} distinct tags.")
+    return tags
+
+@router.get("/meta/distinct_venues/", response_model=List[str])
+async def get_distinct_venues_route(
+    service: PaperViewService = Depends(get_paper_view_service)
+):
+    logger.info("Router: Getting distinct venues.")
+    try:
+        venues = await service.get_distinct_venues()
+    except DatabaseOperationException as e:
+        logger.error(f"Router: Database error fetching distinct venues: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Router: Unexpected error fetching distinct venues: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+    logger.info(f"Router: Successfully fetched {len(venues)} distinct venues.")
+    return venues
+
+@router.get("/meta/distinct_authors/", response_model=List[str])
+async def get_distinct_authors_route(
+    service: PaperViewService = Depends(get_paper_view_service)
+):
+    logger.info("Router: Getting distinct authors.")
+    try:
+        authors = await service.get_distinct_authors()
+    except DatabaseOperationException as e:
+        logger.error(f"Router: Database error fetching distinct authors: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Router: Unexpected error fetching distinct authors: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+    logger.info(f"Router: Successfully fetched {len(authors)} distinct authors.")
+    return authors
+
+@router.get("/meta/status_counts/", response_model=Dict[str, int])
+async def get_paper_status_counts_route(
+    service: PaperViewService = Depends(get_paper_view_service)
+):
+    logger.info("Router: Getting paper status counts.")
+    try:
+        counts = await service.get_paper_count_by_status()
+    except DatabaseOperationException as e:
+        logger.error(f"Router: Database error fetching status counts: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail=str(e))
+    except Exception as e:
+        logger.error(f"Router: Unexpected error fetching status counts: {e}", exc_info=True)
+        raise HTTPException(status_code=500, detail="An unexpected error occurred.")
+    logger.info(f"Router: Successfully fetched paper status counts: {counts}")
+    return counts
+
+# Placeholder for adding a new paper - this would typically be in a different service/router (e.g., admin or submission)
+# For now, just showing how it might look if it were here and async.
+# @router.post("/", response_model=PaperResponse, status_code=201)
+# async def create_paper_route(
+#     paper_data: PaperCreate,
+#     service: PaperViewService = Depends(get_paper_view_service),
+#     current_user: User = Depends(get_current_user) # Assuming creation requires auth
+# ):
+#     logger.info(f"Router: Attempting to create paper by user {current_user.username}")
+#     user_id_str = str(current_user.id)
+#     try:
+#         # This method doesn't exist in PaperViewService, would be in e.g. PaperSubmissionService
+#         # new_paper_db = await service.create_new_paper(paper_data, user_id_str)
+#         # paper_response = await transform_paper_async(new_paper_db, user_id_str)
+#         # return paper_response
+#         raise NotImplementedError("Paper creation endpoint is not fully implemented in this router.")
+#     except DatabaseOperationException as e:
+#         raise HTTPException(status_code=500, detail=str(e))
+#     except ServiceException as e:
+#         raise HTTPException(status_code=400, detail=str(e)) # e.g. validation error in service
+#     except Exception as e:
+#         logger.error(f"Router: Unexpected error creating paper: {e}", exc_info=True)
+#         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 

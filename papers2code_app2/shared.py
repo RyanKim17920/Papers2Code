@@ -22,6 +22,9 @@ IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE = "Admin Not Implementable"
 # Main Status Constants
 MAIN_STATUS_NOT_IMPLEMENTABLE = "Not Implementable"
 MAIN_STATUS_NOT_STARTED = "Not Started"
+MAIN_STATUS_IN_PROGRESS = "In Progress"  # ADDED
+MAIN_STATUS_COMPLETED = "Completed"    # ADDED
+MAIN_STATUS_ABANDONED = "Abandoned"    # ADDED
 
 # --- Nested Settings Models ---
 class GitHubOAuthSettings(BaseSettings):

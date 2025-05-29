@@ -46,6 +46,8 @@ export interface Paper {
 // Define the specific actions for implementability voting (matching backend)
 export type ImplementabilityAction = 'confirm' | 'dispute' | 'retract';
 
+export type AdminSettableImplementabilityStatus = 'Admin Implementable' | 'Admin Not Implementable' | 'Voting';
+
 export interface PaperSummary {
     id: string;
     pwcUrl?: string | null;

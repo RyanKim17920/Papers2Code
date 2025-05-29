@@ -2,12 +2,16 @@ import logging
 from datetime import datetime, timezone
 
 # MongoDB specific imports
-from bson import ObjectId
-from bson.errors import InvalidId
-from pymongo import ReturnDocument
-from pymongo.errors import DuplicateKeyError
+from bson import ObjectId # type: ignore
+from bson.errors import InvalidId # type: ignore
+from pymongo import ReturnDocument # type: ignore
+from pymongo.errors import DuplicateKeyError # type: ignore
 
-from ..database import get_papers_collection_sync, get_user_actions_collection_sync, get_removed_papers_collection_sync
+from ..database import (
+    get_papers_collection_async, 
+    get_user_actions_collection_async, 
+    get_removed_papers_collection_async
+)
 from ..shared import (
     config_settings,
     IMPL_STATUS_VOTING,
@@ -22,11 +26,10 @@ from .exceptions import PaperNotFoundException, UserActionException, InvalidActi
 
 class PaperModerationService:
     def __init__(self):
-        self.papers_collection = get_papers_collection_sync()
-        self.user_actions_collection = get_user_actions_collection_sync()
+        # Collections will be fetched asynchronously within each method
         self.logger = logging.getLogger(__name__)
 
-    def _recalculate_and_update_community_status(self, paper_doc_for_votes): # Removed paper_id_obj from params
+    async def _recalculate_and_update_community_status(self, paper_doc_for_votes):
         """
         Recalculates and updates the community-driven implementability_status of a paper 
         and its main 'status' based on its votes and thresholds.
@@ -34,14 +37,14 @@ class PaperModerationService:
         This function respects admin-set implementability statuses.
         Returns the updated paper document or the original if no changes were made.
         """
+        papers_collection = await get_papers_collection_async()
+
         if not paper_doc_for_votes or not isinstance(paper_doc_for_votes, dict) or '_id' not in paper_doc_for_votes:
             self.logger.error(f"Service:_recalculate: Invalid or missing paper_doc_for_votes.")
-            # This indicates a programming error in how this internal method is called.
-            # Raising an exception is appropriate.
             raise ServiceException("Invalid paper document provided for status recalculation.")
 
-        paper_id_obj = paper_doc_for_votes['_id'] # Extract ObjectId from the provided document
-        current_paper_doc = paper_doc_for_votes # Use the provided document directly
+        paper_id_obj = paper_doc_for_votes['_id']
+        current_paper_doc = paper_doc_for_votes
 
         current_db_implementability_status = current_paper_doc.get("implementability_status")
         current_main_status = current_paper_doc.get("status")
@@ -49,7 +52,7 @@ class PaperModerationService:
         admin_override_statuses = [IMPL_STATUS_ADMIN_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]
 
         update_fields = {}
-        new_calculated_community_status = current_db_implementability_status # Start with current
+        new_calculated_community_status = current_db_implementability_status
 
         if current_db_implementability_status not in admin_override_statuses:
             not_implementable_votes = current_paper_doc.get("nonImplementableVotes", 0)
@@ -83,28 +86,28 @@ class PaperModerationService:
 
         if update_fields:
             update_fields["updated_at"] = datetime.now(timezone.utc)
-            result = self.papers_collection.update_one({"_id": paper_id_obj}, {"$set": update_fields})
+            result = await papers_collection.update_one({"_id": paper_id_obj}, {"$set": update_fields})
             if result.matched_count == 0:
                 self.logger.error(f"Service:_recalculate: Failed to update paper {paper_id_obj} as it was not found during update.")
-                # It's possible the paper was deleted between read and write.
                 raise PaperNotFoundException(f"Paper {paper_id_obj} disappeared during status recalculation update.")
             
             self.logger.info(f"Service:_recalculate: Updated paper {paper_id_obj} with fields: {update_fields}")
-            # Fetch and return the fully updated document
-            updated_doc = self.papers_collection.find_one({"_id": paper_id_obj})
+            updated_doc = await papers_collection.find_one({"_id": paper_id_obj})
             if not updated_doc:
                 self.logger.error(f"Service:_recalculate: Paper {paper_id_obj} not found after update attempt (should not happen if update succeeded).")
                 raise PaperNotFoundException(f"Paper {paper_id_obj} could not be retrieved after status update.")
             return updated_doc
 
-        # If no updates were made, return the original document that was passed in
         self.logger.info(f"Service:_recalculate: No status changes for paper {paper_id_obj}.")
         return current_paper_doc
 
-    def flag_paper_implementability(self, paper_id: str, user_id: str, action: str):
-        self.logger.info(f"Service: Flagging implementability for paper_id: {paper_id}, user_id: {user_id}, action: {action}")
+    async def flag_paper_implementability(self, paper_id: str, user_id: str, action: str):
+        self.logger.info(f"Service: Async flagging implementability for paper_id: {paper_id}, user_id: {user_id}, action: {action}")
         
-        paper_obj_id = None # Initialize to handle potential error before assignment
+        papers_collection = await get_papers_collection_async()
+        user_actions_collection = await get_user_actions_collection_async()
+
+        paper_obj_id = None
         try:
             user_obj_id = ObjectId(user_id)
             paper_obj_id = ObjectId(paper_id)
@@ -112,7 +115,7 @@ class PaperModerationService:
             self.logger.warning(f"Service: Invalid ID format for paper_id '{paper_id}' or user_id '{user_id}'.")
             raise PaperNotFoundException("Invalid paper or user ID format.")
 
-        paper = self.papers_collection.find_one({"_id": paper_obj_id})
+        paper = await papers_collection.find_one({"_id": paper_obj_id})
         if not paper:
             self.logger.warning(f"Service: Paper not found with paper_id: {paper_id}")
             raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
@@ -128,7 +131,7 @@ class PaperModerationService:
             IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE, 
             IMPL_STATUS_COMMUNITY_IMPLEMENTABLE
         ]
-        current_action_doc = self.user_actions_collection.find_one({
+        current_action_doc = await user_actions_collection.find_one({
             "userId": user_obj_id,
             "paperId": paper_obj_id,
             "actionType": {"$in": action_types_for_query}
@@ -184,194 +187,198 @@ class PaperModerationService:
         else:
             raise InvalidActionException(f"Invalid action type: {action}")
 
-        # Perform DB operations
         try:
-            user_action_insert_result = None # Initialize to store insert result
             if user_action_operation == 'insert':
-                user_action_insert_result = self.user_actions_collection.insert_one({
+                await user_actions_collection.insert_one({
                     "userId": user_obj_id,
-                    "paperId": paper_obj_id,  # Ensure correct variable paper_obj_id is used
+                    "paperId": paper_obj_id,
                     "actionType": new_user_action_type_for_db,
                     "createdAt": datetime.now(timezone.utc)
                 })
             elif user_action_operation == 'update':
-                self.user_actions_collection.update_one(
+                await user_actions_collection.update_one(
                     {"_id": current_action_doc["_id"]},
                     {"$set": {"actionType": new_user_action_type_for_db, "updatedAt": datetime.now(timezone.utc)}}
                 )
             elif user_action_operation == 'delete':
-                self.user_actions_collection.delete_one({"_id": current_action_doc["_id"]})
+                await user_actions_collection.delete_one({"_id": current_action_doc["_id"]})
             
-            updated_paper_doc_after_votes = None
+            # Update paper vote counts if there are any operations in $inc
+            updated_paper_after_vote_counts = None
             if paper_vote_update_ops["$inc"]: # Check if there's anything to increment
-                updated_paper_doc_after_votes = self.papers_collection.find_one_and_update(
-                    {"_id": paper_obj_id, "admin_lock": {"$ne": True}},
+                paper_vote_update_ops["$set"] = {"updated_at": datetime.now(timezone.utc)} # Also update timestamp
+                updated_paper_after_vote_counts = await papers_collection.find_one_and_update(
+                    {"_id": paper_obj_id},
                     paper_vote_update_ops,
                     return_document=ReturnDocument.AFTER
                 )
-                if not updated_paper_doc_after_votes:
-                    self.logger.warning(f"Service: Paper {paper_id} (obj_id: {paper_obj_id}) might be admin-locked or was not found during vote update.")
-                    # Rollback user action if paper update failed
-                    if user_action_operation == 'insert' and user_action_insert_result:
-                        self.logger.info(f"Rolling back insert action for user {user_obj_id} on paper {paper_obj_id} due to failed paper update.")
-                        self.user_actions_collection.delete_one({"_id": user_action_insert_result.inserted_id})
-                    # Consider more specific rollbacks for 'update' and 'delete' if necessary
-                    raise UserActionException("Could not update paper vote counts, it might be admin-locked or not found. Your action has been rolled back.")
+                if not updated_paper_after_vote_counts:
+                    self.logger.error(f"Service: Paper {paper_obj_id} not found during vote count update after action {action}.")
+                    # This could happen if paper was deleted between initial find and this update
+                    raise PaperNotFoundException(f"Paper {paper_id} not found during vote count update.")
+                paper_to_recalculate = updated_paper_after_vote_counts
+            else: # If no vote counts changed (e.g. retracting a non-existent vote, though caught earlier)
+                  # or if the action was invalid (also caught earlier)
+                  # We still need the paper document for recalculation if an action was performed.
+                  # If an action was performed (insert/update/delete on user_actions), we should use the latest paper doc.
+                if user_action_operation: # if any user action was done
+                    paper_to_recalculate = await papers_collection.find_one({"_id": paper_obj_id})
+                    if not paper_to_recalculate:
+                         raise PaperNotFoundException(f"Paper {paper_id} not found before recalculation.")
+                else: # No user action, no vote count change, use original paper doc
+                    paper_to_recalculate = paper
 
-            self.logger.info(f"Service: Updated vote counts for paper {paper_obj_id}: {paper_vote_update_ops.get('$inc', {})}")
 
-            # Determine the paper document to use for recalculating community status
-            paper_to_recalculate = None
-            if updated_paper_doc_after_votes:
-                paper_to_recalculate = updated_paper_doc_after_votes
-            elif paper_vote_update_ops["$inc"]: 
-                # This case implies find_one_and_update had $inc ops but returned None, and error wasn't raised above.
-                # This should ideally be caught by the 'if not updated_paper_doc_after_votes:' block above.
-                # As a fallback, fetch the current paper state.
-                self.logger.warning(f"Service: updated_paper_doc_after_votes is None despite $inc ops for paper {paper_obj_id}. Fetching fresh doc.")
-                paper_to_recalculate = self.papers_collection.find_one({"_id": paper_obj_id})
-            else:
-                # No $inc operations, so paper vote counts didn't change via find_one_and_update.
-                # Use the paper document fetched at the start of the method.
-                paper_to_recalculate = paper
-            
             if not paper_to_recalculate:
-                # If paper_to_recalculate is still None, it's an issue (e.g. paper deleted mid-operation)
-                self.logger.error(f"Service: Critical - paper_to_recalculate is None for paper {paper_obj_id} before status recalculation. Paper might have been deleted.")
-                # Attempt to fetch one last time or raise an error.
-                paper_to_recalculate = self.papers_collection.find_one({"_id": paper_obj_id})
-                if not paper_to_recalculate:
-                    raise PaperNotFoundException(f"Paper with ID {paper_id} not found for final status recalculation.")
+                 self.logger.error(f"Service: paper_to_recalculate is None for paper {paper_obj_id} before calling _recalculate_and_update_community_status. This should not happen.")
+                 # Fallback to fetching it again, though this indicates a logic flaw above.
+                 paper_to_recalculate = await papers_collection.find_one({"_id": paper_obj_id})
+                 if not paper_to_recalculate:
+                     raise PaperNotFoundException(f"Paper {paper_id} could not be found before final status recalculation.")
 
-            final_paper_doc = self._recalculate_and_update_community_status(paper_to_recalculate)
-            return final_paper_doc
+
+            # Recalculate and update community status based on the new vote counts
+            final_updated_paper = await self._recalculate_and_update_community_status(paper_to_recalculate)
+            return final_updated_paper
 
         except DuplicateKeyError:
-            self.logger.error(f"Service: DuplicateKeyError during flag operation for paper {paper_id} by user {user_id}. This indicates a potential race condition or an issue with action tracking logic.", exc_info=True)
-            raise UserActionException("There was an issue recording your action due to a conflict. Please try again.")
+            self.logger.warning(f"Service: Duplicate key error for user action on paper {paper_id}, user {user_id}. This might indicate a race condition or an issue with action logic.")
+            # Depending on the desired behavior, you might re-fetch the paper and return it, or raise a specific error.
+            # For now, let's re-raise as a generic ServiceException as it's unexpected with prior checks.
+            raise ServiceException("A database conflict occurred while processing your request. Please try again.")
         except Exception as e:
-            self.logger.exception(f"Service: Unexpected error during flag_paper_implementability for paper {paper_id}, user {user_id}")
-            raise ServiceException(f"An unexpected error occurred while processing your request: {e}")
+            self.logger.exception(f"Service: Error during DB operation for flag_paper_implementability: {e}")
+            # Re-raise as a ServiceException or a more specific one if identifiable
+            raise ServiceException(f"Failed to flag paper implementability: {e}")
 
-    def set_paper_implementability(self, paper_id: str, admin_user_id: str, status_to_set_by_admin: str):
-        self.logger.info(f"Service: Setting implementability for paper_id: {paper_id} by admin_user_id: {admin_user_id} to '{status_to_set_by_admin}'")
+    async def set_paper_implementability(self, paper_id: str, admin_user_id: str, status_to_set_by_admin: str):
+        self.logger.info(f"Service: Async setting implementability for paper_id: {paper_id} by admin_user_id: {admin_user_id} to status: {status_to_set_by_admin}")
+        
+        papers_collection = await get_papers_collection_async()
+        user_actions_collection = await get_user_actions_collection_async() # For logging admin action
+
         try:
             paper_obj_id = ObjectId(paper_id)
+            admin_obj_id = ObjectId(admin_user_id) # Validate admin_user_id as well
         except InvalidId:
-            self.logger.warning(f"Service: Invalid paper ID format for set_implementability: {paper_id}")
-            raise PaperNotFoundException("Invalid paper ID format.")
+            self.logger.warning(f"Service: Invalid ID format for paper_id '{paper_id}' or admin_user_id '{admin_user_id}'.")
+            raise PaperNotFoundException("Invalid paper or admin ID format.")
 
-        paper_to_update = self.papers_collection.find_one({"_id": paper_obj_id})
-        if not paper_to_update:
-            self.logger.warning(f"Service: Paper not found for set_implementability: {paper_id}")
+        valid_admin_statuses = [
+            IMPL_STATUS_ADMIN_IMPLEMENTABLE, 
+            IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE, 
+            IMPL_STATUS_VOTING # Admin can reset to voting
+        ]
+        if status_to_set_by_admin not in valid_admin_statuses:
+            self.logger.error(f"Service: Invalid admin status provided: {status_to_set_by_admin}")
+            raise InvalidActionException(f"Invalid status for admin override: {status_to_set_by_admin}")
+
+        update_doc = {
+            "$set": {
+                "implementability_status": status_to_set_by_admin,
+                "updated_at": datetime.now(timezone.utc)
+            }
+        }
+        
+        # Determine main 'status' based on admin's implementability choice
+        if status_to_set_by_admin == IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE:
+            update_doc["$set"]["status"] = MAIN_STATUS_NOT_IMPLEMENTABLE
+        elif status_to_set_by_admin == IMPL_STATUS_ADMIN_IMPLEMENTABLE:
+            # If admin sets to implementable, main status could be "In Progress" or "Completed" later,
+            # but for now, if it was "Not Implementable", reset it.
+            # We might need more nuanced logic here based on existing main status.
+            # For simplicity, if admin sets to implementable, and current is "Not Implementable", reset to "Not Started".
+            # This part might need refinement based on product logic.
+            # Let's fetch the paper first to check current status.
+            current_paper = await papers_collection.find_one({"_id": paper_obj_id})
+            if not current_paper:
+                raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
+            if current_paper.get("status") == MAIN_STATUS_NOT_IMPLEMENTABLE:
+                 update_doc["$set"]["status"] = MAIN_STATUS_NOT_STARTED # Reset if it was Not Implementable
+            # If admin resets to "Voting", the main status should also reflect that (e.g. "Not Started" if it was "Not Implementable")
+        elif status_to_set_by_admin == IMPL_STATUS_VOTING:
+            current_paper = await papers_collection.find_one({"_id": paper_obj_id})
+            if not current_paper:
+                raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
+            if current_paper.get("status") == MAIN_STATUS_NOT_IMPLEMENTABLE:
+                 update_doc["$set"]["status"] = MAIN_STATUS_NOT_STARTED
+
+
+        updated_paper = await papers_collection.find_one_and_update(
+            {"_id": paper_obj_id},
+            update_doc,
+            return_document=ReturnDocument.AFTER
+        )
+
+        if not updated_paper:
+            self.logger.warning(f"Service: Paper not found with paper_id: {paper_id} during admin set operation.")
             raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
 
-        db_update_payload = {"updated_at": datetime.now(timezone.utc)}
+        # Log admin action
+        try:
+            await user_actions_collection.insert_one({
+                "userId": admin_obj_id,
+                "paperId": paper_obj_id,
+                "actionType": "admin_set_implementability",
+                "details": {"status_set_to": status_to_set_by_admin},
+                "createdAt": datetime.now(timezone.utc)
+            })
+        except Exception as e:
+            self.logger.error(f"Service: Failed to log admin action for set_implementability on paper {paper_id}: {e}", exc_info=True)
+            # Non-critical, so we don't re-raise, but good to know.
+
+        self.logger.info(f"Service: Admin {admin_user_id} successfully set implementability of paper {paper_id} to {status_to_set_by_admin}. New main status: {updated_paper.get('status')}")
+        return updated_paper
+
+    async def delete_paper(self, paper_id: str, admin_user_id: str) -> bool:
+        self.logger.info(f"Service: Async deleting paper_id: {paper_id} by admin_user_id: {admin_user_id}")
+
+        papers_collection = await get_papers_collection_async()
+        user_actions_collection = await get_user_actions_collection_async()
+        removed_papers_collection = await get_removed_papers_collection_async()
         
-        valid_admin_settable_statuses = [
-            IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE, 
-            IMPL_STATUS_ADMIN_IMPLEMENTABLE, 
-            IMPL_STATUS_VOTING
-        ]
-        if status_to_set_by_admin not in valid_admin_settable_statuses:
-            self.logger.warning(f"Service: Invalid status value '{status_to_set_by_admin}' for set_implementability paper {paper_id}")
-            raise InvalidActionException(f"Invalid status value: {status_to_set_by_admin}. Must be one of {valid_admin_settable_statuses}")
-
-        db_update_payload["implementability_status"] = status_to_set_by_admin
-        
-        current_main_status = paper_to_update.get("status")
-        new_main_status = current_main_status
-
-        if status_to_set_by_admin == IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE:
-            if current_main_status != MAIN_STATUS_NOT_IMPLEMENTABLE:
-                new_main_status = MAIN_STATUS_NOT_IMPLEMENTABLE
-        elif status_to_set_by_admin == IMPL_STATUS_ADMIN_IMPLEMENTABLE or status_to_set_by_admin == IMPL_STATUS_VOTING:
-            if current_main_status == MAIN_STATUS_NOT_IMPLEMENTABLE:
-                new_main_status = MAIN_STATUS_NOT_STARTED
-        
-        if new_main_status != current_main_status:
-            db_update_payload["status"] = new_main_status
-        
-        # Only update if there are actual changes to be made to avoid unnecessary writes
-        # or if the status is being set to IMPL_STATUS_VOTING (which always triggers recalculation)
-        if len(db_update_payload) > 1 or status_to_set_by_admin == IMPL_STATUS_VOTING: # >1 because updated_at is always there
-            result = self.papers_collection.update_one(
-                {"_id": paper_obj_id},
-                {"$set": db_update_payload}
-            )
-            if not result.matched_count and not result.modified_count:
-                 # This means the paper disappeared between find_one and update_one
-                 self.logger.error(f"Service: Paper {paper_obj_id} not found during update for set_implementability.") # Corrected variable
-                 raise PaperNotFoundException(f"Paper {paper_id} disappeared during update.")
-            self.logger.info(f"Service: Updated paper {paper_obj_id} with admin status. Payload: {db_update_payload}") # Corrected variable
-        else:
-            self.logger.info(f"Service: No change required for paper {paper_obj_id} by admin status set to '{status_to_set_by_admin}', current status is the same.") # Corrected variable
-
-        # If owner reverted to 'voting', recalculate community status and potentially main status again
-        # Pass the paper document with the potentially updated 'implementability_status' (set to 'voting')
-        # and 'status' (potentially reverted to 'Not Started')
-        if status_to_set_by_admin == IMPL_STATUS_VOTING:
-            # Fetch the paper again to ensure we have the latest version before recalculation,
-            # especially if db_update_payload only contained updated_at.
-            paper_after_admin_set = self.papers_collection.find_one({"_id": paper_obj_id}) # Corrected variable
-            if not paper_after_admin_set:
-                self.logger.error(f"Service: Paper {paper_obj_id} not found before recalculation after admin set to voting.") # Corrected variable
-                raise PaperNotFoundException(f"Paper {paper_id} not found before recalculation.")
-            self.logger.info(f"Service: Recalculating community status for {paper_obj_id} after admin set to voting.") # Corrected variable
-            # Corrected call: _recalculate_and_update_community_status expects the paper document
-            self._recalculate_and_update_community_status(paper_doc_for_votes=paper_after_admin_set)
-
-        final_paper_doc = self.papers_collection.find_one({"_id": paper_obj_id}) # Corrected variable
-        if not final_paper_doc:
-            self.logger.error(f"Service: Paper {paper_obj_id} not found when fetching final state after set_implementability.") # Corrected variable
-            raise PaperNotFoundException(f"Paper {paper_id} could not be retrieved after set_implementability operation.")
-        return final_paper_doc
-
-    def delete_paper(self, paper_id: str, admin_user_id: str):
-        self.logger.info(f"Service: Deleting paper_id: {paper_id} by admin_user_id: {admin_user_id}")
         try:
             paper_obj_id = ObjectId(paper_id)
+            admin_obj_id = ObjectId(admin_user_id)
         except InvalidId:
-            self.logger.warning(f"Service: Invalid paper ID format for delete_paper: {paper_id}")
-            raise PaperNotFoundException("Invalid paper ID format.")
+            self.logger.warning(f"Service: Invalid ID format for paper_id '{paper_id}' or admin_user_id '{admin_user_id}'.")
+            raise PaperNotFoundException("Invalid paper or admin ID format.")
 
-        removed_papers_collection = get_removed_papers_collection_sync() # Get this collection
-
-        paper_to_delete = self.papers_collection.find_one({"_id": paper_obj_id})
+        paper_to_delete = await papers_collection.find_one({"_id": paper_obj_id})
         if not paper_to_delete:
-            self.logger.warning(f"Service: Paper not found for deletion: {paper_id}")
+            self.logger.warning(f"Service: Paper not found with paper_id: {paper_id} for deletion.")
             raise PaperNotFoundException(f"Paper with ID {paper_id} not found for deletion.")
 
-        paper_to_delete["removedAt"] = datetime.now(timezone.utc)
-        paper_to_delete["removedBy"] = admin_user_id 
-        paper_to_delete["updated_at_before_removal"] = paper_to_delete.get("updated_at", paper_to_delete.get("created_at", datetime.now(timezone.utc)))
-        
-        # Remove _id before inserting into removed_papers if it causes issues, or ensure it's fine.
-        # Typically, it's fine to keep the same _id for archival.
-
         try:
-            insert_result = removed_papers_collection.insert_one(paper_to_delete)
-            if not insert_result.inserted_id:
-                self.logger.error(f"Service: Failed to archive paper {paper_obj_id} to removed_papers_collection.") # Corrected variable
-                raise ServiceException("Failed to archive paper before deletion.")
-            self.logger.info(f"Service: Archived paper {paper_obj_id} to removed_papers_collection.")
-        except Exception as e:
-            self.logger.exception(f"Service: Error archiving paper {paper_obj_id}: {e}")
-            raise ServiceException(f"Error archiving paper: {e}")
+            # Add to removed_papers collection
+            removed_doc = paper_to_delete.copy() # Make a copy
+            removed_doc["deleted_at"] = datetime.now(timezone.utc)
+            removed_doc["deleted_by"] = admin_obj_id 
+            removed_doc["original_id"] = paper_obj_id 
+            del removed_doc["_id"] # Remove original _id to allow MongoDB to generate a new one for this collection
 
-        try:
-            delete_result = self.papers_collection.delete_one({"_id": paper_obj_id})
+            await removed_papers_collection.insert_one(removed_doc)
+            
+            # Delete from original papers collection
+            delete_result = await papers_collection.delete_one({"_id": paper_obj_id})
+            
             if delete_result.deleted_count == 0:
-                self.logger.error(f"Service: Failed to delete paper {paper_obj_id} from main collection after archiving. It might have been already deleted.")
-                # This is a critical state if insert_one succeeded but delete_one found nothing.
-                # However, if it was already deleted by another process, then it's not an error for this flow.
-                # For now, we assume it should have been there.
-                raise ServiceException("Failed to delete paper after archiving, paper not found in main collection.")
-            self.logger.info(f"Service: Deleted paper {paper_obj_id} from main collection.")
+                # This is unlikely if find_one succeeded, but possible in a race condition
+                self.logger.error(f"Service: Paper {paper_id} was found but then failed to be deleted from 'papers' collection.")
+                # Attempt to remove from removed_papers if it was inserted? Or log inconsistency.
+                # For now, raise an error.
+                raise ServiceException(f"Paper {paper_id} could not be deleted after being archived.")
+
+            # Optionally, delete related user actions (or mark them as related to a deleted paper)
+            # For now, let's leave user_actions as they might be useful for audit, but this is a design choice.
+            # Example: await user_actions_collection.delete_many({"paperId": paper_obj_id})
+            # Or: await user_actions_collection.update_many({"paperId": paper_obj_id}, {"$set": {"paperDeleted": True}})
+
+
+            self.logger.info(f"Service: Paper {paper_id} successfully deleted by admin {admin_user_id} and moved to removed_papers.")
+            return True
+
         except Exception as e:
-            self.logger.exception(f"Service: Error deleting paper {paper_obj_id} from main collection: {e}")
-            # Potentially attempt to roll back the archival if deletion fails critically.
-            raise ServiceException(f"Error deleting paper from main collection: {e}")
-        
-        # No document to return for a delete operation, router will return 204 No Content.
-        return True # Indicates success
+            self.logger.exception(f"Service: Error during paper deletion process for paper {paper_id}: {e}")
+            # Re-raise as a ServiceException or a more specific one if identifiable
+            raise ServiceException(f"Failed to delete paper: {e}")

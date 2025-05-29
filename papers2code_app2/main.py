@@ -10,10 +10,10 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response as StarletteResponse # ADDED
 import logging # Ensure logging is imported and active
 from contextlib import asynccontextmanager # ADDED: For lifespan event handler
-from typing import Optional, Dict # ADDED: For type hinting
+from typing import Optional, Dict, List # MODIFIED: Added List
 
-# MODIFIED: Import ensure_db_indexes from database.py
-from .database import ensure_db_indexes 
+# MODIFIED: Import ensure_db_indexes and initialize_sync_db from database.py
+from .database import ensure_db_indexes, initialize_sync_db # MODIFIED: Added initialize_sync_db
 from .shared import config_settings # MODIFIED: config_settings is still needed from shared
 # from .routers import users, auth, admin, user_profile, research_fields, conference_series, conferences, proceedings, links, stats # Commented out missing routers
 from .routers import auth_routes # Corrected import for auth_routes
@@ -90,6 +90,8 @@ logger.debug("This is a test DEBUG log from 'papers2code_fastapi' logger in main
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Code to run before the application starts serving requests
+    logger.info("Application startup: Initializing synchronous database connection...")
+    initialize_sync_db() # ADDED: Initialize sync DB for index creation
     logger.info("Application startup: Ensuring database indexes...")
     ensure_db_indexes()
     logger.info("Database index check complete during lifespan startup")

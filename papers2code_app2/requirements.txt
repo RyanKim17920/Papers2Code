@@ -1,7 +1,7 @@
 fastapi
 uvicorn[standard]
 python-jose[cryptography]
-pymongo
+pymongo[srv,tls]>=4.0 # Ensures support for async and includes bson
 passlib[bcrypt]
 pydantic[email]
 requests

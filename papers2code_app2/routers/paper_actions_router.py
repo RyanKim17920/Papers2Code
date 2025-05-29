@@ -13,7 +13,7 @@ from ..shared import (
     IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
 )
 from ..database import get_papers_collection_sync, get_user_actions_collection_sync, get_users_collection_sync # Keep for get_paper_actions for now
-from ..utils import transform_paper_sync
+from ..utils import transform_paper_async
 from ..auth import get_current_user
 from ..services.paper_action_service import PaperActionService
 from ..services.exceptions import PaperNotFoundException, AlreadyVotedException, VoteProcessingException, InvalidActionException # Added InvalidActionException
@@ -46,7 +46,7 @@ async def vote_on_paper(
         if not user_id_str:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
-        updated_paper_doc = paper_action_service.record_vote(
+        updated_paper_doc = await paper_action_service.record_vote(
             paper_id=paper_id,
             user_id=user_id_str,
             vote_type=vote_type
@@ -57,7 +57,7 @@ async def vote_on_paper(
             logger.error(f"Paper {paper_id} not found after voting operation, service returned None unexpectedly.")
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after voting operation")
 
-        return transform_paper_sync(updated_paper_doc, user_id_str, detail_level="full")
+        return await transform_paper_async(updated_paper_doc, user_id_str, detail_level="full")
 
     except PaperNotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
@@ -97,18 +97,12 @@ async def get_paper_actions(
     paper_action_service = PaperActionService()
 
     try:
-        actions_summary = paper_action_service.get_paper_actions(paper_id)
+        actions_summary = await paper_action_service.get_paper_actions(paper_id)
         return actions_summary
     except PaperNotFoundException as e:
         logger.warning(f"Router: PaperNotFoundException for paper_id {paper_id}: {e}")
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except InvalidActionException as e: # Example if service raises this for bad paper_id format
-        logger.warning(f"Router: InvalidActionException for paper_id {paper_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except Exception as e: # Catch-all for other unexpected service errors
-        logger.exception(f"Router: Unexpected error fetching actions for paper_id {paper_id}: {e}")
-        raise HTTPException(
-            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
-            detail="An internal server error occurred while fetching paper actions."
-        )
+    except Exception as e: # General exception handler
+        logger.exception(f"Router: Error getting actions for paper_id {paper_id}: {e}")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve paper actions.")
 

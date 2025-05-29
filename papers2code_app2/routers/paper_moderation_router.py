@@ -29,7 +29,7 @@ from ..database import (
     get_user_actions_collection_sync,
     get_removed_papers_collection_sync
 )
-from ..utils import transform_paper_sync
+from ..utils import transform_paper_async
 from ..auth import get_current_user, get_current_owner
 from ..services.paper_moderation_service import PaperModerationService
 from ..services.exceptions import PaperNotFoundException, UserActionException, InvalidActionException, ServiceException
@@ -59,14 +59,13 @@ async def flag_paper_implementability(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
     try:
-        updated_paper_doc = moderation_service.flag_paper_implementability(
+        updated_paper_doc = await moderation_service.flag_paper_implementability(
             paper_id=paper_id,
             user_id=user_id_str,
             action=action
         )
-        # The service method should return the full paper document after all operations.
-        # If it returns None or raises an error, those are handled by the except blocks.
-        return transform_paper_sync(updated_paper_doc, user_id_str, detail_level="full")
+        # Await the async transformation
+        return await transform_paper_async(updated_paper_doc, user_id_str, detail_level="full")
 
     except PaperNotFoundException as e:
         logger.warning(f"Router: PaperNotFoundException for paper {paper_id}: {e}")
@@ -108,12 +107,13 @@ async def set_paper_implementability(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin user ID not found")
 
     try:
-        updated_paper_doc = moderation_service.set_paper_implementability(
+        updated_paper_doc = await moderation_service.set_paper_implementability(
             paper_id=paper_id,
             admin_user_id=admin_user_id_str,
             status_to_set_by_admin=payload.status_to_set
         )
-        return transform_paper_sync(updated_paper_doc, admin_user_id_str, detail_level="full")
+        # Await the async transformation
+        return await transform_paper_async(updated_paper_doc, admin_user_id_str, detail_level="full")
 
     except PaperNotFoundException as e:
         logger.warning(f"Router: PaperNotFoundException for set_implementability paper {paper_id}: {e}")
@@ -151,7 +151,7 @@ async def delete_paper(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin user ID not found")
 
     try:
-        success = moderation_service.delete_paper(paper_id=paper_id, admin_user_id=admin_user_id_str)
+        success = await moderation_service.delete_paper(paper_id=paper_id, admin_user_id=admin_user_id_str)
         if success: # Service returns True on success
             return None # FastAPI will return 204 No Content based on status_code in decorator
         else:

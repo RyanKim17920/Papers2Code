@@ -7,7 +7,7 @@ from bson.errors import InvalidId
 import logging
 
 from .shared import config_settings
-from .database import get_users_collection_sync
+from .database import get_users_collection_async  # Changed from get_users_collection_sync
 from .schemas_minimal import UserSchema
 
 logger = logging.getLogger(__name__)
@@ -21,7 +21,14 @@ REFRESH_TOKEN_EXPIRE_MINUTES = config_settings.REFRESH_TOKEN_EXPIRE_MINUTES
 ACCESS_TOKEN_COOKIE_NAME = "access_token_cookie"
 
 async def get_token_from_cookie(request: Request) -> Optional[str]:
+    logger.debug(f"get_token_from_cookie: Headers: {request.headers}")
+    logger.debug(f"get_token_from_cookie: All cookies received by server: {request.cookies}")
     token = request.cookies.get(ACCESS_TOKEN_COOKIE_NAME)
+    if token:
+        # Avoid logging the full token for security, just a confirmation and part of it
+        logger.debug(f"get_token_from_cookie: Found '{ACCESS_TOKEN_COOKIE_NAME}'. Token starts with: {token[:20]}...")
+    else:
+        logger.debug(f"get_token_from_cookie: Did not find '{ACCESS_TOKEN_COOKIE_NAME}' in request.cookies.")
     return token
 
 def create_access_token(data: dict, expires_delta: Optional[timedelta] = None):
@@ -50,8 +57,11 @@ async def get_current_user(token: Optional[str] = Depends(get_token_from_cookie)
         detail="Could not validate credentials",
         headers={"WWW-Authenticate": "Bearer"},
     )
+    
+    logger.debug(f"get_current_user: Attempting to get current user. Token received from dependency: {'PRESENT (partial): ' + token[:20] + '...' if token else 'MISSING'}")
+
     if not token:
-        logger.debug("get_current_user: No token found in cookie (token is None or empty). Raising credentials_exception.")
+        logger.warning("get_current_user: Token from Depends(get_token_from_cookie) is None or empty. Raising credentials_exception.")
         raise credentials_exception
 
     try:
@@ -85,7 +95,7 @@ async def get_current_user(token: Optional[str] = Depends(get_token_from_cookie)
         raise credentials_exception
     
     logger.debug(f"get_current_user: Token validated. User ID from sub: {user_id_from_token}")
-    users_collection = get_users_collection_sync()
+    users_collection = await get_users_collection_async() # Changed to async and await
     
     try:
         user_obj_id = ObjectId(user_id_from_token)
@@ -93,7 +103,7 @@ async def get_current_user(token: Optional[str] = Depends(get_token_from_cookie)
         logger.debug(f"get_current_user: Invalid ObjectId format for user_id '{user_id_from_token}' from token. Raising credentials_exception.")
         raise credentials_exception
 
-    user_dict = users_collection.find_one({"_id": user_obj_id})
+    user_dict = await users_collection.find_one({"_id": user_obj_id}) # Added await
     
     if user_dict is None:
         logger.debug(f"User with ID '{user_id_from_token}' not found in database. Raising credentials_exception.")
@@ -128,11 +138,6 @@ async def get_current_user_optional(token: Optional[str] = Depends(get_token_fro
     except Exception as e:
         logger.debug(f"get_current_user_optional: Unexpected error: {e}. Returning None.")
         return None
-
-async def get_current_active_user(current_user: Optional[UserSchema] = Depends(get_current_user)) -> UserSchema:
-    if not current_user:
-        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User not authenticated")
-    return current_user
 
 async def get_current_owner(current_user: UserSchema = Depends(get_current_user)) -> UserSchema:
     logger.info(f"get_current_owner called. Current user: {current_user.username}, Expected owner: {config_settings.OWNER_GITHUB_USERNAME}")

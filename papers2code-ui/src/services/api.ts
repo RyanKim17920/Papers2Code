@@ -1,5 +1,5 @@
 // src/services/api.ts
-import { Paper, AdminSettableImplementabilityStatus } from '../types/paper';
+import { Paper, AdminSettableImplementabilityStatus } from '../types/paper'; // AdminSettableImplementabilityStatus is imported
 import { getCsrfToken, UserProfile } from './auth';
 
 const API_BASE_URL = 'http://localhost:5000';
@@ -48,7 +48,7 @@ export const fetchPapersFromApi = async (
   searchTerm?: string,
   sort?: 'newest' | 'oldest' | 'upvotes',
   advancedFilters?: AdvancedPaperFilters
-): Promise<{ papers: Paper[]; totalPages: number }> => {
+): Promise<{ papers: Paper[]; totalPages: number; page: number; pageSize: number; hasMore: boolean }> => {
   const params = new URLSearchParams();
   params.append('limit', String(limit));
   params.append('page', String(page));
@@ -71,19 +71,22 @@ export const fetchPapersFromApi = async (
     }
   }
 
-  const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers?${params.toString()}`;
+  const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/?${params.toString()}`;
   console.log("Fetching from API:", url);
   const response = await fetch(url, { credentials: 'include' });
-  // MODIFIED: Use handleApiResponse
-  const data = await handleApiResponse<{ papers: Paper[]; totalCount: number }>(response);
-  // console.log('fetched data: ') // Optional: keep for debugging if needed
-  // console.log(data);
-  if (!data || !Array.isArray(data.papers) || typeof data.totalCount !== 'number') {
+  // MODIFIED: Use handleApiResponse with correct camelCase types for pageSize and hasMore from the backend's PaginatedPaperResponse
+  const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; page: number; pageSize: number; hasMore: boolean}>(response);
+  console.log('fetched data: ') // Optional: keep for debugging if needed
+  console.log(data);
+  // console.log(data.papers) // This line can be uncommented for debugging if needed
+  // MODIFIED: Check for camelCase properties from the backend's PaginatedPaperResponse
+  if (!data || !Array.isArray(data.papers) || typeof data.totalCount !== 'number' || typeof data.page !== 'number' || typeof data.pageSize !== 'number' || typeof data.hasMore !== 'boolean') {
     console.error("Unexpected API response structure after handleApiResponse:", data);
     throw new Error("Invalid data structure received from API after handling");
   }
   const totalPages = Math.ceil(data.totalCount / limit);
-  return { papers: data.papers, totalPages };
+  // MODIFIED: Access camelCase properties from data, matching the backend's PaginatedPaperResponse schema (which uses alias_generator=to_camel)
+  return { papers: data.papers, totalPages: totalPages, page: data.page, pageSize: data.pageSize, hasMore: data.hasMore };
 };
 
 // --- fetchPaperByIdFromApi ---
