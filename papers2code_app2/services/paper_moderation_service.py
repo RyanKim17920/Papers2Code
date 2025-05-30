@@ -46,7 +46,7 @@ class PaperModerationService:
         paper_id_obj = paper_doc_for_votes['_id']
         current_paper_doc = paper_doc_for_votes
 
-        current_db_implementability_status = current_paper_doc.get("implementability_status")
+        current_db_implementability_status = current_paper_doc.get("implementabilityStatus")
         current_main_status = current_paper_doc.get("status")
         
         admin_override_statuses = [IMPL_STATUS_ADMIN_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]
@@ -67,7 +67,7 @@ class PaperModerationService:
                 calculated_status_based_on_votes = IMPL_STATUS_COMMUNITY_IMPLEMENTABLE
             
             if current_db_implementability_status != calculated_status_based_on_votes:
-                update_fields["implementability_status"] = calculated_status_based_on_votes
+                update_fields["implementabilityStatus"] = calculated_status_based_on_votes
                 new_calculated_community_status = calculated_status_based_on_votes
 
         effective_implementability_status = new_calculated_community_status
@@ -85,7 +85,7 @@ class PaperModerationService:
             update_fields["status"] = new_main_status
 
         if update_fields:
-            update_fields["updated_at"] = datetime.now(timezone.utc)
+            update_fields["lastUpdated"] = datetime.now(timezone.utc)
             result = await papers_collection.update_one({"_id": paper_id_obj}, {"$set": update_fields})
             if result.matched_count == 0:
                 self.logger.error(f"Service:_recalculate: Failed to update paper {paper_id_obj} as it was not found during update.")
@@ -121,10 +121,10 @@ class PaperModerationService:
             raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
 
         admin_override_statuses = [IMPL_STATUS_ADMIN_IMPLEMENTABLE, IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE]
-        if paper.get("implementability_status") in admin_override_statuses:
+        if paper.get("implementabilityStatus") in admin_override_statuses:
             self.logger.warning(f"Service: Attempt to flag admin-locked paper {paper_id}.")
             raise UserActionException(
-                f"Implementability status is locked by admin to '{paper.get('implementability_status')}'. Voting is disabled."
+                f"Implementability status is locked by admin to '{paper.get('implementabilityStatus')}'. Voting is disabled."
             )
 
         action_types_for_query = [
@@ -206,7 +206,7 @@ class PaperModerationService:
             # Update paper vote counts if there are any operations in $inc
             updated_paper_after_vote_counts = None
             if paper_vote_update_ops["$inc"]: # Check if there's anything to increment
-                paper_vote_update_ops["$set"] = {"updated_at": datetime.now(timezone.utc)} # Also update timestamp
+                paper_vote_update_ops["$set"] = {"lastUpdated": datetime.now(timezone.utc)} # Also update timestamp
                 updated_paper_after_vote_counts = await papers_collection.find_one_and_update(
                     {"_id": paper_obj_id},
                     paper_vote_update_ops,
@@ -275,31 +275,29 @@ class PaperModerationService:
 
         update_doc = {
             "$set": {
-                "implementability_status": status_to_set_by_admin,
-                "updated_at": datetime.now(timezone.utc)
+                "implementabilityStatus": status_to_set_by_admin, # Corrected field name
+                "lastUpdated": datetime.now(timezone.utc)
             }
         }
         
-        # Determine main 'status' based on admin's implementability choice
+        # Determine main 'status' and reset votes based on admin's implementability choice
         if status_to_set_by_admin == IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE:
             update_doc["$set"]["status"] = MAIN_STATUS_NOT_IMPLEMENTABLE
+            update_doc["$set"]["isImplementableVotes"] = 0
+            update_doc["$set"]["nonImplementableVotes"] = 0
         elif status_to_set_by_admin == IMPL_STATUS_ADMIN_IMPLEMENTABLE:
-            # If admin sets to implementable, main status could be "In Progress" or "Completed" later,
-            # but for now, if it was "Not Implementable", reset it.
-            # We might need more nuanced logic here based on existing main status.
-            # For simplicity, if admin sets to implementable, and current is "Not Implementable", reset to "Not Started".
-            # This part might need refinement based on product logic.
-            # Let's fetch the paper first to check current status.
-            current_paper = await papers_collection.find_one({"_id": paper_obj_id})
-            if not current_paper:
-                raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
-            if current_paper.get("status") == MAIN_STATUS_NOT_IMPLEMENTABLE:
-                 update_doc["$set"]["status"] = MAIN_STATUS_NOT_STARTED # Reset if it was Not Implementable
-            # If admin resets to "Voting", the main status should also reflect that (e.g. "Not Started" if it was "Not Implementable")
+            update_doc["$set"]["status"] = MAIN_STATUS_NOT_STARTED # Assertively set to Not Started
+            update_doc["$set"]["isImplementableVotes"] = 0
+            update_doc["$set"]["nonImplementableVotes"] = 0
         elif status_to_set_by_admin == IMPL_STATUS_VOTING:
+            # If admin resets to "Voting", the main status should also reflect that 
+            # (e.g. "Not Started" if it was "Not Implementable")
+            # Vote counts are NOT reset here, allowing recalculation based on existing votes.
             current_paper = await papers_collection.find_one({"_id": paper_obj_id})
             if not current_paper:
-                raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
+                # This should ideally not happen if the paper_obj_id is valid and was checked before,
+                # but as a safeguard if this method is called directly with an ID that becomes invalid.
+                raise PaperNotFoundException(f"Paper with ID {paper_id} not found when checking status for Voting reset.")
             if current_paper.get("status") == MAIN_STATUS_NOT_IMPLEMENTABLE:
                  update_doc["$set"]["status"] = MAIN_STATUS_NOT_STARTED
 
@@ -316,11 +314,26 @@ class PaperModerationService:
 
         # Log admin action
         try:
+            # Remove previous admin implementability settings for this paper by this admin
+            await user_actions_collection.delete_many({
+                "userId": admin_obj_id,
+                "paperId": paper_obj_id,
+                "actionType": {
+                    "$in": [
+                        IMPL_STATUS_ADMIN_IMPLEMENTABLE,
+                        IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE,
+                        IMPL_STATUS_VOTING,
+                        "admin_set_implementability" # Old generic action type
+                    ]
+                }
+            })
+
+            # Log the new admin action with the specific status as actionType
             await user_actions_collection.insert_one({
                 "userId": admin_obj_id,
                 "paperId": paper_obj_id,
-                "actionType": "admin_set_implementability",
-                "details": {"status_set_to": status_to_set_by_admin},
+                "actionType": status_to_set_by_admin, # Use the status directly as actionType
+                # "details": {"status_set_to": status_to_set_by_admin}, # Removed as actionType is now specific
                 "createdAt": datetime.now(timezone.utc)
             })
         except Exception as e:

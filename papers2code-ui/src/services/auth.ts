@@ -43,11 +43,17 @@ export const checkCurrentUser = async (): Promise<UserProfile | null> => {
 // Function to log out
 export const logoutUser = async (): Promise<void> => {
     try {
-        const csrfToken = getCsrfToken();
+        let csrfToken = getCsrfToken(); // Get from localStorage
+
         if (!csrfToken) {
-            console.error("CSRF token not found for logout.");
-            // Optionally, try to fetch it again or alert the user
-            // For now, we'll proceed, but the backend will likely reject if CSRF is enforced
+            console.warn("CSRF token not found in localStorage for logout. Attempting to fetch a new one.");
+            await fetchAndStoreCsrfToken(); // Attempt to fetch and store
+            csrfToken = getCsrfToken(); // Try getting it again
+        }
+
+        if (!csrfToken) {
+            console.error("CSRF token still not available after attempting to fetch. Logout may fail or be rejected by the server if CSRF protection is enforced.");
+            // Proceeding as original code did, but the backend will likely reject if CSRF is enforced and token is missing.
         }
 
         // MODIFIED: Use apiClient and set X-CSRFToken header
@@ -88,7 +94,7 @@ export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
         return null;
     } catch (error: unknown) {
         console.error('Error fetching CSRF token from ' + CSRF_API_ENDPOINT + ':', error);
-        if (axios.isAxiosError(error)) {
+        if (axios.isAxiosError(error)) { // Ensure error is an AxiosError before accessing its properties
             console.error('Axios error details:', {
                 message: error.message,
                 config: error.config,
@@ -103,6 +109,9 @@ export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
             if (error.response) {
                 console.error('Error response data specifically:', error.response.data);
             }
+        } else {
+            // Handle non-Axios errors or log them differently
+            console.error('An unexpected error occurred:', error);
         }
         return null;
     }

@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper, Status } from '../../../../types/paper'; // Import Status
+import { Paper } from '../../../../types/paper'; // Import Status
 import './PaperMetadata.css';
 import { getStatusClass, getStatusSymbol } from '../../../../utils/statusUtils'; // Import utility function for status symbol
 import { stat } from 'fs';
@@ -8,13 +8,16 @@ interface PaperMetadataProps {
 }
 
 const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
-    // --- Determine Display Status, Class, and Symbol based on paper.status ---
-    const displayStatus: Status = paper.status;
+    // --- Determine Display Status, Class, and Symbol based on paper object ---
+    let displayStatus: string = paper.status;
+    if (paper.status === 'Not Started' && paper.nonImplementableVotes > 0 && paper.implementabilityStatus === 'Voting') {
+        displayStatus = 'Disputed'; // Or 'Community Concern'
+    }
     let statusClass = 'status-default'; 
     let statusSymbol = '⏳'; 
 
-    statusClass = getStatusClass(displayStatus);
-    statusSymbol = getStatusSymbol(displayStatus);
+    statusClass = getStatusClass(paper); // Pass the whole paper object
+    statusSymbol = getStatusSymbol(paper); // Pass the whole paper object
     
 
     return (

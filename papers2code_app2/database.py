@@ -3,7 +3,7 @@
 import logging
 from typing import Optional, Any, Tuple
 from pymongo import MongoClient, ASCENDING, DESCENDING # For sync client and indexes
-from pymongo import AsyncMongoClient # Changed from motor.motor_asyncio
+from pymongo import AsyncMongoClient 
 from pymongo.database import Database as SyncDatabase # Alias for clarity
 from pymongo.database import Database as AsyncDatabase # For type hinting with AsyncMongoClient
 from pymongo.collection import Collection as AsyncCollection # For type hinting with AsyncMongoClient
@@ -70,7 +70,7 @@ async def initialize_async_db():
     
     try:
         logger.info(f"Attempting to connect to MongoDB asynchronously using PyMongo. Database: {actual_db_name}")
-        async_client = AsyncMongoClient(actual_mongo_uri) # Changed from AsyncIOMotorClient
+        async_client = AsyncMongoClient(actual_mongo_uri) 
         
         # Ping the server to confirm connection
         await async_client.admin.command('ping')

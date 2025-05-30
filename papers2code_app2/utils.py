@@ -129,7 +129,7 @@ async def transform_paper_async(
     }
 
     if detail_level == "full":
-        raw_implementability_status = paper_doc.get("implementability_status") # Assuming DB field is "implementability_status"
+        raw_implementability_status = paper_doc.get("implementabilityStatus") # Assuming DB field is "implementability_status"
         current_implementability_status = IMPL_STATUS_VOTING
         if raw_implementability_status:
             if raw_implementability_status.lower() == "voting": # Ensure case-insensitive check for "voting"

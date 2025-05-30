@@ -1,16 +1,16 @@
 // src/services/api.ts
 import { Paper, AdminSettableImplementabilityStatus } from '../types/paper'; // AdminSettableImplementabilityStatus is imported
-import { getCsrfToken, UserProfile } from './auth';
+import { getCsrfToken } from './auth'; // IMPORTED for consistent CSRF token handling
 
 // Assuming UserProfile is defined in a types file, e.g., '../types/user'
 // For this example, let\'s define it here if not already imported.
 // Ideally, this UserProfile interface should be in a central types file (e.g., src/types/user.ts or src/types/paper.ts)
-export interface UserProfile {
+// RENAMED to avoid conflict with UserProfile in auth.ts
+export interface PaperActionUserProfile {
   id: string;
   username: string;
   avatarUrl?: string;
-  actionType?: string; // Optional: if you want to carry over the specific action
-  createdAt?: string;  // Optional: if you want to carry over the timestamp
+  actionType?: string;  createdAt?: string;
 }
 // --- End UserProfile Definition ---
 
@@ -40,10 +40,11 @@ export interface AdvancedPaperFilters {
 }
 
 // --- NEW: Type for the response from the /actions endpoint ---
+// UPDATED to use PaperActionUserProfile
 export interface PaperActionUsers {
-  upvotes: UserProfile[];
-  votedIsImplementable: UserProfile[];  // Users who voted "Is Implementable" (Thumbs Up)
-  votedNotImplementable: UserProfile[]; // Users who voted "Not Implementable" (Thumbs Down)
+  upvotes: PaperActionUserProfile[];
+  votedIsImplementable: PaperActionUserProfile[];
+  votedNotImplementable: PaperActionUserProfile[];
 }
 // --- End NEW ---
 
@@ -231,27 +232,24 @@ export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActio
 
   // Use the BackendPaperActionsSummaryResponse type for the raw data
   const rawData = await handleApiResponse<BackendPaperActionsSummaryResponse>(response);
-  console.log(`Fetched raw action users for paper ${paperId}: `, rawData); // This log is correct
+  console.log(`Fetched raw action users for paper ${paperId}: `, rawData);
 
-  // Helper function to map backend detail to frontend UserProfile
-  const mapToUserProfile = (detail: BackendPaperActionUserDetail): UserProfile => ({
+  // Helper function to map backend detail to frontend PaperActionUserProfile - RENAMED and type updated
+  const mapToPaperActionUserProfile = (detail: BackendPaperActionUserDetail): PaperActionUserProfile => ({
     id: detail.userId,
     username: detail.username,
     avatarUrl: detail.avatarUrl,
-    actionType: detail.actionType, // Carry over if UserProfile includes it
-    createdAt: detail.createdAt,   // Carry over if UserProfile includes it
+    actionType: detail.actionType,
+    createdAt: detail.createdAt,
   });
 
-  // Perform the transformation
+  // Perform the transformation - UPDATED to use renamed helper
   const transformedData: PaperActionUsers = {
-    upvotes: rawData.upvotes ? rawData.upvotes.map(mapToUserProfile) : [],
-    votedIsImplementable: rawData.votedIsImplementable ? rawData.votedIsImplementable.map(mapToUserProfile) : [],
-    votedNotImplementable: rawData.votedNotImplementable ? rawData.votedNotImplementable.map(mapToUserProfile) : [],
-    // If you add 'saves' to PaperActionUsers, map it here:
-    // saves: rawData.saves ? rawData.saves.map(mapToUserProfile) : [],
+    upvotes: rawData.upvotes ? rawData.upvotes.map(mapToPaperActionUserProfile) : [],
+    votedIsImplementable: rawData.votedIsImplementable ? rawData.votedIsImplementable.map(mapToPaperActionUserProfile) : [],
+    votedNotImplementable: rawData.votedNotImplementable ? rawData.votedNotImplementable.map(mapToPaperActionUserProfile) : [],
   };
 
-  // This is the critical log. If it's still empty, the issue is subtle or console.log is misleading.
   console.log(`Transformed action users for paper ${paperId} (within fetchPaperActionUsers): `, transformedData);
   return transformedData;
 };
@@ -321,10 +319,12 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
   if (response.status === 400) {
     const errorData = await response.json().catch(() => ({ error: "Bad Request", description: "Unknown CSRF or validation error" }));
     if (errorData.error === "CSRF validation failed") {
-      console.error('CSRF validation failed:', errorData.description);
-      throw new CsrfError(errorData.description || 'CSRF token missing or invalid.');
+        console.error('CSRF validation failed:', errorData.description);
+        throw new CsrfError(errorData.description || 'CSRF validation failed.');
     }
-    // Handle other 400 errors if necessary
+    // Handle other 400 errors
+    console.error(`API Error 400: ${errorData.description || 'Bad Request'}`);
+    throw new Error(`API request failed with status 400: ${errorData.description || 'Bad Request'}`);
   }
   if (!response.ok) {
     // Handle other errors (e.g., 404, 500)
@@ -332,13 +332,11 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
     console.error(`API Error ${response.status}:`, errorBody);
     throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
   }
-  return response.json() as Promise<T>;
-}
 
-// Helper function to get CSRF token from cookie (implement according to your setup)
-function getCsrfToken(): string | null {
-  // Example: document.cookie.match(/csrftoken=([^;]+)/)?.[1] || null;
-  // This needs to be robustly implemented based on how your CSRF token cookie is named and stored.
-  const match = document.cookie.match(/csrftoken=([^;]+)/); // Adjust cookie name if different
-  return match ? match[1] : null;
+  // Handle 204 No Content specifically, as .json() will fail
+  if (response.status === 204) {
+    return undefined as T; // Or null as T, depending on how you want to represent "void"
+  }
+
+  return response.json(); // response.json() already returns a Promise.
 }

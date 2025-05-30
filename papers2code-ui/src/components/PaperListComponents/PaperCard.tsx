@@ -1,7 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Paper, Status } from '../../types/paper'; // Ensure Status is imported
+import { Paper } from '../../types/paper'; // Ensure Status is imported
 import './PaperCard.css';
+import { getStatusClass, getStatusSymbol } from '../../utils/statusUtils'; // Adjust the import path as necessary
 
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -39,45 +40,18 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   };
 
   // --- Determine Display Status and Class ---
-  const displayStatus: Status = paper.status;
-  let statusClass = 'status-default'; // Default class for unhandled or generic statuses
-  let statusSymbol = '⏳'; // Default symbol
-
-  switch (paper.status) {
-    case 'Not Implementable':
-      statusClass = 'status-non-implementable';
-      statusSymbol = '🚫';
-      break;
-    case 'Completed':
-      statusClass = 'status-completed';
-      statusSymbol = '✅';
-      break;
-    case 'Work in Progress':
-      statusClass = 'status-in-progress';
-      statusSymbol = '🚧';
-      break;
-    case 'Not Started':
-      // Assuming 'Not Started' is the new 'NeedsCode'
-      statusClass = 'status-needs-code'; 
-      statusSymbol = '⏳';
-      break;
-    case 'Started':
-      statusClass = 'status-started'; // You might want a specific class or reuse 'status-in-progress'
-      statusSymbol = '🛠️'; // Example: Hammer and wrench
-      break;
-    case 'Waiting for Author Response':
-      statusClass = 'status-waiting';
-      statusSymbol = '💬'; // Example: Speech bubble
-      break;
-    case 'Official Code Posted':
-      statusClass = 'status-official-code';
-      statusSymbol = '🎉'; // Example: Party popper
-      break;
-    // No default case needed if paper.status is always one of the Status union types
-    // and we intend to use the status string directly for displayStatus.
-    // If specific display strings are needed (e.g., "Waiting on Author" for 'Waiting for Author Response'),
-    // you would set `displayStatus = "Waiting on Author";` in the respective case.
+  let displayStatus: string = paper.status;
+  if (paper.status === 'Not Started' && paper.nonImplementableVotes > 0 && paper.implementabilityStatus === 'Voting') {
+    displayStatus = 'Disputed'; // Or 'Community Concern'
   }
+  // Default class and symbol are now handled within statusUtils or by direct assignment below
+  const statusClass = getStatusClass(paper); // Pass the whole paper object
+  const statusSymbol = getStatusSymbol(paper); // Pass the whole paper object
+
+  // The switch statement for statusClass and statusSymbol in this component is now redundant
+  // as getStatusClass and getStatusSymbol centralize this logic.
+  // We directly use what paper.status provides for displayStatus text unless specific overrides are needed.
+
   // --- End Determine Status and Class ---
 
   return (

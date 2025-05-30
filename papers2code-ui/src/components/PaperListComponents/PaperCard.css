@@ -143,10 +143,32 @@
 
 /* Default/Needs Code/Other Statuses */
 .status-default,
-.status-needs-code {
+.status-needs-code,
+.status-unknown { /* Added .status-unknown here */
   background-color: #f8f9fa; /* Very light grey */
   color: #6c757d; /* Muted text */
   border-color: #dee2e6; /* Light border */
+}
+
+/* Not Started Status */
+.status-not-started {
+  background-color: #e9ecef; /* Slightly darker light grey */
+  color: #495057; /* Darker muted text */
+  border-color: #ced4da; /* Grey border */
+}
+
+/* Started Status */
+.status-started {
+  background-color: #d1ecf1; /* Light cyan/blue */
+  color: #0c5460; /* Dark cyan/blue text */
+  border-color: #bee5eb; /* Softer cyan/blue border */
+}
+
+/* Waiting for Author Response Status */
+.status-waiting-author {
+  background-color: #fff3cd; /* Light yellow/orange */
+  color: #856404; /* Dark yellow/orange text */
+  border-color: #ffeeba; /* Softer yellow/orange border */
 }
 
 /* In Progress */
@@ -169,6 +191,19 @@
   color: #c82333; /* Darker red text */
   border-color: #f5c6cb; /* Softer red border */
   font-weight: 600; /* Slightly bolder */
+}
+
+/* Official Code Status */
+.status-official-code {
+  background-color: #c8e6c9; /* Light Green for official code */
+  color: #2e7d32; /* Dark Green text */
+}
+
+/* Not Started Disputed Status */
+.status-not-started-disputed {
+  background-color: #fff59d; /* Light Yellow for disputed */
+  color: #f57f17; /* Dark Yellow/Orange text */
+  border: 1px solid #f57f17; /* Add a border to make it stand out */
 }
 
 .paper-card .details-link:hover {
