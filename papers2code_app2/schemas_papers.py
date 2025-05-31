@@ -3,6 +3,9 @@ from pydantic.alias_generators import to_camel
 from typing import List, Optional, Literal
 from datetime import datetime
 
+from .schemas_db import PyObjectId # ADDED: Import PyObjectId
+from .schemas_implementation_progresss import Progress as ProgressSchema # ADDED: Import ProgressSchema
+
 # --- Reusable Model Configurations ---
 camel_case_config = ConfigDict(
     populate_by_name=True,
@@ -18,7 +21,7 @@ camel_case_config_with_datetime = ConfigDict(
 set_implementability_config = ConfigDict(
     populate_by_name=True,
     alias_generator=to_camel,
-    allow_population_by_field_name=True,
+    validate_by_name=True, # MODIFIED: Changed allow_population_by_field_name to validate_by_name
 )
 
 # --- Type Definitions for Literal Strings ---
@@ -53,13 +56,17 @@ class BasePaper(BaseModel):
 
 class PaperResponse(BasePaper):
     """Schema for representing a paper when returned by API endpoints, including its ID and user-specific interaction details."""
-    id: str
+    id: PyObjectId # MODIFIED: Use PyObjectId
     current_user_implementability_vote: Optional[str] = Field(None, alias="currentUserImplementabilityVote")
     current_user_vote: Optional[str] = Field(None, alias="currentUserVote")
 
     # Aggregated counts - to be populated by backend logic from user actions
     not_implementable_votes: int = Field(0, alias="nonImplementableVotes")
     implementable_votes: int = Field(0, alias="isImplementableVotes")
+
+    # ADDED: Optional field for implementation progress
+    implementation_progress: Optional[ProgressSchema] = Field(None, alias="implementationProgress")
+
 
     @computed_field(alias="isImplementable")
     @property
@@ -88,7 +95,7 @@ class SetImplementabilityRequest(BaseModel):
 
 class PaperActionUserDetail(BaseModel):
     """Schema for detailed information about a user who performed an action on a paper."""
-    user_id: str
+    user_id: PyObjectId # MODIFIED: Use PyObjectId
     username: str
     avatar_url: Optional[HttpUrl] = None
     action_type: str
@@ -98,7 +105,7 @@ class PaperActionUserDetail(BaseModel):
 
 class PaperActionsSummaryResponse(BaseModel):
     """Response schema summarizing various user actions associated with a paper."""
-    paper_id: str = Field(..., alias="paperId") # Explicit alias for consistency
+    paper_id: PyObjectId = Field(..., alias="paperId") # MODIFIED: Use PyObjectId
     upvotes: List[PaperActionUserDetail] = Field(default_factory=list, alias="upvotes")
     saves: List[PaperActionUserDetail] = Field(default_factory=list, alias="saves") # Frontend might expect 'saves' or 'savedBy'
     voted_is_implementable: List[PaperActionUserDetail] = Field(default_factory=list, alias="votedIsImplementable")

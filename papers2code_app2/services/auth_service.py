@@ -39,7 +39,7 @@ class AuthService:
         owner_username = config_settings.OWNER_GITHUB_USERNAME
         is_owner = owner_username is not None and current_user.username == owner_username
         
-        logger.info(f"User {current_user.username} is_owner status: {is_owner} (checked in service)")
+        #logger.info(f"User {current_user.username} is_owner status: {is_owner} (checked in service)")
 
         user_response_data = UserMinimal(
             id=str(current_user.id),
@@ -140,8 +140,8 @@ class AuthService:
             path="/api/auth/github/callback",  # Scope cookie to the callback path
             max_age=10 * 60  # 10 minutes, matching JWT expiry
         )
-        logger.debug(f"Prepared GitHub login redirect to: {auth_url}")
-        logger.debug(f"Setting {OAUTH_STATE_COOKIE_NAME} with path /api/auth/github/callback")
+        #logger.debug(f"Prepared GitHub login redirect to: {auth_url}")
+        #logger.debug(f"Setting {OAUTH_STATE_COOKIE_NAME} with path /api/auth/github/callback")
         return response
 
     async def handle_github_callback(
@@ -178,7 +178,7 @@ class AuthService:
         
         # State validated, clear the state cookie now on the final response
         redirect_response.delete_cookie(OAUTH_STATE_COOKIE_NAME, path=oauth_state_cookie_delete_path, secure=True if config_settings.ENV_TYPE == "production" else False, httponly=True, samesite="lax")
-        logger.debug("OAuth state cookie cleared after successful validation.")
+        #logger.debug("OAuth state cookie cleared after successful validation.")
 
         # State validated, proceed to exchange code for token
         github_access_token_url = config_settings.GITHUB.ACCESS_TOKEN_URL
@@ -215,7 +215,7 @@ class AuthService:
             }
             headers = {"Accept": "application/json"}
             try:
-                logger.debug(f"Exchanging GitHub code. URL: {github_access_token_url}, Params: {token_exchange_params}")
+                #logger.debug(f"Exchanging GitHub code. URL: {github_access_token_url}, Params: {token_exchange_params}")
                 token_response = await client.post(github_access_token_url, params=token_exchange_params, headers=headers)
                 token_response.raise_for_status()
                 token_data = token_response.json()
@@ -223,7 +223,7 @@ class AuthService:
                 if not github_token:
                     logger.error(f"Failed to retrieve access_token from GitHub. Response: {token_data}")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_failed", status_code=307)
-                logger.debug("GitHub access token obtained successfully.")
+                #logger.debug("GitHub access token obtained successfully.")
             except httpx.HTTPStatusError as http_err:
                 logger.error(f"GitHub token exchange HTTP error: {http_err.response.status_code} - {http_err.response.text}")
                 return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_http_error", status_code=307)
@@ -236,11 +236,11 @@ class AuthService:
 
             user_headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github.v3+json"}
             try:
-                logger.debug(f"Fetching user data from GitHub API. URL: {github_api_user_url}")
+                #logger.debug(f"Fetching user data from GitHub API. URL: {github_api_user_url}")
                 user_api_response = await client.get(github_api_user_url, headers=user_headers)
                 user_api_response.raise_for_status()
                 github_user_data = user_api_response.json()
-                logger.debug(f"GitHub user data fetched successfully: { {key: github_user_data.get(key) for key in ['id', 'login', 'name', 'email']} }")
+                #logger.debug(f"GitHub user data fetched successfully: { {key: github_user_data.get(key) for key in ['id', 'login', 'name', 'email']} }")
             except httpx.HTTPStatusError as http_err:
                 logger.error(f"GitHub user data fetch HTTP error: {http_err.response.status_code} - {http_err.response.text}")
                 return RedirectResponse(url=f"{frontend_url}/?login_error=github_user_data_http_error", status_code=307)
@@ -290,7 +290,7 @@ class AuthService:
                 if not user_document:
                     logger.error("Failed to upsert user document, find_one_and_update returned None unexpectedly.")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)
-                logger.info(f"User {username} (ID: {user_document['_id']}) upserted successfully.")
+                #logger.info(f"User {username} (ID: {user_document['_id']}) upserted successfully.")
             except Exception as db_exc:
                 logger.error(f"Database operation error during user upsert: {db_exc}")
                 return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_generic_error", status_code=307)
@@ -334,7 +334,7 @@ class AuthService:
                 path="/",
                 secure=True if config_settings.ENV_TYPE == "production" else False
             )
-            logger.info(f"Successfully authenticated user {username}. Redirecting to frontend.")
+            #logger.info(f"Successfully authenticated user {username}. Redirecting to frontend.")
             return redirect_response
 
     def clear_auth_cookies(self, response: Response):
@@ -372,7 +372,7 @@ class AuthService:
         #     httponly=True,
         #     samesite=cookie_samesite_policy
         # )
-        logger.info("Cleared auth cookies (access, refresh, csrf).")
+        #logger.info("Cleared auth cookies (access, refresh, csrf).")
 
 
     async def logout_user(self, request: Request, response: Response) -> dict: # Made async
@@ -385,11 +385,11 @@ class AuthService:
         # For now, just clearing cookies is the primary mechanism.
         
         if not access_token_value:
-            logger.info("Logout called but no access token cookie was found.")
+            #logger.info("Logout called but no access token cookie was found.")
             # Even if no token, ensure cookies are cleared and return success.
             return {"message": "Logged out successfully, no active session found or cookies already cleared."}
 
-        logger.info("User logged out successfully. Cookies cleared.")
+        #logger.info("User logged out successfully. Cookies cleared.")
         return {"message": "Logged out successfully"}
 
 # Helper function (can be outside the class or static if preferred)
@@ -422,7 +422,7 @@ async def get_current_user_optional(request: Request) -> UserMinimal | None: # M
         # Determine if the user is the owner
         owner_username = config_settings.OWNER_GITHUB_USERNAME
         is_owner = owner_username is not None and user_doc.get("username") == owner_username
-        logger.debug(f"Current user {user_doc.get('username')} is_owner status: {is_owner} (checked in get_current_user_optional)")
+        #logger.debug(f"Current user {user_doc.get('username')} is_owner status: {is_owner} (checked in get_current_user_optional)")
 
 
         return UserMinimal(
@@ -439,35 +439,3 @@ async def get_current_user_optional(request: Request) -> UserMinimal | None: # M
     except Exception as e: # Catch broader exceptions during DB access or UserMinimal instantiation
         logger.error(f"Unexpected error in get_current_user_optional: {e}")
         return None
-
-async def get_current_active_user(current_user: UserMinimal | None = Depends(get_current_user_optional)) -> UserMinimal: # Made async
-    if not current_user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"},
-        )
-    # Additional checks for active status can be added here if needed (e.g., user.disabled)
-    return current_user
-
-# Dependency to get the current user, requiring authentication.
-# This is a common pattern for protected routes.
-# Note: The Depends(get_current_user_optional) was illustrative. 
-# For a route that *requires* auth, you'd typically have a get_current_active_user
-# that raises HTTPException if no user, and then Depends(get_current_active_user).
-
-# Example of a dependency that strictly requires an active user:
-async def require_current_user(request: Request) -> UserMinimal: # Made async
-    user = await get_current_user_optional(request) # Changed to async
-    if not user:
-        raise HTTPException(
-            status_code=status.HTTP_401_UNAUTHORIZED,
-            detail="Not authenticated",
-            headers={"WWW-Authenticate": "Bearer"}, # Typically for Bearer tokens, but good for API context
-        )
-    # Here you could add checks like `if not user.is_active:`
-    return user
-
-# If you need a dependency that can be directly used in path operations:
-# current_user: UserMinimal = Depends(require_current_user)
-

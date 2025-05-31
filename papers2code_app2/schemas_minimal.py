@@ -1,14 +1,15 @@
 from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional
 from datetime import datetime
-# Import shared configurations from schemas_papers
+
+from .schemas_db import PyObjectId # ADDED: Import PyObjectId
 from .schemas_papers import camel_case_config, camel_case_config_with_datetime
 
 # --- Simplified Models for Authentication & User Representation ---
 
 class UserSchema(BaseModel): # Model returned by get_current_user
     """Schema for representing the currently authenticated user, often returned by endpoints like get_current_user."""
-    id: Optional[str] = Field(None, alias='_id') # MongoDB ObjectId as string
+    id: Optional[PyObjectId] = Field(None, alias='_id') # MODIFIED: Use PyObjectId
     github_id: int
     username: str
     name: Optional[str] = None
@@ -23,7 +24,7 @@ class UserSchema(BaseModel): # Model returned by get_current_user
 
 class UserMinimal(BaseModel): # Response model for /me endpoint
     """Minimal user information, suitable for public display or a /me endpoint."""
-    id: Optional[str] = None
+    id: Optional[PyObjectId] = None # MODIFIED: Use PyObjectId, though often this might be string if already converted
     username: str
     name: Optional[str] = None
     avatar_url: Optional[str] = None

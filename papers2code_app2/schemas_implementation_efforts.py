@@ -1,93 +1,113 @@
-from pydantic import BaseModel, Field, HttpUrl
-from typing import List, Optional, Literal
-from datetime import datetime
+from typing import List, Optional, Any
+from pydantic import BaseModel, Field, HttpUrl, AnyUrl
+from datetime import datetime, timezone
+from enum import Enum
+
 from bson import ObjectId
+from pydantic import (
+    BaseModel,
+    Field,
+    ConfigDict,
+    AnyUrl,
+    GetCoreSchemaHandler,
+    GetJsonSchemaHandler
+)
+from pydantic.json_schema import JsonSchemaValue
+from pydantic_core import core_schema
 
-# -----------------------------------------------------------------------------
-# Shared helpers & config
-# -----------------------------------------------------------------------------
-class PyObjectId(ObjectId):
-    """ObjectId field that serialises as str and validates input."""
-
-    @classmethod
-    def __get_validators__(cls):
-        yield cls.validate
-
-    @classmethod
-    def validate(cls, v):
-        if not ObjectId.is_valid(v):
-            raise ValueError("Invalid ObjectId")
-        return ObjectId(v)
-
-    @classmethod
-    def __modify_schema__(cls, field_schema):
-        field_schema.update(type="string")
-
-
-class _MongoModel(BaseModel):
-    """Base class with Mongo‑friendly config."""
-
-    model_config = {
-        "populate_by_name": True,
-        "arbitrary_types_allowed": True,
-        "json_encoders": {ObjectId: str},
-    }
+from .schemas_db import PyObjectId, _MongoModel
 
 
 # -----------------------------------------------------------------------------
-# Author‑outreach
+# Enums
 # -----------------------------------------------------------------------------
-class FirstContact(_MongoModel):
+class AuthorOutreachStatus(str, Enum):  
+    NOT_INITIATED = "Not Initiated"
+    GUIDANCE_PREPARED = "Guidance Prepared"
+    CONTACT_SENT = "Contact Initiated - Awaiting Response"
+    RESPONSE_APPROVED = "Response Received - Approved Proceeding"
+    RESPONSE_DECLINED = "Response Received - Declined Proceeding"
+    RESPONSE_OWN_CODE = "Response Received - Provided Own Code"
+    NO_RESPONSE = "No Response - Grace Period Ended"
+
+
+class ComponentCategory(str, Enum): 
+    CORE = "core"
+    ADDON = "addon"
+
+
+class ComponentStatus(str, Enum):  
+    TO_DO = "To Do"
+    IN_PROGRESS = "In Progress"
+    COMPLETED = "Completed"
+    BLOCKED = "Blocked"
+    SKIPPED = "Skipped"
+
+
+class ProgressStatus(str, Enum):
+    AUTHOR_OUTREACH_PENDING = "Author Outreach Pending"
+    AUTHOR_CONTACT_INITIATED = "Author Contact Initiated"
+    ROADMAP_DEFINITION = "Roadmap Definition"
+    IMPLEMENTATION_ACTIVE = "Implementation Active"
+    IMPLEMENTATION_PAUSED = "Implementation Paused"
+    REVIEW_READY = "Review Ready"
+    COMPLETED = "Completed"
+    ABANDONED = "Abandoned"
+
+
+# -----------------------------------------------------------------------------
+# Author‑outreach sub‑docs (shortened names)
+# -----------------------------------------------------------------------------
+class ContactLog(BaseModel): 
     date_initiated: Optional[datetime] = None
-    method: Optional[str] = None  # e.g. "Email to first author"
+    method: Optional[str] = None
     recipient: Optional[str] = None
     response_deadline: Optional[datetime] = None
 
 
-class AuthorResponse(_MongoModel):
+class AuthResponse(BaseModel): 
     date_received: Optional[datetime] = None
     summary: Optional[str] = None
     can_proceed: Optional[bool] = None
 
 
-class EmailGuidance(_MongoModel):
+class EmailGuide(BaseModel): 
     subject: str = "Inquiry about code for your paper"
     body: str = "Dear Dr. …"
     notes: str = "Replace placeholders such as {Paper Title}."
 
 
-class AuthorOutreach(_MongoModel):
-    status: Literal[
-        "Not Initiated",
-        "Guidance Prepared",
-        "Contact Initiated - Awaiting Response",
-        "Response Received - Approved Proceeding",
-        "Response Received - Declined Proceeding",
-        "Response Received - Provided Own Code",
-        "No Response - Grace Period Ended",
-    ] = "Not Initiated"
-    first_contact: FirstContact = Field(default_factory=FirstContact)
-    author_response: AuthorResponse = Field(default_factory=AuthorResponse)
-    email_guidance: EmailGuidance = Field(default_factory=EmailGuidance)
+class AuthorOutreach(BaseModel):  
+    status: AuthorOutreachStatus = Field(default=AuthorOutreachStatus.NOT_INITIATED)
+    first_contact: ContactLog = Field(default_factory=ContactLog)
+    author_response: AuthResponse = Field(default_factory=AuthResponse)
+    email_guidance: EmailGuide = Field(default_factory=EmailGuide)
 
 
 # -----------------------------------------------------------------------------
-# Road‑map
+# Road‑map 
 # -----------------------------------------------------------------------------
 class Component(_MongoModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
-    name: str
     description: Optional[str] = None
-    category: Literal["core", "addon"] = "core"  # still useful for filtering
-    status: Literal["To Do", "In Progress", "Completed", "Blocked", "Skipped"] = "To Do"
-    assigned_to: List[PyObjectId] = Field(default_factory=list)
-    steps: List[str] = Field(default_factory=list)  # small optional checklist
+    category: ComponentCategory = Field(default=ComponentCategory.CORE)
+    status: ComponentStatus = Field(default=ComponentStatus.TO_DO)
+    steps: List[str] = Field(default_factory=list)
     notes: Optional[str] = None
     order: int
 
 
-class Section(_MongoModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+class ComponentUpdate(BaseModel):
+    name: Optional[str] = None
+    description: Optional[str] = None
+    category: Optional[ComponentCategory] = None
+    status: Optional[ComponentStatus] = None
+    steps: Optional[List[str]] = None
+    notes: Optional[str] = None
+    order: Optional[int] = None
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+
+
+class Section(_MongoModel): 
     title: str
     description: Optional[str] = None
     order: int
@@ -95,41 +115,27 @@ class Section(_MongoModel):
     components: List[Component] = Field(default_factory=list)
 
 
-class Roadmap(_MongoModel):
-    repository_url: Optional[HttpUrl] = None
-    overall_progress: int = Field(default=0, ge=0, le=100)
+class Roadmap(BaseModel):
+    repository_url: Optional[AnyUrl] = None
+    overall_progress: int = Field(0, ge=0, le=100)
     sections: List[Section] = Field(default_factory=list)
 
 
 # -----------------------------------------------------------------------------
-# Implementation effort
+# Implementation progress
 # -----------------------------------------------------------------------------
-class ImplementationEffort(_MongoModel):
-    id: PyObjectId = Field(default_factory=PyObjectId, alias="_id")
+class ImplementationProgress(_MongoModel):
     paper_id: PyObjectId
-    status: Literal[
-        "Author Outreach Pending",
-        "Author Contact Initiated",
-        "Roadmap Definition",
-        "Implementation Active",
-        "Implementation Paused",
-        "Review Ready",
-        "Completed",
-        "Abandoned",
-    ] = "Author Outreach Pending"
+    status: ProgressStatus = Field(default=ProgressStatus.AUTHOR_OUTREACH_PENDING)
     initiated_by: PyObjectId
     contributors: List[PyObjectId] = Field(default_factory=list)
     author_outreach: AuthorOutreach = Field(default_factory=AuthorOutreach)
     implementation_roadmap: Roadmap = Field(default_factory=Roadmap)
-    created_at: datetime = Field(default_factory=datetime.utcnow)
-    updated_at: datetime = Field(default_factory=datetime.utcnow)
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-    # ------------------------------------------------------------------
-    # Helpers
-    # ------------------------------------------------------------------
     @classmethod
-    def new(cls, paper_id: PyObjectId, user_id: PyObjectId):
-        """Factory that pre‑fills contributors and default sections."""
+    def new(cls, paper_id: PyObjectId, user_id: PyObjectId) -> 'ImplementationProgress': 
         return cls(
             paper_id=paper_id,
             initiated_by=user_id,
@@ -138,20 +144,17 @@ class ImplementationEffort(_MongoModel):
         )
 
 
-class ImplementationEffortUpdate(_MongoModel):
-    status: Optional[ImplementationEffort.model_fields["status"].annotation] = None
-    contributors: Optional[List[PyObjectId]] = None
-    author_outreach: Optional[AuthorOutreach] = None
+class ProgressUpdate(BaseModel):  
+    status: Optional[ProgressStatus] = None
     implementation_roadmap: Optional[Roadmap] = None
+    model_config = ConfigDict(extra="forbid")
 
 
 # -----------------------------------------------------------------------------
-# Defaults & utilities
+# Defaults helper (uses new names)
 # -----------------------------------------------------------------------------
-
 def create_default_sections() -> List[Section]:
-    """Return both Core and Add‑on sections with editable default tasks."""
-    core_section = Section(
+    core = Section(
         title="Core Functionalities",
         description="Bare minimum to reproduce the paper’s main result.",
         order=1,
@@ -160,34 +163,25 @@ def create_default_sections() -> List[Section]:
             Component(
                 name="Quick‑start Environment",
                 order=1,
-                category="core",
                 steps=[
-                    "Create requirements.txt or environment.yml",
+                    "Create requirements.txt / environment.yml",
                     "Add install instructions to README",
                 ],
             ),
             Component(
                 name="Core Model / Algorithm",
                 order=2,
-                category="core",
-                steps=[
-                    "Implement forward pass",
-                    "Unit‑test on toy data",
-                ],
+                steps=["Implement forward pass", "Unit‑test on toy data"],
             ),
             Component(
                 name="Minimal Train & Eval",
                 order=3,
-                category="core",
-                steps=[
-                    "Run once with default hyper‑params",
-                    "Print key metric; compare to paper",
-                ],
+                steps=["Run once", "Compare metric to paper"],
             ),
         ],
     )
 
-    addon_section = Section(
+    addon = Section(
         title="Add‑on Functionalities",
         description="Nice extras volunteers can add if they have time.",
         order=2,
@@ -195,23 +189,22 @@ def create_default_sections() -> List[Section]:
         components=[
             Component(
                 name="Small Improvement / Extension",
+                category=ComponentCategory.ADDON,
                 order=1,
-                category="addon",
-                steps=["e.g. extra loss term, minor tweak"],
+                steps=["e.g. extra loss term"],
             ),
             Component(
                 name="Tiny Visualization Notebook",
+                category=ComponentCategory.ADDON,
                 order=2,
-                category="addon",
                 steps=["Plot one key figure"],
             ),
             Component(
                 name="Pre‑trained Checkpoint",
+                category=ComponentCategory.ADDON,
                 order=3,
-                category="addon",
                 steps=["Save weights", "Upload to repo"],
             ),
         ],
     )
-
-    return [core_section, addon_section]
+    return [core, addon]

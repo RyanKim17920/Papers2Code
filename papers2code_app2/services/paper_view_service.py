@@ -48,7 +48,7 @@ class PaperViewService:
         Retrieves a single paper by its ID.
         Includes user-specific actions if user_id is provided.
         """
-        self.logger.debug(f"Service: Attempting to get paper by ID: {paper_id} for user: {user_id}")
+        #self.logger.debug(f"Service: Attempting to get paper by ID: {paper_id} for user: {user_id}")
         try:
             obj_paper_id = ObjectId(paper_id)
         except InvalidId:
@@ -66,7 +66,7 @@ class PaperViewService:
             self.logger.warning(f"Service: Paper with ID {paper_id} not found.")
             raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
 
-        self.logger.debug(f"Service: Successfully fetched paper: {paper_id}")
+        #self.logger.debug(f"Service: Successfully fetched paper: {paper_id}")
         return paper # The transformation to PaperResponse with user actions will be handled by utils.transform_paper_async in the router
 
     async def get_papers_list(
@@ -96,6 +96,7 @@ class PaperViewService:
         Retrieves a list of papers with pagination, sorting, and filtering.
         Simplified to reflect currently supported fields and frontend capabilities.
         """
+        """
         self.logger.debug(
             f"Service: Fetching papers list. Skip: {skip}, Limit: {limit}, SortBy: {sort_by}, "
             f"SortOrder: {sort_order}, User: {user_id}, SearchQuery: '{search_query}', Author: '{author}', "
@@ -103,7 +104,7 @@ class PaperViewService:
             f"has_official_impl='{has_official_impl}', venue='{venue}', "
             f"start_date='{start_date}', end_date='{end_date}'"
         )
-
+        """
         pipeline: List[Dict[str, Any]] = []
         mongo_filter_conditions: List[Dict[str, Any]] = [] # For $match stage after $search or for find()
         is_atlas_search_active = False
@@ -239,7 +240,7 @@ class PaperViewService:
                 }}
                 pipeline.append(facet_stage)
                 
-                self.logger.debug(f"Executing Atlas Search aggregation pipeline: {pipeline}")
+                #self.logger.debug(f"Executing Atlas Search aggregation pipeline: {pipeline}")
                 agg_results_cursor = await papers_collection.aggregate(pipeline) # Added await
                 agg_results = await agg_results_cursor.to_list(length=None) 
                 
@@ -258,7 +259,7 @@ class PaperViewService:
                 # mongo_filter_conditions are used here
                 final_query = {"$and": mongo_filter_conditions} if mongo_filter_conditions else {}
                 
-                self.logger.debug(f"Executing standard find query: {final_query} with sort: {sort_doc}")
+                #self.logger.debug(f"Executing standard find query: {final_query} with sort: {sort_doc}")
                 # pymongo's find().sort() can take a list of tuples or a dict for single field sort
                 # For multi-field sort, it must be a list of tuples.
                 # Our sort_doc is a dict, e.g. {"publicationDate": -1}
@@ -273,7 +274,7 @@ class PaperViewService:
                 papers_list = await cursor.to_list(length=limit)
                 total_papers = await papers_collection.count_documents(final_query)
             
-            self.logger.debug(f"Service: Successfully fetched {len(papers_list)} papers. Total matching: {total_papers}")
+            #self.logger.debug(f"Service: Successfully fetched {len(papers_list)} papers. Total matching: {total_papers}")
             return papers_list, total_papers
 
         except PyMongoError as e:

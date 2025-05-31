@@ -69,3 +69,42 @@ class DatabaseOperationException(ServiceException):
     """Raised when a database operation fails."""
     def __init__(self, detail="A database operation failed."):
         super().__init__(message=detail)
+
+class NotFoundException(ServiceException):
+    """Raised when a requested resource is not found."""
+    def __init__(self, resource_name: str = "Resource", identifier: str | None = None):
+        message = f"{resource_name} not found."
+        if identifier:
+            message = f"{resource_name} with identifier '{identifier}' not found."
+        super().__init__(message=message)
+
+class AlreadyExistsException(ServiceException):
+    """Raised when an attempt is made to create a resource that already exists."""
+    def __init__(self, resource_name: str = "Resource", identifier: str | None = None):
+        message = f"{resource_name} already exists."
+        if identifier:
+            message = f"{resource_name} with identifier '{identifier}' already exists."
+        super().__init__(message=message)
+
+class InvalidRequestException(ServiceException):
+    """Raised when a request is malformed or contains invalid data."""
+    def __init__(self, message="Invalid request.", details: str | None = None):
+        full_message = message
+        if details:
+            full_message += f" Details: {details}"
+        super().__init__(message=full_message)
+
+class AuthorizationException(ServiceException):
+    """Raised when a user is not authorized to perform an action."""
+    def __init__(self, message="User not authorized to perform this action."):
+        super().__init__(message=message)
+
+class UserNotContributorException(AuthorizationException):
+    """Raised when a user is not a contributor to an progress they are trying to modify."""
+    def __init__(self, user_id: str | None = None, progress_id: str | None = None):
+        message = "User is not a contributor to this implementation progress."
+        if user_id and progress_id:
+            message = f"User '{user_id}' is not a contributor to implementation progress '{progress_id}'."
+        elif user_id:
+            message = f"User '{user_id}' is not a contributor."
+        super().__init__(message=message)

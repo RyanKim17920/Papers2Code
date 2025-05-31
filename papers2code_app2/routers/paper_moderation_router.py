@@ -50,7 +50,7 @@ async def flag_paper_implementability(
     action: str = Body(..., embed=True, pattern="^(confirm|dispute|retract)$"),
     current_user: UserSchema = Depends(get_current_user)
 ):
-    logger.info(f"Router: Received request to flag implementability for paper_id: {paper_id}, action: {action}, user: {current_user.id}")
+    #logger.info(f"Router: Received request to flag implementability for paper_id: {paper_id}, action: {action}, user: {current_user.id}")
     
     moderation_service = PaperModerationService()
     user_id_str = str(current_user.id)
@@ -99,7 +99,7 @@ async def set_paper_implementability(
     payload: SetImplementabilityRequest,
     current_user: UserSchema = Depends(get_current_owner) # Ensures only owner can call
 ):
-    logger.info(f"Router: Received request to set implementability for paper_id: {paper_id} by admin: {current_user.id} to '{payload.status_to_set}'")
+    #logger.info(f"Router: Received request to set implementability for paper_id: {paper_id} by admin: {current_user.id} to '{payload.status_to_set}'")
     moderation_service = PaperModerationService()
     admin_user_id_str = str(current_user.id)
 
@@ -143,7 +143,7 @@ async def delete_paper(
     paper_id: str,
     current_user: UserSchema = Depends(get_current_owner)
 ):
-    logger.info(f"Router: Received request to delete paper_id: {paper_id} by admin: {current_user.id}")
+    #logger.info(f"Router: Received request to delete paper_id: {paper_id} by admin: {current_user.id}")
     moderation_service = PaperModerationService()
     admin_user_id_str = str(current_user.id)
 

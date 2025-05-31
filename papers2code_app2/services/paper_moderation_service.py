@@ -91,18 +91,18 @@ class PaperModerationService:
                 self.logger.error(f"Service:_recalculate: Failed to update paper {paper_id_obj} as it was not found during update.")
                 raise PaperNotFoundException(f"Paper {paper_id_obj} disappeared during status recalculation update.")
             
-            self.logger.info(f"Service:_recalculate: Updated paper {paper_id_obj} with fields: {update_fields}")
+            #self.logger.info(f"Service:_recalculate: Updated paper {paper_id_obj} with fields: {update_fields}")
             updated_doc = await papers_collection.find_one({"_id": paper_id_obj})
             if not updated_doc:
                 self.logger.error(f"Service:_recalculate: Paper {paper_id_obj} not found after update attempt (should not happen if update succeeded).")
                 raise PaperNotFoundException(f"Paper {paper_id_obj} could not be retrieved after status update.")
             return updated_doc
 
-        self.logger.info(f"Service:_recalculate: No status changes for paper {paper_id_obj}.")
+        #self.logger.info(f"Service:_recalculate: No status changes for paper {paper_id_obj}.")
         return current_paper_doc
 
     async def flag_paper_implementability(self, paper_id: str, user_id: str, action: str):
-        self.logger.info(f"Service: Async flagging implementability for paper_id: {paper_id}, user_id: {user_id}, action: {action}")
+        #self.logger.info(f"Service: Async flagging implementability for paper_id: {paper_id}, user_id: {user_id}, action: {action}")
         
         papers_collection = await get_papers_collection_async()
         user_actions_collection = await get_user_actions_collection_async()
@@ -144,7 +144,7 @@ class PaperModerationService:
             elif current_action_doc.get("actionType") == IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE:
                 current_vote_type_internal = "not_implementable"
         
-        self.logger.info(f"Service: Flagging details - paper='{paper_obj_id}', user='{user_obj_id}', requested_action='{action}', current_vote_on_paper='{current_vote_type_internal}'")
+        #self.logger.info(f"Service: Flagging details - paper='{paper_obj_id}', user='{user_obj_id}', requested_action='{action}', current_vote_on_paper='{current_vote_type_internal}'")
 
         paper_vote_update_ops = {"$inc": {}}
         new_user_action_type_for_db = None
@@ -252,7 +252,7 @@ class PaperModerationService:
             raise ServiceException(f"Failed to flag paper implementability: {e}")
 
     async def set_paper_implementability(self, paper_id: str, admin_user_id: str, status_to_set_by_admin: str):
-        self.logger.info(f"Service: Async setting implementability for paper_id: {paper_id} by admin_user_id: {admin_user_id} to status: {status_to_set_by_admin}")
+        #self.logger.info(f"Service: Async setting implementability for paper_id: {paper_id} by admin_user_id: {admin_user_id} to status: {status_to_set_by_admin}")
         
         papers_collection = await get_papers_collection_async()
         user_actions_collection = await get_user_actions_collection_async() # For logging admin action
@@ -340,11 +340,11 @@ class PaperModerationService:
             self.logger.error(f"Service: Failed to log admin action for set_implementability on paper {paper_id}: {e}", exc_info=True)
             # Non-critical, so we don't re-raise, but good to know.
 
-        self.logger.info(f"Service: Admin {admin_user_id} successfully set implementability of paper {paper_id} to {status_to_set_by_admin}. New main status: {updated_paper.get('status')}")
+        #self.logger.info(f"Service: Admin {admin_user_id} successfully set implementability of paper {paper_id} to {status_to_set_by_admin}. New main status: {updated_paper.get('status')}")
         return updated_paper
 
     async def delete_paper(self, paper_id: str, admin_user_id: str) -> bool:
-        self.logger.info(f"Service: Async deleting paper_id: {paper_id} by admin_user_id: {admin_user_id}")
+        #self.logger.info(f"Service: Async deleting paper_id: {paper_id} by admin_user_id: {admin_user_id}")
 
         papers_collection = await get_papers_collection_async()
         user_actions_collection = await get_user_actions_collection_async()
@@ -388,7 +388,7 @@ class PaperModerationService:
             # Or: await user_actions_collection.update_many({"paperId": paper_obj_id}, {"$set": {"paperDeleted": True}})
 
 
-            self.logger.info(f"Service: Paper {paper_id} successfully deleted by admin {admin_user_id} and moved to removed_papers.")
+            #self.logger.info(f"Service: Paper {paper_id} successfully deleted by admin {admin_user_id} and moved to removed_papers.")
             return True
 
         except Exception as e:

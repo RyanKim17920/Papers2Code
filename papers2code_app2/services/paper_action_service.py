@@ -29,7 +29,7 @@ class PaperActionService:
         Returns the updated paper document (raw from DB, before transformation).
         Raises PaperNotFoundException, AlreadyVotedException, VoteProcessingException.
         """
-        self.logger.info(f"Service: Async recording vote type '{vote_type}' for paper_id: {paper_id} by user_id: {user_id}")
+        #self.logger.info(f"Service: Async recording vote type '{vote_type}' for paper_id: {paper_id} by user_id: {user_id}")
         
         papers_collection = await get_papers_collection_async()
         user_actions_collection = await get_user_actions_collection_async()
@@ -58,7 +58,7 @@ class PaperActionService:
 
         if vote_type == "up":
             if existing_action:
-                self.logger.info(f"Service: User {user_id} already upvoted paper {paper_id}. No action taken.")
+                #self.logger.info(f"Service: User {user_id} already upvoted paper {paper_id}. No action taken.")
                 return paper_doc 
             
             try:
@@ -73,7 +73,7 @@ class PaperActionService:
                     {"$inc": {"upvoteCount": 1}},
                     return_document=ReturnDocument.AFTER
                 )
-                self.logger.info(f"Service: Upvote recorded for paper {paper_id} by user {user_id}. New count: {updated_paper.get('upvoteCount') if updated_paper else 'N/A'}")
+                #self.logger.info(f"Service: Upvote recorded for paper {paper_id} by user {user_id}. New count: {updated_paper.get('upvoteCount') if updated_paper else 'N/A'}")
             except DuplicateKeyError:
                 self.logger.warning(f"Service: DuplicateKeyError while trying to upvote paper {paper_id} by user {user_id}. User might have already upvoted.")
                 return paper_doc
@@ -83,7 +83,7 @@ class PaperActionService:
 
         elif vote_type == "none":
             if not existing_action:
-                self.logger.info(f"Service: No existing upvote to remove for paper {paper_id} by user {user_id}.")
+                #self.logger.info(f"Service: No existing upvote to remove for paper {paper_id} by user {user_id}.")
                 return paper_doc
 
             try:
@@ -98,7 +98,7 @@ class PaperActionService:
                         {"$inc": {"upvoteCount": -1}},
                         return_document=ReturnDocument.AFTER
                     )
-                    self.logger.info(f"Service: Upvote removed for paper {paper_id} by user {user_id}. New count: {updated_paper.get('upvoteCount') if updated_paper else 'N/A'}")
+                    #self.logger.info(f"Service: Upvote removed for paper {paper_id} by user {user_id}. New count: {updated_paper.get('upvoteCount') if updated_paper else 'N/A'}")
                 else:
                     self.logger.warning(f"Service: Tried to remove upvote for {paper_id} by {user_id}, but action was not found for deletion despite initial check.")
                     updated_paper = paper_doc
@@ -118,7 +118,7 @@ class PaperActionService:
         return updated_paper
 
     async def get_paper_actions(self, paper_id: str) -> PaperActionsSummaryResponse:
-        self.logger.info(f"Service: Async getting actions for paper_id: {paper_id}")
+        #self.logger.info(f"Service: Async getting actions for paper_id: {paper_id}")
         
         papers_collection = await get_papers_collection_async()
         user_actions_collection = await get_user_actions_collection_async()
@@ -138,7 +138,7 @@ class PaperActionService:
             {"paperId": paper_obj_id}
         )
         actions = await actions_cursor.to_list(length=None) # Asynchronously get all actions
-        self.logger.info(f"Service: Fetched {len(actions)} actions for paper_id={paper_id} from DB")
+        #self.logger.info(f"Service: Fetched {len(actions)} actions for paper_id={paper_id} from DB")
 
         if not actions:
             return PaperActionsSummaryResponse(paper_id=paper_id, upvotes=[], saves=[], voted_is_implementable=[], voted_not_implementable=[])

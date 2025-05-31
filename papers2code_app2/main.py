@@ -19,7 +19,7 @@ from .shared import config_settings # MODIFIED: config_settings is still needed 
 from .routers import auth_routes # Corrected import for auth_routes
 
 # Import the paper routers
-from .routers import paper_views_router, paper_actions_router, paper_moderation_router
+from .routers import paper_views_router, paper_actions_router, paper_moderation_router, implementation_progress_router
 
 # ADDED: CSRF constants (ensure these match auth_routes.py)
 CSRF_TOKEN_COOKIE_NAME = "csrf_token_cookie"
@@ -90,14 +90,14 @@ logger.debug("This is a test DEBUG log from 'papers2code_fastapi' logger in main
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     # Code to run before the application starts serving requests
-    logger.info("Application startup: Initializing synchronous database connection...")
+    #logger.info("Application startup: Initializing synchronous database connection...")
     initialize_sync_db() # ADDED: Initialize sync DB for index creation
-    logger.info("Application startup: Ensuring database indexes...")
+    #logger.info("Application startup: Ensuring database indexes...")
     ensure_db_indexes()
-    logger.info("Database index check complete during lifespan startup")
+    #logger.info("Database index check complete during lifespan startup")
     yield
     # Code to run when the application is shutting down
-    logger.info("Application shutdown in lifespan context")
+    #logger.info("Application shutdown in lifespan context")
 
 app = FastAPI(
     title="Papers2Code API",
@@ -124,7 +124,7 @@ if config_settings.FRONTEND_URL:
 origins = list(origins_set) # Convert set to list for CORSMiddleware
 
 # Log the origins being used (ensure logger is configured before this line if used here, it is)
-logger.info(f"Allowed CORS origins: {origins}")
+#logger.info(f"Allowed CORS origins: {origins}")
 
 
 app.add_middleware(
@@ -206,10 +206,9 @@ api_router = APIRouter(prefix="/api")
 api_router.include_router(paper_views_router.router)
 api_router.include_router(paper_actions_router.router)
 api_router.include_router(paper_moderation_router.router)
-
 # Include the auth_routes router into the api_router
 api_router.include_router(auth_routes.router) # MODIFIED: Moved auth_routes here
-
+api_router.include_router(implementation_progress_router.router)
 # Include the api_router into the main app
 app.include_router(api_router)
 

@@ -42,7 +42,7 @@ async def list_papers(
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
     skip = (page - 1) * limit # Calculate skip from page and limit
-    logger.info(f"Router: Listing papers with query: {{page:{page}, limit:{limit}, skip:{skip}, sort_by:{sort_by}, sort_order:{sort_order}, author:{author}, start_date:{start_date}, end_date:{end_date}, ...}}") # Updated log
+    #logger.info(f"Router: Listing papers with query: {{page:{page}, limit:{limit}, skip:{skip}, sort_by:{sort_by}, sort_order:{sort_order}, author:{author}, start_date:{start_date}, end_date:{end_date}, ...}}") # Updated log
     user_id_str = str(current_user.id) if current_user and current_user.id else None
     try:
         papers_db, total_papers = await service.get_papers_list(
@@ -71,7 +71,7 @@ async def list_papers(
             response_papers.append(paper_response)
         except Exception as e:
             logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for list view: {e}", exc_info=True)
-    logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
+    #logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
     # MODIFIED: Return a dictionary matching PaginatedPaperResponse structure
     return {
         "papers": response_papers,
@@ -91,7 +91,7 @@ async def get_paper(
     service: PaperViewService = Depends(get_paper_view_service),
     current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
 ):
-    logger.info(f"Router: Getting paper with ID: {paper_id}")
+    #logger.info(f"Router: Getting paper with ID: {paper_id}")
     user_id_str = str(current_user.id) if current_user and current_user.id else None # Corrected to check current_user.id
     ip_address = request.client.host if request.client else None
 
@@ -114,7 +114,7 @@ async def get_paper(
         logger.error(f"Router: Unexpected error getting paper (ID: {paper_id}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the paper.")
     
-    logger.info(f"Router: Successfully fetched paper ID: {paper_id}")
+    #logger.info(f"Router: Successfully fetched paper ID: {paper_id}")
     return paper_response
 
 @router.get("/by_arxiv_ids/", response_model=List[PaperResponse])
@@ -125,7 +125,7 @@ async def get_papers_by_arxiv_ids_route(
     service: PaperViewService = Depends(get_paper_view_service),
     current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
 ):
-    logger.info(f"Router: Getting papers by arXiv IDs: {arxiv_ids}")
+    #logger.info(f"Router: Getting papers by arXiv IDs: {arxiv_ids}")
     if not arxiv_ids:
         return []
     user_id_str = str(current_user.id) if current_user else None
@@ -146,14 +146,14 @@ async def get_papers_by_arxiv_ids_route(
         except Exception as e:
             logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for arXiv ID list: {e}", exc_info=True)
     
-    logger.info(f"Router: Successfully fetched {len(response_papers)} papers by arXiv IDs.")
+    #logger.info(f"Router: Successfully fetched {len(response_papers)} papers by arXiv IDs.")
     return response_papers
 
 @router.get("/meta/distinct_tags/", response_model=List[str])
 async def get_distinct_tags_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
-    logger.info("Router: Getting distinct tags.")
+    #logger.info("Router: Getting distinct tags.")
     try:
         tags = await service.get_distinct_tags()
     except DatabaseOperationException as e:
@@ -169,7 +169,7 @@ async def get_distinct_tags_route(
 async def get_distinct_venues_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
-    logger.info("Router: Getting distinct venues.")
+    #logger.info("Router: Getting distinct venues.")
     try:
         venues = await service.get_distinct_venues()
     except DatabaseOperationException as e:
@@ -178,14 +178,14 @@ async def get_distinct_venues_route(
     except Exception as e:
         logger.error(f"Router: Unexpected error fetching distinct venues: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
-    logger.info(f"Router: Successfully fetched {len(venues)} distinct venues.")
+    #logger.info(f"Router: Successfully fetched {len(venues)} distinct venues.")
     return venues
 
 @router.get("/meta/distinct_authors/", response_model=List[str])
 async def get_distinct_authors_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
-    logger.info("Router: Getting distinct authors.")
+    #logger.info("Router: Getting distinct authors.")
     try:
         authors = await service.get_distinct_authors()
     except DatabaseOperationException as e:
@@ -194,14 +194,14 @@ async def get_distinct_authors_route(
     except Exception as e:
         logger.error(f"Router: Unexpected error fetching distinct authors: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
-    logger.info(f"Router: Successfully fetched {len(authors)} distinct authors.")
+    #logger.info(f"Router: Successfully fetched {len(authors)} distinct authors.")
     return authors
 
 @router.get("/meta/status_counts/", response_model=Dict[str, int])
 async def get_paper_status_counts_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
-    logger.info("Router: Getting paper status counts.")
+    #logger.info("Router: Getting paper status counts.")
     try:
         counts = await service.get_paper_count_by_status()
     except DatabaseOperationException as e:
@@ -210,7 +210,7 @@ async def get_paper_status_counts_route(
     except Exception as e:
         logger.error(f"Router: Unexpected error fetching status counts: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
-    logger.info(f"Router: Successfully fetched paper status counts: {counts}")
+    #logger.info(f"Router: Successfully fetched paper status counts: {counts}")
     return counts
 
 # Placeholder for adding a new paper - this would typically be in a different service/router (e.g., admin or submission)

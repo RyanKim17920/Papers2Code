@@ -36,8 +36,8 @@ async def vote_on_paper(
 ):
     # Log the raw request body first to see what's coming in before Pydantic validation
     raw_body = await request.body()
-    logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
-    logger.info(f"Vote request for paper_id: {paper_id}. Parsed vote_type: {vote_type}. User ID: {current_user.id}")
+    #logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
+    #logger.info(f"Vote request for paper_id: {paper_id}. Parsed vote_type: {vote_type}. User ID: {current_user.id}")
 
     paper_action_service = PaperActionService() # Instantiate the service
 
@@ -93,7 +93,7 @@ async def get_paper_actions(
     request: Request,  # For limiter
     paper_id: str
 ):
-    logger.info(f"Router: Received request to get actions for paper_id: {paper_id}")
+    #logger.info(f"Router: Received request to get actions for paper_id: {paper_id}")
     paper_action_service = PaperActionService()
 
     try:
