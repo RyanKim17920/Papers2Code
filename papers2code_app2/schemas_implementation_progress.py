@@ -23,7 +23,6 @@ from .schemas_db import PyObjectId, _MongoModel
 # -----------------------------------------------------------------------------
 class AuthorOutreachStatus(str, Enum):  
     NOT_INITIATED = "Not Initiated"
-    GUIDANCE_PREPARED = "Guidance Prepared"
     CONTACT_SENT = "Contact Initiated - Awaiting Response"
     RESPONSE_APPROVED = "Response Received - Approved Proceeding"
     RESPONSE_DECLINED = "Response Received - Declined Proceeding"

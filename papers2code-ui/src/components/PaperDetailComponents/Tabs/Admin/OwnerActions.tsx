@@ -5,16 +5,14 @@ import { Paper } from '../../../../types/paper';
 import { AdminSettableImplementabilityStatus } from '../../../../hooks/usePaperDetail';
 import { UserProfile } from '../../../../services/auth';
 import { updatePaperStatusInApi } from '../../../../services/api';
-import { getStatusClass } from '../../../../utils/statusUtils';
 // import './OwnerActions.css'; // Assuming this will be fixed or is not critical for this change
 
 interface OwnerActionsProps {
     paper: Paper;
     currentUser: UserProfile | null;
     onPaperUpdate: (updatedPaper: Paper) => void;
-    setUpdateError: (error: string | null) => void;
     openConfirmStatusModal: (status: AdminSettableImplementabilityStatus) => void; 
-    openConfirmRemoveModal: () => void;
+    onRequestRemoveConfirmation: () => void; // New prop for triggering remove confirmation
     isUpdatingStatus: boolean;
     isRemoving: boolean;
 }
@@ -23,14 +21,15 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
     paper,
     currentUser,
     onPaperUpdate,
-    setUpdateError,
     openConfirmStatusModal,
-    openConfirmRemoveModal,
+    onRequestRemoveConfirmation, // Added
     isUpdatingStatus,
     isRemoving
 }) => {
     const [isUpdatingImplStatus, setIsUpdatingImplStatus] = useState<boolean>(false);
     const [actionClicked, setActionClicked] = useState<AdminSettableImplementabilityStatus | null>(null);
+    // Store the specific status being updated for the "Mark as..." buttons
+    const [markingStatus, setMarkingStatus] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isUpdatingStatus) {
@@ -41,7 +40,8 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
     const handleUpdatePaperStatus = async (newStatus: string) => {
         if (!currentUser || !paper.id) return;
         setIsUpdatingImplStatus(true);
-        setUpdateError(null);
+        setMarkingStatus(newStatus); // Set which status is being marked
+        // setUpdateError(null);
         try {
             const updatedPaper = await updatePaperStatusInApi(paper.id, newStatus, currentUser.id);
             if (updatedPaper) {
@@ -49,12 +49,13 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
             }
         } catch (err) {
             if (err instanceof Error) {
-                setUpdateError(err.message || 'Failed to update paper status');
+                // setUpdateError(err.message || 'Failed to update paper status');
             } else {
-                setUpdateError('An unknown error occurred while updating paper status');
+                // setUpdateError('An unknown error occurred while updating paper status');
             }
         } finally {
             setIsUpdatingImplStatus(false);
+            setMarkingStatus(null); // Reset marking status
         }
     };
 
@@ -121,25 +122,25 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                 <div className="owner-action-group">
                     <h4>Paper Implementation Status</h4>
                     <button
-                        className={`btn button-secondary ${getStatusClass('Not Started')}`}
+                        className={`btn button-secondary status-not-started`}
                         onClick={() => handleUpdatePaperStatus('Not Started')}
                         disabled={isUpdatingImplStatus || paper.status === 'Not Started'}
                     >
-                        {isUpdatingImplStatus && paper.status !== 'Not Started' ? 'Processing...' : 'Mark as Not Started'}
+                        {isUpdatingImplStatus && markingStatus === 'Not Started' ? 'Processing...' : 'Mark as Not Started'}
                     </button>
                     <button
-                        className={`btn button-secondary ${getStatusClass('Work in Progress')}`}
+                        className={`btn button-secondary status-started`}
                         onClick={() => handleUpdatePaperStatus('Work in Progress')}
                         disabled={isUpdatingImplStatus || paper.status === 'Work in Progress'}
                     >
-                        {isUpdatingImplStatus && paper.status !== 'Work in Progress' ? 'Processing...' : 'Mark as In Progress'}
+                        {isUpdatingImplStatus && markingStatus === 'Work in Progress' ? 'Processing...' : 'Mark as In Progress'}
                     </button>
                     <button
-                        className={`btn button-success ${getStatusClass('Completed')}`}
+                        className={`btn button-success status-completed`}
                         onClick={() => handleUpdatePaperStatus('Completed')}
                         disabled={isUpdatingImplStatus || paper.status === 'Completed'}
                     >
-                        {isUpdatingImplStatus && paper.status !== 'Completed' ? 'Processing...' : 'Mark as Completed'}
+                        {isUpdatingImplStatus && markingStatus === 'Completed' ? 'Processing...' : 'Mark as Completed'}
                     </button>
                 </div>
                 
@@ -147,7 +148,7 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                     <h4>Remove Paper</h4>
                     <button 
                         className="btn button-danger" 
-                        onClick={openConfirmRemoveModal}
+                        onClick={onRequestRemoveConfirmation} // Use new prop
                         disabled={isRemoving}
                     >
                         {isRemoving ? 'Processing...' : 'Remove This Paper'}

@@ -4,7 +4,7 @@ from typing import List, Optional, Literal
 from datetime import datetime
 
 from .schemas_db import PyObjectId # ADDED: Import PyObjectId
-from .schemas_implementation_progresss import Progress as ProgressSchema # ADDED: Import ProgressSchema
+from .schemas_implementation_progress import ImplementationProgress
 
 # --- Reusable Model Configurations ---
 camel_case_config = ConfigDict(
@@ -21,7 +21,7 @@ camel_case_config_with_datetime = ConfigDict(
 set_implementability_config = ConfigDict(
     populate_by_name=True,
     alias_generator=to_camel,
-    validate_by_name=True, # MODIFIED: Changed allow_population_by_field_name to validate_by_name
+    validate_by_name=True, 
 )
 
 # --- Type Definitions for Literal Strings ---
@@ -56,7 +56,7 @@ class BasePaper(BaseModel):
 
 class PaperResponse(BasePaper):
     """Schema for representing a paper when returned by API endpoints, including its ID and user-specific interaction details."""
-    id: PyObjectId # MODIFIED: Use PyObjectId
+    id: PyObjectId 
     current_user_implementability_vote: Optional[str] = Field(None, alias="currentUserImplementabilityVote")
     current_user_vote: Optional[str] = Field(None, alias="currentUserVote")
 
@@ -65,7 +65,7 @@ class PaperResponse(BasePaper):
     implementable_votes: int = Field(0, alias="isImplementableVotes")
 
     # ADDED: Optional field for implementation progress
-    implementation_progress: Optional[ProgressSchema] = Field(None, alias="implementationProgress")
+    implementation_progress: Optional[ImplementationProgress] = Field(None, alias="implementationProgress")
 
 
     @computed_field(alias="isImplementable")
@@ -88,14 +88,14 @@ class PaginatedPaperResponse(BaseModel):
 
 class SetImplementabilityRequest(BaseModel):
     """Request schema for setting or updating the implementability status of a paper."""
-    status_to_set: str = Field(..., alias="statusToSet") # MODIFIED: Changed field name and added alias
+    status_to_set: str = Field(..., alias="statusToSet")
     reason: Optional[str] = None
 
     model_config = set_implementability_config
 
 class PaperActionUserDetail(BaseModel):
     """Schema for detailed information about a user who performed an action on a paper."""
-    user_id: PyObjectId # MODIFIED: Use PyObjectId
+    user_id: PyObjectId 
     username: str
     avatar_url: Optional[HttpUrl] = None
     action_type: str
@@ -105,7 +105,7 @@ class PaperActionUserDetail(BaseModel):
 
 class PaperActionsSummaryResponse(BaseModel):
     """Response schema summarizing various user actions associated with a paper."""
-    paper_id: PyObjectId = Field(..., alias="paperId") # MODIFIED: Use PyObjectId
+    paper_id: PyObjectId = Field(..., alias="paperId")
     upvotes: List[PaperActionUserDetail] = Field(default_factory=list, alias="upvotes")
     saves: List[PaperActionUserDetail] = Field(default_factory=list, alias="saves") # Frontend might expect 'saves' or 'savedBy'
     voted_is_implementable: List[PaperActionUserDetail] = Field(default_factory=list, alias="votedIsImplementable")

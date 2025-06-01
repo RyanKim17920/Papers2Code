@@ -140,3 +140,28 @@ small {
     line-height: 1.6;
     color: var(--text-color);
 }
+
+/* --- New Styles for Implementation Effort Section --- */
+.implementation-effort-section {
+    margin-top: 25px;
+    margin-bottom: 25px;
+    padding: 20px;
+    background-color: var(--background-alt-color);
+    border-radius: var(--border-radius-sm); 
+    border: 1px solid var(--border-color-light);
+}
+
+.implementation-effort-section h4 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    color: var(--text-heading-color);
+    font-size: 1.3em;
+    border-bottom: 1px solid var(--border-color-light);
+    padding-bottom: 10px;
+}
+
+.implementation-effort-section p {
+    margin-bottom: 15px;
+    line-height: 1.6;
+    color: var(--text-color);
+}

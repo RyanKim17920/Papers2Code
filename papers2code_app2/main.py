@@ -1,4 +1,4 @@
-from fastapi import FastAPI, Request, HTTPException, APIRouter, status # MODIFIED: Added APIRouter, status
+from fastapi import FastAPI, Request, HTTPException, APIRouter, status 
 from fastapi.middleware.cors import CORSMiddleware # ADDED: For CORS
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
@@ -10,11 +10,10 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response as StarletteResponse # ADDED
 import logging # Ensure logging is imported and active
 from contextlib import asynccontextmanager # ADDED: For lifespan event handler
-from typing import Optional, Dict, List # MODIFIED: Added List
+from typing import Optional, Dict, List 
 
-# MODIFIED: Import ensure_db_indexes and initialize_sync_db from database.py
-from .database import ensure_db_indexes, initialize_sync_db # MODIFIED: Added initialize_sync_db
-from .shared import config_settings # MODIFIED: config_settings is still needed from shared
+from .database import ensure_db_indexes, initialize_sync_db 
+from .shared import config_settings 
 # from .routers import users, auth, admin, user_profile, research_fields, conference_series, conferences, proceedings, links, stats # Commented out missing routers
 from .routers import auth_routes # Corrected import for auth_routes
 
@@ -38,7 +37,6 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
         csrf_token_header = request.headers.get(CSRF_TOKEN_HEADER_NAME)
 
         if not csrf_token_cookie or not csrf_token_header or csrf_token_cookie != csrf_token_header:
-            # MODIFIED: Raise HTTPException instead of returning JSONResponse directly
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="CSRF token mismatch or missing."
@@ -48,7 +46,7 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
         return response
 
 # Initialize Limiter
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"]) # MODIFIED: Using fixed default limits for now
+limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"]) 
 
 # --- Logging Configuration ---
 # MOVED from shared.py: BasicConfig should ideally be called once, e.g. in main.py
@@ -207,7 +205,7 @@ api_router.include_router(paper_views_router.router)
 api_router.include_router(paper_actions_router.router)
 api_router.include_router(paper_moderation_router.router)
 # Include the auth_routes router into the api_router
-api_router.include_router(auth_routes.router) # MODIFIED: Moved auth_routes here
+api_router.include_router(auth_routes.router)
 api_router.include_router(implementation_progress_router.router)
 # Include the api_router into the main app
 app.include_router(api_router)

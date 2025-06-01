@@ -20,7 +20,7 @@ db_papers_sync: Any = None
 db_user_actions_sync: Any = None
 db_removed_papers_sync: Any = None
 db_users_sync: Any = None
-db_implementation_progresss_sync: Any = None # Ensure it's declared global if not already
+db_implementation_progress_sync: Any = None # Ensure it's declared global if not already
 
 # --- Asynchronous Database Connection Initialization ---
 async_client: Optional[AsyncMongoClient] = None # Changed type
@@ -31,7 +31,7 @@ db_user_actions_async: Optional[AsyncCollection] = None # Changed type
 db_removed_papers_async: Optional[AsyncCollection] = None # Changed type
 db_users_async: Optional[AsyncCollection] = None # Changed type
 db_paper_links_async: Optional[AsyncCollection] = None # ADDED: For paper_links collection
-db_implementation_progresss_async: Optional[AsyncCollection] = None # ADDED: For implementation_progresss collection
+db_implementation_progress_async: Optional[AsyncCollection] = None # ADDED: For implementation_progress collection
 
 
 def get_mongo_uri_and_db_name() -> Tuple[str, str]:
@@ -61,7 +61,7 @@ def get_mongo_uri_and_db_name() -> Tuple[str, str]:
 
 async def initialize_async_db():
     """Initializes the asynchronous database connection and collections using PyMongo Async API."""
-    global async_client, async_db, db_papers_async, db_user_actions_async, db_removed_papers_async, db_users_async, db_paper_links_async, db_implementation_progresss_async # MODIFIED: Added db_implementation_progresss_async
+    global async_client, async_db, db_papers_async, db_user_actions_async, db_removed_papers_async, db_users_async, db_paper_links_async, db_implementation_progress_async
     
     if async_client and async_db:
         #logger.info("Asynchronous database connection already initialized.")
@@ -85,15 +85,15 @@ async def initialize_async_db():
         db_removed_papers_async = async_db["removed_papers"]
         db_users_async = async_db["users"]
         db_paper_links_async = async_db["paper_links"] # ADDED: Initialize paper_links collection
-        db_implementation_progresss_async = async_db["implementation_progresss"] # ADDED: Initialize implementation_progresss collection
-        #logger.info("Async database collections initialized (PyMongo Async): papers, user_actions, removed_papers, users, paper_links, implementation_progresss.") # MODIFIED: Updated log message
+        db_implementation_progress_async = async_db["implementation_progress"] # ADDED: Initialize implementation_progress collection
+        #logger.info("Async database collections initialized (PyMongo Async): papers, user_actions, removed_papers, users, paper_links, implementation_progress.") : Updated log message
 
     except Exception as e:
         logger.critical(f"CRITICAL: Failed to connect to MongoDB asynchronously. URI attempted: {globals().get('actual_mongo_uri', 'Not determined')}, DB Name attempted: {globals().get('actual_db_name', 'Not determined')}. Error: {e}", exc_info=True)
 
 def initialize_sync_db():
     """Initializes the synchronous database connection and collections."""
-    global sync_client, sync_db, db_papers_sync, db_user_actions_sync, db_removed_papers_sync, db_users_sync, db_implementation_progresss_sync # MODIFIED: Added db_implementation_progresss_sync
+    global sync_client, sync_db, db_papers_sync, db_user_actions_sync, db_removed_papers_sync, db_users_sync, db_implementation_progress_sync 
     
     if sync_client and sync_db:
         #logger.info("Synchronous database connection already initialized.")
@@ -113,8 +113,8 @@ def initialize_sync_db():
         db_user_actions_sync = sync_db["user_actions"]
         db_removed_papers_sync = sync_db["removed_papers"]
         db_users_sync = sync_db["users"]
-        db_implementation_progresss_sync = sync_db["implementation_progresss"]
-        #logger.info("Sync database collections initialized: papers, user_actions, removed_papers, users, implementation_progresss.") # MODIFIED: Updated log message
+        db_implementation_progress_sync = sync_db["implementation_progress"]
+        #logger.info("Sync database collections initialized: papers, user_actions, removed_papers, users, implementation_progress.") : Updated log message
 
     except Exception as e:
         logger.critical(f"CRITICAL: Failed to connect to MongoDB. URI attempted: {globals().get('actual_mongo_uri', 'Not determined')}, DB Name attempted: {globals().get('actual_db_name', 'Not determined')}. Error: {e}", exc_info=True)
@@ -174,13 +174,13 @@ async def get_paper_links_collection_async() -> AsyncCollection:
         raise Exception("Asynchronous paper_links collection not initialized after attempt.")
     return db_paper_links_async
 
-async def get_implementation_progresss_collection_async() -> AsyncCollection:
-    # Ensure db_implementation_progresss_async is compared with None
-    if db_implementation_progresss_async is None: 
+async def get_implementation_progress_collection_async() -> AsyncCollection:
+    # Ensure db_implementation_progress_async is compared with None
+    if db_implementation_progress_async is None: 
         await initialize_async_db()
-    if db_implementation_progresss_async is None: 
-        raise Exception("Asynchronous implementation_progresss collection not initialized after attempt.")
-    return db_implementation_progresss_async
+    if db_implementation_progress_async is None: 
+        raise Exception("Asynchronous implementation_progress collection not initialized after attempt.")
+    return db_implementation_progress_async
 
 # --- Database Index Creation (using sync client for now, can be adapted if needed) ---
 def ensure_db_indexes():
@@ -263,6 +263,16 @@ def ensure_db_indexes():
                 #logger.info("Created compound index on 'paperId', 'actionType' in 'user_actions' collection.")
             #else:
             #    logger.info("Index 'paperId_1_actionType_1' already exists in 'user_actions' collection.")
+
+        # Indexes for implementation_progress collection
+        if db_implementation_progress_sync is not None:
+            current_indexes_progress = db_implementation_progress_sync.index_information()
+            if "paper_id_1" not in current_indexes_progress:
+                # Assuming one progress document per paper_id, hence unique=True
+                db_implementation_progress_sync.create_index([("paper_id", ASCENDING)], name="paper_id_1", unique=True)
+                logger.info("Created unique index on 'paper_id' in 'implementation_progress' collection.")
+            #else:
+                #logger.info("Index 'paper_id_1' already exists in 'implementation_progress' collection.")
 
         #logger.info("Database index check/creation process complete.")
 

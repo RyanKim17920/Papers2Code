@@ -1,45 +1,57 @@
 import React from 'react';
-import { Paper } from '../../types/paper'; // Assuming Paper type
+import { Paper, OverallProgressStatusTs } from '../../types/paper'; // Assuming Paper type
 import './PaperTabs.css';
 
 interface PaperTabsProps {
     activeTab: string;
-    setActiveTab: (tab: string) => void;
+    onSelectTab: (tab: string) => void; 
     paper: Paper;
-    isOwner: boolean;
+    isAdminView: boolean; 
 }
 
-const PaperTabs: React.FC<PaperTabsProps> = ({ activeTab, setActiveTab, paper, isOwner }) => {
+const PaperTabs: React.FC<PaperTabsProps> = ({ 
+    activeTab, 
+    onSelectTab, 
+    paper, 
+    isAdminView 
+}) => {
+    const showImplementationDetailsTab = paper.implementationProgress && 
+        paper.implementationProgress.status !== OverallProgressStatusTs.AUTHOR_OUTREACH_PENDING &&
+        paper.implementationProgress.status !== OverallProgressStatusTs.AUTHOR_CONTACT_INITIATED &&
+        paper.implementationProgress.status !== OverallProgressStatusTs.ROADMAP_DEFINITION;
+
     return (
         <div className="paper-tabs">
             <button
                 className={`tab-button ${activeTab === 'paperInfo' ? 'active' : ''}`}
-                onClick={() => setActiveTab('paperInfo')}
+                onClick={() => onSelectTab('paperInfo')}
             >
                 Paper Information
             </button>
-            <button
-                className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
-                onClick={() => setActiveTab('details')}
-            >
-                Implementation Details
-            </button>
+            {showImplementationDetailsTab && (
+                <button
+                    className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
+                    onClick={() => onSelectTab('details')}
+                >
+                    Implementation Details
+                </button>
+            )}
             <button
                 className={`tab-button ${activeTab === 'upvotes' ? 'active' : ''}`}
-                onClick={() => setActiveTab('upvotes')}
+                onClick={() => onSelectTab('upvotes')}
             >
                 Upvotes ({paper.upvoteCount ?? 0})
             </button>
             <button
                 className={`tab-button ${activeTab === 'implementability' ? 'active' : ''}`}
-                onClick={() => setActiveTab('implementability')}
+                onClick={() => onSelectTab('implementability')}
             >
                 Implementability Votes ({paper.nonImplementableVotes + paper.isImplementableVotes})
             </button>
-            {isOwner && (
+            {isAdminView && (
                 <button
                     className={`tab-button ${activeTab === 'admin' ? 'active' : ''}`}
-                    onClick={() => setActiveTab('admin')}
+                    onClick={() => onSelectTab('admin')}
                 >
                     Admin Actions
                 </button>

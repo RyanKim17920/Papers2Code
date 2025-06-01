@@ -9,7 +9,7 @@ from .schemas_papers import camel_case_config, camel_case_config_with_datetime
 
 class UserSchema(BaseModel): # Model returned by get_current_user
     """Schema for representing the currently authenticated user, often returned by endpoints like get_current_user."""
-    id: Optional[PyObjectId] = Field(None, alias='_id') # MODIFIED: Use PyObjectId
+    id: Optional[PyObjectId] = Field(None, alias='_id') 
     github_id: int
     username: str
     name: Optional[str] = None
@@ -24,7 +24,7 @@ class UserSchema(BaseModel): # Model returned by get_current_user
 
 class UserMinimal(BaseModel): # Response model for /me endpoint
     """Minimal user information, suitable for public display or a /me endpoint."""
-    id: Optional[PyObjectId] = None # MODIFIED: Use PyObjectId, though often this might be string if already converted
+    id: Optional[PyObjectId] = None 
     username: str
     name: Optional[str] = None
     avatar_url: Optional[str] = None

@@ -6,7 +6,7 @@ import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } 
 import { UserProfile } from '../services/auth';
 
 import LoadingSpinner from '../components/LoadingSpinner';
-import ConfirmationModal from '../components/common/ConfirmationModal';
+import ConfirmationModal from '../components/common/ConfirmationModal'; // Standardized import
 
 import PaperMetadata from '../components/PaperDetailComponents/Tabs/Paper/PaperMetadata';
 import PaperAbstract from '../components/PaperDetailComponents/Tabs/Paper/PaperAbstract';
@@ -16,7 +16,6 @@ import DetailsTab from '../components/PaperDetailComponents/Tabs/Implementation/
 import { UpvotesTab } from '../components/PaperDetailComponents/Tabs/Upvote/UpvotesTab'; // Named import
 import { ImplementabilityTab } from '../components/PaperDetailComponents/Tabs/Implementation/ImplementabilityTab'; // Named import
 import { OwnerActions } from '../components/PaperDetailComponents/Tabs/Admin/OwnerActions'; // Named import
-
 import './PaperDetailPage.css';
 
 interface PaperDetailPageProps {
@@ -31,37 +30,45 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         isLoading,
         error,
         updateError,
-        isRemoving,
-        isUpdatingStatus,
-        isVoting,
         activeTab,
         setActiveTab,
-        actionUsers,
-        isLoadingActionUsers,
-        actionUsersError,
         handleUpvote,
         handleImplementabilityVote,
         handleSetImplementabilityStatus,
         handleRemovePaper,
         showConfirmRemoveModal,
+        setShowConfirmRemoveModal,
         showConfirmStatusModal,
-        openConfirmRemoveModal,
+        setShowConfirmStatusModal,
         openConfirmStatusModal,
-        closeConfirmRemoveModal,
-        closeConfirmStatusModal,
-        reloadPaper,
-        setUpdateError, // Added setUpdateError to destructuring
+        isRemoving,
+        isUpdatingStatus,
+        isVoting,
+        actionUsers,
+        isLoadingActionUsers,
+        actionUsersError,
+        loadPaperAndActions, 
+        handleInitiateJoinImplementationEffort, 
+        isProcessingEffortAction,          
+        effortActionError                  
     } = usePaperDetail(paperId, currentUser);
-    console.log(paper);
-    // Determine if the current user is an admin
-    const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
 
-    const handleStepUpdate = async () => {
-        await reloadPaper();
-    };
+    const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
 
     const handleSetActiveTab = (tab: string) => {
         setActiveTab(tab as ActiveTabType);
+    };
+
+    // Placeholder handler for initiating/joining implementation effort
+    // TODO: Move this logic to usePaperDetail.ts and implement API calls via api.ts
+    const handleInitiateImplementationEffort = () => {
+        if (!paperId || !currentUser) {
+            console.warn("Paper ID or user not available for initiating implementation effort.");
+            alert("You must be logged in to perform this action.");
+            return;
+        }
+        // Call the handler from the hook
+        handleInitiateJoinImplementationEffort();
     };
 
     if (isLoading) {
@@ -85,12 +92,83 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
             <ImplementabilityNotice paper={paper} />
 
+            {/* --- Community Implementation Effort Section --- */}
+            {currentUser && paper && (
+                <div className="implementation-effort-section">
+                    <h4>Community Implementation Progress</h4>
+                    {paper.implementationProgress ? (
+                        <>
+                            <p>A community effort to implement this paper is active or has been initiated.</p>
+                            <button 
+                                onClick={handleInitiateImplementationEffort} 
+                                className="button-secondary" 
+                                disabled={isProcessingEffortAction} 
+                            >
+                                View or Join Effort
+                            </button>
+                        </>
+                    ) : (
+                        <>
+                            <p>Be the first to lead or join a community effort to implement this paper!</p>
+                            <button 
+                                onClick={handleInitiateImplementationEffort} 
+                                className="button-secondary" 
+                                disabled={isProcessingEffortAction} 
+                            >
+                                Start Implementation Effort
+                            </button>
+                        </>
+                    )}
+                    {effortActionError && <div className="error-message">{effortActionError}</div>}
+                    {updateError && !effortActionError && <div className="error-message">{updateError}</div>} {/* Display general update error if no specific effort error */}
+                </div>
+            )}
+
             <PaperTabs
                 activeTab={activeTab}
-                setActiveTab={handleSetActiveTab}
+                onSelectTab={handleSetActiveTab}
                 paper={paper}
-                isOwner={isAdminView} // Pass isAdminView as isOwner to PaperTabs
+                currentUser={currentUser}
+                onUpvote={(voteType) => handleUpvote(voteType as 'up' | 'none')}
+                onImplementabilityVote={handleImplementabilityVote}
+                onSetImplementabilityStatus={openConfirmStatusModal} // Use openConfirmStatusModal directly
+                onRemovePaper={() => setShowConfirmRemoveModal(true)} // Use setShowConfirmRemoveModal to open
+                isUpdatingStatus={isUpdatingStatus}
+                isVoting={isVoting}
+                updateError={updateError} // Pass updateError state down
+                actionUsers={actionUsers}
+                isLoadingActionUsers={isLoadingActionUsers}
+                actionUsersError={actionUsersError}
+                isAdminView={isAdminView}
+                reloadPaper={loadPaperAndActions} // Pass loadPaperAndActions as reloadPaper
             />
+
+            {showConfirmRemoveModal && (
+                <ConfirmationModal // Standardized to ConfirmationModal
+                    isOpen={showConfirmRemoveModal}
+                    onClose={() => setShowConfirmRemoveModal(false)}
+                    onConfirm={handleRemovePaper}
+                    title="Confirm Removal"
+                    confirmText="Remove"
+                    confirmButtonClass="button-danger"
+                    isConfirming={isRemoving}
+                >
+                    <p>Are you sure you want to remove this paper? This action cannot be undone.</p>
+                </ConfirmationModal>
+            )}
+
+            {showConfirmStatusModal.show && showConfirmStatusModal.status && (
+                <ConfirmationModal // Standardized to ConfirmationModal
+                    isOpen={showConfirmStatusModal.show}
+                    onClose={() => setShowConfirmStatusModal({ show: false, status: null })}
+                    onConfirm={() => handleSetImplementabilityStatus(showConfirmStatusModal.status!)}
+                    title="Confirm Status Change"
+                    confirmText="Confirm Status"
+                    isConfirming={isUpdatingStatus}
+                >
+                    <p>{`Are you sure you want to set the status to "${showConfirmStatusModal.status}"?`}</p>
+                </ConfirmationModal>
+            )}
 
             <div className="tab-content">
                 {activeTab === 'paperInfo' && (
@@ -101,7 +179,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 )}
 
                 {activeTab === 'details' && (
-                    <DetailsTab paper={paper} onStepUpdate={handleStepUpdate} />
+                    <DetailsTab paper={paper} onStepUpdate={loadPaperAndActions} /> 
                 )}
 
                 {activeTab === 'upvotes' && (
@@ -133,10 +211,9 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         <OwnerActions
                             paper={paper}
                             currentUser={currentUser}
-                            onPaperUpdate={reloadPaper}
-                            setUpdateError={setUpdateError}
+                            onPaperUpdate={loadPaperAndActions}
                             openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
-                            openConfirmRemoveModal={openConfirmRemoveModal}
+                            onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)} // Pass handler for new prop
                             isUpdatingStatus={isUpdatingStatus}
                             isRemoving={isRemoving}
                         />
@@ -146,7 +223,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
             <ConfirmationModal
                 isOpen={showConfirmRemoveModal}
-                onClose={closeConfirmRemoveModal}
+                onClose={() => setShowConfirmRemoveModal(false)}
                 onConfirm={handleRemovePaper}
                 title="Confirm Paper Removal"
                 confirmText="Yes, Remove Paper"
@@ -160,7 +237,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
             <ConfirmationModal
                 isOpen={showConfirmStatusModal.show}
-                onClose={closeConfirmStatusModal}
+                onClose={() => setShowConfirmStatusModal({ show: false, status: null })}
                 onConfirm={() => showConfirmStatusModal.status && handleSetImplementabilityStatus(showConfirmStatusModal.status as AdminSettableImplementabilityStatus)}
                 title={`Confirm Status: ${
                     (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' ? 'Implementable' :

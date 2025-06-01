@@ -123,10 +123,15 @@ async def transform_paper_async(
         "id": paper_id,
         "title": paper_doc.get("title"),
         "authors": _transform_authors(paper_doc.get("authors", [])),
-        "publication_date": paper_doc.get("publicationDate"), # MODIFIED: Was "publicationDate"
-        "upvote_count": paper_doc.get("upvoteCount", 0),       # MODIFIED: Was "upvoteCount"
+        "publication_date": paper_doc.get("publicationDate"), 
+        "upvote_count": paper_doc.get("upvoteCount", 0),       
         "status": paper_doc.get("status", "Not Started"),
     }
+
+    # Preserve implementationProgress if it exists in the input paper_doc
+    # This key is added in paper_view_service.py before calling this transform function
+    if "implementationProgress" in paper_doc and paper_doc["implementationProgress"] is not None:
+        transformed_data["implementationProgress"] = paper_doc["implementationProgress"]
 
     if detail_level == "full":
         raw_implementability_status = paper_doc.get("implementabilityStatus") # Assuming DB field is "implementability_status"
@@ -144,11 +149,11 @@ async def transform_paper_async(
             # else: keep default IMPL_STATUS_VOTING if value is unrecognized
 
         transformed_data.update({
-            "pwc_url": _transform_url(paper_doc.get("pwcUrl")),          # MODIFIED: Was "pwcUrl"
-            "arxiv_id": paper_doc.get("arxivId"),                        # MODIFIED: Was "arxivId"
+            "pwc_url": _transform_url(paper_doc.get("pwcUrl")),       
+            "arxiv_id": paper_doc.get("arxivId"),                   
             "abstract": paper_doc.get("abstract"),
-            "url_abs": _transform_url(paper_doc.get("urlAbs")),            # MODIFIED: Was "urlAbs"
-            "url_pdf": _transform_url(paper_doc.get("urlPdf")),            # MODIFIED: Was "urlPdf"
+            "url_abs": _transform_url(paper_doc.get("urlAbs")),         
+            "url_pdf": _transform_url(paper_doc.get("urlPdf")),          
             "venue": paper_doc.get("venue"), # Assumes DB field is "venue"
             "tags": paper_doc.get("tasks", []), # Assumes DB field is "tasks", Pydantic field "tags" has alias "tasks"
             "implementability_status": current_implementability_status,

@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, BackgroundTasks
-from typing import List, Optional, Dict # MODIFIED: Removed Any
+from typing import List, Optional, Dict
 
-from ..schemas_papers import PaperResponse, PaginatedPaperResponse # MODIFIED: Imported PaginatedPaperResponse
+from ..schemas_papers import PaperResponse, PaginatedPaperResponse 
 from ..schemas_minimal import UserSchema as User # Using UserSchema as User for type hinting
 from ..services.paper_view_service import PaperViewService
 from ..services.exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
@@ -20,7 +20,7 @@ router = APIRouter(
 def get_paper_view_service() -> PaperViewService:
     return PaperViewService()
 
-@router.get("/", response_model=PaginatedPaperResponse) # MODIFIED: Changed response_model
+@router.get("/", response_model=PaginatedPaperResponse)
 async def list_papers(
     # Parameters without default values first
     request: Request,
@@ -72,7 +72,6 @@ async def list_papers(
         except Exception as e:
             logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for list view: {e}", exc_info=True)
     #logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
-    # MODIFIED: Return a dictionary matching PaginatedPaperResponse structure
     return {
         "papers": response_papers,
         "total_count": total_papers,
@@ -89,14 +88,14 @@ async def get_paper(
     # Then parameters with default values (Path also acts as a default here for DI)
     paper_id: str = Path(..., description="The ID of the paper to retrieve"),
     service: PaperViewService = Depends(get_paper_view_service),
-    current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
+    current_user: Optional[User] = Depends(get_current_user_optional)  
 ):
     #logger.info(f"Router: Getting paper with ID: {paper_id}")
     user_id_str = str(current_user.id) if current_user and current_user.id else None # Corrected to check current_user.id
     ip_address = request.client.host if request.client else None
 
     try:
-        paper_doc = await service.get_paper_by_id(paper_id, user_id_str) # MODIFIED HERE
+        paper_doc = await service.get_paper_by_id(paper_id, user_id_str)  
         paper_response = await transform_paper_async(paper_doc, user_id_str)
         # Assuming record_paper_view exists or will be handled separately.
         # If it doesn't exist, it will be the next AttributeError.
@@ -123,7 +122,7 @@ async def get_papers_by_arxiv_ids_route(
     # Then parameters with default values
     arxiv_ids: List[str] = Query(..., description="List of arXiv IDs to fetch papers for."),
     service: PaperViewService = Depends(get_paper_view_service),
-    current_user: Optional[User] = Depends(get_current_user_optional) # MODIFIED HERE
+    current_user: Optional[User] = Depends(get_current_user_optional)  
 ):
     #logger.info(f"Router: Getting papers by arXiv IDs: {arxiv_ids}")
     if not arxiv_ids:

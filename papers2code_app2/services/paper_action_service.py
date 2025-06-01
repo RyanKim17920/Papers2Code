@@ -170,7 +170,6 @@ class PaperActionService:
         saves_details = [] 
         voted_is_implementable = []
         voted_not_implementable = []
-        print(actions)
         for action in actions:
             user_id_obj = action.get('userId')
             if not isinstance(user_id_obj, ObjectId) or str(user_id_obj) not in user_map:
@@ -216,13 +215,6 @@ class PaperActionService:
                 voted_is_implementable.append(action_detail)
             elif action_type == IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE:
                 voted_not_implementable.append(action_detail)
-        print(PaperActionsSummaryResponse(
-            paper_id=paper_id,
-            upvotes=upvotes_details,
-            saves=saves_details, # Ensure this is handled or removed if not applicable
-            voted_is_implementable=voted_is_implementable,
-            voted_not_implementable=voted_not_implementable
-        ))
         return PaperActionsSummaryResponse(
             paper_id=paper_id,
             upvotes=upvotes_details,

@@ -11,10 +11,12 @@ from ..database import (
     get_papers_collection_async,
     get_user_actions_collection_async,
     get_paper_links_collection_async,
-    get_users_collection_async
+    get_users_collection_async,
+    get_implementation_progress_collection_async # ADDED
 )
 from .exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
-from ..schemas_papers import PaperResponse # Assuming PaperResponse is still relevant for type hinting
+from ..schemas_papers import PaperResponse 
+from ..schemas_implementation_progress import ImplementationProgress # ADDED
 from ..shared import (
     IMPL_STATUS_VOTING,
     IMPL_STATUS_COMMUNITY_IMPLEMENTABLE,
@@ -46,7 +48,7 @@ class PaperViewService:
     async def get_paper_by_id(self, paper_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
         """
         Retrieves a single paper by its ID.
-        Includes user-specific actions if user_id is provided.
+        Includes user-specific actions if user_id is provided and implementation progress.
         """
         #self.logger.debug(f"Service: Attempting to get paper by ID: {paper_id} for user: {user_id}")
         try:
@@ -65,6 +67,35 @@ class PaperViewService:
         if not paper:
             self.logger.warning(f"Service: Paper with ID {paper_id} not found.")
             raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
+
+        # Fetch and attach implementation progress
+        implementation_progress_collection = await get_implementation_progress_collection_async()
+        try:
+            # Query by the 'paper_id' field in the implementation_progress collection,
+            # using the string paper_id from the function argument.
+            
+            # Enhanced logging for debugging
+            #self.logger.info(f"Service: Attempting to find implementation_progress for paper_id: '{paper_id}' (type: {type(paper_id)})")
+            query_filter = {"paper_id": paper_id}
+            #self.logger.info(f"Service: Using query filter: {query_filter}")
+            
+            progress_document = await implementation_progress_collection.find_one(query_filter)
+            
+            #self.logger.info(f"Service: Result of find_one for paper_id '{paper_id}': {progress_document}")
+            if progress_document:
+                # paper["implementationProgress"] will be this raw dictionary.
+                # Pydantic (in PaperResponse model which includes ImplementationProgress)
+                # will parse this. The ImplementationProgress schema has paper_id: PyObjectId,
+                # which should handle converting the string paper_id from progress_document
+                # into an ObjectId within the model instance.
+                paper["implementationProgress"] = progress_document
+            else:
+                paper["implementationProgress"] = None
+        except PyMongoError as e:
+            self.logger.error(f"Service: Database error while fetching implementation progress for paper {paper_id}: {e}", exc_info=True)
+            # Decide if this should raise an error or just log and continue without progress info
+            paper["implementationProgress"] = None # Default to None on error
+
 
         #self.logger.debug(f"Service: Successfully fetched paper: {paper_id}")
         return paper # The transformation to PaperResponse with user actions will be handled by utils.transform_paper_async in the router

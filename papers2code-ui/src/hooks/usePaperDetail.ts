@@ -11,7 +11,8 @@ import {
     fetchPaperActionUsers,
     PaperActionUsers,
     AuthenticationError,
-    CsrfError
+    CsrfError,
+    joinOrCreateImplementationProgress // Import the new API function
 } from '../services/api';
 
 import { useModal } from '../context/ModalContext';
@@ -38,8 +39,12 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
     const [actionUsersError, setActionUsersError] = useState<string | null>(null);
 
     const [showConfirmRemoveModal, setShowConfirmRemoveModal] = useState<boolean>(false);
-    // Ensure this uses the AdminSettableImplementabilityStatus type
     const [showConfirmStatusModal, setShowConfirmStatusModal] = useState<{ show: boolean; status: AdminSettableImplementabilityStatus | null }>({ show: false, status: null });
+
+    // --- NEW: State for implementation effort actions ---
+    const [isProcessingEffortAction, setIsProcessingEffortAction] = useState<boolean>(false);
+    const [effortActionError, setEffortActionError] = useState<string | null>(null);
+    // --- End NEW ---
 
     const { showLoginPrompt } = useModal();
 
@@ -92,6 +97,41 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
     }, [loadPaperAndActions]);
 
     // --- Action Handlers ---
+
+    // --- NEW: Handler for initiating or joining implementation effort ---
+    const handleInitiateJoinImplementationEffort = useCallback(async () => {
+        if (!paperId || isProcessingEffortAction) return;
+        if (!currentUser) {
+            showLoginPrompt("Please connect with GitHub to start or join an implementation effort.");
+            return;
+        }
+
+        setIsProcessingEffortAction(true);
+        setEffortActionError(null);
+        setUpdateError(null); // Clear general update errors as well
+
+        try {
+            const updatedPaper = await joinOrCreateImplementationProgress(paperId);
+            setPaper(updatedPaper); // Update the local paper state with the response
+            // Optionally, refetch action users if joining/starting an effort might affect that data
+            // fetchPaperActionUsers(paperId).then(setActionUsers).catch(err => setActionUsersError(err.message));
+            console.log("Successfully initiated/joined implementation effort.");
+        } catch (err) {
+            console.error("Failed to initiate/join implementation effort:", err);
+            const errorMessage = err instanceof Error ? err.message : "Failed to start or join the effort.";
+            if (err instanceof AuthenticationError || err instanceof CsrfError) {
+                showLoginPrompt("Please connect with GitHub to perform this action.");
+                setEffortActionError(errorMessage); 
+            } else {
+                setEffortActionError(`API Error: ${errorMessage}`);
+            }
+            // Also set the general updateError if it's a more generic way to display errors on the page
+            setUpdateError(errorMessage);
+        } finally {
+            setIsProcessingEffortAction(false);
+        }
+    }, [paperId, currentUser, isProcessingEffortAction, showLoginPrompt, setPaper, /* setActionUsers, setActionUsersError */]);
+    // --- End NEW ---
 
     const handleUpvote = useCallback(async (voteType: 'up' | 'none') => {
         if (!paperId || isVoting) return;
@@ -200,43 +240,32 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         setShowConfirmStatusModal({ show: true, status });
     };
 
-    const openConfirmRemoveModal = () => {
-        setShowConfirmRemoveModal(true);
-    };
-
-    // --- Modal Closers ---
-    const closeConfirmStatusModal = () => {
-        setShowConfirmStatusModal({ show: false, status: null });
-    };
-
-    const closeConfirmRemoveModal = () => {
-        setShowConfirmRemoveModal(false);
-    };
-
+    // --- Return Values ---
     return {
         paper,
         isLoading,
         error,
         updateError,
-        setUpdateError, // Add this line
         isRemoving,
         isUpdatingStatus,
         isVoting,
         activeTab,
-        setActiveTab,
         actionUsers,
         isLoadingActionUsers,
         actionUsersError,
+        showConfirmRemoveModal,
+        showConfirmStatusModal,
+        isProcessingEffortAction, // Return new state
+        effortActionError,      // Return new error state
+        loadPaperAndActions, // Renamed from reloadPaper for clarity
         handleUpvote,
         handleImplementabilityVote,
         handleSetImplementabilityStatus,
         handleRemovePaper,
-        showConfirmRemoveModal,
-        showConfirmStatusModal,
-        openConfirmRemoveModal,
-        openConfirmStatusModal,
-        closeConfirmRemoveModal,
-        closeConfirmStatusModal,
-        reloadPaper: loadPaperAndActions
+        setActiveTab,
+        setShowConfirmRemoveModal,
+        setShowConfirmStatusModal,
+        openConfirmStatusModal, // Added this to the return object
+        handleInitiateJoinImplementationEffort // Return new handler
     };
 }

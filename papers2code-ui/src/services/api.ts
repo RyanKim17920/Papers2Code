@@ -105,20 +105,10 @@ export const fetchPapersFromApi = async (
 // --- fetchPaperByIdFromApi ---
 export const fetchPaperByIdFromApi = async (id: string): Promise<Paper | undefined> => {
   const response = await fetch(`${API_BASE_URL}${PAPERS_PREFIX}/papers/${id}`, { credentials: 'include' });
-  // Specific handling for 404 before global handler, if desired (e.g., return undefined directly)
   if (response.status === 404) return undefined;
-  // MODIFIED: Use handleApiResponse for other cases
-  return handleApiResponse<Paper>(response);
-};
-
-// --- Placeholder update functions ---
-export const updateStepStatusInApi = async (
-  // paperId: string, // Parameter unused
-  // stepId: number, // Parameter unused
-  // newStatus: Paper['implementationSteps'][0]['status'] // Parameter unused
-): Promise<Paper | undefined> => {
-  console.warn('updateStepStatusInApi: Backend endpoint not implemented yet.');
-  throw new Error("Backend update not implemented");
+  const paper =  handleApiResponse<Paper>(response);
+  console.log("Fetched paper by ID:", id, paper); 
+  return paper;
 };
 
 export type ImplementabilityAction = 'flag' | 'confirm' | 'dispute' | 'retract';
@@ -308,6 +298,38 @@ interface BackendPaperActionsSummaryResponse {
   votedNotImplementable: BackendPaperActionUserDetail[];
 }
 // --- END ADDED TYPE DEFINITIONS ---
+
+// --- NEW: Function to join or create implementation progress ---
+export const joinOrCreateImplementationProgress = async (
+  paperId: string
+): Promise<Paper> => {
+  const url = `${API_BASE_URL}${PAPERS_PREFIX}/implementation-progress/paper/${paperId}/join`;
+  console.log(`Attempting to join or create implementation progress for paper: ${paperId}`);
+
+  const csrfToken = getCsrfToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  } else {
+    console.warn("CSRF Token is missing for joinOrCreateImplementationProgress, X-CSRFToken header NOT added.");
+    // Depending on backend strictness, this might still fail or succeed if CSRF is not enforced on this endpoint
+  }
+
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    // No body is needed for this specific endpoint as per backend definition
+    credentials: 'include',
+  });
+
+  // The backend is expected to return the updated Paper document which includes the ImplementationProgress
+  const updatedPaper = await handleApiResponse<Paper>(response);
+  console.log(`Successfully joined or created implementation progress for paper ${paperId}.`);
+  return updatedPaper;
+};
+// --- End NEW ---
 
 // NEW: Private helper function to handle API responses and 401 errors
 async function handleApiResponse<T>(response: Response): Promise<T> {
