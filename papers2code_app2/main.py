@@ -12,7 +12,7 @@ import logging # Ensure logging is imported and active
 from contextlib import asynccontextmanager # ADDED: For lifespan event handler
 from typing import Optional, Dict, List 
 
-from .database import ensure_db_indexes, initialize_sync_db 
+from .database import ensure_db_indexes_async, initialize_sync_db 
 from .shared import config_settings 
 # from .routers import users, auth, admin, user_profile, research_fields, conference_series, conferences, proceedings, links, stats # Commented out missing routers
 from .routers import auth_routes # Corrected import for auth_routes
@@ -91,7 +91,7 @@ async def lifespan(app: FastAPI):
     #logger.info("Application startup: Initializing synchronous database connection...")
     initialize_sync_db() # ADDED: Initialize sync DB for index creation
     #logger.info("Application startup: Ensuring database indexes...")
-    ensure_db_indexes()
+    await ensure_db_indexes_async()
     #logger.info("Database index check complete during lifespan startup")
     yield
     # Code to run when the application is shutting down

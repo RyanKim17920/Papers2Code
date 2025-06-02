@@ -10,7 +10,6 @@ from datetime import datetime, timedelta
 from ..database import (
     get_papers_collection_async,
     get_user_actions_collection_async,
-    get_paper_links_collection_async,
     get_users_collection_async,
     get_implementation_progress_collection_async # ADDED
 )
@@ -190,7 +189,7 @@ class PaperViewService:
             
             for term in search_terms:
                 atlas_compound_must.append({
-                    "text": {"query": term, "path": ["title", "abstract"], "fuzzy": {"maxEdits": 1, "prefixLength": 1}}
+                    "text": {"query": term, "path": ["title", "abstract"]}
                 })
             atlas_compound_should.append({ # Boost title matches more
                 "text": {"query": search_query, "path": "title", "score": {"boost": {"value": 5}}} # Increased boost to 5
