@@ -44,6 +44,9 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
 
   // API Fetching Logic
   useEffect(() => {
+    // NEW: Create an AbortController for this effect run
+    const abortController = new AbortController();
+
     const loadPapers = async () => {
       setIsLoading(true); // Use internal isLoading
       setError(null);
@@ -71,11 +74,18 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
           ITEMS_PER_PAGE,
           debouncedSearchTerm,
           sortParamToSend,
-          appliedAdvancedFilters // <-- Pass applied filters
+          appliedAdvancedFilters, // <-- Pass applied filters
+          abortController.signal // <-- NEW: Pass the abort signal
         );
         setPapers(response.papers);
         setTotalPages(response.totalPages);
       } catch (err) {
+        // NEW: Check if the error is due to an abort
+        if (err instanceof Error && err.name === 'AbortError') {
+          console.log('Fetch aborted');
+          // Don't set error state for aborted requests
+          return;
+        }
         console.error("Failed to fetch papers:", err);
         setError(err instanceof Error ? err.message : "Failed to load papers.");
         setPapers([]);
@@ -94,6 +104,11 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
         loadPapers();
     }
     // Add authLoading to the dependency array
+
+    // NEW: Cleanup function to abort fetch on component unmount or dependency change
+    return () => {
+      abortController.abort();
+    };
   }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters, authLoading]);
 
   // Handlers

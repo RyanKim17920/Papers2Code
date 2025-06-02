@@ -60,7 +60,8 @@ export const fetchPapersFromApi = async (
   limit: number = 12,
   searchTerm?: string,
   sort?: 'newest' | 'oldest' | 'upvotes',
-  advancedFilters?: AdvancedPaperFilters
+  advancedFilters?: AdvancedPaperFilters,
+  signal?: AbortSignal // <-- NEW: Add AbortSignal parameter
 ): Promise<{ papers: Paper[]; totalPages: number; page: number; pageSize: number; hasMore: boolean }> => {
   const params = new URLSearchParams();
   params.append('limit', String(limit));
@@ -86,7 +87,7 @@ export const fetchPapersFromApi = async (
 
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/?${params.toString()}`;
   console.log("Fetching from API:", url);
-  const response = await fetch(url, { credentials: 'include' });
+  const response = await fetch(url, { credentials: 'include', signal }); // <-- MODIFIED: Pass signal to fetch
   // MODIFIED: Use handleApiResponse with correct camelCase types for pageSize and hasMore from the backend's PaginatedPaperResponse
   const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; page: number; pageSize: number; hasMore: boolean}>(response);
   console.log('fetched data: ') // Optional: keep for debugging if needed
@@ -347,6 +348,25 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
     // Handle other 400 errors
     console.error(`API Error 400: ${errorData.description || 'Bad Request'}`);
     throw new Error(`API request failed with status 400: ${errorData.description || 'Bad Request'}`);
+  }
+  // NEW: Handle 422 Unprocessable Entity for validation errors
+  if (response.status === 422) {
+    const errorData = await response.json().catch(() => null);
+    if (errorData && errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+      // Extract the first validation error message
+      const firstError = errorData.detail[0];
+      let userMessage = firstError.msg;
+      // Optionally, make the message more specific if location info is useful
+      // if (firstError.loc && Array.isArray(firstError.loc) && firstError.loc.length > 1) {
+      //   userMessage = `Error with field '${firstError.loc[1]}': ${userMessage}`;
+      // }
+      console.error('API Validation Error (422):', userMessage, errorData.detail);
+      throw new Error(userMessage); // Throw with the specific validation message
+    }
+    // Fallback if the 422 error format is not as expected
+    const errorBody = await response.text().catch(() => `Status: ${response.status}`);
+    console.error(`API Validation Error (422):`, errorBody);
+    throw new Error(`Validation failed: ${errorBody}`);
   }
   if (!response.ok) {
     // Handle other errors (e.g., 404, 500)

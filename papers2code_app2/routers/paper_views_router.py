@@ -1,5 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, BackgroundTasks
-from typing import List, Optional, Dict
+from typing import List, Optional, Dict, Any
+import asyncio # Add asyncio import
 
 from ..schemas_papers import PaperResponse, PaginatedPaperResponse 
 from ..schemas_minimal import UserSchema as User # Using UserSchema as User for type hinting
@@ -8,6 +9,7 @@ from ..services.exceptions import PaperNotFoundException, DatabaseOperationExcep
 from ..auth import get_current_user_optional # Changed from get_current_user
 from ..utils import transform_paper_async
 import logging
+import time # Add time import for performance logging
 
 logger = logging.getLogger(__name__)
 
@@ -41,44 +43,61 @@ async def list_papers(
     service: PaperViewService = Depends(get_paper_view_service),
     current_user: Optional[User] = Depends(get_current_user_optional)
 ):
+    router_start_time = time.time() # Start timer for the entire endpoint
     skip = (page - 1) * limit # Calculate skip from page and limit
-    #logger.info(f"Router: Listing papers with query: {{page:{page}, limit:{limit}, skip:{skip}, sort_by:{sort_by}, sort_order:{sort_order}, author:{author}, start_date:{start_date}, end_date:{end_date}, ...}}") # Updated log
+    logger.info(f"Router: list_papers called with: page={page}, limit={limit}, sort_by='{sort_by}', search_query='{search_query}', author='{author}'") # More concise initial log
     user_id_str = str(current_user.id) if current_user and current_user.id else None
-    try:
-        papers_db, total_papers = await service.get_papers_list(
-            skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
-            user_id=user_id_str,
-            main_status=main_status, impl_status=impl_status,
-            search_query=search_query, tags=tags,
-            has_official_impl=has_official_impl,
-            venue=venue, author=author,
-            start_date=start_date, end_date=end_date
-        )
-    except DatabaseOperationException as e:
-        logger.error(f"Router: Database error listing papers: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-    except ServiceException as e:
-        logger.error(f"Router: Service error listing papers: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-    except Exception as e:
-        logger.error(f"Router: Unexpected error listing papers: {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching papers.")
+    
+    papers_db: List[Dict[str, Any]]
+    total_papers: int
 
-    response_papers = []
-    for paper_db in papers_db:
-        try:
-            paper_response = await transform_paper_async(paper_db, user_id_str)
-            response_papers.append(paper_response)
-        except Exception as e:
-            logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for list view: {e}", exc_info=True)
+    # Performance logging
+    start_time_total = time.time()
+    logger.info(f"list_papers called with: query='{search_query}', sort_by='{sort_by}', sort_order='{sort_order}', skip={skip}, limit={limit}'")
+
+    current_user_id_str = str(current_user.id) if current_user else None
+    
+    start_time_service = time.time()
+    papers_cursor, total_papers = await service.get_papers_list(
+        skip=skip, limit=limit, sort_by=sort_by, sort_order=sort_order,
+        user_id=user_id_str,
+        main_status=main_status, impl_status=impl_status,
+        search_query=search_query, tags=tags,
+        has_official_impl=has_official_impl,
+        venue=venue, author=author,
+        start_date=start_date, end_date=end_date
+    )
+    end_time_service = time.time()
+    logger.info(f"PERF: service.get_papers_list took {end_time_service - start_time_service:.4f} seconds.")
+
+    start_time_transform = time.time()
+    # transformed_papers = []
+    # for paper_doc in papers_cursor:
+    #     transformed_paper = await transform_paper_async(paper_doc, current_user_id_str) # CORRECTED: removed detail_level
+    #     if transformed_paper:
+    #         transformed_papers.append(transformed_paper)
+
+    # Parallelize the transformation
+    transform_tasks = [
+        transform_paper_async(paper_doc, current_user_id_str) # CORRECTED: removed detail_level
+        for paper_doc in papers_cursor
+    ]
+    transformed_results = await asyncio.gather(*transform_tasks)
+    transformed_papers = [paper for paper in transformed_results if paper is not None]
+    
+    end_time_transform = time.time()
+    logger.info(f"PERF: Transforming {len(transformed_papers)} papers took {end_time_transform - start_time_transform:.4f} seconds.")
+
     #logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
-    return {
-        "papers": response_papers,
+    final_response = {
+        "papers": transformed_papers,
         "total_count": total_papers,
         "page": page,
         "page_size": limit, # FastAPI will use alias 'pageSize' due to model_config
-        "has_more": (skip + len(response_papers)) < total_papers
+        "has_more": (skip + len(transformed_papers)) < total_papers
     }
+    logger.info(f"Router: list_papers endpoint total execution time: {time.time() - router_start_time:.4f}s")
+    return final_response
 
 @router.get("/{paper_id}", response_model=PaperResponse)
 async def get_paper(
