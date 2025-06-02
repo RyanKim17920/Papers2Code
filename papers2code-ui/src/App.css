@@ -377,7 +377,7 @@ a:hover {
 }
 
 .btn:hover:not(:disabled):before {
-  opacity: 1;
+  opacity: .5;
 }
 
 .btn:hover:not(:disabled) {

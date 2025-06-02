@@ -20,7 +20,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     title,
     confirmText = "Confirm",
     cancelText = "Cancel",
-    confirmButtonClass = "button-primary",
+    confirmButtonClass = "btn-primary",
     children,
     isConfirming = false,
 }) => {
@@ -45,7 +45,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                         {isConfirming ? 'Processing...' : confirmText}
                     </button>
                     <button
-                        className="btn button-secondary"
+                        className="btn btn-secondary"
                         onClick={onClose}
                         disabled={isConfirming}
                     >

@@ -1,5 +1,4 @@
-
-/* Styles adapted from PaperDetailPage.css modal styles */
+/* Modern Modal Styles - Enhanced for sleek appearance */
 
 .modal-backdrop {
     position: fixed;
@@ -7,89 +6,310 @@
     left: 0;
     width: 100%;
     height: 100%;
-    background-color: rgba(0, 0, 0, 0.6);
+    background: linear-gradient(135deg, 
+        rgba(0, 0, 0, 0.4) 0%, 
+        rgba(0, 0, 0, 0.6) 100%);
+    backdrop-filter: blur(8px);
+    -webkit-backdrop-filter: blur(8px);
     display: flex;
     justify-content: center;
     align-items: center;
-    z-index: 1050; /* Ensure it's above other content, adjust if needed */
-    padding: 20px; /* Add padding for smaller screens */
+    z-index: 1050;
+    padding: 20px;
     box-sizing: border-box;
+    animation: modalBackdropFadeIn 0.2s ease-out;
+}
+
+@keyframes modalBackdropFadeIn {
+    from {
+        opacity: 0;
+        backdrop-filter: blur(0px);
+        -webkit-backdrop-filter: blur(0px);
+    }
+    to {
+        opacity: 1;
+        backdrop-filter: blur(8px);
+        -webkit-backdrop-filter: blur(8px);
+    }
 }
 
 .modal-content {
-    background-color: var(--card-background-color);
-    padding: 25px 35px; /* Slightly adjusted padding */
-    border-radius: var(--border-radius-lg);
-    box-shadow: var(--box-shadow-lg);
-    min-width: 300px;
-    max-width: 550px; /* Slightly wider max-width */
-    width: 100%; /* Allow shrinking on small screens */
-    max-height: 90vh; /* Limit height */
-    overflow-y: auto;
+    background: #ffffff;
+    padding: 32px 40px;
+    border-radius: 16px;
+    box-shadow: 
+        0 25px 50px -12px rgba(0, 0, 0, 0.25),
+        0 0 0 1px rgba(0, 0, 0, 0.05);
+    min-width: 320px;
+    max-width: 520px;
+    width: 100%;
+    max-height: 90vh;
+    overflow: hidden;
     position: relative;
     display: flex;
     flex-direction: column;
+    border: 1px solid rgba(0, 0, 0, 0.1);
+    animation: modalContentSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+    transform-origin: center;
+}
+
+@keyframes modalContentSlideIn {
+    from {
+        opacity: 0;
+        transform: scale(0.9) translateY(-20px);
+    }
+    to {
+        opacity: 1;
+        transform: scale(1) translateY(0);
+    }
 }
 
 .modal-close-button {
     position: absolute;
-    top: 10px;
-    right: 15px;
-    background: none;
+    top: 16px;
+    right: 20px;
+    background: rgba(0, 0, 0, 0.08);
     border: none;
-    font-size: 1.8rem;
-    font-weight: bold;
-    color: var(--text-muted-color);
+    font-size: 1.4rem;
+    font-weight: 600;
+    color: #666666;
     cursor: pointer;
-    padding: 0;
+    padding: 8px;
     line-height: 1;
-    overflow-y: hidden;
+    border-radius: 50%;
+    width: 32px;
+    height: 32px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    overflow: hidden;
 }
 
 .modal-close-button:hover {
-    color: var(--text-color);
+    color: #333333;
+    background: rgba(0, 0, 0, 0.12);
+    transform: scale(1.1);
+}
+
+.modal-close-button:active {
+    transform: scale(0.95);
 }
 
 .modal-content h2 {
     margin-top: 0;
-    margin-bottom: 20px; /* Space below title */
-    font-size: 1.4em; /* Adjust title size */
-    font-weight: 600;
-    color: var(--text-heading-color);
-    padding-bottom: 10px;
-    border-bottom: 1px solid var(--border-color-light);
+    margin-bottom: 24px;
+    font-size: 1.5rem;
+    font-weight: 700;
+    color: #1a1a1a;
+    padding-bottom: 16px;
+    border-bottom: 2px solid rgba(0, 0, 0, 0.1);
+    position: relative;
+}
+
+.modal-content h2:after {
+    content: '';
+    position: absolute;
+    bottom: -2px;
+    left: 0;
+    width: 40px;
+    height: 2px;
+    background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+    border-radius: 1px;
 }
 
 .modal-body {
-    margin-bottom: 25px; /* Space below content */
-    line-height: 1.6;
-    color: var(--text-color);
-    flex-grow: 1; /* Allow body to take available space */
+    margin-bottom: 32px;
+    line-height: 1.7;
+    color: #333333;
+    flex-grow: 1;
+    font-size: 1rem;
 }
 
 .modal-body p {
     margin-top: 0;
+    margin-bottom: 16px;
+    color: #333333;
 }
+
 .modal-body p:last-child {
     margin-bottom: 0;
+}
+
+.modal-body strong {
+    color: #1a1a1a;
+    font-weight: 600;
 }
 
 
 .modal-actions {
     display: flex;
     justify-content: flex-end;
-    gap: 10px;
-    margin-top: auto; /* Push actions to the bottom */
-    padding-top: 15px; /* Space above actions */
-    border-top: 1px solid var(--border-color-light);
+    gap: 12px;
+    margin-top: auto;
+    padding-top: 24px;
+    border-top: 2px solid rgba(0, 0, 0, 0.05);
 }
 
-/* Assuming .btn and button variations (button-primary, button-secondary, button-danger etc.) are defined globally or in App.css */
 .modal-actions .btn {
-    min-width: 80px; /* Ensure buttons have a minimum width */
+    min-width: 100px;
+    padding: 12px 24px;
+    border-radius: 8px;
+    font-weight: 600;
+    font-size: 0.95rem;
+    transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+    border: 2px solid transparent;
+    cursor: pointer;
+    position: relative;
+    overflow: hidden;
+}
+
+.modal-actions .btn:before {
+    content: '';
+    position: absolute;
+    top: 0;
+    left: 0;
+    width: 100%;
+    height: 100%;
+    background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+    opacity: 0;
+    transition: opacity 0.2s ease;
+}
+
+.modal-actions .btn:hover:before {
+    opacity: 1;
+}
+
+.modal-actions .btn:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+}
+
+.modal-actions .btn:active {
+    transform: translateY(0);
 }
 
 .modal-actions .btn:disabled {
-    opacity: 0.7;
+    opacity: 0.6;
     cursor: not-allowed;
+    transform: none !important;
+    box-shadow: none !important;
+}
+
+.modal-actions .btn:disabled:before {
+    opacity: 0 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 640px) {
+    .modal-backdrop {
+        padding: 16px;
+    }
+    
+    .modal-content {
+        padding: 24px 20px;
+        border-radius: 12px;
+        min-width: unset;
+        width: 100%;
+    }
+    
+    .modal-content h2 {
+        font-size: 1.3rem;
+        margin-bottom: 20px;
+        padding-bottom: 12px;
+    }
+    
+    .modal-actions {
+        flex-direction: column-reverse;
+        gap: 8px;
+    }
+    
+    .modal-actions .btn {
+        width: 100%;
+        min-width: unset;
+    }
+}
+
+/* Animation for mobile devices with reduced motion preference */
+@media (prefers-reduced-motion: reduce) {
+    .modal-backdrop,
+    .modal-content,
+    .modal-close-button,
+    .modal-actions .btn {
+        animation: none;
+        transition: none;
+    }
+}
+
+/* Dark mode support */
+@media (prefers-color-scheme: dark) {
+    .modal-backdrop {
+        background: linear-gradient(135deg, 
+            rgba(0, 0, 0, 0.6) 0%, 
+            rgba(0, 0, 0, 0.8) 100%);
+    }
+    
+    .modal-content {
+        background: #1e1e1e;
+        border: 1px solid rgba(255, 255, 255, 0.15);
+        box-shadow: 
+            0 25px 50px -12px rgba(0, 0, 0, 0.4),
+            0 0 0 1px rgba(255, 255, 255, 0.1);
+    }
+    
+    .modal-content h2 {
+        color: #ffffff;
+        border-bottom: 2px solid rgba(255, 255, 255, 0.15);
+        height: 40px;
+        overflow-y:hidden;
+    }
+    
+    .modal-body,
+    .modal-body p {
+        color: #e0e0e0;
+    }
+    
+    .modal-body strong {
+        color: #ffffff;
+    }
+    
+    .modal-close-button {
+        background: rgba(255, 255, 255, 0.1);
+        color: #cccccc;
+    }
+    
+    .modal-close-button:hover {
+        background: rgba(255, 255, 255, 0.2);
+        color: #ffffff;
+    }
+    
+    .modal-content h2:after {
+        background: linear-gradient(135deg, #0ea5e9 0%, #64748b 100%);
+    }
+}
+
+/* Focus styles for accessibility */
+.modal-close-button:focus,
+.modal-actions .btn:focus {
+    outline: 2px solid var(--primary-color, #007bff);
+    outline-offset: 2px;
+}
+
+/* Enhanced button states */
+.modal-actions .btn-primary {
+    background: linear-gradient(135deg, var(--primary-color, #007bff) 0%, #0056b3 100%);
+    color: white;
+    border-color: var(--primary-color, #007bff);
+}
+
+.modal-actions .btn-secondary {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    color: var(--text-color);
+    border-color: #dee2e6;
+}
+
+.modal-actions .btn-danger {
+    background: linear-gradient(135deg, #dc3545 0%, #c82333 100%);
+    color: white;
+    border-color: #dc3545;
 }
