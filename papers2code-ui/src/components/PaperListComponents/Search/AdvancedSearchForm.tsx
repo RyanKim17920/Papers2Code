@@ -73,36 +73,36 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
       <div className="form-grid">
         {/* Date Range */}
         <div className="form-group">
-          <label htmlFor="startDate">Published After:</label>
-          <DatePicker
+          <label htmlFor="startDate">Published After:</label>          <DatePicker
             selected={parseDateString(filters.startDate)}
             onChange={(date) => handleDateChange(date, 'startDate')}
             selectsStart
-            startDate={parseDateString(filters.startDate)}
-            endDate={parseDateString(filters.endDate)}
+            startDate={parseDateString(filters.startDate) || undefined}
+            endDate={parseDateString(filters.endDate) || undefined}
             dateFormat="yyyy-MM-dd"
             placeholderText="YYYY-MM-DD"
             className="form-control"
             isClearable
-            maxDate={new Date()} // Prevent future dates
+            maxDate={new Date()}
             id="startDate"
             autoComplete="off"
             showIcon
             showMonthDropdown
             showYearDropdown
             dropdownMode="select"
+            readOnly={false}
+            useShortMonthInDropdown={false}
           />
         </div>
         <div className="form-group">
-          <label htmlFor="endDate">Published Before:</label>
-           <DatePicker
+          <label htmlFor="endDate">Published Before:</label>           <DatePicker
             selected={parseDateString(filters.endDate)}
             onChange={(date) => handleDateChange(date, 'endDate')}
             selectsEnd
-            startDate={parseDateString(filters.startDate)}
-            endDate={parseDateString(filters.endDate)}
-            minDate={parseDateString(filters.startDate)} // Prevent earlier dates
-            maxDate={new Date()} // Prevent future dates
+            startDate={parseDateString(filters.startDate) || undefined}
+            endDate={parseDateString(filters.endDate) || undefined}
+            minDate={parseDateString(filters.startDate) || undefined}
+            maxDate={new Date()}
             dateFormat="yyyy-MM-dd"
             placeholderText="YYYY-MM-DD"
             className="form-control"
@@ -113,6 +113,8 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
             showMonthDropdown
             showYearDropdown
             dropdownMode="select"
+            readOnly={false}
+            useShortMonthInDropdown={false}
           />
         </div>
 

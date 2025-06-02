@@ -22,9 +22,11 @@
     /* cleaned up: removed commented grid layout, using flex only */
     display: flex;
     flex-wrap: wrap;
-    gap: 20px;
-    margin: 30px 0 20px; /* combined top/bottom margins */
-    align-items: flex-end; /* Align items based on their bottom edge (useful if labels are above) */
+    gap: 20px;    margin: 30px 0 20px;
+    align-items: flex-start; /* Align items based on their top edge */
+    /*vertical align*/
+    justify-content: flex-start; /* Changed from space-between to fix alignment */
+
   }
   
   
@@ -33,6 +35,8 @@
     flex-direction: column;
     flex: 1 1 auto; /* Allow items to grow and shrink, base size auto */
     min-width: 180px; /* Minimum width before wrapping/shrinking */
+    overflow-y:hidden;
+    height:100%;
   }
   
   
@@ -308,4 +312,140 @@ h2 {
   color: var(--text-heading-color);
   border-bottom: 1px solid var(--border-color);
   padding-bottom: 15px;
+}
+
+/* Remove number input spinners/arrows - AGGRESSIVE APPROACH */
+.form-control::-webkit-outer-spin-button,
+.form-control::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+  overflow: hidden !important;
+}
+
+.form-control[type=number] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  overflow: hidden !important;
+}
+
+/* Remove spinners from react-datepicker inputs */
+.react-datepicker__input-container input::-webkit-outer-spin-button,
+.react-datepicker__input-container input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+  overflow: hidden !important;
+}
+
+.react-datepicker__input-container input[type=number] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  overflow: hidden !important;
+}
+
+.react-datepicker__input-container input {
+  overflow: hidden !important;
+}
+
+/* Additional styling to ensure no spinners appear */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+  overflow: hidden !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  overflow: hidden !important;
+}
+
+/* Remove spinners from month/year dropdowns if they appear as number inputs */
+.react-datepicker__month-select::-webkit-outer-spin-button,
+.react-datepicker__month-select::-webkit-inner-spin-button,
+.react-datepicker__year-select::-webkit-outer-spin-button,
+.react-datepicker__year-select::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+  overflow: hidden !important;
+}
+
+.react-datepicker__month-select[type=number],
+.react-datepicker__year-select[type=number] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  overflow: hidden !important;
+}
+
+.react-datepicker__month-select,
+.react-datepicker__year-select {
+  overflow: hidden !important;
+}
+
+/* Additional protection against any number input spinners */
+.advanced-search-form input[type="number"]::-webkit-outer-spin-button,
+.advanced-search-form input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+  overflow: hidden !important;
+}
+
+.advanced-search-form input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  overflow: hidden !important;
+}
+
+.advanced-search-form input {
+  overflow: hidden !important;
+}
+
+/* Force all DatePicker inputs to not show spinners */
+.react-datepicker-wrapper input,
+.react-datepicker__input-container input {
+  -webkit-appearance: none !important;
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  overflow: hidden !important;
+  height:35px;
+}
+
+.react-datepicker-wrapper input::-webkit-outer-spin-button,
+.react-datepicker-wrapper input::-webkit-inner-spin-button,
+.react-datepicker__input-container input::-webkit-outer-spin-button,
+.react-datepicker__input-container input::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+  overflow: hidden !important;
+}
+
+/* Ensure dropdowns in DatePicker don't show spinners */
+.react-datepicker__header select,
+.react-datepicker__month-dropdown select,
+.react-datepicker__year-dropdown select {
+  -webkit-appearance: menulist !important;
+  -moz-appearance: menulist !important;
+  appearance: menulist !important;
+  overflow: hidden !important;
+}
+
+/* Nuclear option - hide ALL spinners in the component */
+.advanced-search-form *::-webkit-outer-spin-button,
+.advanced-search-form *::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+  overflow: hidden !important;
+}
+
+.advanced-search-form input[type=number] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+  overflow: hidden !important;
 }
