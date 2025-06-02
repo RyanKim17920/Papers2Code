@@ -44,6 +44,7 @@ class ComponentStatus(str, Enum):
 
 
 class ProgressStatus(str, Enum):
+    JUST_CREATED = "Just Created"  # New status
     AUTHOR_OUTREACH_PENDING = "Author Outreach Pending"
     AUTHOR_CONTACT_INITIATED = "Author Contact Initiated"
     ROADMAP_DEFINITION = "Roadmap Definition"
@@ -125,7 +126,7 @@ class Roadmap(BaseModel):
 # -----------------------------------------------------------------------------
 class ImplementationProgress(_MongoModel):
     paper_id: PyObjectId
-    status: ProgressStatus = Field(default=ProgressStatus.AUTHOR_OUTREACH_PENDING)
+    status: ProgressStatus = Field(default=ProgressStatus.AUTHOR_OUTREACH_PENDING) # Default if not set by .new()
     initiated_by: PyObjectId
     contributors: List[PyObjectId] = Field(default_factory=list)
     author_outreach: AuthorOutreach = Field(default_factory=AuthorOutreach)
@@ -134,11 +135,12 @@ class ImplementationProgress(_MongoModel):
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @classmethod
-    def new(cls, paper_id: PyObjectId, user_id: PyObjectId) -> 'ImplementationProgress': 
+    def new(cls, paper_id: PyObjectId, user_id: PyObjectId) -> 'ImplementationProgress':
         return cls(
             paper_id=paper_id,
             initiated_by=user_id,
             contributors=[user_id],
+            status=ProgressStatus.JUST_CREATED,  # Use new default status
             implementation_roadmap=Roadmap(sections=create_default_sections()),
         )
 

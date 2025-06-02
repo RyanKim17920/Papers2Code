@@ -46,6 +46,7 @@ export enum ComponentStatusTs {
 }
 
 export enum OverallProgressStatusTs {
+    JUST_CREATED = "Just Created", // New status
     AUTHOR_OUTREACH_PENDING = "Author Outreach Pending",
     AUTHOR_CONTACT_INITIATED = "Author Contact Initiated",
     ROADMAP_DEFINITION = "Roadmap Definition",

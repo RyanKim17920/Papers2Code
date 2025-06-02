@@ -15,10 +15,6 @@ const PaperTabs: React.FC<PaperTabsProps> = ({
     paper, 
     isAdminView 
 }) => {
-    const showImplementationDetailsTab = paper.implementationProgress && 
-        paper.implementationProgress.status !== OverallProgressStatusTs.AUTHOR_OUTREACH_PENDING &&
-        paper.implementationProgress.status !== OverallProgressStatusTs.AUTHOR_CONTACT_INITIATED &&
-        paper.implementationProgress.status !== OverallProgressStatusTs.ROADMAP_DEFINITION;
 
     return (
         <div className="paper-tabs">
@@ -28,7 +24,7 @@ const PaperTabs: React.FC<PaperTabsProps> = ({
             >
                 Paper Information
             </button>
-            {showImplementationDetailsTab && (
+            {paper.implementationProgress && (
                 <button
                     className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
                     onClick={() => onSelectTab('details')}
@@ -42,12 +38,14 @@ const PaperTabs: React.FC<PaperTabsProps> = ({
             >
                 Upvotes ({paper.upvoteCount ?? 0})
             </button>
-            <button
-                className={`tab-button ${activeTab === 'implementability' ? 'active' : ''}`}
-                onClick={() => onSelectTab('implementability')}
-            >
-                Implementability Votes ({paper.nonImplementableVotes + paper.isImplementableVotes})
-            </button>
+            {!paper.implementationProgress && (
+                <button
+                    className={`tab-button ${activeTab === 'implementability' ? 'active' : ''}`}
+                    onClick={() => onSelectTab('implementability')}
+                >
+                    Implementability Votes ({paper.nonImplementableVotes + paper.isImplementableVotes})
+                </button>
+            )}
             {isAdminView && (
                 <button
                     className={`tab-button ${activeTab === 'admin' ? 'active' : ''}`}

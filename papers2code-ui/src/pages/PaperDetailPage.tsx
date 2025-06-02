@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
 import { usePaperDetail } from '../hooks/usePaperDetail';
@@ -24,6 +24,7 @@ interface PaperDetailPageProps {
 
 const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const { paperId } = useParams<{ paperId: string }>();
+    const [showStartEffortConfirmModal, setShowStartEffortConfirmModal] = useState<boolean>(false); // New state for the modal
 
     const {
         paper,
@@ -50,7 +51,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         loadPaperAndActions, 
         handleInitiateJoinImplementationEffort, 
         isProcessingEffortAction,          
-        effortActionError                  
+        effortActionError
     } = usePaperDetail(paperId, currentUser);
 
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
@@ -59,16 +60,20 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         setActiveTab(tab as ActiveTabType);
     };
 
-    // Placeholder handler for initiating/joining implementation effort
-    // TODO: Move this logic to usePaperDetail.ts and implement API calls via api.ts
+    // Modified to show confirmation modal first
     const handleInitiateImplementationEffort = () => {
         if (!paperId || !currentUser) {
             console.warn("Paper ID or user not available for initiating implementation effort.");
+            // Consider using a more integrated notification system if available
             alert("You must be logged in to perform this action.");
             return;
         }
-        // Call the handler from the hook
-        handleInitiateJoinImplementationEffort();
+        setShowStartEffortConfirmModal(true); // Show the confirmation modal
+    };
+
+    const confirmAndStartEffort = () => {
+        handleInitiateJoinImplementationEffort(); // Call the function from the hook
+        setShowStartEffortConfirmModal(false);    // Close modal
     };
 
     if (isLoading) {
@@ -83,6 +88,10 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         return <div className="error-message">Paper not found or failed to load.</div>;
     }
 
+    const isCurrentUserContributor = paper.implementationProgress?.contributors?.some(
+        (contributorId) => contributorId === currentUser?.id
+    );
+
     return (
         <div className="paper-detail-page">
             <Link to="/" className="back-link">Back to List</Link>
@@ -93,12 +102,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             <ImplementabilityNotice paper={paper} />
 
             {/* --- Community Implementation Effort Section --- */}
-            {currentUser && paper && (
+            {currentUser && paper && !isCurrentUserContributor && (
                 <div className="implementation-effort-section">
                     <h4>Community Implementation Progress</h4>
                     {paper.implementationProgress ? (
                         <>
                             <p>A community effort to implement this paper is active or has been initiated.</p>
+                            {/* Button to View or Join Effort - uses the same handler for now, which will show the modal */}
+                            {/* Consider if "View or Join Effort" should bypass this specific confirmation if an effort already exists */}
                             <button 
                                 onClick={handleInitiateImplementationEffort} 
                                 className="button-secondary" 
@@ -111,7 +122,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         <>
                             <p>Be the first to lead or join a community effort to implement this paper!</p>
                             <button 
-                                onClick={handleInitiateImplementationEffort} 
+                                onClick={handleInitiateImplementationEffort} // This will now open the modal
                                 className="button-secondary" 
                                 disabled={isProcessingEffortAction} 
                             >
@@ -120,7 +131,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         </>
                     )}
                     {effortActionError && <div className="error-message">{effortActionError}</div>}
-                    {updateError && !effortActionError && <div className="error-message">{updateError}</div>} {/* Display general update error if no specific effort error */}
+                    {updateError && !effortActionError && <div className="error-message">{updateError}</div>} 
                 </div>
             )}
 
@@ -128,19 +139,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 activeTab={activeTab}
                 onSelectTab={handleSetActiveTab}
                 paper={paper}
-                currentUser={currentUser}
-                onUpvote={(voteType) => handleUpvote(voteType as 'up' | 'none')}
-                onImplementabilityVote={handleImplementabilityVote}
-                onSetImplementabilityStatus={openConfirmStatusModal} // Use openConfirmStatusModal directly
-                onRemovePaper={() => setShowConfirmRemoveModal(true)} // Use setShowConfirmRemoveModal to open
-                isUpdatingStatus={isUpdatingStatus}
-                isVoting={isVoting}
-                updateError={updateError} // Pass updateError state down
-                actionUsers={actionUsers}
-                isLoadingActionUsers={isLoadingActionUsers}
-                actionUsersError={actionUsersError}
                 isAdminView={isAdminView}
-                reloadPaper={loadPaperAndActions} // Pass loadPaperAndActions as reloadPaper
             />
 
             {showConfirmRemoveModal && (
@@ -220,6 +219,21 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     </div>
                 )}
             </div>
+
+            {/* New Confirmation Modal for Starting/Joining Effort */}
+            {showStartEffortConfirmModal && (
+                <ConfirmationModal
+                    isOpen={showStartEffortConfirmModal}
+                    onClose={() => setShowStartEffortConfirmModal(false)}
+                    onConfirm={confirmAndStartEffort} // Use the new wrapper function
+                    title="Confirm Start Implementation Effort"
+                    confirmText="Yes, Start Effort"
+                    isConfirming={isProcessingEffortAction} 
+                >
+                    <p>Starting an implementation effort indicates this paper is considered implementable, you will work on it, and community implementability voting will be superseded.</p>
+                    <p>Do you want to proceed?</p>
+                </ConfirmationModal>
+            )}
 
             <ConfirmationModal
                 isOpen={showConfirmRemoveModal}
