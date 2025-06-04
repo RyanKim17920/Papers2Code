@@ -6,7 +6,6 @@ from pymongo import AsyncMongoClient
 from pymongo.database import Database as SyncDatabase # Alias for clarity
 from pymongo.database import Database as AsyncDatabase # For type hinting with AsyncMongoClient
 from pymongo.collection import Collection as AsyncCollection # For type hinting with AsyncMongoClient
-from bson import ObjectId
 
 from .shared import config_settings
 
@@ -249,7 +248,7 @@ async def ensure_db_indexes_async():
 
         for collection_obj, index_list_for_collection in all_index_definitions:
             if collection_obj is None: # Corrected condition
-                logger.warning(f"Collection object is None during index definition loop. Skipping. This indicates an issue with db initialization.")
+                logger.warning("Collection object is None during index definition loop. Skipping. This indicates an issue with db initialization.")
                 continue
 
             collection_name = collection_obj.name

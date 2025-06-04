@@ -2,33 +2,17 @@ import logging
 import shlex
 import time # Add time import for performance logging
 from typing import List, Dict, Any, Optional, Tuple
-from bson import ObjectId # type: ignore
-from bson.errors import InvalidId # type: ignore
-from pymongo.errors import PyMongoError # type: ignore
-from pymongo import DESCENDING, ASCENDING # type: ignore
-from datetime import datetime, timedelta
+from bson import ObjectId  # type: ignore
+from bson.errors import InvalidId  # type: ignore
+from pymongo.errors import PyMongoError  # type: ignore
+from pymongo import DESCENDING, ASCENDING  # type: ignore
+from datetime import datetime
 
 from ..database import (
     get_papers_collection_async,
-    get_user_actions_collection_async,
-    get_users_collection_async,
-    get_implementation_progress_collection_async # ADDED
+    get_implementation_progress_collection_async,
 )
 from .exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
-from ..schemas_papers import PaperResponse 
-from ..schemas_implementation_progress import ImplementationProgress # ADDED
-from ..shared import (
-    IMPL_STATUS_VOTING,
-    IMPL_STATUS_COMMUNITY_IMPLEMENTABLE,
-    IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE,
-    IMPL_STATUS_ADMIN_IMPLEMENTABLE,
-    IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE,
-    MAIN_STATUS_NOT_STARTED,
-    MAIN_STATUS_IN_PROGRESS,
-    MAIN_STATUS_COMPLETED,
-    MAIN_STATUS_ABANDONED,
-    MAIN_STATUS_NOT_IMPLEMENTABLE
-)
 
 
 logger = logging.getLogger(__name__)
@@ -168,14 +152,16 @@ class PaperViewService:
             if start_date:
                 dt_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
                 date_filter_parts_mongo["$gte"] = dt_start
-                if is_atlas_search_active: date_filter_parts_atlas_range["gte"] = dt_start
+                if is_atlas_search_active:
+                    date_filter_parts_atlas_range["gte"] = dt_start
             
             if end_date:
                 dt_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
                 if dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0:
                     dt_end = dt_end.replace(hour=23, minute=59, second=59, microsecond=999999)
                 date_filter_parts_mongo["$lte"] = dt_end
-                if is_atlas_search_active: date_filter_parts_atlas_range["lte"] = dt_end
+                if is_atlas_search_active:
+                    date_filter_parts_atlas_range["lte"] = dt_end
             
             if date_filter_parts_mongo:
                 mongo_filter_conditions.append({"publicationDate": date_filter_parts_mongo})
@@ -187,7 +173,7 @@ class PaperViewService:
 
         if has_official_impl is not None:
             if has_official_impl:
-                mongo_filter_conditions.append({"pwc_url": {"$exists": True, "$ne": "", "$ne": None}})
+                mongo_filter_conditions.append({"pwc_url": {"$exists": True, "$nin": ["", None]}})
                 if is_atlas_search_active:
                     atlas_compound_filter.append({
                         "compound": {
@@ -228,9 +214,12 @@ class PaperViewService:
         
         if is_atlas_search_active:
             search_stage_compound: Dict[str, Any] = {}
-            if atlas_compound_must: search_stage_compound["must"] = atlas_compound_must
-            if atlas_compound_should: search_stage_compound["should"] = atlas_compound_should
-            if atlas_compound_filter: search_stage_compound["filter"] = atlas_compound_filter # Now includes all filters
+            if atlas_compound_must:
+                search_stage_compound["must"] = atlas_compound_must
+            if atlas_compound_should:
+                search_stage_compound["should"] = atlas_compound_should
+            if atlas_compound_filter:
+                search_stage_compound["filter"] = atlas_compound_filter  # Now includes all filters
             
             # If compound is empty (e.g. empty search_query/author and no other Atlas filters triggered),
             # then $search stage is not meaningful. Fallback to non-search.

@@ -87,10 +87,10 @@ async def get_current_user(token: Optional[str] = Depends(get_token_from_cookie)
             #logger.debug(f"get_current_user: token_type is not 'access'. Actual type: {token_type}. Payload: {payload}. Raising credentials_exception.")
             raise credentials_exception
             
-    except JWTError as e:
+    except JWTError:
         #logger.debug(f"get_current_user: JWTError during token decoding: {e}. Type: {type(e)}. Raising credentials_exception.")
         raise credentials_exception
-    except Exception as e:
+    except Exception:
         #logger.debug(f"get_current_user: Unexpected error during token processing or initial checks: {e}. Type: {type(e)}. Raising credentials_exception.")
         raise credentials_exception
     
@@ -118,7 +118,7 @@ async def get_current_user(token: Optional[str] = Depends(get_token_from_cookie)
     try:
         user = UserSchema(**user_dict)
         #logger.debug(f"UserSchema object created successfully for user ID '{user_id_from_token}'. User object: {user}")
-    except Exception as e:
+    except Exception:
         #logger.debug(f"Error creating UserSchema for user ID '{user_id_from_token}'. Error: {e}. User dict: {user_dict}. Raising credentials_exception.")
         raise credentials_exception
         
@@ -132,10 +132,10 @@ async def get_current_user_optional(token: Optional[str] = Depends(get_token_fro
         user = await get_current_user(token)
         #logger.debug(f"get_current_user_optional: User found for token. User: {user.username if user else 'None'}")
         return user
-    except HTTPException as e:
+    except HTTPException:
         #logger.debug(f"get_current_user_optional: HTTPException caught ({e.status_code}: {e.detail}). Returning None.")
         return None
-    except Exception as e:
+    except Exception:
         #logger.debug(f"get_current_user_optional: Unexpected error: {e}. Returning None.")
         return None
 

@@ -1,4 +1,4 @@
-from fastapi import HTTPException, status, Request, Response, Depends # Add Depends here
+from fastapi import HTTPException, status, Request, Response
 from fastapi.responses import RedirectResponse
 from jose import jwt, JWTError
 from bson import ObjectId
@@ -6,9 +6,9 @@ from bson.errors import InvalidId
 from ..database import get_users_collection_async # Changed from get_users_collection_sync
 from ..auth import create_access_token, SECRET_KEY, ALGORITHM, create_refresh_token # Updated import
 from .exceptions import (
-    InvalidTokenException, UserNotFoundException, OAuthException,
-    OAuthStateMissingException, OAuthStateMismatchException,
-    GitHubTokenExchangeException, GitHubUserDataException, DatabaseOperationException
+    InvalidTokenException,
+    UserNotFoundException,
+    OAuthException,
 )
 from ..schemas_minimal import UserSchema, UserMinimal
 from ..shared import config_settings
@@ -75,7 +75,6 @@ class AuthService:
             new_access_token_payload = {
                 "sub": str(user_doc["_id"]),
                 "username": user_doc["username"],
-                "github_id": user_doc.get("githubId"),
             }
             new_access_token = create_access_token(data=new_access_token_payload)
             
@@ -254,20 +253,24 @@ class AuthService:
             # 3. User data fetched, now create or update user in DB
             users_collection = await get_users_collection_async()
             
-            github_id = github_user_data.get("id")
-            username = github_user_data.get("login") # This is the GitHub username
-            name = github_user_data.get("name") or username # Use username if name is not set
+            username = github_user_data.get("login")  # GitHub username
+            name = github_user_data.get("name") or username
             avatar_url = github_user_data.get("avatar_url")
-            email = github_user_data.get("email") 
+            email = github_user_data.get("email")
+            github_user_id = github_user_data.get("id")
 
-            if not github_id or not username:
-                logger.error(f"Essential user data (ID or login) missing from GitHub response: {github_user_data}")
-                return RedirectResponse(url=f"{frontend_url}/?login_error=github_missing_essential_data", status_code=307)
+            if github_user_id is None or username is None:
+                logger.error(
+                    f"Essential user data (ID or login) missing from GitHub response: {github_user_data}"
+                )
+                return RedirectResponse(
+                    url=f"{frontend_url}/?login_error=github_missing_essential_data",
+                    status_code=307,
+                )
 
             current_time = datetime.now(timezone.utc)
             try:
                 user_document = await users_collection.find_one_and_update(
-                    {"githubId": github_id},
                     {
                         "$set": {
                             "username": username,
@@ -278,7 +281,6 @@ class AuthService:
                             "lastLoginAt": current_time, # Also update last login time
                         },
                         "$setOnInsert": {
-                            "githubId": github_id,
                             "createdAt": current_time,
                             "is_admin": False, 
                             # Add other default fields for new users if any, e.g., roles: []
@@ -297,7 +299,11 @@ class AuthService:
 
             # 4. Create access and refresh tokens
             user_id_str = str(user_document["_id"])
-            access_token_payload = {"sub": user_id_str, "username": username, "github_id": github_id}
+            access_token_payload = {
+                "sub": user_id_str,
+                "username": username,
+                "github_id": github_user_id,
+            }
             access_token = create_access_token(data=access_token_payload)
             
             refresh_token_payload = {"sub": user_id_str}
@@ -401,13 +407,12 @@ async def get_current_user_optional(request: Request) -> UserMinimal | None: # M
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
         user_id: str = payload.get("sub")
         username: str = payload.get("username")
-        github_id: int = payload.get("github_id")
 
-        if user_id is None or username is None: # github_id can be optional if not all users have it
+        if user_id is None or username is None:
             logger.warning(f"Token payload missing sub or username. Payload: {payload}")
-            return None # Or raise specific error if strict validation needed
+            return None  # Or raise specific error if strict validation needed
 
-        users_collection = await get_users_collection_async() # Changed to async
+        users_collection = await get_users_collection_async()  # Changed to async
         try:
             user_obj_id = ObjectId(user_id)
         except InvalidId:

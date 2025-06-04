@@ -1,7 +1,7 @@
 # papers2code_app2/routers/implementation_progress_router.py
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Body
-from typing import List, Optional
+from fastapi import APIRouter, Depends, HTTPException, status
+from typing import Optional
 from pydantic import BaseModel
 
 from ..schemas_implementation_progress import ( 
@@ -11,7 +11,7 @@ from ..schemas_implementation_progress import (
     ProgressStatus 
 )
 from ..services.implementation_progress_service import ImplementationProgressService
-from ..services.exceptions import NotFoundException, AlreadyExistsException, UserNotContributorException, InvalidRequestException
+from ..services.exceptions import NotFoundException, UserNotContributorException, InvalidRequestException
 from ..auth import get_current_user 
 from ..schemas_minimal import UserSchema as UserInDBMinimalSchema
 
