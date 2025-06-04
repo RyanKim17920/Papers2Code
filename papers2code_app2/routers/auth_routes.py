@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Response, Request
+from fastapi import APIRouter, Depends, status, Response, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 import logging
 
@@ -7,9 +7,9 @@ from ..shared import config_settings
 from ..auth import get_current_user # SECRET_KEY, ALGORITHM, create_refresh_token are used by service
 from ..services.auth_service import AuthService
 from ..services.exceptions import (
-    InvalidTokenException, UserNotFoundException, OAuthException, 
-    OAuthStateMissingException, OAuthStateMismatchException, 
-    GitHubTokenExchangeException, GitHubUserDataException, DatabaseOperationException
+    InvalidTokenException,
+    UserNotFoundException,
+    OAuthException,
 )
 
 logger = logging.getLogger(__name__)

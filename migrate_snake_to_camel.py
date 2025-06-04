@@ -1,5 +1,4 @@
 import pymongo
-from bson import ObjectId # Required for pymongo, though not directly used in key conversion logic
 from pymongo import ReplaceOne
 
 # --- Helper function to convert snake_case to camelCase ---

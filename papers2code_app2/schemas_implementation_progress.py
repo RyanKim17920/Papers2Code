@@ -1,19 +1,14 @@
-from typing import List, Optional, Any
-from pydantic import BaseModel, Field, HttpUrl, AnyUrl
+from typing import List, Optional
+
 from datetime import datetime, timezone
 from enum import Enum
 
-from bson import ObjectId
 from pydantic import (
     BaseModel,
     Field,
     ConfigDict,
     AnyUrl,
-    GetCoreSchemaHandler,
-    GetJsonSchemaHandler
 )
-from pydantic.json_schema import JsonSchemaValue
-from pydantic_core import core_schema
 
 from .schemas_db import PyObjectId, _MongoModel
 

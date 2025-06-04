@@ -1,5 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, BackgroundTasks
-from typing import List, Optional, Dict, Any
+from typing import List, Optional, Dict
 import asyncio # Add asyncio import
 
 from ..schemas_papers import PaperResponse, PaginatedPaperResponse 
@@ -48,11 +48,7 @@ async def list_papers(
     logger.info(f"Router: list_papers called with: page={page}, limit={limit}, sort_by='{sort_by}', search_query='{search_query}', author='{author}'") # More concise initial log
     user_id_str = str(current_user.id) if current_user and current_user.id else None
     
-    papers_db: List[Dict[str, Any]]
-    total_papers: int
-
     # Performance logging
-    start_time_total = time.time()
     logger.info(f"list_papers called with: query='{search_query}', sort_by='{sort_by}', sort_order='{sort_order}', skip={skip}, limit={limit}'")
 
     current_user_id_str = str(current_user.id) if current_user else None
@@ -111,14 +107,12 @@ async def get_paper(
 ):
     #logger.info(f"Router: Getting paper with ID: {paper_id}")
     user_id_str = str(current_user.id) if current_user and current_user.id else None # Corrected to check current_user.id
-    ip_address = request.client.host if request.client else None
 
     try:
         paper_doc = await service.get_paper_by_id(paper_id, user_id_str)  
         paper_response = await transform_paper_async(paper_doc, user_id_str)
         # Assuming record_paper_view exists or will be handled separately.
         # If it doesn't exist, it will be the next AttributeError.
-        # background_tasks.add_task(service.record_paper_view, paper_id, user_id_str, ip_address)
     except PaperNotFoundException as e:
         logger.warning(f"Router: Paper not found (ID: {paper_id}): {e}")
         raise HTTPException(status_code=404, detail=str(e))

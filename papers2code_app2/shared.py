@@ -4,8 +4,6 @@ from typing import Optional, Any
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-from pymongo import MongoClient
-from pymongo.database import Database
 
 # from .schemas_papers import camel_case_config, camel_case_config_with_datetime, set_implementability_config # Assuming this might be needed later
 

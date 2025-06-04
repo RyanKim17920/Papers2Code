@@ -5,9 +5,8 @@ import polars as pl
 import logging
 import io
 import os
-import math
 from typing import List, Dict, Any, Optional
-from pymongo import MongoClient, errors as pymongo_errors
+from pymongo import MongoClient
 from pymongo.operations import ReplaceOne
 from pymongo.errors import BulkWriteError
 from dotenv import load_dotenv

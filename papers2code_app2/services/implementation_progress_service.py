@@ -1,7 +1,7 @@
 \
 # papers2code_app2/services/implementation_progress_service.py
 import logging
-from typing import List, Optional
+from typing import Optional
 from datetime import datetime, timezone
 from bson import ObjectId
 
@@ -18,7 +18,7 @@ from ..schemas_implementation_progress import (
     # ComponentCategory, # Not directly used in this service, can be removed if not needed by ProgressStatus or ComponentStatus
     # ComponentStatus # Not directly used in this service, can be removed if not needed by ProgressStatus
 )
-from .exceptions import NotFoundException, AlreadyExistsException, UserNotContributorException, InvalidRequestException
+from .exceptions import NotFoundException, UserNotContributorException, InvalidRequestException
 
 logger = logging.getLogger(__name__)
 

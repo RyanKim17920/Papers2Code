@@ -9,7 +9,7 @@ import io
 import os
 import math
 from typing import List, Dict, Any, Optional, Set
-from pymongo import MongoClient, errors as pymongo_errors, UpdateOne, InsertOne # <-- Import UpdateOne, InsertOne
+from pymongo import MongoClient, UpdateOne, InsertOne  # <-- Import UpdateOne, InsertOne
 from pymongo.errors import BulkWriteError
 from dotenv import load_dotenv
 import time # For timing operations

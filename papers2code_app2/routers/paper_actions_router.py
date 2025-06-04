@@ -1,22 +1,15 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
-from bson import ObjectId
 from bson.errors import InvalidId
-from datetime import datetime, timezone
 import logging
 from slowapi import Limiter
 from slowapi.util import get_remote_address
 
-from ..schemas_papers import PaperResponse, PaperActionsSummaryResponse, PaperActionUserDetail
-from ..schemas_minimal import UserSchema, UserMinimal
-from ..shared import (
-    IMPL_STATUS_COMMUNITY_IMPLEMENTABLE,
-    IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
-)
-from ..database import get_papers_collection_sync, get_user_actions_collection_sync, get_users_collection_sync # Keep for get_paper_actions for now
+from ..schemas_papers import PaperResponse, PaperActionsSummaryResponse
+from ..schemas_minimal import UserSchema
 from ..utils import transform_paper_async
 from ..auth import get_current_user
 from ..services.paper_action_service import PaperActionService
-from ..services.exceptions import PaperNotFoundException, AlreadyVotedException, VoteProcessingException, InvalidActionException # Added InvalidActionException
+from ..services.exceptions import PaperNotFoundException, AlreadyVotedException, VoteProcessingException
 
 router = APIRouter(
     prefix="/papers",
@@ -34,9 +27,9 @@ async def vote_on_paper(
     vote_type: str = Body(..., embed=True, pattern="^(up|none)$"),
     current_user: UserSchema = Depends(get_current_user)
 ):
-    # Log the raw request body first to see what's coming in before Pydantic validation
-    raw_body = await request.body()
-    #logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
+    # Raw request body can be logged for debugging if needed
+    # raw_body = await request.body()
+    # logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
     #logger.info(f"Vote request for paper_id: {paper_id}. Parsed vote_type: {vote_type}. User ID: {current_user.id}")
 
     paper_action_service = PaperActionService() # Instantiate the service

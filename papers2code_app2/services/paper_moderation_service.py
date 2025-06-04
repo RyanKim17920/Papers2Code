@@ -40,7 +40,7 @@ class PaperModerationService:
         papers_collection = await get_papers_collection_async()
 
         if not paper_doc_for_votes or not isinstance(paper_doc_for_votes, dict) or '_id' not in paper_doc_for_votes:
-            self.logger.error(f"Service:_recalculate: Invalid or missing paper_doc_for_votes.")
+            self.logger.error("Service:_recalculate: Invalid or missing paper_doc_for_votes.")
             raise ServiceException("Invalid paper document provided for status recalculation.")
 
         paper_id_obj = paper_doc_for_votes['_id']
@@ -347,7 +347,6 @@ class PaperModerationService:
         #self.logger.info(f"Service: Async deleting paper_id: {paper_id} by admin_user_id: {admin_user_id}")
 
         papers_collection = await get_papers_collection_async()
-        user_actions_collection = await get_user_actions_collection_async()
         removed_papers_collection = await get_removed_papers_collection_async()
         
         try:

@@ -1,34 +1,13 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
-from pymongo import ReturnDocument
-from pymongo.errors import DuplicateKeyError
-from bson import ObjectId
 from bson.errors import InvalidId
-from datetime import datetime, timezone
 from slowapi import Limiter
 from slowapi.util import get_remote_address
-import logging # Ensure logging is imported
-import traceback
+import logging  # Ensure logging is imported
 
 from ..schemas_papers import (
     PaperResponse, SetImplementabilityRequest
 )
 from ..schemas_minimal import UserSchema
-from ..shared import (
-    config_settings,
-    # Import the constants
-    IMPL_STATUS_VOTING,
-    IMPL_STATUS_COMMUNITY_IMPLEMENTABLE,
-    IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE,
-    IMPL_STATUS_ADMIN_IMPLEMENTABLE,
-    IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE,
-    MAIN_STATUS_NOT_IMPLEMENTABLE, # Import new constant
-    MAIN_STATUS_NOT_STARTED # Import new constant
-)
-from ..database import (
-    get_papers_collection_sync,
-    get_user_actions_collection_sync,
-    get_removed_papers_collection_sync
-)
 from ..utils import transform_paper_async
 from ..auth import get_current_user, get_current_owner
 from ..services.paper_moderation_service import PaperModerationService

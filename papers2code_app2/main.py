@@ -10,7 +10,7 @@ from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoin
 from starlette.responses import Response as StarletteResponse # ADDED
 import logging # Ensure logging is imported and active
 from contextlib import asynccontextmanager # ADDED: For lifespan event handler
-from typing import Optional, Dict, List 
+from typing import Optional, Dict
 
 from .database import ensure_db_indexes_async, initialize_sync_db 
 from .shared import config_settings 
