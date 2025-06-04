@@ -1,4 +1,3 @@
-\
 import logging
 from typing import Optional, Any, Dict, List
 from bson import ObjectId
