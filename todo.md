@@ -11,17 +11,17 @@
                 - [X] Backend: Data model for `authorOutreach` within `implementation_progress` finalized (includes `firstContact`, `authorResponse`, `emailGuidance`).
                 - [ ] UI: Present email guidance, allow user to confirm contact initiation, log response.
             - [X] Display status: "Author Contact Pending," "Author Contacted - Awaiting Response," "Author Approved Open Sourcing" (link to their code), "Author Declined/No Response - Open for Community Implementation." *(This will now be managed via `implementation_progress.status` and `implementation_progress.authorOutreach.status`).*
-        - [~] **Implementation Progress Tracker (for community progress):**
-            - [~] **Allow users to initiate or join a code recreation progress for a specific paper.**
-                - [ ] UI: "Start/Join Implementation Progress" button on Paper Detail page.
-                - [ ] Backend: Endpoints to create progress and add contributors.
+        - [X] **Implementation Progress Tracker (for community progress):**
+            - [X] **Allow users to initiate or join a code recreation progress for a specific paper.**
+                - [X] UI: "Start/Join Implementation Progress" button on Paper Detail page.
+                - [X] Backend: Endpoints to create progress and add contributors.
             - [~] **Users can collaboratively define and track progress on distinct code components/stages.**
                 - [X] **Backend: Define data model for `implementation_progress` collection.**
                     - Finalized schema includes `paperId`, overall `status`, `initiatedBy`, `contributors`, `authorOutreach` object, and `implementationRoadmap` object.
                     - `implementationRoadmap` contains `repositoryUrl`, `overallProgress`, and `sections` array.
                     - Each `section` has `title`, `description`, `order`, `isDefault`, and a `components` array.
                     - Each `component` has `name`, `description`, `status`, `assignedTo`, `notes`, and `order`.
-                - [ ] Provide suggestions for components in "Core Functionalities" section by default.
+                - [X] Provide suggestions for components in "Core Functionalities" section by default.
                 - [ ] Allow users to add custom sections and components.
             - [ ] Status for each component: "To Do," "In Progress," "Completed," "Blocked/Stuck (with notes)," "Skipped (with reason)."
             - [ ] Visual progress bar or checklist for overall implementation. *(Future UI enhancement)*
@@ -34,12 +34,12 @@
                 - Reviewers assess if the code faithfully implements the paper's described methods and ideally can reproduce key results/figures.
                 - Reviewers can provide feedback, request changes, or approve ("checkmark") the implementation.
             - [ ] Display status: "Implementation in Progress," "Submitted for Peer Review," "Peer Review Ongoing," "Peer Reviewed & Verified," "Revisions Requested by Reviewers."
-        - [~] **Backend & UI Development:**
-            - [~] **Develop backend logic to store and manage all aspects:** paper status, **author communication logs (within `implementation_progress.authorOutreach`)**, **implementation components and their statuses (within `implementation_progress.implementationRoadmap`)**, peer review assignments and feedback.
+        - [X] **Backend & UI Development:**
+            - [X] **Develop backend logic to store and manage all aspects:** paper status, **author communication logs (within `implementation_progress.authorOutreach`)**, **implementation components and their statuses (within `implementation_progress.implementationRoadmap`)**, peer review assignments and feedback.
                 - [X] Define MongoDB collection: `implementation_progress` (schema finalized).
                 - [ ] Create Pydantic schemas for new models.
                 - [ ] Develop FastAPI services and routers for `implementation_progress`.
-            - [~] **Create intuitive UI elements for users to navigate this entire workflow:** submitting papers, **initiating/contributing to implementations, guiding author outreach, tracking progress,** and participating in peer reviews.
+            - [ ] **Create intuitive UI elements for users to navigate this entire workflow:** submitting papers, **initiating/contributing to implementations, guiding author outreach, tracking progress,** and participating in peer reviews.
                 - [ ] New "Implementation" tab/section on Paper Detail page.
 
 ### 1.2. Enhanced User Account Management & Dashboard
@@ -68,6 +68,7 @@
             - [ ] Include calls to action (e.g., "Browse Papers," "Submit Your Code," "Sign Up/Login").
         - [ ] **Logged-in View:**
             - [ ] Redirect to the User Dashboard (as per existing todo).
+
 
 ## Phase 2: Pre-Production & Infrastructure
 
@@ -113,7 +114,7 @@
     - **Goal:** Make it easier for users to find relevant papers and code.
     - **Tasks:**
         - [ ] **Advanced Search Capabilities:**
-            - [ ] Filter by keywords, authors, publication date, conference/journal.
+            - [ ] Improved filter by implementation, conference/journal, etc..
             - [ ] Filter by code implementation details (e.g., language, framework, availability of pre-trained models).
         - [ ] **Ordering/Sorting:**
             - [ ] Add citation count (requires integrating with a citation data source like Semantic Scholar, OpenAlex, or CrossRef).
@@ -137,11 +138,3 @@
         - [ ] **User Comments/Discussions:** Consider allowing comments on paper/code pages.
         - [ ] **Rating System:** Allow users to rate the quality/completeness of linked code.
         - [ ] **Enhanced Moderation Tools:** Improve tools for admins/moderators to manage submissions, flags, and user reports.
-
-## Ongoing Tasks
-    - [ ] **Documentation:**
-        - [ ] Maintain and update API documentation.
-        - [ ] Keep architectural documentation current.
-        - [ ] Ensure `README.md` files are comprehensive for setup and contribution.
-    - [ ] **Dependency Management:** Regularly update frontend and backend dependencies.
-    - [ ] **Performance Monitoring & Optimization:** Continuously monitor and improve application performance.

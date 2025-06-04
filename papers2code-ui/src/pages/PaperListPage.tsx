@@ -25,24 +25,16 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
     handleSortChange,
     handlePageChange,
     handlePrev,
-    handleNext,
-    handleVote,
-    // --- NEW: Destructure advanced search state/handlers ---
+    handleNext,    handleVote,    // --- NEW: Destructure advanced search state/handlers and search flags ---
     showAdvancedSearch,
     advancedFilters,
-    appliedAdvancedFilters, // Needed to determine if search is active
     toggleAdvancedSearch,
     handleAdvancedFilterChange,
     applyAdvancedFilters,
     clearAdvancedFilters,
+    isTitleAbstractSearchActive,
     // --- End NEW ---
   } = usePaperList(authLoading); // Pass authLoading to the hook
-
-  // Determine if any search criteria is active for the ListControls component
-  const isAnySearchActive = !!debouncedSearchTerm ||
-                           !!appliedAdvancedFilters.startDate ||
-                           !!appliedAdvancedFilters.endDate ||
-                           !!appliedAdvancedFilters.searchAuthors;
 
   return (
     <div className="paper-list-page">
@@ -51,9 +43,8 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
         <ListControls
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
-          activeSortDisplay={activeSortDisplay as SortPreference | 'relevance'}
-          onSortChange={handleSortChange}
-          isSearchActive={isAnySearchActive} // <-- Use combined check
+          activeSortDisplay={activeSortDisplay as SortPreference | 'relevance'}          onSortChange={handleSortChange}
+          isSearchInputActive={isTitleAbstractSearchActive}
           onToggleAdvancedSearch={toggleAdvancedSearch} // <-- Pass handler
           showAdvancedSearch={showAdvancedSearch}     // <-- Pass state
         />
@@ -68,19 +59,18 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
           />
         )}
         {/* --- End NEW --- */}
-      </div>
-
-      <div className="list-content-area">
-        {isLoading && <LoadingSpinner />}
-        {/* ... rest of the component ... */}
-        {!isLoading && error && <div className="error-message">{error}</div>}
-
-        {!isLoading && !error && (
+      </div>      <div className="list-content-area">
+        {isLoading ? (
+          <LoadingSpinner />
+        ) : error ? (
+          <div className="error-message">{error}</div>
+        ) : (
           <>
             <PaperListDisplay
               papers={papers}
               debouncedSearchTerm={debouncedSearchTerm}
               onVote={handleVote}
+              isLoading={isLoading}
             />
             <PaginationControls
               currentPage={currentPage}

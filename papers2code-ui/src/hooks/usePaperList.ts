@@ -1,5 +1,5 @@
-import { useState, useEffect, useCallback } from 'react';
-// MODIFIED: Import AuthenticationError and CsrfError
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { useSearchParams } from 'react-router-dom';
 import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters, AuthenticationError, CsrfError } from '../services/api'; 
 import { Paper } from '../types/paper';
 import useDebounce from './useDebounce';
@@ -10,61 +10,160 @@ const DEBOUNCE_DELAY = 500;
 const ITEMS_PER_PAGE = 12;
 
 export type SortPreference = 'newest' | 'oldest' | 'upvotes'; // Update sort type
+const DEFAULT_SORT_PREFERENCE: SortPreference = 'newest';
 
 const initialAdvancedFilters: AdvancedPaperFilters = {
   startDate: '',
   endDate: '',
   searchAuthors: '',
+  // TODO: not defined yet but eventually will
 };
 
 export function usePaperList(authLoading?: boolean) { // authLoading is optional
+  const [searchParams, setSearchParams] = useSearchParams();
+  const prevSearchParamsRef = useRef(searchParams.toString()); // To detect actual changes
   const [papers, setPapers] = useState<Paper[]>([]);
-  const [isLoading, setIsLoading] = useState<boolean>(true); // Keep internal isLoading for paper fetching
+  const [isLoading, setIsLoading] = useState<boolean>(true); // Start with loading true to prevent flash of "No papers"
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>('');
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
   const [sortPreference, setSortPreference] = useState<SortPreference>('newest'); // Use updated type
-  const [currentPage, setCurrentPage] = useState(1);
+  const [currentPage, setCurrentPage] = useState<number>(
+    () => parseInt(searchParams.get('page') || '1', 10)
+  );
   const [totalPages, setTotalPages] = useState(1);
 
   // NEW: Get showLoginPrompt from useModal
   const { showLoginPrompt } = useModal();
 
   // --- NEW: State for advanced filters and visibility ---
-  const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(initialAdvancedFilters);
+  const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(() => ({
+    startDate: searchParams.get('startDate') || '',
+    endDate: searchParams.get('endDate') || '',
+    searchAuthors: searchParams.get('searchAuthors') || '',
+  }));
   const [showAdvancedSearch, setShowAdvancedSearch] = useState<boolean>(false);
-  // Use a separate state to "apply" filters, avoiding fetches on every keystroke in advanced fields
-  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState<AdvancedPaperFilters>(initialAdvancedFilters);
-  // --- End NEW ---
+  const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState<AdvancedPaperFilters>(() => ({
+    startDate: searchParams.get('startDate') || '',
+    endDate: searchParams.get('endDate') || '',
+    searchAuthors: searchParams.get('searchAuthors') || '',
+  }));
 
-  // Reset currentPage when search or sort changes
+
   useEffect(() => {
+    const currentSearchParamsStr = searchParams.toString();
+    console.log('[URL Sync Effect] searchParams changed. Current URL params string:', currentSearchParamsStr);
+    console.log('[URL Sync Effect] Previous URL params string ref:', prevSearchParamsRef.current);
+
+    // Only proceed if searchParams have actually changed, to avoid loops with our own setSearchParams calls
+    if (currentSearchParamsStr !== prevSearchParamsRef.current) {
+        const queryFromUrl = searchParams.get('searchQuery') || '';
+        console.log(`[URL Sync Effect] queryFromUrl: "${queryFromUrl}", current internal searchTerm: "${searchTerm}"`);
+        if (queryFromUrl !== searchTerm) {
+            console.log(`[URL Sync Effect] Updating searchTerm to: "${queryFromUrl}"`);
+            setSearchTerm(queryFromUrl);
+        }
+        prevSearchParamsRef.current = currentSearchParamsStr; // Update the ref
+    } else {
+        console.log('[URL Sync Effect] searchParams string identical to ref, skipping update to avoid loop.');
+    }
+  }, [searchParams]); // Only trigger when the searchParams object reference changes
+
+
+  const isSearchInputActive = !!searchTerm; 
+  const isDebouncedSearchActive = !!debouncedSearchTerm;
+  const isAuthorSearchActive = !!appliedAdvancedFilters.searchAuthors; // Remains based on applied filters
+
+  // Determines the value shown in the sort dropdown
+  const uiSortValue = isSearchInputActive ? 'relevance' : sortPreference;
+
+
+  useEffect(() => {
+    const newParams = new URLSearchParams();
+    if (debouncedSearchTerm) { // Use debounced term for URL's searchQuery
+      newParams.set('searchQuery', debouncedSearchTerm);
+    }
+    if (currentPage !== 1) {
+      newParams.set('page', currentPage.toString());
+    }
+
+    // Sort param in URL should reflect the sort that would be used by API
+    // If a debounced search is active, API uses relevance (undefined sort), so don't put 'sort' in URL
+    if (!isDebouncedSearchActive && sortPreference !== DEFAULT_SORT_PREFERENCE) {
+      newParams.set('sort', sortPreference);
+    }
+    // else if (isDebouncedSearchActive && newParams.has('sort')) { // Redundant if above is correct
+    //   newParams.delete('sort');
+    // }
+
+
+    // Add applied advanced filters to URL
+    if (appliedAdvancedFilters.startDate) newParams.set('startDate', appliedAdvancedFilters.startDate);
+    if (appliedAdvancedFilters.endDate) newParams.set('endDate', appliedAdvancedFilters.endDate);
+    if (appliedAdvancedFilters.searchAuthors) newParams.set('searchAuthors', appliedAdvancedFilters.searchAuthors);
+    /*
+    TODO: Future advanced filters
+    if (appliedAdvancedFilters.mainStatus) newParams.set('mainStatus', appliedAdvancedFilters.mainStatus);
+    if (appliedAdvancedFilters.implStatus) newParams.set('implStatus', appliedAdvancedFilters.implStatus);
+    if (appliedAdvancedFilters.hasOfficialImpl !== undefined) newParams.set('hasOfficialImpl', String(appliedAdvancedFilters.hasOfficialImpl));
+    if (appliedAdvancedFilters.venue) newParams.set('venue', appliedAdvancedFilters.venue);
+    if (appliedAdvancedFilters.tags && appliedAdvancedFilters.tags.length > 0) newParams.set('tags', appliedAdvancedFilters.tags.join(','));
+    */
+    setSearchParams(newParams, { replace: true });
+  }, [debouncedSearchTerm, currentPage, sortPreference, appliedAdvancedFilters, setSearchParams, isDebouncedSearchActive]);
+
+
+  // Reset currentPage when search, sort, or applied advanced filters change
+  // This effect should run *after* the URL has potentially set initial values
+  useEffect(() => {
+    // Only reset if it's not the initial load (i.e., currentPage is already set from URL)
+    // This check might need refinement based on how initial state from URL is handled.
+    // For now, we assume that if any of these primary filters change, we go to page 1.
     setCurrentPage(1);
-  }, [debouncedSearchTerm, sortPreference]);
+  }, [debouncedSearchTerm, sortPreference, appliedAdvancedFilters]);
 
-  // API Fetching Logic
   useEffect(() => {
-    // NEW: Create an AbortController for this effect run
+    // Check if it's not the very first load where currentPage might be set from URL
+    // This simple check might need refinement if complex initial state scenarios arise
+    if (currentPage !== 1 && (debouncedSearchTerm || sortPreference !== DEFAULT_SORT_PREFERENCE || JSON.stringify(appliedAdvancedFilters) !== JSON.stringify(initialAdvancedFilters))) {
+        setCurrentPage(1);
+    } else if (currentPage === 1 && (debouncedSearchTerm || sortPreference !== DEFAULT_SORT_PREFERENCE || JSON.stringify(appliedAdvancedFilters) !== JSON.stringify(initialAdvancedFilters))) {
+        // If already on page 1 but filters change, ensure it stays 1 (no explicit call needed unless other logic depends on it)
+    }
+  }, [debouncedSearchTerm, sortPreference, appliedAdvancedFilters]);  // API Fetching Logic
+  useEffect(() => {
     const abortController = new AbortController();
-
+    console.log('[usePaperList] Effect triggered with:', { 
+      debouncedSearchTerm, 
+      sortPreference, 
+      currentPage, 
+      authLoading 
+    });
+    
+    // Immediately set loading to true when this effect runs to prevent "No papers" flash
+    setIsLoading(true);
+    
     const loadPapers = async () => {
-      setIsLoading(true); // Use internal isLoading
+      console.log('[usePaperList] Starting loadPapers function');
+      // Keep the papers array while loading instead of clearing it
+      // This avoids the "No papers" message while navigating
       setError(null);
 
-      // Determine if any search (basic or advanced) is active
-      const isSearchActive = !!debouncedSearchTerm ||
-                             !!appliedAdvancedFilters.startDate ||
-                             !!appliedAdvancedFilters.endDate ||
-                             !!appliedAdvancedFilters.searchAuthors;
-
-      // Sort param: Use preference only if no search term *and* no advanced filters are active.
-      // Backend defaults to relevance if any search criteria is present.
-      const sortParamToSend = isSearchActive ? undefined : sortPreference;
-
+      let finalSortParamForApi: SortPreference | undefined;
+      // API sort decision is based on the debounced term (what's actually searched)
+      if (isDebouncedSearchActive) {
+          finalSortParamForApi = undefined; // API interprets undefined as relevance for search
+      } else if (isAuthorSearchActive && sortPreference === DEFAULT_SORT_PREFERENCE) {
+          // If author search is active and sort is default (or user selected 'relevance' for author search)
+          finalSortParamForApi = undefined;
+      } else {
+          finalSortParamForApi = sortPreference;
+      }
+      
       console.log(
         `Fetching page ${currentPage} with:`,
-        `Term="${debouncedSearchTerm}",`,
-        `Sort=${sortParamToSend || 'relevance (search active)'},`,
+        `Term="${debouncedSearchTerm}" (API),`,
+        `Sort=${finalSortParamForApi || 'relevance (API default)'},`,
         `Filters=${JSON.stringify(appliedAdvancedFilters)}`
       );
 
@@ -72,18 +171,16 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
         const response = await fetchPapersFromApi(
           currentPage,
           ITEMS_PER_PAGE,
-          debouncedSearchTerm,
-          sortParamToSend,
-          appliedAdvancedFilters, // <-- Pass applied filters
-          abortController.signal // <-- NEW: Pass the abort signal
+          debouncedSearchTerm, // Use debounced term for API
+          finalSortParamForApi,
+          appliedAdvancedFilters,
+          abortController.signal
         );
         setPapers(response.papers);
         setTotalPages(response.totalPages);
       } catch (err) {
-        // NEW: Check if the error is due to an abort
         if (err instanceof Error && err.name === 'AbortError') {
           console.log('Fetch aborted');
-          // Don't set error state for aborted requests
           return;
         }
         console.error("Failed to fetch papers:", err);
@@ -91,45 +188,39 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
         setPapers([]);
         setTotalPages(1);
       } finally {
-        setIsLoading(false); // Use internal isLoading
+        setIsLoading(false);
       }
-    };
-
-    // Only attempt to load papers if authLoading is false (meaning auth process is complete)
-    // or if authLoading is undefined (for components that might use this hook without auth context)
-    if (authLoading === false) {
+    };    if (authLoading === false) {
       loadPapers();
-    } else if (authLoading === undefined) { // Fallback if authLoading is not provided
-        console.warn('usePaperList: authLoading prop not provided, fetching papers immediately.');
-        loadPapers();
+    } else if (authLoading === undefined) {
+      loadPapers();
+    } else {
+      // If authLoading is true, we still want to show loading state
+      console.log('[usePaperList] Auth is loading, keeping isLoading true');
     }
-    // Add authLoading to the dependency array
-
-    // NEW: Cleanup function to abort fetch on component unmount or dependency change
     return () => {
       abortController.abort();
     };
-  }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters, authLoading]);
+  }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters, authLoading, isDebouncedSearchActive, isAuthorSearchActive]);
 
-  // Handlers
+
   const handleSearchChange = useCallback((newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
   }, []);
 
   const handleSortChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
-    const value = event.target.value;
-    const isAnySearchActive = !!debouncedSearchTerm ||
-                              !!appliedAdvancedFilters.startDate ||
-                              !!appliedAdvancedFilters.endDate ||
-                              !!appliedAdvancedFilters.searchAuthors;
+    const value = event.target.value as SortPreference | 'relevance';
+    // This check is based on immediate search input, as dropdown is disabled based on it
+    if (isSearchInputActive) { // Use isSearchInputActive
+        return; // Sort is locked to relevance
+    }
 
-     if (value === 'relevance' && isAnySearchActive) {
-         console.log("Relevance selected with search criteria active.");
-         // Keep underlying sort preference, backend handles relevance
-     } else if (value !== 'relevance') {
-         setSortPreference(value as SortPreference);
-     }
-  }, [debouncedSearchTerm, appliedAdvancedFilters]); // Depend on applied filters too
+    if (value !== 'relevance') { // User selected 'newest', 'oldest', or 'upvotes'
+        setSortPreference(value as SortPreference);
+    } else { // User selected 'relevance' (only possible if !isSearchInputActive && isAuthorSearchActive)
+        setSortPreference(DEFAULT_SORT_PREFERENCE); // Treat 'relevance' selection as default for API
+    }
+  }, [isSearchInputActive]); // Dependency updated
 
   const toggleAdvancedSearch = useCallback(() => {
     setShowAdvancedSearch(prev => !prev);
@@ -198,9 +289,13 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
       // unless the calling component needs to do further specific error handling.
     }
   }, [showLoginPrompt]); // Added showLoginPrompt to dependencies
-
-  // Determine which sort option is effectively active for the dropdown UI
-  const activeSortDisplay = debouncedSearchTerm ? 'relevance' : sortPreference;
+  console.log('[usePaperList] Current state:', {
+    searchTerm,
+    debouncedSearchTerm,
+    isSearchInputActive,
+    uiSortValue,
+    sortPreference
+  });
 
   return {
     papers,
@@ -208,8 +303,8 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
     error,
     searchTerm,
     debouncedSearchTerm,
-    activeSortDisplay,
-    sortPreference,
+    activeSortDisplay: uiSortValue, // For select value, reacts immediately to searchTerm
+    sortPreference, 
     currentPage,
     totalPages,
     handleSearchChange,
@@ -218,14 +313,14 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
     handlePrev,
     handleNext,
     handleVote,
-    // --- NEW: Expose advanced search state and handlers ---
     showAdvancedSearch,
-    advancedFilters, // Current values in the form
-    appliedAdvancedFilters, // Filters used for the last fetch
+    advancedFilters,
+    appliedAdvancedFilters,
     toggleAdvancedSearch,
     handleAdvancedFilterChange,
     applyAdvancedFilters,
     clearAdvancedFilters,
-    // --- End NEW ---
+    isTitleAbstractSearchActive: isSearchInputActive, // Prop for ListControls, reacts immediately
+    isAuthorSearchActive,
   };
 }
