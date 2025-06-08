@@ -100,3 +100,17 @@ class PaperActionsSummaryResponse(BaseModel):
     voted_not_implementable: List[PaperActionUserDetail] = Field(default_factory=list, alias="votedNotImplementable")
     
     model_config = camel_case_config
+
+
+# Rebuild models to resolve forward references
+def rebuild_models():
+    """Rebuild all models to resolve forward references."""
+    try:
+        from .schemas_implementation_progress import ImplementationProgress
+        PaperResponse.model_rebuild()
+    except ImportError:
+        # If ImplementationProgress is not available, skip rebuild
+        pass
+
+# Call rebuild when module is imported
+rebuild_models()

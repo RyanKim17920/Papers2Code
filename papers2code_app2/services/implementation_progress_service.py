@@ -1,5 +1,3 @@
-\
-# papers2code_app2/services/implementation_progress_service.py
 import logging
 from typing import Optional
 from datetime import datetime, timezone
