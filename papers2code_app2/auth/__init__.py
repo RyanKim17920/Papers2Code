@@ -6,10 +6,10 @@ from bson import ObjectId
 from bson.errors import InvalidId
 import logging
 
-from .shared import config_settings
-from .database import get_users_collection_async
-from .schemas_minimal import UserSchema
-from .constants import ACCESS_TOKEN_COOKIE_NAME
+from ..shared import config_settings
+from ..database import get_users_collection_async
+from ..schemas.minimal import UserSchema
+from ..constants import ACCESS_TOKEN_COOKIE_NAME
 from .token_utils import create_token
 
 logger = logging.getLogger(__name__)

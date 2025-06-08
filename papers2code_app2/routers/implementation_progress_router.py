@@ -3,7 +3,7 @@ from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
 from pydantic import BaseModel
 
-from ..schemas_implementation_progress import ( 
+from ..schemas.implementation_progress import (
     ImplementationProgress, 
     ComponentUpdate,
     Component, 
@@ -14,7 +14,7 @@ from ..dependencies import get_implementation_progress_service
 from ..error_handlers import handle_service_errors
 from ..services.exceptions import NotFoundException
 from ..auth import get_current_user 
-from ..schemas_minimal import UserSchema as UserInDBMinimalSchema
+from ..schemas.minimal import UserSchema as UserInDBMinimalSchema
 
 logger = logging.getLogger(__name__) 
 

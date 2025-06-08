@@ -2,8 +2,8 @@ from pydantic import BaseModel, Field, HttpUrl
 from typing import Optional
 from datetime import datetime
 
-from .schemas_db import PyObjectId # ADDED: Import PyObjectId
-from .schemas_papers import camel_case_config, camel_case_config_with_datetime
+from .db_models import PyObjectId  # ADDED: Import PyObjectId
+from .papers import camel_case_config, camel_case_config_with_datetime
 
 # --- Simplified Models for Authentication & User Representation ---
 

@@ -3,10 +3,10 @@ from bson.errors import InvalidId
 from ..dependencies import limiter, get_paper_moderation_service
 import logging  # Ensure logging is imported
 
-from ..schemas_papers import (
+from ..schemas.papers import (
     PaperResponse, SetImplementabilityRequest
 )
-from ..schemas_minimal import UserSchema
+from ..schemas.minimal import UserSchema
 from ..utils import transform_paper_async
 from ..auth import get_current_user, get_current_owner
 from ..services.paper_moderation_service import PaperModerationService

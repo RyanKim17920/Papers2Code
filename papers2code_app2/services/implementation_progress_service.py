@@ -8,7 +8,7 @@ from ..database import (
     get_papers_collection_async,
     get_users_collection_async
 )
-from ..schemas_implementation_progress import ( 
+from ..schemas.implementation_progress import (
     ImplementationProgress,
     Component, 
     ComponentUpdate, 

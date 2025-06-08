@@ -11,7 +11,7 @@ from .exceptions import (
     OAuthException,
     DatabaseOperationException, # New
 )
-from ..schemas_minimal import UserSchema, UserMinimal, UserUpdateProfile # Added UserUpdateProfile
+from ..schemas.minimal import UserSchema, UserMinimal, UserUpdateProfile  # Added UserUpdateProfile
 from ..shared import config_settings
 import httpx # Add httpx import
 import uuid # Add uuid import

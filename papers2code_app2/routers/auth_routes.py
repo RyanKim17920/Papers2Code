@@ -2,7 +2,13 @@ from fastapi import APIRouter, Depends, status, Response, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 import logging
 
-from ..schemas_minimal import UserSchema, TokenResponse, UserMinimal, CsrfToken, UserUpdateProfile # Added UserUpdateProfile
+from ..schemas.minimal import (
+    UserSchema,
+    TokenResponse,
+    UserMinimal,
+    CsrfToken,
+    UserUpdateProfile,
+)
 from ..shared import config_settings
 from ..auth import get_current_user # SECRET_KEY, ALGORITHM, create_refresh_token are used by service
 from ..services.auth_service import AuthService

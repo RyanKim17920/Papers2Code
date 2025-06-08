@@ -2,8 +2,8 @@ from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, Bac
 from typing import List, Optional, Dict
 import asyncio # Add asyncio import
 
-from ..schemas_papers import PaperResponse, PaginatedPaperResponse 
-from ..schemas_minimal import UserSchema as User # Using UserSchema as User for type hinting
+from ..schemas.papers import PaperResponse, PaginatedPaperResponse
+from ..schemas.minimal import UserSchema as User  # Using UserSchema as User for type hinting
 from ..services.paper_view_service import PaperViewService
 from ..dependencies import get_paper_view_service
 from ..services.exceptions import DatabaseOperationException

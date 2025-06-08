@@ -10,7 +10,7 @@ from pydantic import (
     AnyUrl,
 )
 
-from .schemas_db import PyObjectId, _MongoModel
+from .db_models import PyObjectId, _MongoModel
 from .shared import camel_case_config
 
 # -----------------------------------------------------------------------------

@@ -3,8 +3,8 @@ from ..database import (
     get_user_actions_collection_async, 
     get_users_collection_async
 )
-from ..schemas_papers import PaperActionsSummaryResponse, PaperActionUserDetail
-from ..schemas_minimal import UserMinimal
+from ..schemas.papers import PaperActionsSummaryResponse, PaperActionUserDetail
+from ..schemas.minimal import UserMinimal
 from ..shared import IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
 from .exceptions import PaperNotFoundException, VoteProcessingException, InvalidActionException
 

@@ -2,10 +2,10 @@ from pydantic import BaseModel, Field, HttpUrl, computed_field
 from typing import List, Optional, Literal, TYPE_CHECKING
 from datetime import datetime
 
-from .schemas_db import PyObjectId # ADDED: Import PyObjectId
+from .db_models import PyObjectId  # ADDED: Import PyObjectId
 
 if TYPE_CHECKING:
-    from .schemas_implementation_progress import ImplementationProgress
+    from .implementation_progress import ImplementationProgress
 
 from .shared import (
     camel_case_config,
@@ -106,7 +106,7 @@ class PaperActionsSummaryResponse(BaseModel):
 def rebuild_models():
     """Rebuild all models to resolve forward references."""
     try:
-        from .schemas_implementation_progress import ImplementationProgress
+        from .implementation_progress import ImplementationProgress
         _ = ImplementationProgress  # Reference to ensure import and avoid lint errors
         PaperResponse.model_rebuild()
     except ImportError:

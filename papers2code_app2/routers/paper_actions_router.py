@@ -3,8 +3,8 @@ from bson.errors import InvalidId
 import logging
 from ..dependencies import limiter, get_paper_action_service
 
-from ..schemas_papers import PaperResponse, PaperActionsSummaryResponse
-from ..schemas_minimal import UserSchema
+from ..schemas.papers import PaperResponse, PaperActionsSummaryResponse
+from ..schemas.minimal import UserSchema
 from ..utils import transform_paper_async
 from ..auth import get_current_user
 from ..services.paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED # Added action types
