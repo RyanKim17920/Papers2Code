@@ -94,7 +94,7 @@ async def get_current_user_api(current_user: UserSchema = Depends(get_current_us
     user_details_model = auth_service.get_user_details(current_user)
     return user_details_model # FastAPI will serialize Pydantic model to JSON
 
-@router.put("/users/me/profile", response_model=UserSchema)
+@router.put("/me/profile", response_model=UserSchema)
 async def update_current_user_profile(
     profile_data: UserUpdateProfile,
     current_user: UserSchema = Depends(get_current_user),

@@ -1,10 +1,8 @@
 /* src/App.css */
 @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
-
-* {
-  overflow-x: hidden;
+*{
+  overflow-x:hidden;
 }
-
 /* Enhanced Color Palette & Variables */
 :root {
   /* --- Primary Palette (Teal/Green focus) --- */
@@ -183,6 +181,7 @@ a:hover {
   position: sticky;
   top: 0;
   z-index: 1000;
+  overflow: visible; /* Allow dropdown to extend outside header */
 }
 
 .app-header .logo-link {
@@ -281,129 +280,149 @@ a:hover {
   display: flex;
   align-items: center;
   gap: 10px;
+  position: relative; /* Needed for dropdown positioning */
+  overflow-x:visible;
+  overflow-y:visible;
 }
 
-.auth-loading {
-  font-style: italic;
-  color: var(--text-muted-color);
+/* Styles for User Avatar Dropdown */
+
+.user-info-container {
+  position: relative; /* Crucial for anchoring the absolute dropdown */
+  overflow-x: visible; /* Override global overflow-x: hidden to allow dropdown visibility */
+  overflow-y: visible; /* Override global overflow-y: hidden to allow dropdown visibility */
 }
 
-.user-info {
+.user-avatar-button {
+  background-color: transparent;
+  border: none;
+  border-radius: var(--border-radius-lg);
+  padding: 4px;
+  cursor: pointer;
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.user-avatar-button:hover {
+  transform: translateY(-2px);
+}
+
+.user-avatar-button:focus,
+.user-avatar-button:focus-visible { /* Improved focus state */
+  outline: none;
+  transform: translateY(-2px);
 }
 
 .user-avatar {
-  width: 32px;
-  height: 32px;
+  width: 44px;
+  height: 44px;
   border-radius: 50%;
-  border: 1px solid var(--border-color);
-  box-shadow: 0 2px 5px rgba(0,0,0,0.1);
+  display: block; /* Ensure it behaves well within the button */
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+  transition: all 0.3s ease;
+  box-shadow: var(--box-shadow-sm);
 }
 
-.username {
-  font-weight: 500;
-  color: var(--text-color);
+/* Hover effects on the avatar itself */
+.user-avatar-button:hover .user-avatar {
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 16px rgba(var(--primary-rgb), 0.15);
 }
 
-/* General Auth Button Style */
-.auth-button {
-  padding: 8px 16px;
-  border: none;
-  border-radius: var(--border-radius-md);
-  cursor: pointer;
-  font-size: 0.9em;
-  font-weight: 500;
-  transition: all 0.2s ease;
+.user-avatar-button:focus .user-avatar,
+.user-avatar-button:focus-visible .user-avatar {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2), 0 8px 16px rgba(var(--primary-rgb), 0.15);
 }
 
-.connect-button {
-  background-color: var(--dark-color); /* Use dark variable */
-  color: var(--text-on-dark);
-  /* Optional: Keep gradient or simplify */
-  background-image: linear-gradient(to right, #333 0%, #444 100%);
-}
-.connect-button:hover {
-  background-color: #495057; /* Slightly lighter dark */
-  background-image: linear-gradient(to right, #444 0%, #555 100%);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.2);
-  transform: translateY(-1px);
-}
-
-.logout-button {
-  background-color: var(--light-gray-bg);
-  color: var(--text-muted-color);
-  border: 1px solid var(--border-color);
-}
-.logout-button:hover {
-  background-color: #e2e6ea; /* Keep existing or use a variable like --border-color */
-  border-color: #dae0e5;
-  transform: translateY(-1px);
-}
-
-/* Universal Button System */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
-  padding: 10px 20px;
-  border: 2px solid transparent;
-  border-radius: var(--border-radius-md);
-  font-size: 0.95rem;
-  font-weight: 600;
-  font-family: inherit;
-  text-decoration: none;
-  cursor: pointer;
-  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-  position: relative;
-  overflow: hidden;
-  min-width: 80px;
-  box-sizing: border-box;
-  white-space: nowrap;
-}
-
-.btn:before {
-  content: '';
+.user-dropdown-menu {
   position: absolute;
-  top: 0;
-  left: 0;
-  width: 100%;
-  height: 100%;
-  background: linear-gradient(135deg, rgba(255, 255, 255, 0.1), rgba(255, 255, 255, 0));
+  top: calc(100% + 15px); /* Position below the avatar button with more gap to clear header */
+  right: 0; /* Align to the right of the user-info-container */
+  background-color: var(--card-background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05);
+  z-index: 1010; /* Ensure it's above other header elements */
+  min-width: 200px; /* Adjust as needed */
+  padding: 12px 0; /* Vertical padding for the menu */
   opacity: 0;
-  transition: opacity 0.2s ease;
+  visibility: hidden;
+  transform: translateY(-15px) scale(0.95); /* Initial state for transition */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 70vh; /* For internal scroll of long dropdowns */
+  overflow-y: auto;   /* For internal scroll */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
 }
 
-.btn:hover:not(:disabled):before {
-  opacity: .5;
+.user-dropdown-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1); /* Final state for transition */
 }
 
-.btn:hover:not(:disabled) {
-  transform: translateY(-1px);
-  box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+.dropdown-item {
+  display: block;
+  padding: 14px 20px; /* Increased padding for better touch targets */
+  color: var(--text-color);
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
 }
 
-.btn:active:not(:disabled) {
-  transform: translateY(0);
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--primary-light-color);
+  color: var(--primary-color);
+  outline: none;
+  border-left-color: var(--primary-color);
+  transform: translateX(2px);
 }
 
-.btn:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none !important;
-  box-shadow: none !important;
+/* Specific styling for the button version of dropdown-item */
+.dropdown-item-button {
+  background: transparent; /* Remove default button background */
+  border: none;            /* Remove default button border */
+  padding: 0;              /* Padding should come from .dropdown-item class */
+  margin: 0;               /* Reset margin */
+  font: inherit;           /* Inherit font styles from parent */
+  color: inherit;          /* Inherit text color from .dropdown-item */
+  text-align: left;        /* Align text to the left */
+  width: 100%;             /* Make button take full width */
+  cursor: pointer;         /* Show pointer cursor */
 }
 
-.btn:disabled:before {
-  opacity: 0 !important;
+.dropdown-item-button:hover,
+.dropdown-item-button:focus {
+  outline: none; /* Remove default browser outline if custom focus is handled by .dropdown-item */
 }
 
-.btn:focus {
-  outline: 2px solid var(--primary-color);
-  outline-offset: 2px;
+/* Add a subtle separator line between menu items */
+.dropdown-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background-color: var(--border-color);
+  opacity: 0.3;
 }
+
+/* Removed special styling for logout button to maintain consistency */
 
 /* Primary Button */
 .btn-primary {

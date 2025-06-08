@@ -1,4 +1,3 @@
-# filepath: /media/ryankim17920/01DBCEABB99AC8E0/Users/ilove/CODING/Papers-2-code/papers2code_app2/database.py
 import logging
 from typing import Optional, Any, Tuple
 from pymongo import MongoClient, ASCENDING, DESCENDING # For sync client and indexes
