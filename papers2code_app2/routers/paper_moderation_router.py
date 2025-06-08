@@ -10,7 +10,7 @@ from ..schemas_minimal import UserSchema
 from ..utils import transform_paper_async
 from ..auth import get_current_user, get_current_owner
 from ..services.paper_moderation_service import PaperModerationService
-from ..services.exceptions import PaperNotFoundException, UserActionException, InvalidActionException, ServiceException
+from ..error_handlers import handle_service_errors
 
 router = APIRouter(
     prefix="/papers",
@@ -20,6 +20,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/{paper_id}/flag_implementability", response_model=PaperResponse)
 @limiter.limit("30/minute")
+@handle_service_errors
 async def flag_paper_implementability(
     request: Request, # For limiter
     paper_id: str,
@@ -38,24 +39,11 @@ async def flag_paper_implementability(
         updated_paper_doc = await service.flag_paper_implementability(
             paper_id=paper_id,
             user_id=user_id_str,
-            action=action
+            action=action,
         )
-        # Await the async transformation
         return await transform_paper_async(updated_paper_doc, user_id_str, detail_level="full")
 
-    except PaperNotFoundException as e:
-        logger.warning(f"Router: PaperNotFoundException for paper {paper_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except UserActionException as e: # Covers cases like "already voted", "no vote to retract", "admin lock"
-        logger.warning(f"Router: UserActionException for paper {paper_id}, user {user_id_str}, action {action}: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e)) # 400 or 409 depending on specific case
-    except InvalidActionException as e: # e.g. invalid 'action' string
-        logger.warning(f"Router: InvalidActionException for paper {paper_id}, action {action}: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ServiceException as e: # Catch-all for other service-layer issues
-        logger.error(f"Router: ServiceException during flag_implementability for paper {paper_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An internal server error occurred.")
-    except InvalidId: # This might still be raised by ObjectId conversion if not caught in service for some reason
+    except InvalidId:  # This might still be raised by ObjectId conversion if not caught in service for some reason
         logger.warning(f"Router: InvalidId encountered for paper {paper_id} or user {user_id_str}.")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid ID format.")
     except HTTPException: # Re-raise HTTPExceptions if they were raised directly
@@ -69,6 +57,7 @@ async def flag_paper_implementability(
 
 @router.post("/{paper_id}/set_implementability", response_model=PaperResponse)
 @limiter.limit("10/minute")
+@handle_service_errors
 async def set_paper_implementability(
     request: Request, # For limiter
     paper_id: str,
@@ -86,21 +75,11 @@ async def set_paper_implementability(
         updated_paper_doc = await service.set_paper_implementability(
             paper_id=paper_id,
             admin_user_id=admin_user_id_str,
-            status_to_set_by_admin=payload.status_to_set
+            status_to_set_by_admin=payload.status_to_set,
         )
-        # Await the async transformation
         return await transform_paper_async(updated_paper_doc, admin_user_id_str, detail_level="full")
 
-    except PaperNotFoundException as e:
-        logger.warning(f"Router: PaperNotFoundException for set_implementability paper {paper_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except InvalidActionException as e:
-        logger.warning(f"Router: InvalidActionException for set_implementability paper {paper_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
-    except ServiceException as e:
-        logger.error(f"Router: ServiceException during set_implementability for paper {paper_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An internal server error occurred.")
-    except InvalidId: # Should be caught by service, but as a fallback
+    except InvalidId:  # Should be caught by service, but as a fallback
         logger.warning(f"Router: InvalidId encountered for set_implementability paper {paper_id}.")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper ID format.")
     except HTTPException:
@@ -114,6 +93,7 @@ async def set_paper_implementability(
 
 @router.delete("/{paper_id}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("5/minute")
+@handle_service_errors
 async def delete_paper(
     request: Request, # For limiter
     paper_id: str,
@@ -128,20 +108,12 @@ async def delete_paper(
 
     try:
         success = await service.delete_paper(paper_id=paper_id, admin_user_id=admin_user_id_str)
-        if success: # Service returns True on success
-            return None # FastAPI will return 204 No Content based on status_code in decorator
-        else:
-            # This case should ideally be covered by exceptions from the service
-            logger.error(f"Router: delete_paper service call for {paper_id} returned False unexpectedly.")
-            raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Deletion failed for an unknown reason.")
+        if success:
+            return None
+        logger.error(f"Router: delete_paper service call for {paper_id} returned False unexpectedly.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Deletion failed for an unknown reason.")
 
-    except PaperNotFoundException as e:
-        logger.warning(f"Router: PaperNotFoundException for delete_paper {paper_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except ServiceException as e:
-        logger.error(f"Router: ServiceException during delete_paper for {paper_id}: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An internal server error occurred during deletion.")
-    except InvalidId: # Should be caught by service
+    except InvalidId:  # Should be caught by service
         logger.warning(f"Router: InvalidId encountered for delete_paper {paper_id}.")
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper ID format.")
     except HTTPException:

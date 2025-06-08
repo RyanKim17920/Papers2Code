@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response # Added Response
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response
 from bson.errors import InvalidId
 import logging
 from ..dependencies import limiter, get_paper_action_service
@@ -8,7 +8,7 @@ from ..schemas_minimal import UserSchema
 from ..utils import transform_paper_async
 from ..auth import get_current_user
 from ..services.paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED # Added action types
-from ..services.exceptions import PaperNotFoundException, AlreadyVotedException, VoteProcessingException, InvalidActionException # Added InvalidActionException
+from ..error_handlers import handle_service_errors
 
 router = APIRouter(
     prefix="/papers",
@@ -18,6 +18,7 @@ logger = logging.getLogger(__name__)
 
 @router.post("/{paper_id}/vote", response_model=PaperResponse)
 @limiter.limit("60/minute")
+@handle_service_errors
 async def vote_on_paper(
     request: Request,  # For limiter
     paper_id: str,
@@ -42,29 +43,13 @@ async def vote_on_paper(
         )
 
         if not updated_paper_doc:
-            # This case should ideally be handled by exceptions from the service
-            logger.error(f"Paper {paper_id} not found after voting operation, service returned None unexpectedly.")
+            logger.error(
+                f"Paper {paper_id} not found after voting operation, service returned None unexpectedly."
+            )
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after voting operation")
 
         return await transform_paper_async(updated_paper_doc, user_id_str, detail_level="full")
 
-    except PaperNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except AlreadyVotedException as e:
-        # For "already voted" when trying to upvote, or "not voted" when trying to remove,
-        # the service currently returns the paper state without error.
-        # If we want to return a specific HTTP status for these, we'd adjust the service or handle here.
-        # For now, assuming the service handles it by returning current paper, which is then transformed.
-        # This part of the code might not be hit if the service doesn't raise AlreadyVotedException for "no action needed" cases.
-        # However, if it *does* raise for an actual issue (e.g. trying to vote 'up' when already voted 'up' and this is an error condition)
-        logger.warning(f"AlreadyVotedException for paper {paper_id}, user {current_user.id}: {e}")
-        # We might want to return a 200 with current paper state or a 409 Conflict.
-        # For now, let's assume the service handles returning the paper, and we transform it.
-        # If the service raised it as a true error, re-raise as HTTP 409.
-        raise HTTPException(status_code=status.HTTP_409_CONFLICT, detail=str(e))
-    except VoteProcessingException as e:
-        logger.error(f"VoteProcessingException for paper {paper_id}, user {current_user.id}: {e}")
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=str(e))
     except InvalidId:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
     except HTTPException:
@@ -78,6 +63,7 @@ async def vote_on_paper(
 
 @router.post("/{paper_id}/actions/{action_type}", status_code=status.HTTP_204_NO_CONTENT)
 @limiter.limit("60/minute")
+@handle_service_errors
 async def record_generic_paper_action(
     request: Request, # For limiter
     paper_id: str,
@@ -102,14 +88,8 @@ async def record_generic_paper_action(
             action_type=action_type,
             details=details
         )
-        # No content to return, so FastAPI will handle the 204 response
-        return Response(status_code=status.HTTP_204_NO_CONTENT) 
+        return Response(status_code=status.HTTP_204_NO_CONTENT)
 
-    except PaperNotFoundException as e:
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except InvalidActionException as e:
-        logger.error(f"InvalidActionException for paper {paper_id}, user {user_id_str}, action {action_type}: {e}")
-        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
     except InvalidId:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
     except HTTPException:
@@ -122,7 +102,8 @@ async def record_generic_paper_action(
         )
 
 @router.get("/{paper_id}/actions", response_model=PaperActionsSummaryResponse)
-@limiter.limit("100/minute") # Keep limiter if needed
+@limiter.limit("100/minute")  # Keep limiter if needed
+@handle_service_errors
 async def get_paper_actions(
     request: Request,  # For limiter
     paper_id: str,
@@ -132,10 +113,7 @@ async def get_paper_actions(
     try:
         actions_summary = await service.get_paper_actions(paper_id)
         return actions_summary
-    except PaperNotFoundException as e:
-        logger.warning(f"Router: PaperNotFoundException for paper_id {paper_id}: {e}")
-        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
-    except Exception as e: # General exception handler
+    except Exception as e:  # General exception handler
         logger.exception(f"Router: Error getting actions for paper_id {paper_id}: {e}")
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to retrieve paper actions.")
 

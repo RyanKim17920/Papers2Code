@@ -7,6 +7,7 @@ from ..schemas_minimal import UserSchema as User # Using UserSchema as User for 
 from ..services.paper_view_service import PaperViewService
 from ..dependencies import get_paper_view_service
 from ..services.exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
+from ..error_handlers import handle_service_errors
 from ..auth import get_current_user_optional # Changed from get_current_user
 from ..utils import transform_paper_async
 import logging
@@ -94,6 +95,7 @@ async def list_papers(
     return final_response
 
 @router.get("/{paper_id}", response_model=PaperResponse)
+@handle_service_errors
 async def get_paper(
     # Parameters without default values first
     request: Request,
@@ -107,19 +109,9 @@ async def get_paper(
     user_id_str = str(current_user.id) if current_user and current_user.id else None # Corrected to check current_user.id
 
     try:
-        paper_doc = await service.get_paper_by_id(paper_id, user_id_str)  
+        paper_doc = await service.get_paper_by_id(paper_id, user_id_str)
         paper_response = await transform_paper_async(paper_doc, user_id_str)
         # Assuming record_paper_view exists or will be handled separately.
-        # If it doesn't exist, it will be the next AttributeError.
-    except PaperNotFoundException as e:
-        logger.warning(f"Router: Paper not found (ID: {paper_id}): {e}")
-        raise HTTPException(status_code=404, detail=str(e))
-    except DatabaseOperationException as e:
-        logger.error(f"Router: Database error getting paper (ID: {paper_id}): {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
-    except ServiceException as e:
-        logger.error(f"Router: Service error getting paper (ID: {paper_id}): {e}", exc_info=True)
-        raise HTTPException(status_code=500, detail=str(e))
     except Exception as e:
         logger.error(f"Router: Unexpected error getting paper (ID: {paper_id}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the paper.")
@@ -128,6 +120,7 @@ async def get_paper(
     return paper_response
 
 @router.get("/by_arxiv_ids/", response_model=List[PaperResponse])
+@handle_service_errors
 async def get_papers_by_arxiv_ids_route(
     # Parameters without default values first (none here)
     # Then parameters with default values
@@ -160,6 +153,7 @@ async def get_papers_by_arxiv_ids_route(
     return response_papers
 
 @router.get("/meta/distinct_tags/", response_model=List[str])
+@handle_service_errors
 async def get_distinct_tags_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
@@ -176,6 +170,7 @@ async def get_distinct_tags_route(
     return tags
 
 @router.get("/meta/distinct_venues/", response_model=List[str])
+@handle_service_errors
 async def get_distinct_venues_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
@@ -192,6 +187,7 @@ async def get_distinct_venues_route(
     return venues
 
 @router.get("/meta/distinct_authors/", response_model=List[str])
+@handle_service_errors
 async def get_distinct_authors_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
@@ -208,6 +204,7 @@ async def get_distinct_authors_route(
     return authors
 
 @router.get("/meta/status_counts/", response_model=Dict[str, int])
+@handle_service_errors
 async def get_paper_status_counts_route(
     service: PaperViewService = Depends(get_paper_view_service)
 ):
