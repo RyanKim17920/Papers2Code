@@ -1,6 +1,6 @@
 import React from 'react';
-import { Paper, ImplementabilityAction } from '../../../../types/paper'; // Ensure ImplementabilityAction is imported
-import { UserProfile } from '../../../../services/auth'; // Added import for UserProfile
+import { Paper, ImplementabilityAction } from '../../../../types/paper';
+import type { UserProfile } from '../../../../types/user';
 import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
 import './ImplementabilityVotingTab.css';

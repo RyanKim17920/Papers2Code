@@ -1,6 +1,6 @@
 import React from 'react';
-import { Paper } from '../../../../types/paper'; // Corrected import path
-import { UserProfile } from '../../../../services/auth'; // Corrected import path
+import { Paper } from '../../../../types/paper';
+import type { UserProfile } from '../../../../types/user';
 import { VoteButton, RetractVoteButton, FaArrowUp } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
 import type { PaperActionUsers } from '../../../../services/api'; // Add this line

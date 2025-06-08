@@ -39,10 +39,6 @@
    line-height: 1.3;
  }
 
- /* Styles moved to PaperMetadata.css */
- /* Styles moved to PaperAbstract.css */
- /* Styles moved to ImplementabilityNotice.css */
- /* Styles moved to OwnerActions.css */
 
 /* --- Button Styles (Warning, Danger, Secondary, Link) --- */
 /* Warning Button (Yellow/Orange) */
@@ -113,11 +109,6 @@ small {
     color: var(--text-muted-color);
 }
 
-/* Styles moved to Modal.css */
-/* Styles moved to PaperTabs.css */
-/* Styles moved to UserDisplayList.css */
-/* Styles moved to VotingButtons.css */
-/* Styles moved to ImplementabilityTab.css */
 
 /* Implementation Notes specific to PaperDetailPage */
 .implementation-notes {

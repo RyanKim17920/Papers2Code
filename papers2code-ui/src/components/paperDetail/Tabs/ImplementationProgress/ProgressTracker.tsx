@@ -4,8 +4,8 @@ import {
   ImplementationSection,
   ImplementationComponent,
   ComponentStatusTs,
-  ComponentCategoryTs, 
-} from '../../../../types/paper';
+  ComponentCategoryTs,
+} from '../../../../types/implementation';
 import './ProgressTracker.css';
 
 interface ProgressTrackerProps {

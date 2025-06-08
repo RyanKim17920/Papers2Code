@@ -3,8 +3,8 @@ import { useParams, Link } from 'react-router-dom';
 
 import { usePaperDetail } from '../hooks/usePaperDetail';
 import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../hooks/usePaperDetail';
-import { UserProfile } from '../services/auth';
-import type { ImplementationProgress } from '../types/paper'; // Added import
+import type { UserProfile } from '../types/user';
+import type { ImplementationProgress } from '../types/implementation';
 
 import { LoadingSpinner } from '../components/common';
 import ConfirmationModal from '../components/common/ConfirmationModal'; // Standardized import

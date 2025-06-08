@@ -1,18 +1,8 @@
 // src/services/auth.ts
 import axios from 'axios';
-import { API_BASE_URL } from './config';
+import { API_BASE_URL, AUTH_API_PREFIX, CSRF_API_ENDPOINT } from './config';
+import type { UserProfile } from '../types/user';
 
-export interface UserProfile {
-    id: string;
-    username: string;
-    avatarUrl?: string | null;
-    name?: string | null;
-    isOwner?: boolean;
-    isAdmin?: boolean;
-}
-
-const AUTH_API_PREFIX = '/api/auth';
-const CSRF_API_ENDPOINT = '/api/auth/csrf-token';
 
 // Create an Axios instance for API calls
 const apiClient = axios.create({
