@@ -6,17 +6,17 @@ import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } 
 import { UserProfile } from '../services/auth';
 import type { ImplementationProgress } from '../types/paper'; // Added import
 
-import LoadingSpinner from '../components/LoadingSpinner';
+import { LoadingSpinner } from '../components/common';
 import ConfirmationModal from '../components/common/ConfirmationModal'; // Standardized import
 
-import PaperMetadata from '../components/PaperDetailComponents/Tabs/Paper/PaperMetadata';
-import PaperAbstract from '../components/PaperDetailComponents/Tabs/Paper/PaperAbstract';
-import ImplementabilityNotice from '../components/PaperDetailComponents/Tabs/ImplementationVoting/ImplementabilityNotice';
-import PaperTabs from '../components/PaperDetailComponents/PaperTabs';
-import { UpvotesTab } from '../components/PaperDetailComponents/Tabs/Upvote/UpvotesTab'; // Named import
-import { ImplementabilityVotingTab } from '../components/PaperDetailComponents/Tabs/ImplementationVoting/ImplementabilityVotingTab'; // Named import
-import { OwnerActions } from '../components/PaperDetailComponents/Tabs/Admin/OwnerActions'; // Named import
-import { ImplementationProgressTab } from '../components/PaperDetailComponents/Tabs/ImplementationProgress/ImplementationProgressTab'; // FIXED IMPORT
+import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
+import PaperAbstract from '../components/paperDetail/Tabs/Paper/PaperAbstract';
+import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
+import PaperTabs from '../components/paperDetail/PaperTabs';
+import { UpvotesTab } from '../components/paperDetail/Tabs/Upvote/UpvotesTab';
+import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
+import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
+import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
 import './PaperDetailPage.css';
 
 interface PaperDetailPageProps {

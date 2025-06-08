@@ -5,7 +5,6 @@ import dotenv
 from typing import List
 from pymongo import MongoClient
 import openai
-import itertools
 from tqdm import tqdm
 import sys
 """Automatically label CS papers with an OpenAI chat model and optionally

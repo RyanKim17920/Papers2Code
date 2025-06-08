@@ -12,7 +12,7 @@ from ..schemas_implementation_progress import (
 from ..services.implementation_progress_service import ImplementationProgressService
 from ..dependencies import get_implementation_progress_service
 from ..error_handlers import handle_service_errors
-from ..services.exceptions import NotFoundException, UserNotContributorException, InvalidRequestException
+from ..services.exceptions import NotFoundException
 from ..auth import get_current_user 
 from ..schemas_minimal import UserSchema as UserInDBMinimalSchema
 

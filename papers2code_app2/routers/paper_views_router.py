@@ -6,7 +6,7 @@ from ..schemas_papers import PaperResponse, PaginatedPaperResponse
 from ..schemas_minimal import UserSchema as User # Using UserSchema as User for type hinting
 from ..services.paper_view_service import PaperViewService
 from ..dependencies import get_paper_view_service
-from ..services.exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
+from ..services.exceptions import DatabaseOperationException
 from ..error_handlers import handle_service_errors
 from ..auth import get_current_user_optional # Changed from get_current_user
 from ..utils import transform_paper_async

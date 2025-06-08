@@ -1,8 +1,7 @@
 import React from 'react';
 import { UserProfile as User} from '../../services/auth';
-import UserAvatar from '../UserAvatar'; // Import the new UserAvatar component
+import { UserAvatar, LoadingSpinner } from '../common';
 import './UserDisplayList.css';
-import LoadingSpinner from '../LoadingSpinner';
 
 interface UserDisplayListProps {
     users: User[] | undefined;

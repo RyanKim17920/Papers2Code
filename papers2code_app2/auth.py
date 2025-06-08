@@ -1,6 +1,6 @@
 from fastapi import Depends, HTTPException, status, Request
 from jose import JWTError, jwt
-from datetime import datetime, timedelta, timezone
+from datetime import timedelta
 from typing import Optional
 from bson import ObjectId
 from bson.errors import InvalidId

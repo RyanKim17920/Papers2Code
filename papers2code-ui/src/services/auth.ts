@@ -1,5 +1,6 @@
 // src/services/auth.ts
 import axios from 'axios';
+import { API_BASE_URL } from './config';
 
 export interface UserProfile {
     id: string;
@@ -10,9 +11,8 @@ export interface UserProfile {
     isAdmin?: boolean;
 }
 
-const API_BASE_URL = 'http://localhost:5000/api'; // Ensure this is your backend URL
-const AUTH_API_PREFIX = '/auth'; // Specific prefix for auth routes
-const CSRF_API_ENDPOINT = '/auth/csrf-token'; // Specific endpoint for CSRF token
+const AUTH_API_PREFIX = '/api/auth';
+const CSRF_API_ENDPOINT = '/api/auth/csrf-token';
 
 // Create an Axios instance for API calls
 const apiClient = axios.create({
@@ -60,7 +60,6 @@ export const logoutUser = async (): Promise<void> => {
         await apiClient.post(`${AUTH_API_PREFIX}/logout`, {}, { // Send empty object as data if no body needed
             headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
         });
-        console.log("Logout successful");
         // Clear CSRF token from localStorage after successful logout
         localStorage.removeItem('csrfToken');
     } catch (error) {
@@ -77,15 +76,11 @@ export const getCsrfToken = (): string | null => {
 // Function to fetch and store CSRF token
 export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
     try {
-        console.log('Attempting to fetch CSRF token from:', CSRF_API_ENDPOINT);
-        // MODIFIED: Update type to expect csrfToken (camelCase) based on observed log
         const response = await apiClient.get<{ csrfToken: string }>(CSRF_API_ENDPOINT);
-        console.log('Response received from CSRF token endpoint:', response);
 
         // MODIFIED: Check for csrfToken (camelCase) based on observed log
         if (response.data && response.data.csrfToken) {
             localStorage.setItem('csrfToken', response.data.csrfToken);
-            console.log('CSRF token fetched and stored successfully:', response.data.csrfToken);
             return response.data.csrfToken;
         }
         // This log indicates the expected property was not found.

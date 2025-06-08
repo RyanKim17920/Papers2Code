@@ -1,10 +1,10 @@
 import React from 'react';
 import { usePaperList, SortPreference } from '../hooks/usePaperList';
-import LoadingSpinner from '../components/LoadingSpinner';
-import ListControls from '../components/PaperListComponents/Search/ListControls';
-import PaperListDisplay from '../components/PaperListComponents/PaperListDisplay';
-import PaginationControls from '../components/PaperListComponents/Search/PaginationControls';
-import AdvancedSearchForm from '../components/PaperListComponents/Search/AdvancedSearchForm'; // <-- Import Advanced Form
+import { LoadingSpinner } from '../components/common';
+import ListControls from '../components/paperList/Search/ListControls';
+import PaperListDisplay from '../components/paperList/PaperListDisplay';
+import PaginationControls from '../components/paperList/Search/PaginationControls';
+import AdvancedSearchForm from '../components/paperList/Search/AdvancedSearchForm';
 import './PaperListPage.css';
 
 interface PaperListPageProps { // Create an interface for props

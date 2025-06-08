@@ -1,6 +1,7 @@
 // src/services/api.ts
 import { Paper, AdminSettableImplementabilityStatus, ImplementationProgress } from '../types/paper'; // AdminSettableImplementabilityStatus is imported
 import { getCsrfToken } from './auth'; // IMPORTED for consistent CSRF token handling
+import { API_BASE_URL } from './config';
 
 // Assuming UserProfile is defined in a types file, e.g., '../types/user'
 // For this example, let\'s define it here if not already imported.
@@ -14,7 +15,6 @@ export interface PaperActionUserProfile {
 }
 // --- End UserProfile Definition ---
 
-const API_BASE_URL = 'http://localhost:5000';
 const PAPERS_PREFIX = '/api'; // Prefix for paper-related API calls
 
 // --- NEW: Custom Error Classes ---
@@ -86,13 +86,9 @@ export const fetchPapersFromApi = async (
   }
 
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/?${params.toString()}`;
-  console.log("Fetching from API:", url);
   const response = await fetch(url, { credentials: 'include', signal }); // <-- MODIFIED: Pass signal to fetch
   // MODIFIED: Use handleApiResponse with correct camelCase types for pageSize and hasMore from the backend's PaginatedPaperResponse
   const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; page: number; pageSize: number; hasMore: boolean}>(response);
-  console.log('fetched data: ') // Optional: keep for debugging if needed
-  console.log(data);
-  // console.log(data.papers) // This line can be uncommented for debugging if needed
   // MODIFIED: Check for camelCase properties from the backend's PaginatedPaperResponse
   if (!data || !Array.isArray(data.papers) || typeof data.totalCount !== 'number' || typeof data.page !== 'number' || typeof data.pageSize !== 'number' || typeof data.hasMore !== 'boolean') {
     console.error("Unexpected API response structure after handleApiResponse:", data);
@@ -108,7 +104,6 @@ export const fetchPaperByIdFromApi = async (id: string): Promise<Paper | undefin
   const response = await fetch(`${API_BASE_URL}${PAPERS_PREFIX}/papers/${id}`, { credentials: 'include' });
   if (response.status === 404) return undefined;
   const paper =  handleApiResponse<Paper>(response);
-  console.log("Fetched paper by ID:", id, paper); 
   return paper;
 };
 
@@ -119,7 +114,6 @@ export const flagImplementabilityInApi = async (
   action: ImplementabilityAction
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/flag_implementability`;
-  console.log(`Attempting action '${action}' on implementability for paper:`, url);
 
   const csrfToken = getCsrfToken(); // Get token
   const response = await fetch(url, {
@@ -134,7 +128,6 @@ export const flagImplementabilityInApi = async (
 
   // MODIFIED: Use handleApiResponse
   const updatedPaper = await handleApiResponse<Paper>(response);
-  console.log(`Action '${action}' successful for paper ${paperId}. New status: ${updatedPaper.status}`);
   return updatedPaper;
 };
 
@@ -145,7 +138,6 @@ export const setImplementabilityInApi = async (
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/set_implementability`;
 
-  console.log(`Owner setting implementability to ${adminStatus} for paper:`, url);
 
   const csrfToken = getCsrfToken(); 
   const headers: HeadersInit = {
@@ -163,7 +155,6 @@ export const setImplementabilityInApi = async (
   });
 
   const updatedPaper = await handleApiResponse<Paper>(response);
-  console.log(`Owner action setImplementability successful for paper ${paperId}.`);
   return updatedPaper;
 };
 
@@ -172,7 +163,6 @@ export const voteOnPaperInApi = async (
   voteType: 'up' | 'none'
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/vote`;
-  console.log(`Attempting to ${voteType}vote paper:`, url);
 
   const csrfToken = getCsrfToken(); // Get token
   const response = await fetch(url, {
@@ -186,14 +176,12 @@ export const voteOnPaperInApi = async (
 
   // MODIFIED: Use handleApiResponse
   const updatedPaper = await handleApiResponse<Paper>(response);
-  console.log(`Vote successful for paper ${paperId}. New count: ${updatedPaper.upvoteCount}, Your vote: ${updatedPaper.currentUserVote}`);
   return updatedPaper;
 };
 
 // --- Function to remove a paper (Owner only) ---
 export const removePaperFromApi = async (paperId: string): Promise<void> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}`;
-  console.log("Attempting to remove paper:", url);
 
   const csrfToken = getCsrfToken(); // Get token
   const response = await fetch(url, {
@@ -210,7 +198,6 @@ export const removePaperFromApi = async (paperId: string): Promise<void> => {
   // but the primary success/failure is handled by handleApiResponse.
   // MODIFIED: Check response.ok instead of specific statuses, as handleApiResponse now throws for non-ok responses.
   if (response.ok) { 
-      console.log(`Paper ${paperId} removed successfully or request accepted.`);
   }
   // No need for an else to throw error, as handleApiResponse does that.
 };
@@ -218,12 +205,10 @@ export const removePaperFromApi = async (paperId: string): Promise<void> => {
 // --- NEW: Function to fetch users who performed actions on a paper ---
 export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActionUsers> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/actions`;
-  console.log("Fetching paper action users from:", url);
   const response = await fetch(url, { credentials: 'include' });
 
   // Use the BackendPaperActionsSummaryResponse type for the raw data
   const rawData = await handleApiResponse<BackendPaperActionsSummaryResponse>(response);
-  console.log(`Fetched raw action users for paper ${paperId}: `, rawData);
 
   // Helper function to map backend detail to frontend PaperActionUserProfile - RENAMED and type updated
   const mapToPaperActionUserProfile = (detail: BackendPaperActionUserDetail): PaperActionUserProfile => ({
@@ -241,7 +226,6 @@ export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActio
     votedNotImplementable: rawData.votedNotImplementable ? rawData.votedNotImplementable.map(mapToPaperActionUserProfile) : [],
   };
 
-  console.log(`Transformed action users for paper ${paperId} (within fetchPaperActionUsers): `, transformedData);
   return transformedData;
 };
 // --- End NEW ---
@@ -253,7 +237,6 @@ export const updatePaperStatusInApi = async (
   userId: string // Assuming backend might want to log which owner/admin performed the action
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/papers/${paperId}/status`;
-  console.log(`Owner ${userId} updating paper ${paperId} implementation status to: ${status}`);
 
   const csrfToken = getCsrfToken();
   const headers: HeadersInit = {
@@ -274,7 +257,6 @@ export const updatePaperStatusInApi = async (
 
   // MODIFIED: Use handleApiResponse
   const updatedPaper = await handleApiResponse<Paper>(response);
-  console.log(`Paper ${paperId} implementation status updated successfully to ${status}.`);
   return updatedPaper;
 };
 // --- End NEW ---
@@ -284,7 +266,6 @@ export const joinOrCreateImplementationProgress = async (
   paperId: string
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/implementation-progress/paper/${paperId}/join`;
-  console.log(`Attempting to join or create implementation progress for paper: ${paperId}`);
 
   const csrfToken = getCsrfToken();
   const headers: HeadersInit = {
@@ -306,7 +287,6 @@ export const joinOrCreateImplementationProgress = async (
 
   // The backend is expected to return the updated Paper document which includes the ImplementationProgress
   const updatedPaper = await handleApiResponse<Paper>(response);
-  console.log(`Successfully joined or created implementation progress for paper ${paperId}.`);
   return updatedPaper;
 };
 // --- End NEW ---
@@ -317,7 +297,6 @@ export const updateImplementationProgressInApi = async (
   progressData: ImplementationProgress
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_PREFIX}/implementation-progress/paper/${paperId}`;
-  console.log(`Attempting to update implementation progress for paper: ${paperId}`, progressData);
 
   const csrfToken = getCsrfToken();
   const headers: HeadersInit = {
@@ -338,7 +317,6 @@ export const updateImplementationProgressInApi = async (
 
   // The backend is expected to return the updated Paper document
   const updatedPaper = await handleApiResponse<Paper>(response);
-  console.log(`Successfully updated implementation progress for paper ${paperId}.`);
   return updatedPaper;
 };
 // --- End NEW ---

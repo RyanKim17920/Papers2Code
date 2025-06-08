@@ -107,6 +107,7 @@ def rebuild_models():
     """Rebuild all models to resolve forward references."""
     try:
         from .schemas_implementation_progress import ImplementationProgress
+        _ = ImplementationProgress  # Reference to ensure import and avoid lint errors
         PaperResponse.model_rebuild()
     except ImportError:
         # If ImplementationProgress is not available, skip rebuild

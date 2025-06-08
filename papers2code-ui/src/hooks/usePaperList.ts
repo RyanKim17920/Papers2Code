@@ -52,20 +52,15 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
 
   useEffect(() => {
     const currentSearchParamsStr = searchParams.toString();
-    console.log('[URL Sync Effect] searchParams changed. Current URL params string:', currentSearchParamsStr);
-    console.log('[URL Sync Effect] Previous URL params string ref:', prevSearchParamsRef.current);
 
     // Only proceed if searchParams have actually changed, to avoid loops with our own setSearchParams calls
     if (currentSearchParamsStr !== prevSearchParamsRef.current) {
         const queryFromUrl = searchParams.get('searchQuery') || '';
-        console.log(`[URL Sync Effect] queryFromUrl: "${queryFromUrl}", current internal searchTerm: "${searchTerm}"`);
         if (queryFromUrl !== searchTerm) {
-            console.log(`[URL Sync Effect] Updating searchTerm to: "${queryFromUrl}"`);
             setSearchTerm(queryFromUrl);
         }
         prevSearchParamsRef.current = currentSearchParamsStr; // Update the ref
     } else {
-        console.log('[URL Sync Effect] searchParams string identical to ref, skipping update to avoid loop.');
     }
   }, [searchParams]); // Only trigger when the searchParams object reference changes
 
@@ -133,7 +128,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
   }, [debouncedSearchTerm, sortPreference, appliedAdvancedFilters]);  // API Fetching Logic
   useEffect(() => {
     const abortController = new AbortController();
-    console.log('[usePaperList] Effect triggered with:', { 
       debouncedSearchTerm, 
       sortPreference, 
       currentPage, 
@@ -144,7 +138,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
     setIsLoading(true);
     
     const loadPapers = async () => {
-      console.log('[usePaperList] Starting loadPapers function');
       // Keep the papers array while loading instead of clearing it
       // This avoids the "No papers" message while navigating
       setError(null);
@@ -160,7 +153,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
           finalSortParamForApi = sortPreference;
       }
       
-      console.log(
         `Fetching page ${currentPage} with:`,
         `Term="${debouncedSearchTerm}" (API),`,
         `Sort=${finalSortParamForApi || 'relevance (API default)'},`,
@@ -180,7 +172,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
         setTotalPages(response.totalPages);
       } catch (err) {
         if (err instanceof Error && err.name === 'AbortError') {
-          console.log('Fetch aborted');
           return;
         }
         console.error("Failed to fetch papers:", err);
@@ -196,7 +187,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
       loadPapers();
     } else {
       // If authLoading is true, we still want to show loading state
-      console.log('[usePaperList] Auth is loading, keeping isLoading true');
     }
     return () => {
       abortController.abort();
@@ -289,7 +279,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
       // unless the calling component needs to do further specific error handling.
     }
   }, [showLoginPrompt]); // Added showLoginPrompt to dependencies
-  console.log('[usePaperList] Current state:', {
     searchTerm,
     debouncedSearchTerm,
     isSearchInputActive,
