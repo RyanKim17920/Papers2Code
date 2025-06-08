@@ -44,6 +44,20 @@ const formatDateToString = (date: Date | null): string => {
   }
 };
 
+const datePickerProps = {
+  dateFormat: 'yyyy-MM-dd',
+  placeholderText: 'YYYY-MM-DD',
+  className: 'form-control',
+  isClearable: true,
+  autoComplete: 'off',
+  showIcon: true,
+  showMonthDropdown: true,
+  showYearDropdown: true,
+  dropdownMode: 'select',
+  readOnly: false,
+  useShortMonthInDropdown: false,
+} as const;
+
 
 const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
   filters,
@@ -73,29 +87,21 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
       <div className="form-grid">
         {/* Date Range */}
         <div className="form-group">
-          <label htmlFor="startDate">Published After:</label>          <DatePicker
+          <label htmlFor="startDate">Published After:</label>
+          <DatePicker
             selected={parseDateString(filters.startDate)}
             onChange={(date) => handleDateChange(date, 'startDate')}
             selectsStart
             startDate={parseDateString(filters.startDate) || undefined}
             endDate={parseDateString(filters.endDate) || undefined}
-            dateFormat="yyyy-MM-dd"
-            placeholderText="YYYY-MM-DD"
-            className="form-control"
-            isClearable
             maxDate={new Date()}
             id="startDate"
-            autoComplete="off"
-            showIcon
-            showMonthDropdown
-            showYearDropdown
-            dropdownMode="select"
-            readOnly={false}
-            useShortMonthInDropdown={false}
+            {...datePickerProps}
           />
         </div>
         <div className="form-group">
-          <label htmlFor="endDate">Published Before:</label>           <DatePicker
+          <label htmlFor="endDate">Published Before:</label>
+          <DatePicker
             selected={parseDateString(filters.endDate)}
             onChange={(date) => handleDateChange(date, 'endDate')}
             selectsEnd
@@ -103,18 +109,8 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
             endDate={parseDateString(filters.endDate) || undefined}
             minDate={parseDateString(filters.startDate) || undefined}
             maxDate={new Date()}
-            dateFormat="yyyy-MM-dd"
-            placeholderText="YYYY-MM-DD"
-            className="form-control"
-            isClearable
             id="endDate"
-            autoComplete="off"
-            showIcon
-            showMonthDropdown
-            showYearDropdown
-            dropdownMode="select"
-            readOnly={false}
-            useShortMonthInDropdown={false}
+            {...datePickerProps}
           />
         </div>
 
