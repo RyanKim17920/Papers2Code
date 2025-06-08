@@ -2,9 +2,10 @@ from fastapi import FastAPI, Request, HTTPException, APIRouter, status
 from fastapi.middleware.cors import CORSMiddleware # ADDED: For CORS
 from fastapi.responses import JSONResponse # For custom error handling
 from pydantic import BaseModel # ADDED: For type checking in AliasJSONResponse
-from slowapi import Limiter, _rate_limit_exceeded_handler
-from slowapi.util import get_remote_address
+from slowapi import _rate_limit_exceeded_handler
 from slowapi.errors import RateLimitExceeded
+from .dependencies import limiter
+from .constants import CSRF_TOKEN_COOKIE_NAME, CSRF_TOKEN_HEADER_NAME
 import uvicorn
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware # For HSTS
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint # ADDED
@@ -21,9 +22,6 @@ from .routers import auth_routes # Corrected import for auth_routes
 # Import the paper routers
 from .routers import paper_views_router, paper_actions_router, paper_moderation_router, implementation_progress_router
 
-# ADDED: CSRF constants (ensure these match auth_routes.py)
-CSRF_TOKEN_COOKIE_NAME = "csrf_token_cookie"
-CSRF_TOKEN_HEADER_NAME = "X-CSRFToken"
 
 # ADDED: CSRF Protection Middleware
 class CSRFProtectMiddleware(BaseHTTPMiddleware):
@@ -63,8 +61,6 @@ class AliasJSONResponse(JSONResponse):
             return super().render(content.model_dump(by_alias=True))
         return super().render(content)
 
-# Initialize Limiter
-limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"]) 
 
 # --- Logging Configuration ---
 # MOVED from shared.py: BasicConfig should ideally be called once, e.g. in main.py

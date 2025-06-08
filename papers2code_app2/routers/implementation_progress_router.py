@@ -10,6 +10,7 @@ from ..schemas_implementation_progress import (
     ProgressStatus 
 )
 from ..services.implementation_progress_service import ImplementationProgressService
+from ..dependencies import get_implementation_progress_service
 from ..services.exceptions import NotFoundException, UserNotContributorException, InvalidRequestException
 from ..auth import get_current_user 
 from ..schemas_minimal import UserSchema as UserInDBMinimalSchema
@@ -21,9 +22,6 @@ router = APIRouter(
     tags=["Implementation Progress"], 
 )
 
-# Dependency to get the service
-def get_implementation_progress_service() -> ImplementationProgressService:
-    return ImplementationProgressService()
 
 @router.post("/paper/{paper_id}/join", response_model=ImplementationProgress, status_code=status.HTTP_200_OK) 
 async def join_or_create_implementation_progress(

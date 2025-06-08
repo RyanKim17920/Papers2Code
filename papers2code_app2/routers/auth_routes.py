@@ -6,6 +6,7 @@ from ..schemas_minimal import UserSchema, TokenResponse, UserMinimal, CsrfToken,
 from ..shared import config_settings
 from ..auth import get_current_user # SECRET_KEY, ALGORITHM, create_refresh_token are used by service
 from ..services.auth_service import AuthService
+from ..constants import OAUTH_STATE_COOKIE_NAME, CSRF_TOKEN_COOKIE_NAME
 from ..services.exceptions import (
     InvalidTokenException,
     UserNotFoundException,
@@ -21,11 +22,6 @@ router = APIRouter(
 )
 
 auth_service = AuthService()
-
-OAUTH_STATE_COOKIE_NAME = "oauth_state_token" # Used for setting and clearing
-ACCESS_TOKEN_COOKIE_NAME = "access_token_cookie" # Used for clearing on error/logout
-REFRESH_TOKEN_COOKIE_NAME = "refresh_token" # Used for clearing on error/logout
-CSRF_TOKEN_COOKIE_NAME = "csrf_token_cookie" # Used for /csrf-token endpoint
 
 @router.get("/csrf-token", response_model=CsrfToken)
 async def get_csrf_token(request: Request, response: Response):

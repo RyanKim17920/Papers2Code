@@ -1,7 +1,6 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
 from bson.errors import InvalidId
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from ..dependencies import limiter, get_paper_moderation_service
 import logging  # Ensure logging is imported
 
 from ..schemas_papers import (
@@ -17,8 +16,6 @@ router = APIRouter(
     prefix="/papers",
     tags=["paper-moderation"],
 )
-
-limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
 @router.post("/{paper_id}/flag_implementability", response_model=PaperResponse)
@@ -27,18 +24,18 @@ async def flag_paper_implementability(
     request: Request, # For limiter
     paper_id: str,
     action: str = Body(..., embed=True, pattern="^(confirm|dispute|retract)$"),
-    current_user: UserSchema = Depends(get_current_user)
+    current_user: UserSchema = Depends(get_current_user),
+    service: PaperModerationService = Depends(get_paper_moderation_service)
 ):
     #logger.info(f"Router: Received request to flag implementability for paper_id: {paper_id}, action: {action}, user: {current_user.id}")
     
-    moderation_service = PaperModerationService()
     user_id_str = str(current_user.id)
 
     if not user_id_str: # Should be caught by get_current_user if it raises, but good practice
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
     try:
-        updated_paper_doc = await moderation_service.flag_paper_implementability(
+        updated_paper_doc = await service.flag_paper_implementability(
             paper_id=paper_id,
             user_id=user_id_str,
             action=action
@@ -76,17 +73,17 @@ async def set_paper_implementability(
     request: Request, # For limiter
     paper_id: str,
     payload: SetImplementabilityRequest,
-    current_user: UserSchema = Depends(get_current_owner) # Ensures only owner can call
+    current_user: UserSchema = Depends(get_current_owner), # Ensures only owner can call
+    service: PaperModerationService = Depends(get_paper_moderation_service)
 ):
     #logger.info(f"Router: Received request to set implementability for paper_id: {paper_id} by admin: {current_user.id} to '{payload.status_to_set}'")
-    moderation_service = PaperModerationService()
     admin_user_id_str = str(current_user.id)
 
     if not admin_user_id_str:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin user ID not found")
 
     try:
-        updated_paper_doc = await moderation_service.set_paper_implementability(
+        updated_paper_doc = await service.set_paper_implementability(
             paper_id=paper_id,
             admin_user_id=admin_user_id_str,
             status_to_set_by_admin=payload.status_to_set
@@ -120,17 +117,17 @@ async def set_paper_implementability(
 async def delete_paper(
     request: Request, # For limiter
     paper_id: str,
-    current_user: UserSchema = Depends(get_current_owner)
+    current_user: UserSchema = Depends(get_current_owner),
+    service: PaperModerationService = Depends(get_paper_moderation_service)
 ):
     #logger.info(f"Router: Received request to delete paper_id: {paper_id} by admin: {current_user.id}")
-    moderation_service = PaperModerationService()
     admin_user_id_str = str(current_user.id)
 
     if not admin_user_id_str:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Admin user ID not found")
 
     try:
-        success = await moderation_service.delete_paper(paper_id=paper_id, admin_user_id=admin_user_id_str)
+        success = await service.delete_paper(paper_id=paper_id, admin_user_id=admin_user_id_str)
         if success: # Service returns True on success
             return None # FastAPI will return 204 No Content based on status_code in decorator
         else:
