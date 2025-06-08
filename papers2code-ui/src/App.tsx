@@ -1,5 +1,5 @@
 // src/App.tsx
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
@@ -13,6 +13,8 @@ import './App.css';
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false); // State for dropdown
+  const dropdownRef = useRef<HTMLDivElement>(null); // Ref for dropdown click outside
 
   // Check login status and fetch CSRF token when the app loads
   useEffect(() => {
@@ -26,12 +28,28 @@ function App() {
     initializeApp();
   }, []);
 
+  // Handle clicking outside of dropdown to close it
+  useEffect(() => {
+    const handleClickOutside = (event: MouseEvent) => {
+      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
+        setIsDropdownOpen(false);
+      }
+    };
+    document.addEventListener('mousedown', handleClickOutside);
+    return () => {
+      document.removeEventListener('mousedown', handleClickOutside);
+    };
+  }, [dropdownRef]);
+
   // Handle Logout
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
     localStorage.removeItem('csrfToken'); // Clear token on logout
+    setIsDropdownOpen(false); // Close dropdown on logout
   };
+
+  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
 
   return (
     <ModalProvider>
@@ -48,16 +66,22 @@ function App() {
               {authLoading ? (
                 <span className="auth-loading">Loading...</span>
               ) : currentUser ? (
-                <div className="user-info">
-                  <UserAvatar
-                    avatarUrl={currentUser.avatarUrl}
-                    username={currentUser.username}
-                    className="user-avatar" // This class is defined in UserAvatar.css
-                  />
-                  <span className="username">{currentUser.username}</span>
-                  <button onClick={handleLogout} className="auth-button logout-button">
-                    Logout
-                  </button>
+                <div className="user-info-container" ref={dropdownRef}>
+                  <button onClick={toggleDropdown} className="user-avatar-button">
+                    <UserAvatar
+                      avatarUrl={currentUser.avatarUrl}
+                      username={currentUser.username}
+                      className="user-avatar"
+                    />
+                  </button>                  {isDropdownOpen && (
+                    <div className={`user-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
+                      <Link to="/profile" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
+                      <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>                      
+                      <Link to="" onClick={handleLogout} className="dropdown-item">
+                        Logout
+                      </Link>
+                    </div>
+                  )}
                 </div>
               ) : (
                 <button onClick={redirectToGitHubLogin} className="auth-button connect-button">

@@ -90,7 +90,7 @@ async def get_current_user_api(current_user: UserSchema = Depends(get_current_us
     user_details_model = auth_service.get_user_details(current_user)
     return user_details_model # FastAPI will serialize Pydantic model to JSON
 
-@router.put("/users/me/profile", response_model=UserSchema)
+@router.put("/me/profile", response_model=UserSchema)
 async def update_current_user_profile(
     profile_data: UserUpdateProfile,
     current_user: UserSchema = Depends(get_current_user),
@@ -105,9 +105,14 @@ async def update_current_user_profile(
     except DatabaseOperationException as e: # Assuming DatabaseOperationException is a relevant exception from your service
         logger.error(f"Database error updating profile for user_id: {current_user.id}: {e.message}")
         return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": "Failed to update profile due to a database error."})
-    except Exception as e:
-        logger.exception(f"Unexpected error updating profile for user_id: {current_user.id}")
-        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": "An unexpected error occurred."})
+    except Exception:
+        logger.exception(
+            f"Unexpected error updating profile for user_id: {current_user.id}"
+        )
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "An unexpected error occurred."},
+        )
 
 
 @router.post("/refresh_token", response_model=TokenResponse)

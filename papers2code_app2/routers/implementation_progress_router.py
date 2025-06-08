@@ -1,4 +1,3 @@
-# papers2code_app2/routers/implementation_progress_router.py
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
