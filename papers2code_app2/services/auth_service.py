@@ -19,13 +19,15 @@ import secrets # Add import for secrets
 from datetime import datetime, timedelta, timezone # Add datetime, timedelta, timezone imports
 from pymongo import ReturnDocument # Add pymongo import
 import logging # Add logging import
+from ..constants import (
+    ACCESS_TOKEN_COOKIE_NAME,
+    REFRESH_TOKEN_COOKIE_NAME,
+    OAUTH_STATE_COOKIE_NAME,
+    CSRF_TOKEN_COOKIE_NAME,
+)
 
 logger = logging.getLogger(__name__)
 
-ACCESS_TOKEN_COOKIE_NAME = "access_token_cookie"
-REFRESH_TOKEN_COOKIE_NAME = "refresh_token"
-OAUTH_STATE_COOKIE_NAME = "oauth_state_token" # Define OAUTH_STATE_COOKIE_NAME
-CSRF_TOKEN_COOKIE_NAME = "csrf_token_cookie" # Define CSRF_TOKEN_COOKIE_NAME
 
 class AuthService:
     def generate_csrf_token(self) -> str:
