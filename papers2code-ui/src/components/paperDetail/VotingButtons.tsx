@@ -4,7 +4,7 @@ import { faThumbsUp as faSolidThumbsUp, faFlag, faCheckCircle, faTimesCircle, fa
 import { faThumbsUp as faRegularThumbsUp, faThumbsDown as faRegularThumbsDown } from '@fortawesome/free-regular-svg-icons';
 import { Paper, ImplementabilityAction, AdminSettableImplementabilityStatus, Status } from '../../types/paper';
 import { voteOnPaperInApi, flagImplementabilityInApi, setImplementabilityInApi, CsrfError, AuthenticationError } from '../../services/api';
-import { UserProfile } from '../../services/auth';
+import type { UserProfile } from '../../types/user';
 import ConfirmationModal from '../common/ConfirmationModal';
 import './VotingButtons.css';
 import { useModal } from '../../context/ModalContext';

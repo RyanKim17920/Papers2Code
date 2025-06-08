@@ -4,7 +4,8 @@ import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
 import logo from './images/papers2codelogo.png';
-import { UserProfile, checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './services/auth';
+import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './services/auth';
+import type { UserProfile } from './types/user';
 import { UserAvatar } from './components/common';
 import { ModalProvider } from './context/ModalContext'; // Import ModalProvider
 import LoginPromptModal from './components/common/LoginPromptModal'; // Import LoginPromptModal

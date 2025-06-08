@@ -1,5 +1,5 @@
 // src/utils/statusUtils.ts
-import { Paper, Status } from '../types/paper'; // Import Paper type
+import { Paper } from '../types/paper';
 /**
  * Returns a CSS class string based on the paper's status and implementability votes.
  * @param paper - The paper object.

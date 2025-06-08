@@ -4,7 +4,6 @@ import React, { useState, useEffect } from 'react';
 import { Paper } from '../../../../types/paper';
 import { AdminSettableImplementabilityStatus } from '../../../../hooks/usePaperDetail';
 import type { UserProfile } from '../../../../types/user';
-import { updatePaperStatusInApi } from '../../../../services/api';
 // import './OwnerActions.css'; // Assuming this will be fixed or is not critical for this change
 
 interface OwnerActionsProps {
@@ -19,17 +18,12 @@ interface OwnerActionsProps {
 
 export const OwnerActions: React.FC<OwnerActionsProps> = ({
     paper,
-    currentUser,
-    onPaperUpdate,
     openConfirmStatusModal,
     onRequestRemoveConfirmation, // Added
     isUpdatingStatus,
     isRemoving
 }) => {
-    const [isUpdatingImplStatus, setIsUpdatingImplStatus] = useState<boolean>(false);
     const [actionClicked, setActionClicked] = useState<AdminSettableImplementabilityStatus | null>(null);
-    // Store the specific status being updated for the "Mark as..." buttons
-    const [markingStatus, setMarkingStatus] = useState<string | null>(null);
 
     useEffect(() => {
         if (!isUpdatingStatus) {
@@ -37,27 +31,6 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
         }
     }, [isUpdatingStatus]);
 
-    const handleUpdatePaperStatus = async (newStatus: string) => {
-        if (!currentUser || !paper.id) return;
-        setIsUpdatingImplStatus(true);
-        setMarkingStatus(newStatus); // Set which status is being marked
-        // setUpdateError(null);
-        try {
-            const updatedPaper = await updatePaperStatusInApi(paper.id, newStatus, currentUser.id);
-            if (updatedPaper) {
-                onPaperUpdate(updatedPaper);
-            }
-        } catch (err) {
-            if (err instanceof Error) {
-                // setUpdateError(err.message || 'Failed to update paper status');
-            } else {
-                // setUpdateError('An unknown error occurred while updating paper status');
-            }
-        } finally {
-            setIsUpdatingImplStatus(false);
-            setMarkingStatus(null); // Reset marking status
-        }
-    };
 
     const handleImplementabilityAction = (status: AdminSettableImplementabilityStatus) => {
         if (!isUpdatingStatus) {

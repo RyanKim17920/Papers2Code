@@ -128,11 +128,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
   }, [debouncedSearchTerm, sortPreference, appliedAdvancedFilters]);  // API Fetching Logic
   useEffect(() => {
     const abortController = new AbortController();
-      debouncedSearchTerm, 
-      sortPreference, 
-      currentPage, 
-      authLoading 
-    });
     
     // Immediately set loading to true when this effect runs to prevent "No papers" flash
     setIsLoading(true);
@@ -153,11 +148,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
           finalSortParamForApi = sortPreference;
       }
       
-        `Fetching page ${currentPage} with:`,
-        `Term="${debouncedSearchTerm}" (API),`,
-        `Sort=${finalSortParamForApi || 'relevance (API default)'},`,
-        `Filters=${JSON.stringify(appliedAdvancedFilters)}`
-      );
 
       try {
         const response = await fetchPapersFromApi(
@@ -181,7 +171,8 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
       } finally {
         setIsLoading(false);
       }
-    };    if (authLoading === false) {
+    };
+    if (authLoading === false) {
       loadPapers();
     } else if (authLoading === undefined) {
       loadPapers();
@@ -279,12 +270,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
       // unless the calling component needs to do further specific error handling.
     }
   }, [showLoginPrompt]); // Added showLoginPrompt to dependencies
-    searchTerm,
-    debouncedSearchTerm,
-    isSearchInputActive,
-    uiSortValue,
-    sortPreference
-  });
 
   return {
     papers,

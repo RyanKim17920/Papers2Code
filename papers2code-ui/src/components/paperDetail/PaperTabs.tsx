@@ -1,6 +1,5 @@
 import React from 'react';
 import { Paper } from '../../types/paper';
-import { OverallProgressStatusTs } from '../../types/implementation';
 import './PaperTabs.css';
 
 interface PaperTabsProps {

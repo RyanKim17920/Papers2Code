@@ -2,7 +2,6 @@ import React from 'react';
 import { Paper } from '../../../../types/paper'; // Import Status
 import './PaperMetadata.css';
 import { getStatusClass, getStatusSymbol } from '../../../../utils/statusUtils'; // Import utility function for status symbol
-import { stat } from 'fs';
 interface PaperMetadataProps {
     paper: Paper;
 }

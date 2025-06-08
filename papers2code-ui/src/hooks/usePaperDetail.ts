@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paper, ImplementabilityAction, ImplementationProgress } from '../types/paper'; // Added ImplementationProgress
-import { UserProfile } from '../services/auth';
+import { Paper, ImplementabilityAction } from '../types/paper';
+import type { ImplementationProgress } from '../types/implementation';
+import type { UserProfile } from '../types/user';
 import {
     fetchPaperByIdFromApi,
     flagImplementabilityInApi,

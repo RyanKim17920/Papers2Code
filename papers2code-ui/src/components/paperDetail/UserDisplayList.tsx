@@ -1,5 +1,5 @@
 import React from 'react';
-import { UserProfile as User} from '../../services/auth';
+import type { UserProfile as User } from '../../types/user';
 import { UserAvatar, LoadingSpinner } from '../common';
 import './UserDisplayList.css';
 
