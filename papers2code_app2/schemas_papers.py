@@ -1,5 +1,4 @@
-from pydantic import BaseModel, Field, HttpUrl, computed_field, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import BaseModel, Field, HttpUrl, computed_field
 from typing import List, Optional, Literal, TYPE_CHECKING
 from datetime import datetime
 

@@ -114,8 +114,10 @@ async def record_generic_paper_action(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
     except HTTPException:
         raise # Re-raise if it's already an HTTPException
-    except Exception as e:
-        logger.exception(f"An internal server error occurred during action recording for paper {paper_id}, action {action_type}.")
+    except Exception:
+        logger.exception(
+            f"An internal server error occurred during action recording for paper {paper_id}, action {action_type}."
+        )
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal server error occurred while recording the action."

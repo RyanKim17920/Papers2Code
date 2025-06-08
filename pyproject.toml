@@ -30,3 +30,7 @@ dependencies = [
     "uvicorn[standard]>=0.34.2",
     "waitress>=3.0.2",
 ]
+
+[tool.ruff]
+target-version = "py312"
+line-length = 120
