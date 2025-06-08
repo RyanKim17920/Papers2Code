@@ -1,6 +1,6 @@
 import React from 'react';
 import { FaThumbsUp, FaThumbsDown } from 'react-icons/fa';
-import { Paper } from '../../../../types/paper';
+import { Paper } from '../../../../common/types/paper';
 import './ImplementabilityNotice.css';
 
 interface ImplementabilityNoticeProps {

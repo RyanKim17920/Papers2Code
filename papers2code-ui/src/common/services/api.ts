@@ -184,10 +184,7 @@ export const removePaperFromApi = async (paperId: string): Promise<void> => {
   await handleApiResponse<void>(response); 
   // Original success logging can remain if specific status codes (200, 207) are meaningful beyond just "ok"
   // but the primary success/failure is handled by handleApiResponse.
-  // MODIFIED: Check response.ok instead of specific statuses, as handleApiResponse now throws for non-ok responses.
-  if (response.ok) { 
-  }
-  // No need for an else to throw error, as handleApiResponse does that.
+  // MODIFIED: No further action needed; handleApiResponse throws for errors.
 };
 
 // --- NEW: Function to fetch users who performed actions on a paper ---
@@ -353,7 +350,7 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
     if (errorData && errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
       // Extract the first validation error message
       const firstError = errorData.detail[0];
-      let userMessage = firstError.msg;
+      const userMessage = firstError.msg;
       // Optionally, make the message more specific if location info is useful
       // if (firstError.loc && Array.isArray(firstError.loc) && firstError.loc.length > 1) {
       //   userMessage = `Error with field '${firstError.loc[1]}': ${userMessage}`;

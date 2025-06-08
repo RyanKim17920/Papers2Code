@@ -1,8 +1,8 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Paper } from '../../types/paper'; // Ensure Status is imported
+import { Paper } from '../../common/types/paper'; // Ensure Status is imported
 import './PaperCard.css';
-import { getStatusClass, getStatusSymbol } from '../../utils/statusUtils'; // Adjust the import path as necessary
+import { getStatusClass, getStatusSymbol } from '../../common/utils/statusUtils';
 
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">

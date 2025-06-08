@@ -1,5 +1,5 @@
 import React from 'react';
-import { ImplementationProgress as ImplementationProgressType } from '../../../../types/implementation';
+import { ImplementationProgress as ImplementationProgressType } from '../../../../common/types/implementation';
 import { ImplementationRoadmapView } from './ImplementationStepView';
 import './ImplementationProgressTab.css';
 

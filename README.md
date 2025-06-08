@@ -17,4 +17,6 @@ Use `run_app2.py` to start the API and `npm start` inside `papers2code-ui` to la
   - `routers/` - route declarations
   - `services/` - business logic services
 - `papers2code-ui/` - React/Vite front-end
+  - `src/assets/` - static assets
+  - `src/common/` - shared hooks, services, and components
 - `scripts/` - helper scripts for working with the database

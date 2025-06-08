@@ -4,7 +4,7 @@ import {
   OverallProgressStatusTs,
   // ImplementationSection, // No longer directly used here
   // ImplementationComponent // No longer directly used here
-} from '../../../../types/implementation';
+} from '../../../../common/types/implementation';
 // import ImplementationFlow from './ImplementationFlow'; // REMOVED
 import ProgressTracker from './ProgressTracker'; // RENAMED
 

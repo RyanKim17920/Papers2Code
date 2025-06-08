@@ -5,7 +5,7 @@ import {
   ImplementationComponent,
   ComponentStatusTs,
   ComponentCategoryTs,
-} from '../../../../types/implementation';
+} from '../../../../common/types/implementation';
 import './ProgressTracker.css';
 
 interface ProgressTrackerProps {
@@ -33,13 +33,13 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
     const section = updatedProgress.implementationRoadmap?.sections.find(s => s.id === sectionId);
     if (section) {
       if (field === 'description') {
-        (section[field] as string | null | undefined) = value; 
+        (section[field] as string | null | undefined) = value;
       } else if (field === 'title' || field === 'name') {
         (section[field] as string) = value;
       } else if (field === 'isDefault') {
         (section[field] as boolean) = Boolean(value);
       } else {
-        (section[field] as any) = value; 
+        (section as unknown as Record<string, unknown>)[field] = value;
       }
       onImplementationProgressChange(updatedProgress);
     }
@@ -58,7 +58,7 @@ const ProgressTracker: React.FC<ProgressTrackerProps> = ({
         } else if (field === 'order') {
             (component[field] as number) = Number(value);
         } else {
-            (component[field] as any) = value;
+            (component as unknown as Record<string, unknown>)[field] = value;
         }
         onImplementationProgressChange(updatedProgress);
       }

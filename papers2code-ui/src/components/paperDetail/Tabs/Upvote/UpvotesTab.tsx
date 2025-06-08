@@ -1,9 +1,9 @@
 import React from 'react';
-import { Paper } from '../../../../types/paper';
-import type { UserProfile } from '../../../../types/user';
+import { Paper } from '../../../../common/types/paper';
+import type { UserProfile } from '../../../../common/types/user';
 import { VoteButton, RetractVoteButton, FaArrowUp } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
-import type { PaperActionUsers } from '../../../../services/api'; // Add this line
+import type { PaperActionUsers } from '../../../../common/services/api'; // Add this line
 
 interface UpvotesTabProps {
     paper: Paper;

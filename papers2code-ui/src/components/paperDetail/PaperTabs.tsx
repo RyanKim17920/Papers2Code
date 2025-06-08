@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper } from '../../types/paper';
+import { Paper } from '../../common/types/paper';
 import './PaperTabs.css';
 
 interface PaperTabsProps {

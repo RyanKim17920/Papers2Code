@@ -45,7 +45,7 @@ export interface PaperSummary {
     id: string;
     pwcUrl?: string | null;
     title: string;
-    authors: String[]; // Kept as Author[] for summaries
+    authors: string[]; // Kept as Author[] for summaries
     date: string;
     status: Status; // Use the new Status type
     isImplementable: boolean;

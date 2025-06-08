@@ -1,6 +1,6 @@
 import React from 'react';
-import type { UserProfile as User } from '../../types/user';
-import { UserAvatar, LoadingSpinner } from '../common';
+import type { UserProfile as User } from '../../common/types/user';
+import { UserAvatar, LoadingSpinner } from '../../common/components';
 import './UserDisplayList.css';
 
 interface UserDisplayListProps {

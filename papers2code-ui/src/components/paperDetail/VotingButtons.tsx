@@ -2,12 +2,12 @@ import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faThumbsUp as faSolidThumbsUp, faFlag, faCheckCircle, faTimesCircle, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import { faThumbsUp as faRegularThumbsUp, faThumbsDown as faRegularThumbsDown } from '@fortawesome/free-regular-svg-icons';
-import { Paper, ImplementabilityAction, AdminSettableImplementabilityStatus, Status } from '../../types/paper';
-import { voteOnPaperInApi, flagImplementabilityInApi, setImplementabilityInApi, CsrfError, AuthenticationError } from '../../services/api';
-import type { UserProfile } from '../../types/user';
-import ConfirmationModal from '../common/ConfirmationModal';
+import { Paper, ImplementabilityAction, AdminSettableImplementabilityStatus, Status } from '../../common/types/paper';
+import { voteOnPaperInApi, flagImplementabilityInApi, setImplementabilityInApi, CsrfError, AuthenticationError } from '../../common/services/api';
+import type { UserProfile } from '../../common/types/user';
+import ConfirmationModal from '../../common/components/ConfirmationModal';
 import './VotingButtons.css';
-import { useModal } from '../../context/ModalContext';
+import { useModal } from '../../common/context/ModalContext';
 
 export const FaArrowUp = () => <FontAwesomeIcon icon={faArrowUp} />;
 export const FaThumbsUp = () => <FontAwesomeIcon icon={faRegularThumbsUp} />;

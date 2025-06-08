@@ -1,5 +1,5 @@
 import React from 'react';
-import { Paper } from '../../types/paper'; // Use full Paper type
+import { Paper } from '../../common/types/paper'; // Use full Paper type
 import PaperCard from './PaperCard';
 import { Typography } from '@mui/material'; // Import Typography from Material-UI
 

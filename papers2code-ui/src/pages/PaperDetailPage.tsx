@@ -1,13 +1,13 @@
 import React, { useState } from 'react';
 import { useParams, Link } from 'react-router-dom';
 
-import { usePaperDetail } from '../hooks/usePaperDetail';
-import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../hooks/usePaperDetail';
-import type { UserProfile } from '../types/user';
-import type { ImplementationProgress } from '../types/implementation';
+import { usePaperDetail } from '../common/hooks/usePaperDetail';
+import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../common/hooks/usePaperDetail';
+import type { UserProfile } from '../common/types/user';
+import type { ImplementationProgress } from '../common/types/implementation';
 
-import { LoadingSpinner } from '../components/common';
-import ConfirmationModal from '../components/common/ConfirmationModal'; // Standardized import
+import { LoadingSpinner } from '../common/components';
+import ConfirmationModal from '../common/components/ConfirmationModal';
 
 import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
 import PaperAbstract from '../components/paperDetail/Tabs/Paper/PaperAbstract';

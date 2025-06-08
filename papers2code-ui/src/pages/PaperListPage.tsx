@@ -1,6 +1,6 @@
 import React from 'react';
-import { usePaperList, SortPreference } from '../hooks/usePaperList';
-import { LoadingSpinner } from '../components/common';
+import { usePaperList, SortPreference } from '../common/hooks/usePaperList';
+import { LoadingSpinner } from '../common/components';
 import ListControls from '../components/paperList/Search/ListControls';
 import PaperListDisplay from '../components/paperList/PaperListDisplay';
 import PaginationControls from '../components/paperList/Search/PaginationControls';

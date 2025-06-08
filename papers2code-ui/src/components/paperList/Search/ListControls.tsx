@@ -1,6 +1,6 @@
 import React from 'react';
 import SearchBar from './SearchBar';
-import { SortPreference } from '../../../hooks/usePaperList';
+import { SortPreference } from '../../../common/hooks/usePaperList';
 
 interface ListControlsProps {
   searchTerm: string;

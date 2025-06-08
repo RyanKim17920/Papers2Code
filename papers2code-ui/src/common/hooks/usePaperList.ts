@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { useSearchParams } from 'react-router-dom';
-import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters, AuthenticationError, CsrfError } from '../services/api'; 
+import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters, AuthenticationError, CsrfError } from '../services/api';
 import { Paper } from '../types/paper';
 import useDebounce from './useDebounce';
 // NEW: Import useModal hook
@@ -60,7 +60,6 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
             setSearchTerm(queryFromUrl);
         }
         prevSearchParamsRef.current = currentSearchParamsStr; // Update the ref
-    } else {
     }
   }, [searchParams]); // Only trigger when the searchParams object reference changes
 
