@@ -9,6 +9,7 @@ import logging
 from .shared import config_settings
 from .database import get_users_collection_async  # Changed from get_users_collection_sync
 from .schemas_minimal import UserSchema
+from .constants import ACCESS_TOKEN_COOKIE_NAME
 
 logger = logging.getLogger(__name__)
 
@@ -18,7 +19,6 @@ ALGORITHM = config_settings.ALGORITHM
 ACCESS_TOKEN_EXPIRE_MINUTES = config_settings.ACCESS_TOKEN_EXPIRE_MINUTES
 REFRESH_TOKEN_EXPIRE_MINUTES = config_settings.REFRESH_TOKEN_EXPIRE_MINUTES
 
-ACCESS_TOKEN_COOKIE_NAME = "access_token_cookie"
 
 async def get_token_from_cookie(request: Request) -> Optional[str]:
     #logger.debug(f"get_token_from_cookie: Headers: {request.headers}")

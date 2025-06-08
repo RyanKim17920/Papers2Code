@@ -1,8 +1,7 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response # Added Response
 from bson.errors import InvalidId
 import logging
-from slowapi import Limiter
-from slowapi.util import get_remote_address
+from ..dependencies import limiter, get_paper_action_service
 
 from ..schemas_papers import PaperResponse, PaperActionsSummaryResponse
 from ..schemas_minimal import UserSchema
@@ -15,8 +14,6 @@ router = APIRouter(
     prefix="/papers",
     tags=["paper-actions"],
 )
-
-limiter = Limiter(key_func=get_remote_address)
 logger = logging.getLogger(__name__)
 
 @router.post("/{paper_id}/vote", response_model=PaperResponse)
@@ -25,21 +22,20 @@ async def vote_on_paper(
     request: Request,  # For limiter
     paper_id: str,
     vote_type: str = Body(..., embed=True, pattern="^(up|none)$"),
-    current_user: UserSchema = Depends(get_current_user)
+    current_user: UserSchema = Depends(get_current_user),
+    service: PaperActionService = Depends(get_paper_action_service)
 ):
     # Raw request body can be logged for debugging if needed
     # raw_body = await request.body()
     # logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
     #logger.info(f"Vote request for paper_id: {paper_id}. Parsed vote_type: {vote_type}. User ID: {current_user.id}")
 
-    paper_action_service = PaperActionService() # Instantiate the service
-
     try:
         user_id_str = str(current_user.id)
         if not user_id_str:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
-        updated_paper_doc = await paper_action_service.record_vote(
+        updated_paper_doc = await service.record_vote(
             paper_id=paper_id,
             user_id=user_id_str,
             vote_type=vote_type
@@ -87,11 +83,11 @@ async def record_generic_paper_action(
     paper_id: str,
     action_type: str,
     current_user: UserSchema = Depends(get_current_user),
-    details: dict = Body(None) # Optional details for the action
+    details: dict = Body(None), # Optional details for the action
+    service: PaperActionService = Depends(get_paper_action_service)
 ):
     logger.info(f"Action request for paper_id: {paper_id}. Action type: {action_type}. User ID: {current_user.id}")
 
-    paper_action_service = PaperActionService()
     user_id_str = str(current_user.id)
 
     # Validate action_type if necessary, or let the service handle it
@@ -100,7 +96,7 @@ async def record_generic_paper_action(
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid action type: {action_type}")
 
     try:
-        await paper_action_service.record_paper_related_action(
+        await service.record_paper_related_action(
             paper_id=paper_id,
             user_id=user_id_str,
             action_type=action_type,
@@ -129,13 +125,12 @@ async def record_generic_paper_action(
 @limiter.limit("100/minute") # Keep limiter if needed
 async def get_paper_actions(
     request: Request,  # For limiter
-    paper_id: str
+    paper_id: str,
+    service: PaperActionService = Depends(get_paper_action_service)
 ):
     #logger.info(f"Router: Received request to get actions for paper_id: {paper_id}")
-    paper_action_service = PaperActionService()
-
     try:
-        actions_summary = await paper_action_service.get_paper_actions(paper_id)
+        actions_summary = await service.get_paper_actions(paper_id)
         return actions_summary
     except PaperNotFoundException as e:
         logger.warning(f"Router: PaperNotFoundException for paper_id {paper_id}: {e}")
