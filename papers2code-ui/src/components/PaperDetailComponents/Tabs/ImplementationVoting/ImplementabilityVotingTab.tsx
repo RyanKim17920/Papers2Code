@@ -3,7 +3,7 @@ import { Paper, ImplementabilityAction } from '../../../../types/paper'; // Ensu
 import { UserProfile } from '../../../../services/auth'; // Added import for UserProfile
 import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
-import './ImplementabilityTab.css';
+import './ImplementabilityVotingTab.css';
 import type { PaperActionUsers } from '../../../../services/api'; // Add this line
 
 
@@ -18,7 +18,7 @@ interface ImplementabilityTabProps {
 }
 
 // Changed to named export
-export const ImplementabilityTab: React.FC<ImplementabilityTabProps> = ({
+export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
     paper,
     currentUser,
     isVoting,

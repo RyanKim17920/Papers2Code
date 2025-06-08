@@ -4,18 +4,19 @@ import { useParams, Link } from 'react-router-dom';
 import { usePaperDetail } from '../hooks/usePaperDetail';
 import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../hooks/usePaperDetail';
 import { UserProfile } from '../services/auth';
+import type { ImplementationProgress } from '../types/paper'; // Added import
 
 import LoadingSpinner from '../components/LoadingSpinner';
 import ConfirmationModal from '../components/common/ConfirmationModal'; // Standardized import
 
 import PaperMetadata from '../components/PaperDetailComponents/Tabs/Paper/PaperMetadata';
 import PaperAbstract from '../components/PaperDetailComponents/Tabs/Paper/PaperAbstract';
-import ImplementabilityNotice from '../components/PaperDetailComponents/Tabs/Implementation/ImplementabilityNotice';
+import ImplementabilityNotice from '../components/PaperDetailComponents/Tabs/ImplementationVoting/ImplementabilityNotice';
 import PaperTabs from '../components/PaperDetailComponents/PaperTabs';
-import DetailsTab from '../components/PaperDetailComponents/Tabs/Implementation/DetailsTab';
 import { UpvotesTab } from '../components/PaperDetailComponents/Tabs/Upvote/UpvotesTab'; // Named import
-import { ImplementabilityTab } from '../components/PaperDetailComponents/Tabs/Implementation/ImplementabilityTab'; // Named import
+import { ImplementabilityVotingTab } from '../components/PaperDetailComponents/Tabs/ImplementationVoting/ImplementabilityVotingTab'; // Named import
 import { OwnerActions } from '../components/PaperDetailComponents/Tabs/Admin/OwnerActions'; // Named import
+import { ImplementationProgressTab } from '../components/PaperDetailComponents/Tabs/ImplementationProgress/ImplementationProgressTab'; // FIXED IMPORT
 import './PaperDetailPage.css';
 
 interface PaperDetailPageProps {
@@ -51,7 +52,8 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         loadPaperAndActions, 
         handleInitiateJoinImplementationEffort, 
         isProcessingEffortAction,          
-        effortActionError
+        effortActionError,
+        updateImplementationProgress // Added from usePaperDetail hook (will be implemented next)
     } = usePaperDetail(paperId, currentUser);
 
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
@@ -74,6 +76,17 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const confirmAndStartEffort = () => {
         handleInitiateJoinImplementationEffort(); // Call the function from the hook
         setShowStartEffortConfirmModal(false);    // Close modal
+        window.location.reload(); // Without reloading the page is broken for some reason
+    };
+
+    // New handler for implementation progress changes
+    const handleImplementationProgressChange = async (updatedProgress: ImplementationProgress) => {
+        if (!paperId) return;
+        // Call the function from the hook to update local state and make API call
+        // This function will be added to usePaperDetail hook
+        await updateImplementationProgress(updatedProgress);
+        // Optionally, refetch paper data or rely on optimistic update
+        // loadPaperAndActions(); // Or a more specific refresh if available
     };
 
     if (isLoading) {
@@ -177,10 +190,6 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     </div>
                 )}
 
-                {activeTab === 'details' && (
-                    <DetailsTab paper={paper} onStepUpdate={loadPaperAndActions} /> 
-                )}
-
                 {activeTab === 'upvotes' && (
                     <UpvotesTab
                         paper={paper}
@@ -194,7 +203,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 )}
 
                 {activeTab === 'implementability' && (
-                    <ImplementabilityTab
+                    <ImplementabilityVotingTab
                         paper={paper}
                         currentUser={currentUser}
                         isVoting={isVoting}
@@ -215,6 +224,16 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)} // Pass handler for new prop
                             isUpdatingStatus={isUpdatingStatus}
                             isRemoving={isRemoving}
+                        />
+                    </div>
+                )}
+
+                {activeTab === 'implementationProgress' && paper.implementationProgress && (
+                    <div className="tab-pane-container">
+                        <ImplementationProgressTab 
+                            progress={paper.implementationProgress} 
+                            onImplementationProgressChange={handleImplementationProgressChange} // Updated prop
+                            // onUpdateStep is no longer used by ImplementationProgressTab, can be removed if not needed elsewhere
                         />
                     </div>
                 )}

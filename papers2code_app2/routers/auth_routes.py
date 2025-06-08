@@ -2,7 +2,7 @@ from fastapi import APIRouter, Depends, status, Response, Request
 from fastapi.responses import RedirectResponse, JSONResponse
 import logging
 
-from ..schemas_minimal import UserSchema, TokenResponse, UserMinimal, CsrfToken
+from ..schemas_minimal import UserSchema, TokenResponse, UserMinimal, CsrfToken, UserUpdateProfile # Added UserUpdateProfile
 from ..shared import config_settings
 from ..auth import get_current_user # SECRET_KEY, ALGORITHM, create_refresh_token are used by service
 from ..services.auth_service import AuthService
@@ -10,6 +10,7 @@ from ..services.exceptions import (
     InvalidTokenException,
     UserNotFoundException,
     OAuthException,
+    DatabaseOperationException # Added DatabaseOperationException
 )
 
 logger = logging.getLogger(__name__)
@@ -86,12 +87,31 @@ async def github_callback(code: str, state: str, request: Request): # Removed re
         return error_redirect
 
 
-@router.get("/me", response_model=UserMinimal) # Changed to UserMinimal for consistency if that's what get_user_details returns
+@router.get("/me", response_model=UserMinimal)
 async def get_current_user_api(current_user: UserSchema = Depends(get_current_user)):
     # Logic moved to AuthService.get_user_details
     # Ensure get_user_details returns a Pydantic model or a dict that matches UserMinimal
     user_details_model = auth_service.get_user_details(current_user)
     return user_details_model # FastAPI will serialize Pydantic model to JSON
+
+@router.put("/users/me/profile", response_model=UserSchema)
+async def update_current_user_profile(
+    profile_data: UserUpdateProfile,
+    current_user: UserSchema = Depends(get_current_user),
+    auth_service_instance: AuthService = Depends(lambda: auth_service) # Use Depends for service instance
+):
+    try:
+        updated_user = await auth_service_instance.update_user_profile(user_id=str(current_user.id), profile_data=profile_data)
+        return updated_user
+    except UserNotFoundException as e:
+        logger.warning(f"User not found when trying to update profile for user_id: {current_user.id}")
+        return JSONResponse(status_code=status.HTTP_404_NOT_FOUND, content={"detail": e.message})
+    except DatabaseOperationException as e: # Assuming DatabaseOperationException is a relevant exception from your service
+        logger.error(f"Database error updating profile for user_id: {current_user.id}: {e.message}")
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": "Failed to update profile due to a database error."})
+    except Exception as e:
+        logger.exception(f"Unexpected error updating profile for user_id: {current_user.id}")
+        return JSONResponse(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, content={"detail": "An unexpected error occurred."})
 
 
 @router.post("/refresh_token", response_model=TokenResponse)

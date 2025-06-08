@@ -1,6 +1,6 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Paper, ImplementabilityAction } from '../types/paper'; 
+import { Paper, ImplementabilityAction, ImplementationProgress } from '../types/paper'; // Added ImplementationProgress
 import { UserProfile } from '../services/auth';
 import {
     fetchPaperByIdFromApi,
@@ -12,12 +12,13 @@ import {
     PaperActionUsers,
     AuthenticationError,
     CsrfError,
-    joinOrCreateImplementationProgress // Import the new API function
+    joinOrCreateImplementationProgress,
+    updateImplementationProgressInApi // Placeholder for the new API function
 } from '../services/api';
 
 import { useModal } from '../context/ModalContext';
 
-export type ActiveTab = 'paperInfo' | 'details' | 'upvotes' | 'implementability' | 'admin';
+export type ActiveTab = 'paperInfo' | 'details' | 'upvotes' | 'implementability' | 'admin' | 'implementationProgress';
 
 // Define the type for the status that can be set by an admin/owner.
 // These are the values that will be displayed in the UI and passed to handleSetImplementabilityStatus.
@@ -32,6 +33,8 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
     const [isRemoving, setIsRemoving] = useState<boolean>(false);
     const [isUpdatingStatus, setIsUpdatingStatus] = useState<boolean>(false); // For owner actions
     const [isVoting, setIsVoting] = useState<boolean>(false); // For general upvotes/implementability votes
+    const [isUpdatingProgress, setIsUpdatingProgress] = useState<boolean>(false); // New state for progress updates
+    const [progressUpdateError, setProgressUpdateError] = useState<string | null>(null); // New error state for progress updates
 
     const [activeTab, setActiveTab] = useState<ActiveTab>('paperInfo');
     const [actionUsers, setActionUsers] = useState<PaperActionUsers | null>(null);
@@ -62,6 +65,7 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         setIsUpdatingStatus(false);
         setIsVoting(false);
         setActionUsersError(null);
+        setProgressUpdateError(null); // Reset progress update error
 
         try {
             const [fetchedPaper, fetchedActionUsers] = await Promise.all([
@@ -131,6 +135,36 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
             setIsProcessingEffortAction(false);
         }
     }, [paperId, currentUser, isProcessingEffortAction, showLoginPrompt, setPaper, /* setActionUsers, setActionUsersError */]);
+    // --- End NEW ---
+
+    // --- NEW: Handler for updating implementation progress ---
+    const updateImplementationProgress = useCallback(async (updatedProgressData: ImplementationProgress) => {
+        if (!paperId || !paper) return; // Ensure paper and paperId exist
+        if (isUpdatingProgress) return;
+
+        setIsUpdatingProgress(true);
+        setProgressUpdateError(null);
+        setUpdateError(null); // Clear general update error
+
+        try {
+            const updatedPaper = await updateImplementationProgressInApi(paperId, updatedProgressData);
+            setPaper(updatedPaper); // Update local paper state
+            // Optionally, inform the user of success via a toast or similar
+        } catch (err) {
+            console.error("Failed to update implementation progress:", err);
+            const errorMessage = err instanceof Error ? err.message : "Failed to update implementation progress.";
+            if (err instanceof AuthenticationError || err instanceof CsrfError) {
+                showLoginPrompt("Please connect with GitHub to update progress.");
+                setProgressUpdateError(errorMessage);
+            } else {
+                setProgressUpdateError(`API Error: ${errorMessage}`);
+            }
+            setUpdateError(errorMessage); // Also set general update error for broader display if needed
+        }
+        finally {
+            setIsUpdatingProgress(false);
+        }
+    }, [paperId, paper, isUpdatingProgress, showLoginPrompt, setPaper, setIsUpdatingProgress, setProgressUpdateError, setUpdateError]);
     // --- End NEW ---
 
     const handleUpvote = useCallback(async (voteType: 'up' | 'none') => {
@@ -257,6 +291,8 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         showConfirmStatusModal,
         isProcessingEffortAction, // Return new state
         effortActionError,      // Return new error state
+        isUpdatingProgress, // Return new state for progress updates
+        progressUpdateError, // Return new error state for progress updates
         loadPaperAndActions, // Renamed from reloadPaper for clarity
         handleUpvote,
         handleImplementabilityVote,
@@ -266,6 +302,7 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
         setShowConfirmRemoveModal,
         setShowConfirmStatusModal,
         openConfirmStatusModal, // Added this to the return object
-        handleInitiateJoinImplementationEffort // Return new handler
+        handleInitiateJoinImplementationEffort, // Return new handler
+        updateImplementationProgress // Return new handler for progress updates
     };
 }

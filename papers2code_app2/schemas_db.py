@@ -1,4 +1,5 @@
-from typing import Any
+from datetime import datetime  # Add datetime import
+from typing import Any, Optional
 from bson import ObjectId
 from pydantic import (
     BaseModel,
@@ -9,6 +10,7 @@ from pydantic import (
 )
 from pydantic.json_schema import JsonSchemaValue
 from pydantic_core import core_schema
+from pydantic.alias_generators import to_camel
 
 # -----------------------------------------------------------------------------
 # Mongo helpers
@@ -61,4 +63,20 @@ class _MongoModel(BaseModel):
         arbitrary_types_allowed=True,
         json_encoders={ObjectId: str},
         str_strip_whitespace=True,
+        alias_generator=to_camel,
+    )
+
+
+class UserActivity(_MongoModel):
+    """Schema for storing general user activities."""
+    user_id: PyObjectId = Field(..., alias="userId")
+    activity_type: str = Field(..., alias="activityType")  # E.g., "profile_updated", "project_started", "user_logged_in"
+    timestamp: datetime = Field(default_factory=datetime.utcnow)
+    details: Optional[dict[str, Any]] = None  # Specific details about the activity
+
+    model_config = ConfigDict(
+        populate_by_name=True,
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str, datetime: lambda dt: dt.isoformat()},
+        alias_generator=to_camel,
     )

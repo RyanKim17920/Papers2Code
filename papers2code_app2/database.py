@@ -241,7 +241,7 @@ async def ensure_db_indexes_async():
                 ([("paperId", ASCENDING), ("actionType", ASCENDING)], {"name": "paperId_1_actionType_1_user_actions_async"}), # For specific action on a paper
             ]),
             (collections_to_check["implementation_progress"], [
-                ([("paper_id", ASCENDING)], {"name": "paper_id_1_impl_progress_async", "unique": True}),
+                ([("paperId", ASCENDING)], {"name": "paperId_1_impl_progress_async", "unique": True}),
                 ([("status", ASCENDING)], {"name": "status_1_impl_progress_async"}),
             ])
         ]

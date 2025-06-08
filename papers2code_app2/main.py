@@ -1,11 +1,12 @@
 from fastapi import FastAPI, Request, HTTPException, APIRouter, status 
 from fastapi.middleware.cors import CORSMiddleware # ADDED: For CORS
+from fastapi.responses import JSONResponse # For custom error handling
+from pydantic import BaseModel # ADDED: For type checking in AliasJSONResponse
 from slowapi import Limiter, _rate_limit_exceeded_handler
 from slowapi.util import get_remote_address
 from slowapi.errors import RateLimitExceeded
 import uvicorn
 from fastapi.middleware.httpsredirect import HTTPSRedirectMiddleware # For HSTS
-from fastapi.responses import JSONResponse # For custom error handling
 from starlette.middleware.base import BaseHTTPMiddleware, RequestResponseEndpoint # ADDED
 from starlette.responses import Response as StarletteResponse # ADDED
 import logging # Ensure logging is imported and active
@@ -44,6 +45,23 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
         
         response = await call_next(request)
         return response
+
+# --- Custom JSON Response class to enforce by_alias=True globally ---
+class AliasJSONResponse(JSONResponse):
+    def render(self, content: any) -> bytes:
+        if isinstance(content, list):
+            # Handle lists of Pydantic models
+            processed_content = []
+            for item in content:
+                if isinstance(item, BaseModel):
+                    processed_content.append(item.model_dump(by_alias=True))
+                else:
+                    processed_content.append(item)
+            return super().render(processed_content)
+        if isinstance(content, BaseModel):
+            # Handle single Pydantic models
+            return super().render(content.model_dump(by_alias=True))
+        return super().render(content)
 
 # Initialize Limiter
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"]) 
@@ -101,7 +119,8 @@ app = FastAPI(
     title="Papers2Code API",
     description="API for Papers2Code platform.",
     version="0.2.0",
-    lifespan=lifespan
+    lifespan=lifespan,
+    default_response_class=AliasJSONResponse  # MODIFIED: Set the default response class
 )
 
 # --- CORS Middleware ---
@@ -248,20 +267,20 @@ async def generic_exception_handler(request: Request, exc: Exception):
     
     response_headers = _prepare_cors_headers_for_exceptions(request)
             
-    return JSONResponse(
+    return AliasJSONResponse(  # MODIFIED: Use AliasJSONResponse
         status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
         content={"detail": "Internal server error"},
         headers=response_headers,
     )
 
-# --- HTTP Exception Handler (FastAPI's default is usually good, but can be customized) ---
+# --- HTTP Exception Handler ---
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
     logger.warning(f"HTTP Exception: {exc.status_code} {exc.detail} for {request.method} {request.url.path}")
     
     response_headers = _prepare_cors_headers_for_exceptions(request, exc.headers)
 
-    return JSONResponse(
+    return AliasJSONResponse(  # MODIFIED: Use AliasJSONResponse
         status_code=exc.status_code,
         content={"detail": exc.detail},
         headers=response_headers,

@@ -55,13 +55,7 @@ class PaperViewService:
         # Fetch and attach implementation progress
         implementation_progress_collection = await get_implementation_progress_collection_async()
         try:
-            # Convert the string paper_id to ObjectId for querying. Progress documents
-            # store paper_id as an ObjectId, so querying with a plain string would never
-            # match and always return None.
-            obj_paper_id = ObjectId(paper_id)
-
-            #self.logger.info(f"Service: Attempting to find implementation_progress for paper_id: '{paper_id}' (type: {type(paper_id)})")
-            query_filter = {"paper_id": obj_paper_id}
+            query_filter = {"paperId": paper_id} # No matter what DO NOT CHANGE THIS LINE I SWEAR
             #self.logger.info(f"Service: Using query filter: {query_filter}")
 
             progress_document = await implementation_progress_collection.find_one(query_filter)

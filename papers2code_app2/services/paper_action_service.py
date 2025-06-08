@@ -16,6 +16,11 @@ from pymongo.errors import DuplicateKeyError # type: ignore
 
 import logging
 from datetime import datetime, timezone
+from typing import Dict, Any, Optional # Added Optional
+
+# Define new action types
+ACTION_PROJECT_STARTED = "Project Started"
+ACTION_PROJECT_JOINED = "Project Joined"
 
 
 class PaperActionService:
@@ -116,6 +121,46 @@ class PaperActionService:
             return final_check_paper
             
         return updated_paper
+
+    async def record_paper_related_action(self, paper_id: str, user_id: str, action_type: str, details: Optional[Dict[str, Any]] = None):
+        """
+        Records a generic paper-related action for a user.
+        Raises PaperNotFoundException, InvalidActionException.
+        """
+        self.logger.info(f"Service: Recording action '{action_type}' for paper_id: {paper_id} by user_id: {user_id}")
+        
+        papers_collection = await get_papers_collection_async()
+        user_actions_collection = await get_user_actions_collection_async()
+
+        try:
+            paper_obj_id = ObjectId(paper_id)
+            user_obj_id = ObjectId(user_id)
+        except InvalidId:
+            self.logger.warning(f"Service: Invalid ID format for paper_id '{paper_id}' or user_id '{user_id}'.")
+            raise PaperNotFoundException("Invalid paper or user ID format.")
+
+        # Check if paper exists
+        paper_doc = await papers_collection.find_one({"_id": paper_obj_id})
+        if not paper_doc:
+            self.logger.warning(f"Service: Paper not found with paper_id: {paper_id} when recording action '{action_type}'.")
+            raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
+
+        action_document = {
+            "userId": user_obj_id,
+            "paperId": paper_obj_id,
+            "actionType": action_type,
+            "createdAt": datetime.now(timezone.utc)
+        }
+        if details is not None:
+            action_document["details"] = details
+
+        try:
+            await user_actions_collection.insert_one(action_document)
+            self.logger.info(f"Service: Action '{action_type}' recorded for paper {paper_id} by user {user_id}.")
+        except Exception as e:
+            self.logger.exception(f"Service: Error inserting action '{action_type}' for paper {paper_id}")
+            # Consider a more specific exception if needed
+            raise InvalidActionException(f"Failed to record action '{action_type}': {e}")
 
     async def get_paper_actions(self, paper_id: str) -> PaperActionsSummaryResponse:
         #self.logger.info(f"Service: Async getting actions for paper_id: {paper_id}")

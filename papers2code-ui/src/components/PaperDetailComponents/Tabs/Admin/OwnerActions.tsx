@@ -118,7 +118,7 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                         Force or lock implementability status, or revert to community voting.
                     </p>
                 </div>
-
+                {/*
                 <div className="owner-action-group">
                     <h4>Paper Implementation Status</h4>
                     <button
@@ -143,7 +143,7 @@ export const OwnerActions: React.FC<OwnerActionsProps> = ({
                         {isUpdatingImplStatus && markingStatus === 'Completed' ? 'Processing...' : 'Mark as Completed'}
                     </button>
                 </div>
-                
+                */}
                 <div className="owner-action-group">
                     <h4>Remove Paper</h4>
                     <button 

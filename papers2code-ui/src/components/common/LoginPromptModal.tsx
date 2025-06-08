@@ -1,5 +1,5 @@
 import React from 'react';
-import './Modal.css'; // Reuse existing modal styles or create specific ones
+import './ConfirmationModal.css'; // Reuse existing modal styles or create specific ones
 import { redirectToGitHubLogin } from '../../services/auth'; // Import the auth function
 import { useModal } from '../../context/ModalContext';
 
@@ -8,7 +8,7 @@ interface LoginPromptModalProps {}
 
 const LoginPromptModal: React.FC<LoginPromptModalProps> = () => {
     // MODIFIED: Use correct properties from useModal hook
-    const { isLoginPromptOpen, loginPromptMessage, hideLoginPrompt, showLoginPrompt } = useModal();
+    const { isLoginPromptOpen, loginPromptMessage, hideLoginPrompt } = useModal();
 
     if (!isLoginPromptOpen) { // Use isLoginPromptOpen from context
         return null;

@@ -1,4 +1,4 @@
-from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response # Added Response
 from bson.errors import InvalidId
 import logging
 from slowapi import Limiter
@@ -8,8 +8,8 @@ from ..schemas_papers import PaperResponse, PaperActionsSummaryResponse
 from ..schemas_minimal import UserSchema
 from ..utils import transform_paper_async
 from ..auth import get_current_user
-from ..services.paper_action_service import PaperActionService
-from ..services.exceptions import PaperNotFoundException, AlreadyVotedException, VoteProcessingException
+from ..services.paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED # Added action types
+from ..services.exceptions import PaperNotFoundException, AlreadyVotedException, VoteProcessingException, InvalidActionException # Added InvalidActionException
 
 router = APIRouter(
     prefix="/papers",
@@ -78,6 +78,51 @@ async def vote_on_paper(
         raise HTTPException(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             detail="An internal server error occurred during voting."
+        )
+
+@router.post("/{paper_id}/actions/{action_type}", status_code=status.HTTP_204_NO_CONTENT)
+@limiter.limit("60/minute")
+async def record_generic_paper_action(
+    request: Request, # For limiter
+    paper_id: str,
+    action_type: str,
+    current_user: UserSchema = Depends(get_current_user),
+    details: dict = Body(None) # Optional details for the action
+):
+    logger.info(f"Action request for paper_id: {paper_id}. Action type: {action_type}. User ID: {current_user.id}")
+
+    paper_action_service = PaperActionService()
+    user_id_str = str(current_user.id)
+
+    # Validate action_type if necessary, or let the service handle it
+    # For example, ensure it's one of the predefined generic types if you have a specific list
+    if action_type not in [ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED]: # Add other valid generic actions here
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=f"Invalid action type: {action_type}")
+
+    try:
+        await paper_action_service.record_paper_related_action(
+            paper_id=paper_id,
+            user_id=user_id_str,
+            action_type=action_type,
+            details=details
+        )
+        # No content to return, so FastAPI will handle the 204 response
+        return Response(status_code=status.HTTP_204_NO_CONTENT) 
+
+    except PaperNotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except InvalidActionException as e:
+        logger.error(f"InvalidActionException for paper {paper_id}, user {user_id_str}, action {action_type}: {e}")
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except InvalidId:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")
+    except HTTPException:
+        raise # Re-raise if it's already an HTTPException
+    except Exception as e:
+        logger.exception(f"An internal server error occurred during action recording for paper {paper_id}, action {action_type}.")
+        raise HTTPException(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            detail="An internal server error occurred while recording the action."
         )
 
 @router.get("/{paper_id}/actions", response_model=PaperActionsSummaryResponse)

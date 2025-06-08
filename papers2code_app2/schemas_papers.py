@@ -1,28 +1,19 @@
 from pydantic import BaseModel, Field, HttpUrl, computed_field, ConfigDict
 from pydantic.alias_generators import to_camel
-from typing import List, Optional, Literal
+from typing import List, Optional, Literal, TYPE_CHECKING
 from datetime import datetime
 
 from .schemas_db import PyObjectId # ADDED: Import PyObjectId
-from .schemas_implementation_progress import ImplementationProgress
 
-# --- Reusable Model Configurations ---
-camel_case_config = ConfigDict(
-    populate_by_name=True,
-    alias_generator=to_camel,
+if TYPE_CHECKING:
+    from .schemas_implementation_progress import ImplementationProgress
+
+from .shared import (
+    camel_case_config,
+    camel_case_config_with_datetime,
+    set_implementability_config,
 )
 
-camel_case_config_with_datetime = ConfigDict(
-    populate_by_name=True,
-    alias_generator=to_camel,
-    json_encoders={datetime: lambda dt: dt.isoformat()},
-)
-
-set_implementability_config = ConfigDict(
-    populate_by_name=True,
-    alias_generator=to_camel,
-    validate_by_name=True, 
-)
 
 # --- Type Definitions for Literal Strings ---
 ImplementabilityStatusType = Literal[
@@ -62,10 +53,8 @@ class PaperResponse(BasePaper):
 
     # Aggregated counts - to be populated by backend logic from user actions
     not_implementable_votes: int = Field(0, alias="nonImplementableVotes")
-    implementable_votes: int = Field(0, alias="isImplementableVotes")
-
-    # ADDED: Optional field for implementation progress
-    implementation_progress: Optional[ImplementationProgress] = Field(None, alias="implementationProgress")
+    implementable_votes: int = Field(0, alias="isImplementableVotes")    # ADDED: Optional field for implementation progress - using forward reference
+    implementation_progress: Optional["ImplementationProgress"] = Field(None, alias="implementationProgress")
 
 
     @computed_field(alias="isImplementable")

@@ -1,5 +1,5 @@
 // src/services/api.ts
-import { Paper, AdminSettableImplementabilityStatus } from '../types/paper'; // AdminSettableImplementabilityStatus is imported
+import { Paper, AdminSettableImplementabilityStatus, ImplementationProgress } from '../types/paper'; // AdminSettableImplementabilityStatus is imported
 import { getCsrfToken } from './auth'; // IMPORTED for consistent CSRF token handling
 
 // Assuming UserProfile is defined in a types file, e.g., '../types/user'
@@ -279,27 +279,6 @@ export const updatePaperStatusInApi = async (
 };
 // --- End NEW ---
 
-// --- BEGIN ADDED TYPE DEFINITIONS ---
-// These interfaces define the expected structure of the raw JSON response
-// from the backend /actions endpoint, after camelCase conversion.
-
-interface BackendPaperActionUserDetail {
-  userId: string;
-  username: string;
-  avatarUrl?: string;
-  actionType?: string;
-  createdAt?: string; // Assuming datetime is serialized as string by the backend
-}
-
-interface BackendPaperActionsSummaryResponse {
-  paperId: string;
-  upvotes: BackendPaperActionUserDetail[];
-  saves: BackendPaperActionUserDetail[]; // Included to match backend, even if not fully used in PaperActionUsers yet
-  votedIsImplementable: BackendPaperActionUserDetail[];
-  votedNotImplementable: BackendPaperActionUserDetail[];
-}
-// --- END ADDED TYPE DEFINITIONS ---
-
 // --- NEW: Function to join or create implementation progress ---
 export const joinOrCreateImplementationProgress = async (
   paperId: string
@@ -331,6 +310,59 @@ export const joinOrCreateImplementationProgress = async (
   return updatedPaper;
 };
 // --- End NEW ---
+
+// --- NEW: Function to update implementation progress ---
+export const updateImplementationProgressInApi = async (
+  paperId: string,
+  progressData: ImplementationProgress
+): Promise<Paper> => {
+  const url = `${API_BASE_URL}${PAPERS_PREFIX}/implementation-progress/paper/${paperId}`;
+  console.log(`Attempting to update implementation progress for paper: ${paperId}`, progressData);
+
+  const csrfToken = getCsrfToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  } else {
+    console.warn("CSRF Token is missing for updateImplementationProgressInApi, X-CSRFToken header NOT added.");
+  }
+
+  const response = await fetch(url, {
+    method: 'PUT', // Assuming PUT for updates
+    headers: headers,
+    body: JSON.stringify(progressData),
+    credentials: 'include',
+  });
+
+  // The backend is expected to return the updated Paper document
+  const updatedPaper = await handleApiResponse<Paper>(response);
+  console.log(`Successfully updated implementation progress for paper ${paperId}.`);
+  return updatedPaper;
+};
+// --- End NEW ---
+
+// --- BEGIN ADDED TYPE DEFINITIONS ---
+// These interfaces define the expected structure of the raw JSON response
+// from the backend /actions endpoint, after camelCase conversion.
+
+interface BackendPaperActionUserDetail {
+  userId: string;
+  username: string;
+  avatarUrl?: string;
+  actionType?: string;
+  createdAt?: string; // Assuming datetime is serialized as string by the backend
+}
+
+interface BackendPaperActionsSummaryResponse {
+  paperId: string;
+  upvotes: BackendPaperActionUserDetail[];
+  saves: BackendPaperActionUserDetail[]; // Included to match backend, even if not fully used in PaperActionUsers yet
+  votedIsImplementable: BackendPaperActionUserDetail[];
+  votedNotImplementable: BackendPaperActionUserDetail[];
+}
+// --- END ADDED TYPE DEFINITIONS ---
 
 // NEW: Private helper function to handle API responses and 401 errors
 async function handleApiResponse<T>(response: Response): Promise<T> {

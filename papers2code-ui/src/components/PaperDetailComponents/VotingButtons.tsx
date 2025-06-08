@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
 import { faThumbsUp as faSolidThumbsUp, faFlag, faCheckCircle, faTimesCircle, faArrowUp } from '@fortawesome/free-solid-svg-icons';
 import { faThumbsUp as faRegularThumbsUp, faThumbsDown as faRegularThumbsDown } from '@fortawesome/free-regular-svg-icons';
-import { Paper, ImplementabilityAction, OwnerSettableImplementabilityStatus, Status } from '../../types/paper';
+import { Paper, ImplementabilityAction, AdminSettableImplementabilityStatus, Status } from '../../types/paper';
 import { voteOnPaperInApi, flagImplementabilityInApi, setImplementabilityInApi, CsrfError, AuthenticationError } from '../../services/api';
 import { UserProfile } from '../../services/auth';
 import ConfirmationModal from '../common/ConfirmationModal';
@@ -117,7 +117,7 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
         }
     };
 
-    const handleSetImplementability = async (statusToSet: OwnerSettableImplementabilityStatus) => {
+    const handleSetImplementability = async (statusToSet: AdminSettableImplementabilityStatus) => {
         if (isProcessing) return;
         if (!currentUser) {
             showLoginPrompt("Please connect with GitHub to set implementability.");
@@ -162,12 +162,12 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
         setShowConfirmModal(true);
     };
 
-    const handleSetImplementabilityClick = (statusToSet: OwnerSettableImplementabilityStatus) => {
+    const handleSetImplementabilityClick = (statusToSet: AdminSettableImplementabilityStatus) => {
         let statusText = '';
         switch (statusToSet) {
-            case 'confirmed_implementable': statusText = 'Confirmed Implementable'; break;
-            case 'confirmed_not_implementable': statusText = 'Confirmed Not-Implementable'; break;
-            case 'voting': statusText = 'Open for Voting (community decides)'; break;
+            case 'Admin Implementable': statusText = 'Confirmed Implementable'; break;
+            case 'Admin Not Implementable': statusText = 'Confirmed Not-Implementable'; break;
+            case 'Voting': statusText = 'Open for Voting (community decides)'; break;
             // default: statusText = 'update the status'; // Default case not strictly needed
         }
         setModalContent({
@@ -242,7 +242,7 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
                     {/* Button to set as Implementable by Owner */}
                     {paper.status !== ownerSetImplementableStatus && paper.status !== 'Official Code Posted' && (
                          <button 
-                            onClick={() => handleSetImplementabilityClick('confirmed_implementable')} 
+                            onClick={() => handleSetImplementabilityClick('Admin Implementable')} 
                             className="set-status-button implementable"
                             disabled={isProcessing}
                             title="Owner: Set as Implementable (overrides votes)"
@@ -253,7 +253,7 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
                     {/* Button to set as Not Implementable by Owner */}
                     {paper.status !== ownerSetNonImplementableStatus && (
                         <button 
-                            onClick={() => handleSetImplementabilityClick('confirmed_not_implementable')} 
+                            onClick={() => handleSetImplementabilityClick('Admin Not Implementable')} 
                             className="set-status-button not-implementable-owner"
                             disabled={isProcessing}
                             title="Owner: Set as Not Implementable (overrides votes)"
@@ -264,7 +264,7 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
                     {/* Button to revert to community voting */}
                     {(paper.status === ownerSetImplementableStatus || paper.status === ownerSetNonImplementableStatus) && (
                          <button 
-                            onClick={() => handleSetImplementabilityClick('voting')} 
+                            onClick={() => handleSetImplementabilityClick('Voting')} 
                             className="set-status-button revert-to-voting-owner"
                             disabled={isProcessing}
                             title="Owner: Revert to community voting (current status will be reset)"

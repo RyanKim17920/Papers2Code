@@ -15,12 +15,30 @@ class UserSchema(BaseModel): # Model returned by get_current_user
     name: Optional[str] = None
     avatar_url: Optional[HttpUrl] = None
     bio: Optional[str] = None
+    website_url: Optional[HttpUrl] = None
+    show_github_profile: Optional[bool] = Field(default=False) # Changed from github_profile_url
+    twitter_profile_url: Optional[HttpUrl] = None
+    linkedin_profile_url: Optional[HttpUrl] = None
+    bluesky_username: Optional[str] = None  # New
     is_admin: Optional[bool] = False
     is_owner: Optional[bool] = False
     created_at: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
+    profile_updated_at: Optional[datetime] = None # New
 
     model_config = camel_case_config_with_datetime
+
+class UserUpdateProfile(BaseModel):
+    """Schema for updating user profile information."""
+    name: Optional[str] = None
+    bio: Optional[str] = None
+    website_url: Optional[HttpUrl] = None
+    show_github_profile: Optional[bool] = None # Changed from github_profile_url
+    twitter_profile_url: Optional[HttpUrl] = None
+    linkedin_profile_url: Optional[HttpUrl] = None
+    bluesky_username: Optional[str] = None # New
+
+    model_config = camel_case_config
 
 class UserMinimal(BaseModel): # Response model for /me endpoint
     """Minimal user information, suitable for public display or a /me endpoint."""

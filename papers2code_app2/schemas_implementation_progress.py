@@ -11,7 +11,7 @@ from pydantic import (
 )
 
 from .schemas_db import PyObjectId, _MongoModel
-
+from .shared import camel_case_config
 
 # -----------------------------------------------------------------------------
 # Enums
@@ -59,17 +59,23 @@ class ContactLog(BaseModel):
     recipient: Optional[str] = None
     response_deadline: Optional[datetime] = None
 
+    model_config = camel_case_config
+
 
 class AuthResponse(BaseModel): 
     date_received: Optional[datetime] = None
     summary: Optional[str] = None
     can_proceed: Optional[bool] = None
 
+    model_config = camel_case_config
+
 
 class EmailGuide(BaseModel): 
     subject: str = "Inquiry about code for your paper"
     body: str = "Dear Dr. …"
     notes: str = "Replace placeholders such as {Paper Title}."
+
+    model_config = camel_case_config
 
 
 class AuthorOutreach(BaseModel):  
@@ -78,17 +84,22 @@ class AuthorOutreach(BaseModel):
     author_response: AuthResponse = Field(default_factory=AuthResponse)
     email_guidance: EmailGuide = Field(default_factory=EmailGuide)
 
+    model_config = camel_case_config
+
 
 # -----------------------------------------------------------------------------
 # Road‑map 
 # -----------------------------------------------------------------------------
 class Component(_MongoModel):
+    name: str
     description: Optional[str] = None
     category: ComponentCategory = Field(default=ComponentCategory.CORE)
     status: ComponentStatus = Field(default=ComponentStatus.TO_DO)
     steps: List[str] = Field(default_factory=list)
     notes: Optional[str] = None
     order: int
+
+    model_config = camel_case_config
 
 
 class ComponentUpdate(BaseModel):
@@ -99,7 +110,7 @@ class ComponentUpdate(BaseModel):
     steps: Optional[List[str]] = None
     notes: Optional[str] = None
     order: Optional[int] = None
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, **camel_case_config)
 
 
 class Section(_MongoModel): 
@@ -108,12 +119,14 @@ class Section(_MongoModel):
     order: int
     is_default: bool = False
     components: List[Component] = Field(default_factory=list)
+    model_config = camel_case_config
 
 
 class Roadmap(BaseModel):
     repository_url: Optional[AnyUrl] = None
     overall_progress: int = Field(0, ge=0, le=100)
     sections: List[Section] = Field(default_factory=list)
+    model_config = camel_case_config
 
 
 # -----------------------------------------------------------------------------
@@ -138,12 +151,13 @@ class ImplementationProgress(_MongoModel):
             status=ProgressStatus.JUST_CREATED,  # Use new default status
             implementation_roadmap=Roadmap(sections=create_default_sections()),
         )
+    model_config = camel_case_config
 
 
 class ProgressUpdate(BaseModel):  
     status: Optional[ProgressStatus] = None
     implementation_roadmap: Optional[Roadmap] = None
-    model_config = ConfigDict(extra="forbid")
+    model_config = camel_case_config
 
 
 # -----------------------------------------------------------------------------
@@ -204,3 +218,18 @@ def create_default_sections() -> List[Section]:
         ],
     )
     return [core, addon]
+
+
+# Rebuild models to resolve any forward references
+def rebuild_implementation_models():
+    """Rebuild implementation progress models to resolve forward references."""
+    try:
+        ImplementationProgress.model_rebuild()
+        Component.model_rebuild()
+        Section.model_rebuild()
+    except Exception:
+        # If rebuild fails, continue anyway
+        pass
+
+# Call rebuild when module is imported
+rebuild_implementation_models()

@@ -19,10 +19,15 @@ from ..schemas_implementation_progress import (
     # ComponentStatus # Not directly used in this service, can be removed if not needed by ProgressStatus
 )
 from .exceptions import NotFoundException, UserNotContributorException, InvalidRequestException
+# Import PaperActionService and action types
+from .paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED
 
 logger = logging.getLogger(__name__)
 
 class ImplementationProgressService:
+    def __init__(self): # Added init
+        self.paper_action_service = PaperActionService() # Instantiate PaperActionService
+
     async def get_progress_by_id(self, progress_id: str) -> Optional[ImplementationProgress]: 
         collection = await get_implementation_progress_collection_async() 
         try:
@@ -42,7 +47,7 @@ class ImplementationProgressService:
         except Exception:
             logger.warning(f"Invalid paper_id format: {paper_id}")
             return None
-        progress_data = await collection.find_one({"paper_id": paper_obj_id})
+        progress_data = await collection.find_one({"paperId": paper_obj_id})
         if progress_data:
             return ImplementationProgress(**progress_data) 
         return None
@@ -66,7 +71,7 @@ class ImplementationProgressService:
             raise NotFoundException(f"User with ID {user_id} not found.")
 
         progress_collection = await get_implementation_progress_collection_async() 
-        existing_progress_data = await progress_collection.find_one({"paper_id": paper_obj_id})
+        existing_progress_data = await progress_collection.find_one({"paperId": paper_obj_id})
 
         current_time = datetime.now(timezone.utc)
 
@@ -77,6 +82,16 @@ class ImplementationProgressService:
                     {"_id": existing_progress.id}, 
                     {"$addToSet": {"contributors": user_obj_id}, "$set": {"updated_at": current_time}}
                 )
+                # Log ACTION_PROJECT_JOINED
+                try:
+                    await self.paper_action_service.record_paper_related_action(
+                        paper_id=paper_id,
+                        user_id=user_id, # user_id is already a string here
+                        action_type=ACTION_PROJECT_JOINED,
+                        details={"progress_id": str(existing_progress.id)}
+                    )
+                except Exception as e_log:
+                    logger.error(f"Failed to log ACTION_PROJECT_JOINED for user {user_id}, paper {paper_id}, progress {existing_progress.id}: {e_log}")
             # Re-fetch to get the potentially updated document
             updated_progress_data = await progress_collection.find_one({"_id": existing_progress.id})
             if not updated_progress_data:
@@ -85,18 +100,46 @@ class ImplementationProgressService:
         else:
             # Use the .new() classmethod from ImplementationProgress schema
             new_progress = ImplementationProgress.new(paper_id=paper_obj_id, user_id=user_obj_id) 
-            # The .new() method already sets created_at, updated_at, status, etc.
-            # It also correctly handles ObjectId for paper_id and user_id if they are passed as strings.
-            # However, our .new() expects PyObjectId, so ensure they are passed as such or the schema handles conversion.
-            # The schema's `paper_id: PyObjectId` and `contributors: List[PyObjectId]` should handle this.
             
             progress_to_insert = new_progress.model_dump(by_alias=True) # by_alias=True to handle _id -> id
             
-            result = await progress_collection.insert_one(progress_to_insert)
-            created_progress_data = await progress_collection.find_one({"_id": result.inserted_id})
-            if not created_progress_data:
-                raise NotFoundException("Failed to retrieve newly created progress.")
-            return ImplementationProgress(**created_progress_data) 
+            try:
+                result = await progress_collection.insert_one(progress_to_insert)
+                created_progress_data = await progress_collection.find_one({"_id": result.inserted_id})
+                if not created_progress_data:
+                    raise NotFoundException("Failed to retrieve newly created progress.")
+                
+                # Log ACTION_PROJECT_STARTED
+                try:
+                    await self.paper_action_service.record_paper_related_action(
+                        paper_id=paper_id,
+                        user_id=user_id, # user_id is already a string here
+                        action_type=ACTION_PROJECT_STARTED,
+                        details={"progress_id": str(result.inserted_id)}
+                    )
+                except Exception as e_log:
+                    logger.error(f"Failed to log ACTION_PROJECT_STARTED for user {user_id}, paper {paper_id}, progress {str(result.inserted_id)}: {e_log}")
+
+                return ImplementationProgress(**created_progress_data) 
+            except Exception as e:
+                # Handle duplicate key error due to unique constraint on paperId
+                if "duplicate key" in str(e).lower() or "11000" in str(e):
+                    logger.info(f"Duplicate paperId detected for paper {paper_id}, fetching existing progress")
+                    # Try to fetch the existing progress that was created concurrently
+                    existing_progress_data = await progress_collection.find_one({"paperId": paper_obj_id})
+                    if existing_progress_data:
+                        existing_progress = ImplementationProgress(**existing_progress_data)
+                        # Add user as contributor if not already there
+                        if user_obj_id not in existing_progress.contributors:
+                            await progress_collection.update_one(
+                                {"_id": existing_progress.id}, 
+                                {"$addToSet": {"contributors": user_obj_id}, "$set": {"updatedAt": current_time}}
+                            )
+                        # Return the updated progress
+                        updated_progress_data = await progress_collection.find_one({"_id": existing_progress.id})
+                        if updated_progress_data:
+                            return ImplementationProgress(**updated_progress_data)
+                raise e 
 
     async def add_component_to_progress(self, progress_id: str, user_id: str, component_data: Component, section_id: str) -> ImplementationProgress: 
         progress_collection = await get_implementation_progress_collection_async() 

@@ -2,23 +2,39 @@
 export type Status = 'Not Implementable' | 'Not Started' | 'Started' | 'Waiting for Author Response' | 'Work in Progress' | 'Completed' | 'Official Code Posted';
 
 // MODIFIED: Renamed to avoid conflict with overall progress status
-export type StepProgressStatus = 'Not Started' | 'Started' | 'Work in Progress' | 'Completed';
+// export type StepProgressStatus = 'Not Started' | 'Started' | 'Work in Progress' | 'Completed';
+export enum StepProgressStatus {
+    NOT_STARTED = 'Not Started',
+    STARTED = 'Started',
+    WORK_IN_PROGRESS = 'Work in Progress',
+    COMPLETED = 'Completed',
+}
 
-export interface Author { // This interface might be used for detailed views or future enhancements
-    // If author objects are never fetched with an ID from this API, 'id' might be removed or sourced differently.
-    id?: number; // Made optional as backend Author models don't consistently show it
+export interface UserBasic { // Simple user representation for assignment
+    id: string; // Assuming user IDs are strings (e.g., MongoDB ObjectIds or UUIDs)
     name: string;
+    avatarUrl?: string;
+}
+
+export interface StepComment {
+    id: string; // Comment ID (e.g., MongoDB ObjectId or UUID)
+    user: UserBasic; // User who made the comment
+    text: string;
+    createdAt: string; // ISO date string
+    updatedAt?: string; // ISO date string, if comments can be edited
 }
 
 export interface ImplementationStep {
-    id: number;
+    id: string; // Changed to string to align with typical MongoDB ObjectId usage for IDs
     order: number;
     name: string;
-    description: string | null;
-    status: StepProgressStatus; // Use the new StepProgressStatus type
+    description: string | null; // Potentially rich text
+    status: StepProgressStatus;
     github_url: string | null;
     created_at: string;
     updated_at: string;
+    comments?: StepComment[]; // Array of comments for this step
+    // Consider adding: dueDate?: string | null;
 }
 
 // --- NEW TYPES FOR IMPLEMENTATION PROGRESS ---
@@ -149,6 +165,7 @@ export interface Paper {
     nonImplementableVotes: number; // from not_implementable_votes (was optional)
     isImplementableVotes: number; // from implementable_votes (was optional)
     implementabilityStatus: 'Voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'; // DO NOT CHANGE
+    isImplementable: boolean; // from is_implementable (computed field in backend)
 
     implementationProgress?: ImplementationProgress; // ADDED
 }
@@ -162,7 +179,7 @@ export interface PaperSummary {
     id: string;
     pwcUrl?: string | null;
     title: string;
-    authors: Author[]; // Kept as Author[] for summaries
+    authors: String[]; // Kept as Author[] for summaries
     date: string;
     status: Status; // Use the new Status type
     isImplementable: boolean;

@@ -26,10 +26,10 @@ const PaperTabs: React.FC<PaperTabsProps> = ({
             </button>
             {paper.implementationProgress && (
                 <button
-                    className={`tab-button ${activeTab === 'details' ? 'active' : ''}`}
-                    onClick={() => onSelectTab('details')}
+                    className={`tab-button ${activeTab === 'implementationProgress' ? 'active' : ''}`}
+                    onClick={() => onSelectTab('implementationProgress')}
                 >
-                    Implementation Details
+                    Implementation Progress
                 </button>
             )}
             <button

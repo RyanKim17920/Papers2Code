@@ -1,3 +1,9 @@
+# Environment variables
+.env
+.env.local
+.env.production
+.env.test
+
 # Byte-compiled / optimized / DLL files
 __pycache__/
 *.py[cod]
@@ -135,6 +141,7 @@ venv/
 ENV/
 env.bak/
 venv.bak/
+.vscodeignore
 
 # Spyder project settings
 .spyderproject
