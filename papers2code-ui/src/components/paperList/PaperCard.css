@@ -37,7 +37,6 @@
   color: var(--text-heading-color);
   /* Fixed height for title - allows for 2 lines */
   height: 4.2em;
-  overflow: hidden;
   display: -webkit-box;
   -webkit-line-clamp: 3;
   -webkit-box-orient: vertical;
@@ -85,7 +84,6 @@
   font-weight: 400;
   /* If authors text is too long, add ellipsis */
   white-space: nowrap;
-  overflow: hidden;
   text-overflow: ellipsis;
 }
 

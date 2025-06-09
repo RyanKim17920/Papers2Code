@@ -38,8 +38,10 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
 
   return (
     <div className="paper-list-page">
+      <header className="page-header">
+        <h1>Explore Research Papers</h1>
+      </header>
       <div className="list-header">
-        <h1>Papers Without Implementation</h1>
         <ListControls
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
