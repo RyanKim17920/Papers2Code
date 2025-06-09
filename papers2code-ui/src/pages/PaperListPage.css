@@ -3,6 +3,7 @@
     padding: 0;
     width: 100%; /* Ensure full width */
     max-width: 1400px;
+    overflow: visible; /* Allow paper cards to overflow if needed for animations */
   }
   
   .paper-list-page h1 {

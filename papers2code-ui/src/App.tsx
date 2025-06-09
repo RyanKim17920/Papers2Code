@@ -1,6 +1,7 @@
 // src/App.tsx
 import React, { useState, useEffect, useRef } from 'react';
 import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import LandingPage from './pages/LandingPage';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
 import logo from './images/papers2codelogo.png';
@@ -61,6 +62,7 @@ function App() {
               <img src={logo} alt="Papers To Code Community Logo" className="app-logo" />
             </Link>
             <nav className="main-nav">
+              <Link to="/papers" className="nav-link">Papers</Link>
               {/* Add other nav links here if needed */}
             </nav>
             <div className="auth-section">
@@ -74,10 +76,11 @@ function App() {
                       username={currentUser.username}
                       className="user-avatar"
                     />
-                  </button>                  {isDropdownOpen && (
+                  </button>
+                  {isDropdownOpen && (
                     <div className={`user-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
                       <Link to="/profile" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
-                      <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>                      
+                      <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
                       <Link to="" onClick={handleLogout} className="dropdown-item">
                         Logout
                       </Link>
@@ -91,10 +94,10 @@ function App() {
               )}
             </div>
           </header>
-
           <main className="app-main">
             <Routes>
-              <Route path="/" element={<PaperListPage authLoading={authLoading} />} />
+              <Route path="/" element={<LandingPage />} />
+              <Route path="/papers" element={<PaperListPage authLoading={authLoading} />} />
               <Route
                 path="/paper/:paperId"
                 element={<PaperDetailPage currentUser={currentUser} />}
