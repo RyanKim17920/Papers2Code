@@ -3,7 +3,7 @@ from typing import Optional, Dict
 
 from jose import jwt
 
-from .shared import config_settings
+from ..shared import config_settings
 
 SECRET_KEY = config_settings.FLASK_SECRET_KEY
 ALGORITHM = config_settings.ALGORITHM

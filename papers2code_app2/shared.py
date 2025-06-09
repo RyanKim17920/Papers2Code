@@ -4,8 +4,7 @@ from typing import Optional, Any
 from datetime import datetime
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
-from pydantic import Field, ConfigDict
-from pydantic.alias_generators import to_camel
+from pydantic import Field
 
 # from .schemas_papers import camel_case_config, camel_case_config_with_datetime, set_implementability_config # Assuming this might be needed later
 
@@ -85,21 +84,3 @@ class AppSettings(BaseSettings):
 
 config_settings = AppSettings()
 
-
-
-camel_case_config = ConfigDict(
-    populate_by_name=True,
-    alias_generator=to_camel,
-)
-
-camel_case_config_with_datetime = ConfigDict(
-    populate_by_name=True,
-    alias_generator=to_camel,
-    json_encoders={datetime: lambda dt: dt.isoformat()},
-)
-
-set_implementability_config = ConfigDict(
-    populate_by_name=True,
-    alias_generator=to_camel,
-    validate_by_name=True, 
-)
