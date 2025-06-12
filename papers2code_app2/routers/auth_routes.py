@@ -164,16 +164,42 @@ async def refresh_access_token_route(request: Request, response: Response): # re
 @router.post("/logout")
 async def logout_user_route(request: Request, response: Response): # response needed to clear cookies
     try:
-        await auth_service.logout_user(request, response) # Modifies 'response' to clear cookies
-        return {"message": "Logout successful"}
+        # This call to auth_service.logout_user internally calls auth_service.clear_auth_cookies(response),
+        # which will add headers to the 'response' object to delete the old cookies, including the old CSRF cookie.
+        await auth_service.logout_user(request, response) 
+
+        # Generate a new CSRF token after old ones are marked for deletion
+        new_csrf_token_value = auth_service.generate_csrf_token()
+        
+        # Set the new CSRF token cookie on the same response object.
+        # Starlette should handle multiple Set-Cookie headers, including delete and then set for the same cookie name if necessary.
+        response.set_cookie(
+            key=CSRF_TOKEN_COOKIE_NAME,
+            value=new_csrf_token_value,
+            httponly=False, 
+            samesite="lax",
+            secure=True if config_settings.ENV_TYPE == "production" else False,
+            path="/", # Ensure path is consistent with where it's used/expected
+            max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 # Or a suitable duration for a 'logged-out' token
+        )
+        
+        # Return the new CSRF token in the response body so the frontend can store it.
+        # Using camelCase "csrfToken" for consistency with frontend expectations.
+        return {"message": "Logout successful", "csrfToken": new_csrf_token_value}
+
     except Exception as e:
         logger.error(f"Error during logout process: {e}", exc_info=True)
         # Even if logout service fails, try to clear cookies on a new response
+        # Create a new JSONResponse for the error to avoid modifying the original 'response' object
+        # which might be in an inconsistent state.
         error_response = JSONResponse(
             status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
             content={"detail": "An error occurred during logout."}
         )
-        auth_service.clear_auth_cookies(error_response) # Clear cookies on this new response
+        # Attempt to clear auth cookies on this new error_response.
+        # This ensures that if the main logout logic failed before clearing cookies,
+        # we still make an attempt to clear them.
+        auth_service.clear_auth_cookies(error_response) 
         return error_response
 
 # Ensure AuthService has a clear_auth_cookies method:

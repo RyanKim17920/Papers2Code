@@ -148,8 +148,8 @@ async def transform_paper_async(
             # else: keep default IMPL_STATUS_VOTING if value is unrecognized
 
         transformed_data.update({
-            "pwc_url": _transform_url(paper_doc.get("pwcUrl")),       
-            "arxiv_id": paper_doc.get("arxivId"),                   
+            "pwc_url": _transform_url(paper_doc.get("pwcUrl")),
+            "arxiv_id": paper_doc.get("arxivId"), 
             "abstract": paper_doc.get("abstract"),
             "url_abs": _transform_url(paper_doc.get("urlAbs")),         
             "url_pdf": _transform_url(paper_doc.get("urlPdf")),          
@@ -160,8 +160,10 @@ async def transform_paper_async(
 
     try:
         # Asynchronous calls to helper functions
-        user_specific_data = await _get_user_specific_paper_data_async(paper_obj_id, current_user_id_str)
-        transformed_data.update(user_specific_data)
+        # For summary level, we skip user-specific data to improve performance
+        if detail_level != "summary":
+            user_specific_data = await _get_user_specific_paper_data_async(paper_obj_id, current_user_id_str)
+            transformed_data.update(user_specific_data)
 
         if detail_level == "full":
             aggregate_votes = await _get_aggregate_vote_counts_async(paper_obj_id)

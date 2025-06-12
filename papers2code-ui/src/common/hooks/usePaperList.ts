@@ -128,61 +128,63 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
   useEffect(() => {
     const abortController = new AbortController();
     
-    // Immediately set loading to true when this effect runs to prevent "No papers" flash
     setIsLoading(true);
     
     const loadPapers = async () => {
-      // Keep the papers array while loading instead of clearing it
-      // This avoids the "No papers" message while navigating
       setError(null);
-
-      let finalSortParamForApi: SortPreference | undefined;
-      // API sort decision is based on the debounced term (what's actually searched)
-      if (isDebouncedSearchActive) {
-          finalSortParamForApi = undefined; // API interprets undefined as relevance for search
-      } else if (isAuthorSearchActive && sortPreference === DEFAULT_SORT_PREFERENCE) {
-          // If author search is active and sort is default (or user selected 'relevance' for author search)
-          finalSortParamForApi = undefined;
-      } else {
-          finalSortParamForApi = sortPreference;
-      }
-      
-
       try {
+        const sortForAPI = isDebouncedSearchActive ? undefined : sortPreference;
+        const effectivePage = currentPage;
+
+        // Corrected call to fetchPapersFromApi
         const response = await fetchPapersFromApi(
-          currentPage,
-          ITEMS_PER_PAGE,
-          debouncedSearchTerm, // Use debounced term for API
-          finalSortParamForApi,
-          appliedAdvancedFilters,
-          abortController.signal
+          effectivePage, // page
+          ITEMS_PER_PAGE, // limit
+          // If author search is active, general searchTerm is not used for title/abstract by this API endpoint structure.
+          // The backend /papers/ endpoint uses `searchQuery` for title/abstract and `searchAuthors` for authors.
+          // `advancedFilters.searchAuthors` will be used if `isAuthorSearchActive` is true.
+          // If only general search is active, `debouncedSearchTerm` is passed as `searchTerm`.
+          isAuthorSearchActive ? undefined : debouncedSearchTerm, // searchTerm (for title/abstract)
+          sortForAPI, // sort
+          appliedAdvancedFilters, // advancedFilters (contains searchAuthors, startDate, endDate)
+          abortController.signal // signal
         );
-        setPapers(response.papers);
-        setTotalPages(response.totalPages);
-      } catch (err) {
-        if (err instanceof Error && err.name === 'AbortError') {
-          return;
+
+        if (!abortController.signal.aborted) {
+          setPapers(response.papers);
+          setTotalPages(response.totalPages);
         }
-        console.error("Failed to fetch papers:", err);
-        setError(err instanceof Error ? err.message : "Failed to load papers.");
-        setPapers([]);
-        setTotalPages(1);
+      } catch (err: any) {
+        if (err.name !== 'AbortError' && !abortController.signal.aborted) {
+          console.error("Failed to fetch papers:", err);
+          if (err instanceof AuthenticationError) {
+            setError("Authentication failed. Please log in again.");
+          } else if (err instanceof CsrfError) {
+            setError("Session expired or invalid. Please refresh the page.");
+          } else {
+            setError(err.message || 'Failed to fetch papers. Please try again later.');
+          }
+          setPapers([]);
+          setTotalPages(1);
+        }
       } finally {
-        setIsLoading(false);
+        if (!abortController.signal.aborted) {
+          setIsLoading(false);
+        }
       }
     };
+    
     if (authLoading === false) {
       loadPapers();
     } else if (authLoading === undefined) {
-      loadPapers();
+      loadPapers(); 
     } else {
-      // If authLoading is true, we still want to show loading state
+      // isLoading remains true if authLoading is true
     }
     return () => {
       abortController.abort();
     };
-  }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters, authLoading, isDebouncedSearchActive, isAuthorSearchActive]);
-
+  }, [debouncedSearchTerm, sortPreference, currentPage, appliedAdvancedFilters, authLoading, isDebouncedSearchActive, isAuthorSearchActive, fetchPapersFromApi, showLoginPrompt, setIsLoading, setError, setPapers, setTotalPages]); // Added setIsLoading, setError, setPapers, setTotalPages to dependencies
 
   const handleSearchChange = useCallback((newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
@@ -213,14 +215,14 @@ export function usePaperList(authLoading?: boolean) { // authLoading is optional
   const applyAdvancedFilters = useCallback(() => {
       // Trigger fetch by updating the applied filters state
       setAppliedAdvancedFilters(advancedFilters);
-      // Optionally close the advanced search form
+      // Optionally, close the advanced search form
       // setShowAdvancedSearch(false);
   }, [advancedFilters]);
 
   const clearAdvancedFilters = useCallback(() => {
       setAdvancedFilters(initialAdvancedFilters);
       setAppliedAdvancedFilters(initialAdvancedFilters); // Also clear applied filters
-      // Optionally close the advanced search form
+      // Optionally, close the advanced search form
       // setShowAdvancedSearch(false);
   }, []);
 

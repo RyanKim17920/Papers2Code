@@ -23,6 +23,7 @@ from .papers import (
     PaperActionUserDetail,
     SetImplementabilityRequest,
 )
+from .users import UserProfileResponse
 
 __all__ = [
     "PyObjectId",
@@ -43,4 +44,5 @@ __all__ = [
     "PaperActionsSummaryResponse",
     "PaperActionUserDetail",
     "SetImplementabilityRequest",
+    "UserProfileResponse",
 ]

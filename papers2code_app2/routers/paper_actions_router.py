@@ -1,6 +1,8 @@
 from fastapi import APIRouter, Depends, HTTPException, status, Request, Body, Response
 from bson.errors import InvalidId
 import logging
+from typing import Optional # Added Optional
+
 from ..dependencies import limiter, get_paper_action_service
 
 from ..schemas.papers import PaperResponse, PaperActionsSummaryResponse
@@ -8,6 +10,7 @@ from ..schemas.minimal import UserSchema
 from ..utils import transform_paper_async
 from ..auth import get_current_user
 from ..services.paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED # Added action types
+from ..services.paper_view_service import PaperViewService
 from ..error_handlers import handle_service_errors
 
 router = APIRouter(
@@ -23,9 +26,16 @@ async def vote_on_paper(
     request: Request,  # For limiter
     paper_id: str,
     vote_type: str = Body(..., embed=True, pattern="^(up|none)$"),
-    current_user: UserSchema = Depends(get_current_user),
+    current_user: Optional[UserSchema] = Depends(get_current_user), # Changed to Optional[UserSchema]
     service: PaperActionService = Depends(get_paper_action_service)
 ):
+    if not current_user:
+        logger.info("Attempted to vote without authentication.") # Changed logger level and message
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Authentication required to vote."
+        )
+
     # Raw request body can be logged for debugging if needed
     # raw_body = await request.body()
     # logger.info(f"Vote request for paper_id: {paper_id}. Raw request body: {raw_body.decode()}")
@@ -36,19 +46,18 @@ async def vote_on_paper(
         if not user_id_str:
             raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="User ID not found")
 
-        updated_paper_doc = await service.record_vote(
+        # Record the vote
+        await service.record_vote(
             paper_id=paper_id,
             user_id=user_id_str,
             vote_type=vote_type
         )
 
-        if not updated_paper_doc:
-            logger.error(
-                f"Paper {paper_id} not found after voting operation, service returned None unexpectedly."
-            )
-            raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail="Paper not found after voting operation")
+        # Get the complete paper with implementation progress
+        paper_view_service = PaperViewService()
+        complete_paper_doc = await paper_view_service.get_paper_by_id(paper_id, user_id_str)
 
-        return await transform_paper_async(updated_paper_doc, user_id_str, detail_level="full")
+        return await transform_paper_async(complete_paper_doc, user_id_str, detail_level="full")
 
     except InvalidId:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")

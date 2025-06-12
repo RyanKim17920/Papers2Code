@@ -61,7 +61,8 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
           />
         )}
         {/* --- End NEW --- */}
-      </div>      <div className="list-content-area">
+      </div>     
+       <div className="list-content-area">
         {isLoading ? (
           <LoadingSpinner />
         ) : error ? (

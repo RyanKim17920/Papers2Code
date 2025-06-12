@@ -1,9 +1,17 @@
 // src/services/api.ts
 import { Paper, AdminSettableImplementabilityStatus } from '../types/paper';
 import type { ImplementationProgress } from '../types/implementation';
-import type { PaperActionUserProfile } from '../types/user';
+import type { PaperActionUserProfile, UserProfile } from '../types/user'; // Added UserProfile import
 import { getCsrfToken } from './auth';
 import { API_BASE_URL, PAPERS_API_PREFIX } from './config';
+
+// --- User Profile Types ---
+export interface UserProfileResponse {
+  userDetails: UserProfile;
+  upvotedPapers: Paper[];
+  contributedPapers: Paper[];
+}
+// --- End User Profile Types ---
 
 
 // --- NEW: Custom Error Classes ---
@@ -306,6 +314,26 @@ export const updateImplementationProgressInApi = async (
 };
 // --- End NEW ---
 
+// --- User Profile API Functions ---
+export const fetchUserProfileFromApi = async (username: string): Promise<UserProfileResponse | null> => {
+  try {
+    const response = await fetch(`${API_BASE_URL}/api/users/${username}/profile`, { 
+      credentials: 'include' 
+    });
+    
+    if (response.status === 404) {
+      return null; // User not found
+    }
+    
+    const profileData = await handleApiResponse<UserProfileResponse>(response);
+    return profileData;
+  } catch (error) {
+    console.error('Failed to fetch user profile:', error);
+    throw error;
+  }
+};
+// --- End User Profile API Functions ---
+
 // --- BEGIN ADDED TYPE DEFINITIONS ---
 // These interfaces define the expected structure of the raw JSON response
 // from the backend /actions endpoint, after camelCase conversion.
@@ -334,6 +362,28 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
     console.error('Authentication error (401):', await response.text().catch(() => ""));
     throw new AuthenticationError('User not authenticated or session expired.');
   }
+
+  // MODIFIED: Add specific handling for 403 CSRF/Forbidden errors
+  if (response.status === 403) {
+    const errorData = await response.json().catch(() => ({ detail: "Forbidden access" }));
+    // Check if the detail specifically mentions CSRF, as 403 is generic "Forbidden"
+    // Backend uses "CSRF token mismatch or missing."
+    if (errorData.detail && typeof errorData.detail === 'string' && 
+        (errorData.detail.toLowerCase().includes('csrf') || errorData.detail.toLowerCase().includes('forbidden'))) { 
+        console.error('CSRF or Forbidden error (403):', errorData.detail);
+        if (errorData.detail.toLowerCase().includes('csrf')) {
+            throw new CsrfError(errorData.detail);
+        } else {
+            // For a general "Forbidden" that isn't CSRF, it's likely a permission issue.
+            throw new AuthenticationError(errorData.detail || 'Access denied. You may not have permission to perform this action.');
+        }
+    }
+    // For other 403 errors not matching the CSRF/Forbidden detail pattern (e.g. if response wasn't JSON)
+    const errorText = await response.text().catch(() => "Forbidden access");
+    console.error('Generic Forbidden error (403):', errorText);
+    throw new AuthenticationError(errorText || 'Permission denied.');
+  }
+
   if (response.status === 400) {
     const errorData = await response.json().catch(() => ({ error: "Bad Request", description: "Unknown CSRF or validation error" }));
     if (errorData.error === "CSRF validation failed") {

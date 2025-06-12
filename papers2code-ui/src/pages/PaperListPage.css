@@ -67,11 +67,6 @@
       margin: 20px auto; /* Center error message itself */
   }
 
-
-  .list-header {
-    /* Optional: Add styling if needed, like bottom border */
-    margin-bottom: 20px; /* Space below header section */
-  }
   
   .list-header h1 {
     text-align: center;

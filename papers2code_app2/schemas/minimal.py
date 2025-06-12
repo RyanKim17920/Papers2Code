@@ -1,5 +1,5 @@
 from pydantic import BaseModel, Field, HttpUrl
-from typing import Optional
+from typing import Optional, List
 from datetime import datetime
 
 from .db_models import PyObjectId  # ADDED: Import PyObjectId
@@ -16,10 +16,10 @@ class UserSchema(BaseModel): # Model returned by get_current_user
     avatar_url: Optional[HttpUrl] = None
     bio: Optional[str] = None
     website_url: Optional[HttpUrl] = None
-    show_github_profile: Optional[bool] = Field(default=False) # Changed from github_profile_url
     twitter_profile_url: Optional[HttpUrl] = None
     linkedin_profile_url: Optional[HttpUrl] = None
     bluesky_username: Optional[str] = None  # New
+    huggingface_username: Optional[str] = None  # New
     is_admin: Optional[bool] = False
     is_owner: Optional[bool] = False
     created_at: Optional[datetime] = None
@@ -33,11 +33,10 @@ class UserUpdateProfile(BaseModel):
     name: Optional[str] = None
     bio: Optional[str] = None
     website_url: Optional[HttpUrl] = None
-    show_github_profile: Optional[bool] = None # Changed from github_profile_url
     twitter_profile_url: Optional[HttpUrl] = None
     linkedin_profile_url: Optional[HttpUrl] = None
     bluesky_username: Optional[str] = None # New
-
+    huggingface_username: Optional[str] = None # New
     model_config = camel_case_config
 
 class UserMinimal(BaseModel): # Response model for /me endpoint

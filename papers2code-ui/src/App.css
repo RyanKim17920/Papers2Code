@@ -217,6 +217,8 @@ a:hover {
   align-items: center;
   justify-content: flex-start;
   position: relative; /* For potential overlays */
+  overflow-y: auto; /* Allow vertical scrolling if content overflows */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
 }
 
 /* Add subtle accent gradient to main content area */

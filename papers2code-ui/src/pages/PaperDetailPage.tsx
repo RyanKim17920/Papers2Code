@@ -107,7 +107,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
     return (
         <div className="paper-detail-page">
-            <Link to="/" className="back-link">Back to List</Link>
+            <Link to="/papers" className="back-link">Back to List</Link>
 
             {updateError && <div className="update-error">{updateError}</div>}
             <h1>{paper.title}</h1>
@@ -115,14 +115,15 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             <ImplementabilityNotice paper={paper} />
 
             {/* --- Community Implementation Effort Section --- */}
-            {currentUser && paper && !isCurrentUserContributor && (
+            {/* MODIFIED: Added '&& paper.implementationProgress' to ensure this section only shows when implementationProgress exists */}
+            {currentUser && paper && !isCurrentUserContributor && paper.implementationProgress && (
                 <div className="implementation-effort-section">
                     <h4>Community Implementation Progress</h4>
+                    {/* This inner condition will always be true now due to the parent, but kept for clarity */}
                     {paper.implementationProgress ? (
                         <>
                             <p>A community effort to implement this paper is active or has been initiated.</p>
-                            {/* Button to View or Join Effort - uses the same handler for now, which will show the modal */}
-                            {/* Consider if "View or Join Effort" should bypass this specific confirmation if an effort already exists */}
+                            {/* Button to View or Join Effort */}
                             <button 
                                 onClick={handleInitiateImplementationEffort} 
                                 className="button-secondary" 
@@ -132,10 +133,13 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             </button>
                         </>
                     ) : (
+                        // This 'else' block should ideally not be reached if the outer condition requires paper.implementationProgress
+                        // However, to be safe and cover unexpected states, we can leave a fallback or a simplified message.
+                        // For now, this block is effectively dead code due to the outer condition.
                         <>
                             <p>Be the first to lead or join a community effort to implement this paper!</p>
                             <button 
-                                onClick={handleInitiateImplementationEffort} // This will now open the modal
+                                onClick={handleInitiateImplementationEffort}
                                 className="button-secondary" 
                                 disabled={isProcessingEffortAction} 
                             >

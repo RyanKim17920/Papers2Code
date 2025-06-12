@@ -46,36 +46,43 @@ export const logoutUser = async (): Promise<void> => {
             // Proceeding as original code did, but the backend will likely reject if CSRF is enforced and token is missing.
         }
 
-        // MODIFIED: Use apiClient and set X-CSRFToken header
-        await apiClient.post(`${AUTH_API_PREFIX}/logout`, {}, { // Send empty object as data if no body needed
+        // MODIFIED: Use apiClient and set X-CSRFToken header        
+        const response = await apiClient.post<{ message: string, csrfToken: string }>(`${AUTH_API_PREFIX}/logout`, {}, { // Send empty object as data if no body needed
             headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
         });
-        // Clear CSRF token from localStorage after successful logout
-        localStorage.removeItem('csrfToken');
+        // Note: The new CSRF token is automatically set as a cookie by the backend,
+        // so we don't need to manually store it in localStorage anymore
     } catch (error) {
         console.error("Logout failed:", error);
         // Handle logout error (e.g., show a message)
     }
 };
 
-// --- NEW: Helper function to get CSRF token from localStorage ---
+// --- NEW: Helper function to get CSRF token from cookie ---
 export const getCsrfToken = (): string | null => {
-    return localStorage.getItem('csrfToken');
+    // Read CSRF token from cookie instead of localStorage to match backend expectations
+    const cookies = document.cookie.split(';');
+    for (let cookie of cookies) {
+        const [name, value] = cookie.trim().split('=');
+        if (name === 'csrf_token_cookie') {
+            return decodeURIComponent(value);
+        }
+    }
+    return null;
 };
 
-// Function to fetch and store CSRF token
+// Function to fetch CSRF token (it will be automatically set as a cookie by the backend)
 export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
     try {
         const response = await apiClient.get<{ csrfToken: string }>(CSRF_API_ENDPOINT);
 
-        // MODIFIED: Check for csrfToken (camelCase) based on observed log
+        // The backend automatically sets the CSRF token as a cookie
+        // We just need to verify it was received correctly
         if (response.data && response.data.csrfToken) {
-            localStorage.setItem('csrfToken', response.data.csrfToken);
+            // The token should now be available in the cookie
             return response.data.csrfToken;
         }
-        // This log indicates the expected property was not found.
-        // The property name in response.data might be different (e.g. case or underscore)
-        console.warn('CSRF token not found using key \'csrfToken\' in response data from ' + CSRF_API_ENDPOINT + '. Actual response data:', response.data);
+        console.warn('CSRF token not found in response data from ' + CSRF_API_ENDPOINT + '. Actual response data:', response.data);
         return null;
     } catch (error: unknown) {
         console.error('Error fetching CSRF token from ' + CSRF_API_ENDPOINT + ':', error);

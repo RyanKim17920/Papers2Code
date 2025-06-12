@@ -9,6 +9,7 @@ export interface UserProfile {
     username: string;
     avatarUrl?: string | null;
     name?: string | null;
+    bio?: string; // Added bio field
     isOwner?: boolean;
     isAdmin?: boolean;
 }

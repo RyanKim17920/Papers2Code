@@ -10,6 +10,8 @@ import type { UserProfile } from './common/types/user';
 import { UserAvatar } from './common/components';
 import { ModalProvider } from './common/context/ModalContext'; // Import ModalProvider
 import LoginPromptModal from './common/components/LoginPromptModal'; // Import LoginPromptModal
+
+import ProfilePage from './pages/ProfilePage'; // Added import for ProfilePage
 import './App.css';
 
 function App() {
@@ -76,10 +78,9 @@ function App() {
                       username={currentUser.username}
                       className="user-avatar"
                     />
-                  </button>
-                  {isDropdownOpen && (
+                  </button>                  {isDropdownOpen && (
                     <div className={`user-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
-                      <Link to="/profile" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
+                      <Link to={`/user/${currentUser.username}`} className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
                       <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
                       <Link to="" onClick={handleLogout} className="dropdown-item">
                         Logout
@@ -102,6 +103,7 @@ function App() {
                 path="/paper/:paperId"
                 element={<PaperDetailPage currentUser={currentUser} />}
               />
+              <Route path="/user/:github_username" element={<ProfilePage />} /> {/* Added route for ProfilePage */}
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
           </main>
