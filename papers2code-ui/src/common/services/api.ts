@@ -332,7 +332,87 @@ export const fetchUserProfileFromApi = async (username: string): Promise<UserPro
     throw error;
   }
 };
-// --- End User Profile API Functions ---
+
+export const getUserProfileSettings = async (): Promise<UserProfileResponse | null> => {
+  try {
+    const url = `${API_BASE_URL}/api/users/settings`;
+    const response = await fetch(url, {
+      credentials: 'include'
+    });
+    
+    if (response.status === 401) {
+      return null; // Not authenticated
+    }
+    
+    if (response.status === 404) {
+      return null; // User not found
+    }
+    
+    const userDetails = await handleApiResponse<UserProfile>(response);
+    
+    // Convert UserSchema to UserProfileResponse for consistency with SettingsPage
+    const userProfileResponse: UserProfileResponse = {
+      userDetails: userDetails,
+      upvotedPapers: [],
+      contributedPapers: []
+    };
+    
+    return userProfileResponse;
+  } catch (error) {
+    console.error('Failed to fetch user settings:', error);
+    throw error;
+  }
+};
+
+// --- User Profile Management Functions ---
+export const updateUserProfile = async (profileData: {
+  name?: string;
+  bio?: string;
+  websiteUrl?: string;
+  twitterProfileUrl?: string;
+  linkedinProfileUrl?: string;
+  blueskyUsername?: string;
+  huggingfaceUsername?: string;
+}): Promise<UserProfile> => {
+  const url = `${API_BASE_URL}/api/users/profile`;
+
+  const csrfToken = getCsrfToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'PUT',
+    headers: headers,
+    body: JSON.stringify(profileData),
+    credentials: 'include',
+  });
+
+  const updatedUser = await handleApiResponse<UserProfile>(response);
+  return updatedUser;
+};
+
+export const deleteUserAccount = async (): Promise<void> => {
+  const url = `${API_BASE_URL}/api/users/profile`;
+
+  const csrfToken = getCsrfToken();
+  const headers: HeadersInit = {};
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  }
+
+  const response = await fetch(url, {
+    method: 'DELETE',
+    headers: headers,
+    credentials: 'include',
+  });
+
+  await handleApiResponse<void>(response);
+};
+
 
 // --- BEGIN ADDED TYPE DEFINITIONS ---
 // These interfaces define the expected structure of the raw JSON response
@@ -393,10 +473,17 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
     // Handle other 400 errors
     console.error(`API Error 400: ${errorData.description || 'Bad Request'}`);
     throw new Error(`API request failed with status 400: ${errorData.description || 'Bad Request'}`);
-  }
-  // NEW: Handle 422 Unprocessable Entity for validation errors
+  }  // NEW: Handle 422 Unprocessable Entity for validation errors
   if (response.status === 422) {
     const errorData = await response.json().catch(() => null);
+    
+    // Check if it's a simple detail string (our custom validation errors)
+    if (errorData && errorData.detail && typeof errorData.detail === 'string') {
+      console.error('API Validation Error (422):', errorData.detail);
+      throw new Error(errorData.detail); // Throw with the specific validation message
+    }
+    
+    // Handle FastAPI's default validation error format (array of validation errors)
     if (errorData && errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
       // Extract the first validation error message
       const firstError = errorData.detail[0];
@@ -408,6 +495,7 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
       console.error('API Validation Error (422):', userMessage, errorData.detail);
       throw new Error(userMessage); // Throw with the specific validation message
     }
+    
     // Fallback if the 422 error format is not as expected
     const errorBody = await response.text().catch(() => `Status: ${response.status}`);
     console.error(`API Validation Error (422):`, errorBody);
@@ -424,6 +512,5 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
   if (response.status === 204) {
     return undefined as T; // Or null as T, depending on how you want to represent "void"
   }
-
   return response.json(); // response.json() already returns a Promise.
 }

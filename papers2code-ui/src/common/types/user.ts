@@ -9,9 +9,17 @@ export interface UserProfile {
     username: string;
     avatarUrl?: string | null;
     name?: string | null;
-    bio?: string; // Added bio field
+    bio?: string | null;
+    websiteUrl?: string | null;
+    twitterProfileUrl?: string | null;
+    linkedinProfileUrl?: string | null;
+    blueskyUsername?: string | null;
+    huggingfaceUsername?: string | null;
     isOwner?: boolean;
     isAdmin?: boolean;
+    createdAt?: string;
+    lastLoginAt?: string;
+    profileUpdatedAt?: string;
 }
 
 export interface PaperActionUserProfile {

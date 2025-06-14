@@ -1,10 +1,27 @@
 import React, { createContext, useContext, useState, ReactNode } from 'react';
 
+interface ModalAction {
+  label: string;
+  onClick: () => void;
+  color?: 'primary' | 'secondary' | 'error' | 'warning' | 'info' | 'success';
+  variant?: 'text' | 'outlined' | 'contained';
+}
+
+interface ModalOptions {
+  title: string;
+  message: string;
+  actions: ModalAction[];
+}
+
 interface ModalContextType {
   showLoginPrompt: (message?: string) => void;
   hideLoginPrompt: () => void;
   isLoginPromptOpen: boolean;
   loginPromptMessage: string | undefined;
+  showModal: (options: ModalOptions) => void;
+  hideModal: () => void;
+  isModalOpen: boolean;
+  modalOptions: ModalOptions | null;
 }
 
 const ModalContext = createContext<ModalContextType | undefined>(undefined);
@@ -12,6 +29,8 @@ const ModalContext = createContext<ModalContextType | undefined>(undefined);
 export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) => {
   const [isLoginPromptOpen, setIsLoginPromptOpen] = useState(false);
   const [loginPromptMessage, setLoginPromptMessage] = useState<string | undefined>(undefined);
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalOptions, setModalOptions] = useState<ModalOptions | null>(null);
 
   const showLoginPrompt = (message?: string) => {
     setLoginPromptMessage(message);
@@ -23,8 +42,27 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setLoginPromptMessage(undefined);
   };
 
+  const showModal = (options: ModalOptions) => {
+    setModalOptions(options);
+    setIsModalOpen(true);
+  };
+
+  const hideModal = () => {
+    setIsModalOpen(false);
+    setModalOptions(null);
+  };
+
   return (
-    <ModalContext.Provider value={{ showLoginPrompt, hideLoginPrompt, isLoginPromptOpen, loginPromptMessage }}>
+    <ModalContext.Provider value={{ 
+      showLoginPrompt, 
+      hideLoginPrompt, 
+      isLoginPromptOpen, 
+      loginPromptMessage,
+      showModal,
+      hideModal,
+      isModalOpen,
+      modalOptions
+    }}>
       {children}
     </ModalContext.Provider>
   );

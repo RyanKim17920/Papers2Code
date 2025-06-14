@@ -12,6 +12,7 @@ import { ModalProvider } from './common/context/ModalContext'; // Import ModalPr
 import LoginPromptModal from './common/components/LoginPromptModal'; // Import LoginPromptModal
 
 import ProfilePage from './pages/ProfilePage'; // Added import for ProfilePage
+import SettingsPage from './pages/SettingsPage'; // Added import for SettingsPage
 import './App.css';
 
 function App() {
@@ -102,16 +103,14 @@ function App() {
               <Route
                 path="/paper/:paperId"
                 element={<PaperDetailPage currentUser={currentUser} />}
-              />
-              <Route path="/user/:github_username" element={<ProfilePage />} /> {/* Added route for ProfilePage */}
+              />              <Route path="/user/:github_username" element={<ProfilePage />} /> {/* Added route for ProfilePage */}
+              <Route path="/settings" element={<SettingsPage />} /> {/* Added route for SettingsPage */}
               <Route path="*" element={<NotFoundPage />} />
             </Routes>
-          </main>
-
-          <LoginPromptModal /> {/* Add LoginPromptModal here so it can be displayed globally */}
+          </main>          <LoginPromptModal /> {/* Add LoginPromptModal here so it can be displayed globally */}
 
           <footer className="app-footer">
-            <p>© {new Date().getFullYear()} Papers2Code Community. Data sourced from PapersWithCode.</p>
+            <p>© {new Date().getFullYear()} Papers2Code Community. Data sourced from PapersWithCode, licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.</p>
           </footer>
         </div>
       </Router>
