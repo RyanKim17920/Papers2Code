@@ -1,5 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
+import { FaGlobe, FaTwitter, FaLinkedin } from 'react-icons/fa';
+import { SiBluesky, SiHuggingface } from 'react-icons/si';
 import { UserAvatar, LoadingSpinner } from '../common/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi } from '../common/services/api';
 import { Paper } from '../common/types/paper';
@@ -245,7 +247,64 @@ const ProfilePage: React.FC = () => {
                   )}
                 </div>
                 
-                
+                {/* Social Links Section */}
+                <div className="social-links">
+                  {userDetails.websiteUrl && (
+                    <a 
+                      href={userDetails.websiteUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="social-link website-link"
+                      title="Website"
+                    >
+                      <FaGlobe />
+                    </a>
+                  )}
+                  {userDetails.twitterProfileUrl && (
+                    <a 
+                      href={userDetails.twitterProfileUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="social-link twitter-link"
+                      title="Twitter/X"
+                    >
+                      <FaTwitter />
+                    </a>
+                  )}
+                  {userDetails.linkedinProfileUrl && (
+                    <a 
+                      href={userDetails.linkedinProfileUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="social-link linkedin-link"
+                      title="LinkedIn"
+                    >
+                      <FaLinkedin />
+                    </a>
+                  )}
+                  {userDetails.blueskyUsername && (
+                    <a 
+                      href={`https://bsky.app/profile/${userDetails.blueskyUsername}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="social-link bluesky-link"
+                      title="Bluesky"
+                    >
+                      <SiBluesky />
+                    </a>
+                  )}
+                  {userDetails.huggingfaceUsername && (
+                    <a 
+                      href={`https://huggingface.co/${userDetails.huggingfaceUsername}`} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="social-link huggingface-link"
+                      title="Hugging Face"
+                    >
+                      <SiHuggingface />
+                    </a>
+                  )}
+                </div>
                 
                 <div className="profile-stats">
                   <div className="stat-item">

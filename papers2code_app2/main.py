@@ -28,19 +28,30 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
     async def dispatch(self, request: Request, call_next: RequestResponseEndpoint) -> StarletteResponse:
         # Paths that do not require CSRF protection
         exempt_paths = ["/api/auth/csrf-token", "/api/auth/github/login", "/api/auth/github/callback", "/docs", "/openapi.json"]
-        if request.url.path in exempt_paths or request.method in ("GET", "HEAD", "OPTIONS"):
+        # Allow all /static/ paths for serving static files without CSRF
+        if request.url.path.startswith("/static/") or request.url.path in exempt_paths or request.method in ("GET", "HEAD", "OPTIONS"):
+            # logger.debug(f"CSRF Middleware: Exempted path or method: {request.method} {request.url.path}")
             response = await call_next(request)
             return response
 
         csrf_token_cookie = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
         csrf_token_header = request.headers.get(CSRF_TOKEN_HEADER_NAME)
 
+        logger.debug(f"CSRF Middleware: Validating request: {request.method} {request.url.path}")
+        logger.debug(f"CSRF Middleware: Cookie '{CSRF_TOKEN_COOKIE_NAME}': {csrf_token_cookie}")
+        logger.debug(f"CSRF Middleware: Header '{CSRF_TOKEN_HEADER_NAME}': {csrf_token_header}")
+
         if not csrf_token_cookie or not csrf_token_header or csrf_token_cookie != csrf_token_header:
+            logger.warning(
+                f"CSRF token validation failed for {request.method} {request.url.path}. "
+                f"Cookie value: '{csrf_token_cookie}', Header value: '{csrf_token_header}'."
+            )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="CSRF token mismatch or missing."
             )
         
+        logger.info(f"CSRF token validation successful for {request.method} {request.url.path}")
         response = await call_next(request)
         return response
 

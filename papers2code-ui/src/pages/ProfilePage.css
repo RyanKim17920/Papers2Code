@@ -115,6 +115,84 @@
   color: white;
 }
 
+/* Social Links */
+.social-links {
+  display: flex;
+  gap: 0.75rem;
+  margin-bottom: 1.5rem;
+  flex-wrap: wrap;
+}
+
+.social-link {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  text-decoration: none;
+  transition: all 0.2s ease;
+  border: 1px solid var(--border-color);
+  background-color: var(--background-color);
+  color: var(--text-color);
+}
+
+.social-link:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.15);
+}
+
+.website-link {
+  color: #6b7280;
+}
+
+.website-link:hover {
+  background-color: #f8f9fa;
+  border-color: #6b7280;
+  color: #374151;
+}
+
+.twitter-link {
+  color: #1da1f2;
+}
+
+.twitter-link:hover {
+  background-color: #1da1f2;
+  color: white;
+  border-color: #1da1f2;
+}
+
+.linkedin-link {
+  color: #0077b5;
+}
+
+.linkedin-link:hover {
+  background-color: #0077b5;
+  color: white;
+  border-color: #0077b5;
+}
+
+.bluesky-link {
+  color: #00bcd4;
+}
+
+.bluesky-link:hover {
+  background-color: #00bcd4;
+  color: white;
+  border-color: #00bcd4;
+}
+
+.huggingface-link {
+  color: #ff6b35;
+}
+
+.huggingface-link:hover {
+  background-color: #ff6b35;
+  color: white;
+  border-color: #ff6b35;
+}
+
 .profile-bio {
   margin-bottom: 1.5rem;
   padding: 1rem 0;

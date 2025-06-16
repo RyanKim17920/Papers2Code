@@ -273,30 +273,43 @@ class AuthService:
 
             current_time = datetime.now(timezone.utc)
             try:
+                # Data to be set on document whether it's an insert or update
+                set_payload = {
+                    "name": name,
+                    "avatarUrl": avatar_url,
+                    "email": email,
+                    "github_id": github_user_id,  # Set/update this on every successful auth
+                    "updatedAt": current_time,
+                    "lastLoginAt": current_time,
+                }
+
+                # Data to be set only when the document is first inserted
+                # username is the query key, but also needs to be in the document on insert.
+                set_on_insert_payload = {
+                    "username": username, 
+                    "createdAt": current_time,
+                    "is_admin": False,
+                    # github_id is handled by $set, so it will be set on insert too and must not be here.
+                }
+
+                logger.debug(f"AuthService: Upserting user. Filter: {{'username': '{username}'}}, "
+                             f"Set: {set_payload}, SetOnInsert: {set_on_insert_payload}")
+
                 user_document = await users_collection.find_one_and_update(
-                    {"username": username},  # Filter to find existing user by username
+                    {"username": username},  # Find user by GitHub login username
                     {
-                        "$set": {
-                            "username": username,
-                            "name": name,
-                            "avatarUrl": avatar_url,
-                            "email": email,
-                            "updatedAt": current_time,
-                            "lastLoginAt": current_time, # Also update last login time
-                        },
-                        "$setOnInsert": {
-                            "createdAt": current_time,
-                            "is_admin": False, 
-                            # Add other default fields for new users if any, e.g., roles: []
-                        }
+                        "$set": set_payload,
+                        "$setOnInsert": set_on_insert_payload
                     },
                     upsert=True,
                     return_document=ReturnDocument.AFTER
                 )
                 if not user_document:
-                    logger.error("Failed to upsert user document, find_one_and_update returned None unexpectedly.")
+                    logger.error("AuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)
-                #logger.info(f"User {username} (ID: {user_document['_id']}) upserted successfully.")
+                
+                logger.info(f"AuthService: User {username} (DB ID: {user_document['_id']}, GitHub ID: {user_document.get('github_id')}) upserted successfully.")
+
             except Exception as db_exc:
                 logger.error(f"Database operation error during user upsert: {db_exc}")
                 return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_generic_error", status_code=307)
@@ -335,6 +348,7 @@ class AuthService:
             
             # Generate and set CSRF token cookie
             csrf_token = secrets.token_hex(16)
+            logger.info(f"AuthService: Setting CSRF token cookie ('{CSRF_TOKEN_COOKIE_NAME}') during GitHub callback. Value: {csrf_token[:5]}...{csrf_token[-5:]}") # Log CSRF token being set
             redirect_response.set_cookie(
                 key=CSRF_TOKEN_COOKIE_NAME,
                 value=csrf_token,
@@ -344,7 +358,7 @@ class AuthService:
                 path="/",
                 secure=True if config_settings.ENV_TYPE == "production" else False
             )
-            #logger.info(f"Successfully authenticated user {username}. Redirecting to frontend.")
+            logger.info(f"Successfully authenticated user {username}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
             return redirect_response
 
     def clear_auth_cookies(self, response: Response):

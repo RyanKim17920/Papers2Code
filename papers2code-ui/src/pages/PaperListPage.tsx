@@ -25,15 +25,15 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
     handleSortChange,
     handlePageChange,
     handlePrev,
-    handleNext,    handleVote,    // --- NEW: Destructure advanced search state/handlers and search flags ---
+    handleNext,
+    handleVote,
     showAdvancedSearch,
     advancedFilters,
     toggleAdvancedSearch,
     handleAdvancedFilterChange,
-    applyAdvancedFilters,
-    clearAdvancedFilters,
-    isTitleAbstractSearchActive,
-    // --- End NEW ---
+    handleApplyAdvancedFilters, // Corrected to match the hook's returned name
+    handleClearAdvancedFilters, // Corrected to match the hook's returned name
+    isSearchActive, // Corrected to match the hook's returned name (isSearchActive or isDebouncedSearchActive)
   } = usePaperList(authLoading); // Pass authLoading to the hook
 
   return (
@@ -45,8 +45,9 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
         <ListControls
           searchTerm={searchTerm}
           onSearchChange={handleSearchChange}
-          activeSortDisplay={activeSortDisplay as SortPreference | 'relevance'}          onSortChange={handleSortChange}
-          isSearchInputActive={isTitleAbstractSearchActive}
+          activeSortDisplay={activeSortDisplay as SortPreference | 'relevance'} // This was activeSortDisplay, ensure it's what you want from the hook
+          onSortChange={handleSortChange}
+          isSearchInputActive={isSearchActive} // Corrected to use isSearchActive from the hook
           onToggleAdvancedSearch={toggleAdvancedSearch} // <-- Pass handler
           showAdvancedSearch={showAdvancedSearch}     // <-- Pass state
         />
@@ -55,8 +56,8 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
           <AdvancedSearchForm
             filters={advancedFilters}
             onChange={handleAdvancedFilterChange}
-            onApply={applyAdvancedFilters}
-            onClear={clearAdvancedFilters}
+            onApply={handleApplyAdvancedFilters} // Corrected to use handleApplyAdvancedFilters
+            onClear={handleClearAdvancedFilters} // Corrected to use handleClearAdvancedFilters
             onClose={toggleAdvancedSearch} // Use toggle to close
           />
         )}

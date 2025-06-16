@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { Typography, Button, Divider, TextField, CircularProgress } from '@mui/material';
 import { useNavigate } from 'react-router-dom';
-import { useModal } from '../common/context/ModalContext';
 import { logoutUser } from '../common/services/auth';
 import { updateUserProfile, deleteUserAccount, UserProfileResponse, getUserProfileSettings } from '../common/services/api';
 import { 
@@ -13,6 +12,7 @@ import {
   convertDisplayToApiValue,
   type NormalizedUrlResult
 } from '../common/utils/urlNormalization';
+import ConfirmationModal from '../common/components/ConfirmationModal';
 import './SettingsPage.css';
 
 interface UserProfileFormData {
@@ -32,13 +32,14 @@ interface FieldValidation {
 
 const SettingsPage: React.FC = () => {
   const navigate = useNavigate();
-  const { showModal, hideModal } = useModal();
   
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [successMessage, setSuccessMessage] = useState<string | null>(null);
+  const [showDeleteConfirmModal, setShowDeleteConfirmModal] = useState(false);
+  const [isDeleting, setIsDeleting] = useState(false);
   const [formData, setFormData] = useState<UserProfileFormData>({
     name: '',
     bio: '',
@@ -204,37 +205,26 @@ const SettingsPage: React.FC = () => {
     await logoutUser();
     localStorage.removeItem('csrfToken');
     navigate('/');
-    window.location.reload();
+    window.location.reload(); // Force reload to clear all state
   };
 
   const handleDeleteAccount = () => {
-    showModal({
-      title: 'Delete Account',
-      message: 'Are you sure you want to delete your account? This action is irreversible and will remove all your personal data. Your contributions may be anonymized.',
-      actions: [
-        {
-          label: 'Cancel',
-          onClick: hideModal,
-          color: 'primary',
-        },
-        {
-          label: 'Delete My Account',
-          onClick: async () => {
-            hideModal();
-            try {
-              await deleteUserAccount();
-              alert('Account deleted successfully.');
-              await handleLogout();
-            } catch (error: any) {
-              console.error('Error deleting account:', error);
-              setError(error.message || 'Failed to delete account');
-            }
-          },
-          color: 'error',
-          variant: 'contained',
-        },
-      ],
-    });
+    setShowDeleteConfirmModal(true);
+  };
+
+  const handleConfirmDelete = async () => {
+    setIsDeleting(true);
+    try {
+      await deleteUserAccount();
+      alert('Account deleted successfully.');
+      await handleLogout();
+    } catch (error: any) {
+      console.error('Error deleting account:', error);
+      setError(error.message || 'Failed to delete account');
+    } finally {
+      setIsDeleting(false);
+      setShowDeleteConfirmModal(false);
+    }
   };
 
   if (loading) {
@@ -492,20 +482,36 @@ const SettingsPage: React.FC = () => {
             </div>
             
             <div className="account-action">
-              <div className="danger-warning">
-                <strong>Warning:</strong> Deleting your account is permanent and cannot be undone.
-              </div>
-              <Button 
-                variant="contained" 
-                className="btn-delete-account"
+              <Button
+                variant="outlined"
+                color="error"
                 onClick={handleDeleteAccount}
+                className="btn-delete-account"
               >
-                Delete My Account
+                🗑️ Delete My Account
               </Button>
+              <Typography variant="caption" display="block" className="action-description">
+                Permanently remove your account and all associated data. This action cannot be undone.
+              </Typography>
             </div>
           </div>
         </div>
       </div>
+
+      {/* Delete Account Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={showDeleteConfirmModal}
+        onClose={() => setShowDeleteConfirmModal(false)}
+        onConfirm={handleConfirmDelete}
+        title="Delete Account"
+        confirmText="Delete My Account"
+        cancelText="Cancel"
+        confirmButtonClass="button-danger"
+        isConfirming={isDeleting}
+      >
+        <p>Are you sure you want to delete your account? This action is irreversible and will remove all your personal data. Your contributions may be anonymized.</p>
+        <p><strong>This cannot be undone.</strong></p>
+      </ConfirmationModal>
     </div>
   );
 };

@@ -7,12 +7,14 @@ from ..database import (
     get_users_collection_async,
     get_papers_collection_async,
     get_user_actions_collection_async,
-    get_implementation_progress_collection_async
+    get_implementation_progress_collection_async,
+    async_client  # Import async_client for transaction support
 )
 from ..schemas.users import UserProfileResponse
 from ..schemas.papers import PaperResponse
 from ..schemas.minimal import UserSchema, UserUpdateProfile
 from ..services.exceptions import UserNotFoundException
+from ..shared import IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
 from ..utils import transform_paper_async # Assuming this can transform a raw paper doc to UserProfilePaper compatible dict
 
 logger = logging.getLogger(__name__)
@@ -293,34 +295,146 @@ class UserService:
         return UserSchema(**updated_user_doc)
 
     async def delete_user_account(self, user_id: ObjectId) -> None:
-        """Delete a user's account and all associated data."""
+        """Delete a user's account and all associated data.
+        
+        This operation:
+        1. Uses database transactions for atomicity
+        2. Updates paper upvote counts (implementability votes are calculated dynamically)
+        3. Removes user from implementation progress records
+        4. Deletes all user actions and the user document
+        5. Provides comprehensive logging for audit purposes
+        
+        Args:
+            user_id: The ObjectId of the user to delete
+            
+        Raises:
+            UserNotFoundException: If user doesn't exist
+            ValueError: If user_id is invalid
+            Exception: For other database/transaction errors
+        """
         await self._init_collections()
         
-        # Check if user exists
+        # Input validation
+        if not user_id:
+            raise ValueError("User ID cannot be None or empty")
+        
+        # Check if user exists before starting transaction
         user_doc = await self.users_collection.find_one({"_id": user_id})
         if not user_doc:
             raise UserNotFoundException(f"User with ID '{user_id}' not found.")
         
-        # TODO: In a production system, you might want to:
-        # 1. Anonymize user contributions instead of deleting them
-        # 2. Remove user from implementation progress contributors
-        # 3. Handle foreign key constraints properly
-        # 4. Log the deletion for audit purposes
+        username = user_doc.get("username", "unknown")
+        logger.info(f"Starting deletion process for user {user_id} (username: {username})")
         
-        # For now, we'll do a simple deletion
-        # Remove user actions
-        await self.user_actions_collection.delete_many({"userId": user_id})
+        # TODO: Add rate limiting check here in production
+        # TODO: Add additional permission checks (e.g., admin confirmation for certain users)
         
-        # Remove user from implementation progress contributors
-        await self.implementation_progress_collection.update_many(
-            {"contributors": user_id},
-            {"$pull": {"contributors": user_id}}
-        )
+        # Start a MongoDB session for transaction support
+        from ..database import async_client # Import async_client directly
         
-        # Delete the user document
-        await self.users_collection.delete_one({"_id": user_id})
+        if not async_client:
+            logger.error("Database client (async_client) is not initialized. Cannot start transaction.")
+            raise Exception("Database client not initialized. Account deletion failed.")
+
+        async with await async_client.start_session() as session:
+            async with session.start_transaction():
+                try:
+                    # Step 1: Get all user actions to understand what needs cleanup
+                    user_actions_cursor = self.user_actions_collection.find({"userId": user_id}, session=session)
+                    user_actions = await user_actions_cursor.to_list(None)
+                    
+                    # Log what we're about to delete for audit purposes
+                    action_summary = {}
+                    upvote_papers = []
+                    for action in user_actions:
+                        action_type = action["actionType"]
+                        paper_id = action["paperId"]
+                        
+                        action_summary[action_type] = action_summary.get(action_type, 0) + 1
+                        
+                        if action_type == "upvote":
+                            upvote_papers.append(paper_id)
+                    
+                    logger.info(f"User {user_id} has {len(user_actions)} actions: {action_summary}")
+                    
+                    # Step 2: Update upvote counts for papers (only upvotes are stored as counts)
+                    if upvote_papers:
+                        for paper_id in upvote_papers:
+                            await self.papers_collection.update_one(
+                                {"_id": paper_id},
+                                {"$inc": {"upvoteCount": -1}},
+                                session=session
+                            )
+                        logger.info(f"Decremented upvote counts for {len(upvote_papers)} papers")
+                    
+                    # Step 3: Handle implementation progress records
+                    impl_progress_cursor = self.implementation_progress_collection.find({
+                        "$or": [
+                            {"contributors": user_id},
+                            {"startedBy": user_id}
+                        ]
+                    }, session=session)
+                    
+                    impl_progress_records = await impl_progress_cursor.to_list(None)
+                    
+                    for progress in impl_progress_records:
+                        update_ops = {}
+                        
+                        # Remove user from contributors array
+                        if "contributors" in progress and user_id in progress["contributors"]:
+                            update_ops["$pull"] = {"contributors": user_id}
+                        
+                        # Handle if user was the starter
+                        if progress.get("startedBy") == user_id:
+                            update_ops["$set"] = {"startedBy": None}
+                        
+                        if update_ops:
+                            await self.implementation_progress_collection.update_one(
+                                {"_id": progress["_id"]},
+                                update_ops,
+                                session=session
+                            )
+                    
+                    logger.info(f"Updated {len(impl_progress_records)} implementation progress records")
+                    
+                    # Step 4: Delete all user actions
+                    delete_actions_result = await self.user_actions_collection.delete_many(
+                        {"userId": user_id}, 
+                        session=session
+                    )
+                    logger.info(f"Deleted {delete_actions_result.deleted_count} user actions")
+                    
+                    # Step 5: Delete the user document
+                    delete_user_result = await self.users_collection.delete_one(
+                        {"_id": user_id}, 
+                        session=session
+                    )
+                    
+                    if delete_user_result.deleted_count == 0:
+                        logger.warning(f"User document for {user_id} not found during final delete operation")
+                        raise UserNotFoundException(f"User with ID '{user_id}' could not be deleted as it was not found during the final step.")
+
+                    logger.info(f"Successfully deleted user account: {user_id}")
+                    logger.info(f"Summary: Updated {len(upvote_papers)} paper upvote counts, {len(impl_progress_records)} implementation records, deleted {delete_actions_result.deleted_count} actions")
+                    
+                    # Transaction will be committed automatically if we reach here
+                    
+                except Exception as e:
+                    # Transaction will be automatically rolled back
+                    error_msg = f"Error deleting user account {user_id} (username: {username}): {str(e)}"
+                    logger.error(error_msg, exc_info=True)
+                    logger.error("Transaction rolled back - no changes were made")
+                    
+                    # TODO: In production, add monitoring/alerting here
+                    # TODO: Consider different exception types for different error handling
+                    
+                    raise Exception(f"Account deletion failed: {str(e)}") from e
         
-        logger.info(f"Successfully deleted user account: {user_id}")
+        # TODO: In production, consider implementing:
+        # - Asynchronous cleanup of related data
+        # - Data export before deletion (if required)
+        # - Compliance reporting
+        # - Monitoring and alerting for deletion patterns
 
 # Add to papers2code_app2/dependencies.py:
 # from .services.user_service import UserService
