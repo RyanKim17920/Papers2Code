@@ -5,10 +5,11 @@ import dotenv
 from typing import List
 from pymongo import MongoClient
 import openai
-from google import genai # Corrected import for the new API client
-from google.genai import types # Import the 'types' module for GenerateContentConfig
+from google import genai
+from google.genai import types
 from tqdm import tqdm
 import sys
+import collections # Import for deque
 
 """Automatically label CS papers with an OpenAI or Google GenAI chat model and optionally
 remove high‑certainty negatives from the source collection.
@@ -32,35 +33,26 @@ Env requirements (set via .env or shell):
 dotenv.load_dotenv()
 
 # --- LLM Provider Configuration ---
-# Determine which LLM provider to use from environment variable, default to 'openai'.
 LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").lower()
 
-# Initialize API client variables outside the functions for reuse
 openai_client = None
 gemini_client = None
 
 if LLM_PROVIDER == "openai":
-    # Get OpenAI API key and configure client
     openai_api_key = os.getenv("OPENAI_API_KEY")
     if not openai_api_key:
         raise RuntimeError("OPENAI_API_KEY not set in environment or .env file for OpenAI provider.")
     openai.api_key = openai_api_key
-    # Set default model name for OpenAI
     MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
-    # Initialize OpenAI client
     openai_client = openai.chat.completions
 elif LLM_PROVIDER == "gemini":
-    # Get Google GenAI API key and configure client
     google_api_key = os.getenv("GOOGLE_API_KEY")
     if not google_api_key:
         raise RuntimeError("GOOGLE_API_KEY not set in environment or .env file for Gemini provider.")
     
-    # Initialize Gemini client using the correct genai.Client method
     gemini_client = genai.Client(api_key=google_api_key) 
-    # Set default model name for Gemini
     MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash")
 else:
-    # Raise error for unsupported LLM provider
     raise ValueError(f"Unsupported LLM_PROVIDER: '{LLM_PROVIDER}'. Please set LLM_PROVIDER to 'openai' or 'gemini'.")
 
 # --- MongoDB Configuration ---
@@ -75,6 +67,12 @@ BATCH_SIZE = int(os.getenv("BATCH_SIZE", 1))
 LIMIT = int(os.getenv("LIMIT", 10000))
 DELETE_THRESHOLD = float(os.getenv("DELETE_THRESHOLD", 90)) # percentage
 
+# --- Rate Limiting Configuration for Gemini ---
+# Gemini's free tier typically allows 15 requests per minute.
+# We'll set a slightly conservative rate to be safe.
+GEMINI_RPM_LIMIT = 15
+GEMINI_TIME_WINDOW = 60 # seconds
+
 # --- Database Connection ---
 client = MongoClient(MONGO_URI)
 db = client[DB_NAME]
@@ -82,20 +80,20 @@ papers = db[PAPERS_COLL]
 working = db[WORKING_COLL]
 removed = db[REMOVED_COLL]
 
-# --- LLM System Prompt (remains unchanged as it's model-agnostic instructions) ---
+# --- LLM System Prompt ---
 SYSTEM_PROMPT = """
 Identify computer-science papers that introduce a clearly novel, reusable software-side contribution (method, algorithm, system, or technique).
 Use the title and abstract only.
 
 A paper is “yes” if all four bullets below are satisfied.
-1. It is CS-focused (AI, ML, data-science, software-eng, etc.).
+1. It is AI, ML, or data-science focused.
 2. It proposes a NEW or IMPROVED software method/algorithm/system, not just an application or benchmark.
 3. The innovation can be re-implemented without proprietary or exotic hardware.
 4. The contribution is reusable/extensible by the community.
 
 “No” papers include (but aren’t limited to):
 Surveys, dataset or benchmark descriptions, or purely empirical studies with no new software idea.
-Works that only apply existing models or tweak hyper-parameters.
+Works that only apply existing models to new datasets or tweak hyper-parameters.
 Hardware-only or hardware-dependent projects with no general-purpose software method.
 
 “Not sure” rules — be strict: choose “not sure” when ANY of the following is true
@@ -111,31 +109,58 @@ Pick X from 0–100 to reflect your confidence.
 Be concise and precise.
 """
 
+# --- Rate Limiter Class ---
+class GeminiRateLimiter:
+    def __init__(self, rpm_limit: int, time_window: int):
+        self.rpm_limit = rpm_limit
+        self.time_window = time_window
+        self.timestamps = collections.deque()
+
+    def wait_for_token(self):
+        current_time = time.time()
+
+        # Remove timestamps older than the time window
+        while self.timestamps and self.timestamps[0] <= current_time - self.time_window:
+            self.timestamps.popleft()
+
+        # If we have exceeded the limit, wait
+        if len(self.timestamps) >= self.rpm_limit:
+            wait_time = self.time_window - (current_time - self.timestamps[0])
+            if wait_time > 0:
+                # print(f"Rate limit hit. Waiting for {wait_time:.2f} seconds.") # Debugging line
+                time.sleep(wait_time)
+            # After waiting, clean up again to be sure
+            while self.timestamps and self.timestamps[0] <= time.time() - self.time_window:
+                self.timestamps.popleft()
+        
+        # Record the current request time
+        self.timestamps.append(time.time())
+
+# Initialize the rate limiter for Gemini
+gemini_rate_limiter = GeminiRateLimiter(GEMINI_RPM_LIMIT, GEMINI_TIME_WINDOW)
+
 def chunked(iterable: List[dict], n: int):
     """Yield successive n-sized chunks (tiny helper, avoids external libs)."""
     for i in range(0, len(iterable), n):
         yield iterable[i : i + n]
 
 # Regex to parse the decision and certainty from the LLM's response
-DECISION_RE = re.compile(r"^(yes|no|not sure)\b.*", re.I | re.M)  # capture whole line
+DECISION_RE = re.compile(r"^(yes|no|not sure)\b.*", re.I | re.M)
 CERT_RE     = re.compile(r"(\d+(?:\.\d+)?)\s*%")
 
 
-def fetch_unlabeled(limit: int) -> List[dict]:
+def fetch_unlabeled(limit: int) -> List[dict]: 
     """
     Return up to `limit` unlabeled documents by excluding IDs already present
     in the working or removed collections.
-    """
-    # Get distinct IDs from working and removed collections
-    # Check if collections have documents to avoid errors with empty/non-existent collections
+    """ 
     working_ids = list(working.distinct("_id")) if working.estimated_document_count() > 0 else []
     removed_ids = list(removed.distinct("_id")) if removed.estimated_document_count() > 0 else []
     skip_ids = working_ids + removed_ids
 
-    # Aggregate pipeline to find documents not in skip_ids and sample up to limit
     pipeline = [
-        {"$match": {"_id": {"$nin": skip_ids}}}, # Match documents whose _id is not in skip_ids
-        {"$sample": {"size": limit}},            # Randomly sample up to the specified limit
+        {"$match": {"_id": {"$nin": skip_ids}}},
+        {"$sample": {"size": limit}},
     ]
     return list(papers.aggregate(pipeline))
 
@@ -150,86 +175,74 @@ def build_prompt(doc: dict) -> str:
 def _call_openai_api(batch: List[dict]) -> List[str]:
     """Helper function to make API calls to OpenAI's chat completion endpoint."""
     results = []
-    # Ensure openai_client is initialized
     if openai_client is None:
         raise RuntimeError("OpenAI client not initialized.")
 
-    # Iterate through each document in the batch with a progress bar
     for doc in tqdm(batch, desc="Calling OpenAI API"):
-        for attempt in range(3): # Retry mechanism for transient network or API errors (up to 3 attempts)
+        for attempt in range(3):
             try:
-                # Call OpenAI chat completions API with system and user messages
                 resp = openai_client.create(
                     model=MODEL_NAME,
                     messages=[
-                        {"role": "system", "content": SYSTEM_PROMPT}, # System instructions
-                        {"role": "user", "content": build_prompt(doc)}, # User prompt with doc content
+                        {"role": "system", "content": SYSTEM_PROMPT},
+                        {"role": "user", "content": build_prompt(doc)},
                     ],
-                    temperature=0.01, # Low temperature for more deterministic and less creative responses
-                    max_tokens=200,   # Limit the length of the LLM's response
+                    temperature=0.01,
+                    max_tokens=200,
                 )
-                # Extract and store the text content from the response
                 results.append(resp.choices[0].message.content.strip())
-                break  # Break out of retry loop on successful API call
+                break
             except openai.APIError as e:
-                # Handle specific OpenAI API errors, e.g., rate limits, invalid requests
                 print(f"OpenAI API error for doc {doc.get('_id')}, attempt {attempt+1}: {e}", file=sys.stderr)
-                if attempt == 2: # If this was the last attempt, re-raise the exception
+                if attempt == 2:
                     raise e
-                time.sleep(2 ** attempt + 1) # Exponential back-off before retrying
+                time.sleep(2 ** attempt + 1) # Exponential back-off for API errors
             except Exception as e:
-                # Catch any other unexpected errors during the API call
                 print(f"An unexpected error occurred for doc {doc.get('_id')}, attempt {attempt+1}: {e}", file=sys.stderr)
                 if attempt == 2:
                     raise e
-                time.sleep(2 ** attempt + 1)
-        time.sleep(0.2)  # Small throttle between individual document API calls to avoid hitting hitting limits
+                time.sleep(2 ** attempt + 1) # Exponential back-off for other errors
 
     return results
 
 def _call_gemini_api(batch: List[dict]) -> List[str]:
     """
     Helper function to make API calls to Google Gemini's generate content endpoint
-    using the genai.Client and GenerateContentConfig for system instructions.
+    using the genai.Client and GenerateContentConfig for system instructions,
+    with built-in rate limiting.
     """
     results = []
-    # Ensure gemini_client is initialized
     if gemini_client is None:
         raise RuntimeError("Gemini client not initialized.")
 
-    # Iterate through each document in the batch with a progress bar
     for doc in tqdm(batch, desc="Calling Gemini API"):
-        for attempt in range(3): # Retry mechanism for transient network or API errors
+        # Wait for a token from the rate limiter before making the call
+        gemini_rate_limiter.wait_for_token()
+
+        for attempt in range(3):
             try:
-                # Call Gemini's generate_content API with the user prompt and a config object.
-                # The system instructions and generation parameters are passed in the config.
                 resp = gemini_client.models.generate_content(
                     model=MODEL_NAME,
-                    contents=[build_prompt(doc)], # User prompt as a list of contents
+                    contents=[build_prompt(doc)],
                     config=types.GenerateContentConfig(
-                        system_instruction=SYSTEM_PROMPT, # System instructions via config
-                        temperature=0.01, # Low temperature for more deterministic responses
-                        max_output_tokens=200, # Limit the length of the LLM's response
+                        system_instruction=SYSTEM_PROMPT,
+                        temperature=0.01,
+                        max_output_tokens=200,
                     )
                 )
-                # Check if the response contains valid text candidates
                 if resp.candidates and resp.candidates[0].content.parts:
-                    results.append(resp.text.strip()) # Extract and store the text content
-                    break # Break out of retry loop on success
+                    results.append(resp.text.strip())
+                    break
                 else:
-                    # If Gemini returns no content, log a warning and retry
-                    print(f"Gemini returned no content for doc {doc.get('_id')}.", file=sys.stderr)
+                    print(f"Gemini returned no content for doc {doc.get('_id')} after {attempt+1} attempts.", file=sys.stderr)
                     if attempt == 2:
                         raise ValueError("Gemini returned no content after multiple attempts.")
-                    time.sleep(2 ** attempt + 1)
-
+                    time.sleep(2 ** attempt + 1) # Exponential back-off before retrying
             except Exception as e:
-                # Catch any errors during the API call (e.g., network issues, invalid requests)
                 print(f"Gemini API error for doc {doc.get('_id')}, attempt {attempt+1}: {e}", file=sys.stderr)
-                if attempt == 2: # If this was the last attempt, re-raise the exception
+                if attempt == 2:
                     raise e
-                time.sleep(2 ** attempt + 1) # Exponential back-off
-        time.sleep(0.2) # Small throttle between individual document API calls
+                time.sleep(2 ** attempt + 1) # Exponential back-off for any error
 
     return results
 
@@ -244,8 +257,6 @@ def call_llm(batch: List[dict]) -> List[str]:
     elif LLM_PROVIDER == "gemini":
         return _call_gemini_api(batch)
     else:
-        # This case should ideally be caught by the initial validation at script start,
-        # but included here for defensive programming.
         raise ValueError("Invalid LLM_PROVIDER configured. Cannot call LLM.")
 
 
@@ -259,41 +270,34 @@ def parse_and_store(doc: dict, response: str):
     """
     try:
         m_dec  = DECISION_RE.search(response)
-        # Extract decision (e.g., "yes", "no", "not sure"), default to "not sure" if not found
         decision = (m_dec.group(1).lower() if m_dec else "not sure")
 
         m_cert = CERT_RE.search(response)
-        # Extract certainty percentage, default to None if not found
         certainty = float(m_cert.group(1)) if m_cert else None
 
-        # Prepare payload for MongoDB insertion/update
         payload = {
-            "_id": doc["_id"], # Use the original document's _id
+            "_id": doc["_id"],
             "title": doc.get("title"),
             "abstract": doc.get("abstract"),
             "response": response,
             "certainty": certainty,
-            "llm_provider": LLM_PROVIDER, # Record which LLM was used for this labeling
-            "model_name": MODEL_NAME,     # Record which specific model was used
+            "llm_provider": LLM_PROVIDER,
+            "model_name": MODEL_NAME,
         }
 
-        # Determine target collection based on the decision
         coll = working if decision == "yes" else removed
-        # Upsert the document: insert if _id doesn't exist, update if it does
+        print(f"Classified doc {doc['_id']} as '{decision}' with certainty {certainty}%.")
         coll.replace_one({"_id": doc["_id"]}, payload, upsert=True)
 
-        # If the document was classified as 'no' with high certainty, delete it from the source collection
         if coll is removed and certainty is not None and certainty >= DELETE_THRESHOLD:
             papers.delete_one({"_id": doc["_id"]})
             print(f"Deleted doc {doc['_id']} from '{PAPERS_COLL}' (Negative, certainty: {certainty}%)")
     except Exception as e:
-        # Log any errors during parsing or storage and exit the script
         print(f"Error processing and storing doc {doc.get('_id')}: {e}", file=sys.stderr)
-        sys.exit(1) # Exit script upon encountering a critical error
+        sys.exit(1)
 
 
 if __name__ == "__main__":
-    # Print initial configuration details for the user
     print(f"Starting paper labeling process.")
     print(f"LLM Provider: {LLM_PROVIDER.upper()}")
     print(f"Model Name: {MODEL_NAME}")
@@ -305,44 +309,38 @@ if __name__ == "__main__":
     print(f"Batch Size: {BATCH_SIZE}")
     print(f"Limit: {LIMIT}")
     print(f"Delete Threshold: {DELETE_THRESHOLD}%")
+    if LLM_PROVIDER == "gemini":
+        print(f"Gemini Rate Limit: {GEMINI_RPM_LIMIT} requests per {GEMINI_TIME_WINDOW} seconds.")
+
 
     try:
-        # Fetch documents that are yet to be labeled, up to the specified LIMIT
         docs_to_process = fetch_unlabeled(LIMIT)
         print(f"Found {len(docs_to_process)} unlabeled documents to process.")
 
         if not docs_to_process:
             print("No new documents to label. Exiting.")
-            sys.exit(0) # Exit gracefully if no documents are found
+            sys.exit(0)
 
-        # Process documents in batches as defined by BATCH_SIZE
         for idx, batch in enumerate(chunked(docs_to_process, BATCH_SIZE), 1):
-            # Call the selected LLM (OpenAI or Gemini) for the current batch of documents
             responses = call_llm(batch)
 
-            # Process each document and its corresponding LLM response
             for doc, resp in zip(batch, responses):
                 parse_and_store(doc, resp)
-                # Print a truncated response for cleaner output
                 print(f"Processed doc {doc.get('_id')}: {resp.splitlines()[0]}...")
 
-            # Provide progress update after each batch
             done = min(idx * BATCH_SIZE, len(docs_to_process))
-            if done % 20 == 0 or done == len(docs_to_process): # Print every 20 documents or when done
+            if done % 20 == 0 or done == len(docs_to_process):
                 print(f"Labeled {done}/{len(docs_to_process)} documents.")
 
         print("Labeling process completed successfully.")
 
     except RuntimeError as e:
-        # Catch configuration-related errors
         print(f"Configuration Error: {e}", file=sys.stderr)
         sys.exit(1)
     except Exception as e:
-        # Catch any unhandled general exceptions
         print(f"An unhandled error occurred: {e}", file=sys.stderr)
         sys.exit(1)
     finally:
-        # Ensure the MongoDB client connection is always closed
         if 'client' in locals() and client:
             client.close()
             print("MongoDB connection closed.")
