@@ -68,6 +68,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     // Debug logging to see what the progress object looks like
     console.log('ImplementationProgressTab: progress object:', progress);
     console.log('ImplementationProgressTab: progress.id:', progress.id);
+    console.log('ImplementationProgressTab: progress.emailSentAt:', progress.emailSentAt);
+    console.log('ImplementationProgressTab: progress.emailSentAt type:', typeof progress.emailSentAt);
 
     const handleEmailStatusUpdate = async (newStatus: EmailStatus) => {
         if (newStatus === EmailStatus.RESPONSE_RECEIVED) {
@@ -191,27 +193,6 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         }
     };
 
-    const getEmailStatusColor = (status: EmailStatus) => {
-        switch (status) {
-            case EmailStatus.NOT_SENT:
-                return '#6b7280'; // gray
-            case EmailStatus.SENT:
-                return '#f59e0b'; // amber
-            case EmailStatus.RESPONSE_RECEIVED:
-                return '#3b82f6'; // blue
-            case EmailStatus.CODE_UPLOADED:
-                return '#10b981'; // green
-            case EmailStatus.CODE_NEEDS_REFACTORING:
-                return '#f59e0b'; // amber
-            case EmailStatus.REFUSED_TO_UPLOAD:
-                return '#ef4444'; // red
-            case EmailStatus.NO_RESPONSE:
-                return '#ef4444'; // red
-            default:
-                return '#6b7280';
-        }
-    };
-
     const getNextAllowedStatuses = (currentStatus: EmailStatus): EmailStatus[] => {
         switch (currentStatus) {
             case EmailStatus.NOT_SENT:
@@ -240,20 +221,31 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         return (now.getTime() - sentDate.getTime()) >= fourWeeksInMs;
     };
 
-    const getTimeUntilNoResponse = (): { days: number; hours: number; minutes: number } | null => {
+    const getTimeUntilNoResponse = (): string | null => {
         if (!progress.emailSentAt || hasReachedNoResponseTime()) return null;
         
         const sentDate = new Date(progress.emailSentAt);
         const now = new Date();
-        const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
+        const fourWeeksInMs = 28 * 24 * 60 * 60 * 1000; // Exactly 28 days
         const timePassedMs = now.getTime() - sentDate.getTime();
         const timeRemainingMs = fourWeeksInMs - timePassedMs;
         
+        // If less than an hour remaining, don't show timer
+        if (timeRemainingMs < 60 * 60 * 1000) {
+            return null;
+        }
+        
         const days = Math.floor(timeRemainingMs / (24 * 60 * 60 * 1000));
         const hours = Math.floor((timeRemainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
-        const minutes = Math.floor((timeRemainingMs % (60 * 60 * 1000)) / (60 * 1000));
         
-        return { days, hours, minutes };
+        // Clean display - only show days if > 0, otherwise show hours
+        if (days > 0) {
+            return `${days} day${days !== 1 ? 's' : ''}`;
+        } else if (hours > 0) {
+            return `${hours} hour${hours !== 1 ? 's' : ''}`;
+        }
+        
+        return null;
     };
 
     const getStatusConfirmationMessage = (status: EmailStatus): string => {
@@ -282,6 +274,27 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                progress.emailStatus === EmailStatus.NO_RESPONSE;
     };
 
+    const getStatusDescription = (status: EmailStatus): string => {
+        switch (status) {
+            case EmailStatus.NOT_SENT:
+                return "Ready to contact the paper's authors about implementing their work";
+            case EmailStatus.SENT:
+                return "Email sent to authors. Waiting for their response within 4 weeks";
+            case EmailStatus.RESPONSE_RECEIVED:
+                return "Authors have responded! Please specify the type of response";
+            case EmailStatus.CODE_UPLOADED:
+                return "Authors published their working implementation";
+            case EmailStatus.CODE_NEEDS_REFACTORING:
+                return "Authors shared code but it needs improvement";
+            case EmailStatus.REFUSED_TO_UPLOAD:
+                return "Authors declined to share their implementation";
+            case EmailStatus.NO_RESPONSE:
+                return "No response received from authors after 4 weeks";
+            default:
+                return "";
+        }
+    };
+
     return (
         <div className="implementation-progress-view">
             <h2>Implementation Progress</h2>
@@ -294,62 +307,52 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
 
             {/* Email Status Tracker */}
             <div className="email-tracker">
-                <h3>Author Contact Status</h3>
+                <h3>Author Contact Progress</h3>
                 
-                {/* Cooldown Timer */}
-                {progress.emailStatus === EmailStatus.SENT && !hasReachedNoResponseTime() && (
-                    <div className="cooldown-timer">
-                        <h4>Waiting for Author Response</h4>
-                        <p>Status will automatically change to "No Response" if no reply is received within 4 weeks.</p>
-                        {(() => {
-                            const timeLeft = getTimeUntilNoResponse();
-                            return timeLeft ? (
-                                <div className="timer-display">
-                                    <span className="timer-value">{timeLeft.days}d {timeLeft.hours}h {timeLeft.minutes}m</span>
-                                    <span className="timer-label">until auto "No Response"</span>
-                                </div>
-                            ) : null;
-                        })()}
+                {/* Status Card */}
+                <div className="status-card">
+                    <div className="status-header">
+                        <span className="status-icon">{getEmailStatusIcon(progress.emailStatus)}</span>
+                        <div className="status-details">
+                            <h4 className="status-title">{progress.emailStatus}</h4>
+                            <p className="status-description">{getStatusDescription(progress.emailStatus)}</p>
+                        </div>
                     </div>
-                )}
-                
-                <div className="email-status-steps">
-                    {Object.values(EmailStatus).map((status) => {
-                        const isCurrentStatus = progress.emailStatus === status;
-                        const allowedNextStatuses = getNextAllowedStatuses(progress.emailStatus);
-                        const canMoveTo = allowedNextStatuses.includes(status);
-                        
-                        return (
-                            <div 
-                                key={status}
-                                className={`email-step ${isCurrentStatus ? 'active' : ''} ${canMoveTo ? 'available' : 'disabled'}`}
-                                style={{ 
-                                    color: isCurrentStatus ? getEmailStatusColor(status) : '#6b7280'
-                                }}
-                            >
-                                <div className="email-step-icon">
-                                    {getEmailStatusIcon(status)}
+                    
+                    {/* Timer for Sent status */}
+                    {progress.emailStatus === EmailStatus.SENT && !hasReachedNoResponseTime() && (
+                        <div className="timer-section">
+                            <div className="timer-info">
+                                <span className="timer-icon">⏱️</span>
+                                <div className="timer-text">
+                                    <span className="timer-label">Auto "No Response" in:</span>
+                                    <span className="timer-value">{getTimeUntilNoResponse()}</span>
                                 </div>
-                                <div className="email-step-label">{status}</div>
-                                {canMoveTo && (
-                                    <button
-                                        className="email-step-button"
-                                        onClick={() => handleEmailStatusUpdate(status)}
-                                        disabled={isUpdating}
-                                        title={`Mark as ${status}`}
-                                    >
-                                        {status === EmailStatus.RESPONSE_RECEIVED ? 
-                                            'Authors Responded' : 
-                                            `Mark as ${status}`
-                                        }
-                                    </button>
-                                )}
-                                {isCurrentStatus && (
-                                    <div className="current-status-indicator">Current</div>
-                                )}
                             </div>
-                        );
-                    })}
+                        </div>
+                    )}
+                    
+                    {/* Next Actions */}
+                    {getNextAllowedStatuses(progress.emailStatus).length > 0 && (
+                        <div className="action-section">
+                            <h5>Next Step:</h5>
+                            <div className="action-buttons">
+                                {getNextAllowedStatuses(progress.emailStatus).map((nextStatus) => (
+                                    <button
+                                        key={nextStatus}
+                                        className="action-button"
+                                        onClick={() => handleEmailStatusUpdate(nextStatus)}
+                                        disabled={isUpdating}
+                                    >
+                                        <span className="action-icon">{getEmailStatusIcon(nextStatus)}</span>
+                                        <span className="action-text">
+                                            {nextStatus === EmailStatus.RESPONSE_RECEIVED ? 'Authors Responded' : `Mark as ${nextStatus}`}
+                                        </span>
+                                    </button>
+                                ))}
+                            </div>
+                        </div>
+                    )}
                 </div>
             </div>
 
@@ -396,8 +399,10 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                                 disabled={isUpdating}
                             >
                                 <div className="response-icon">✅</div>
-                                <div className="response-title">Code Uploaded</div>
-                                <div className="response-description">Authors published their working implementation</div>
+                                <div className="response-content">
+                                    <div className="response-title">Code Uploaded</div>
+                                    <div className="response-description">Authors published their working implementation</div>
+                                </div>
                             </button>
                             <button 
                                 className="response-option code-needs-work"
@@ -405,8 +410,10 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                                 disabled={isUpdating}
                             >
                                 <div className="response-icon">🔧</div>
-                                <div className="response-title">Code Needs Refactoring</div>
-                                <div className="response-description">Authors shared code but it needs improvement</div>
+                                <div className="response-content">
+                                    <div className="response-title">Code Needs Refactoring</div>
+                                    <div className="response-description">Authors shared code but it needs improvement</div>
+                                </div>
                             </button>
                             <button 
                                 className="response-option refused"
@@ -414,8 +421,10 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                                 disabled={isUpdating}
                             >
                                 <div className="response-icon">❌</div>
-                                <div className="response-title">Refused to Upload</div>
-                                <div className="response-description">Authors declined to share their implementation</div>
+                                <div className="response-content">
+                                    <div className="response-title">Refused to Upload</div>
+                                    <div className="response-description">Authors declined to share their implementation</div>
+                                </div>
                             </button>
                         </div>
                         <div className="modal-actions">

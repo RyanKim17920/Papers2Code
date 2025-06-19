@@ -2,7 +2,7 @@
 
 .implementation-progress-view {
   padding: 20px;
-  max-width: 800px;
+  max-width: 900px;
   margin: 0 auto;
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
@@ -27,7 +27,7 @@
   border: 1px solid #fcc;
   color: #c33;
   padding: 12px;
-  border-radius: 6px;
+  border-radius: 8px;
   margin-bottom: 20px;
   font-size: 14px;
 }
@@ -35,97 +35,425 @@
 /* Email Tracker Section */
 .email-tracker {
   margin-bottom: 32px;
-  padding: 20px;
-  background-color: #f8f9fa;
-  border-radius: 8px;
+}
+
+/* Status Card */
+.status-card {
+  background: linear-gradient(135deg, #ffffff 0%, #f8f9fa 100%);
   border: 1px solid #e9ecef;
+  border-radius: 12px;
+  padding: 24px;
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.05), 0 1px 3px rgba(0, 0, 0, 0.1);
+  margin-bottom: 24px;
 }
 
-.email-status-steps {
-  display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+.status-header {
+  display: flex;
+  align-items: flex-start;
   gap: 16px;
-  margin-top: 16px;
+  margin-bottom: 20px;
 }
 
-.email-step {
+.status-icon {
+  font-size: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 56px;
+  height: 56px;
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  border-radius: 12px;
+  border: 2px solid #dee2e6;
+}
+
+.status-details {
+  flex: 1;
+}
+
+.status-title {
+  margin: 0 0 8px 0;
+  font-size: 20px;
+  font-weight: 600;
+  color: #1a1a1a;
+}
+
+.status-description {
+  margin: 0;
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+/* Timer Section */
+.timer-section {
+  background: linear-gradient(135deg, #fff3cd 0%, #fef5e7 100%);
+  border: 1px solid #faebcd;
+  border-radius: 8px;
+  padding: 16px;
+  margin-bottom: 20px;
+}
+
+.timer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timer-icon {
+  font-size: 20px;
+}
+
+.timer-text {
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 16px;
-  border: 2px solid #e5e7eb;
-  border-radius: 8px;
-  transition: all 0.2s ease;
-}
-
-.email-step.active {
-  border-color: #3b82f6;
-  background-color: #eff6ff;
-}
-
-.email-step.available {
-  border-color: #d1d5db;
-}
-
-.email-step.available:hover {
-  border-color: #3b82f6;
-  background-color: #f9fafb;
-}
-
-.email-step-icon {
-  font-size: 24px;
-  margin-bottom: 8px;
-}
-
-.email-step-label {
-  font-weight: 500;
-  text-align: center;
-  margin-bottom: 8px;
-  font-size: 14px;
-}
-
-/* Cooldown Timer */
-.cooldown-timer {
-    background-color: #fef3c7;
-    border: 1px solid #f59e0b;
-    border-radius: 8px;
-    padding: 16px;
-    margin-bottom: 20px;
-}
-
-.cooldown-timer h4 {
-    margin: 0 0 8px 0;
-    color: #92400e;
-    font-size: 16px;
-}
-
-.cooldown-timer p {
-    margin: 0 0 12px 0;
-    color: #78350f;
-    font-size: 14px;
-}
-
-.timer-display {
-    display: flex;
-    align-items: center;
-    gap: 8px;
-}
-
-.timer-value {
-    background-color: #f59e0b;
-    color: white;
-    padding: 4px 12px;
-    border-radius: 20px;
-    font-weight: bold;
-    font-size: 14px;
 }
 
 .timer-label {
-    color: #78350f;
-    font-size: 14px;
+  font-size: 13px;
+  color: #856404;
+  margin-bottom: 2px;
 }
 
-/* Confirmation Modal */
+.timer-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #533f03;
+}
+
+/* Action Section */
+.action-section {
+  border-top: 1px solid #e9ecef;
+  padding-top: 20px;
+}
+
+.action-section h5 {
+  margin: 0 0 12px 0;
+  font-size: 14px;
+  font-weight: 600;
+  color: #495057;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.action-buttons {
+  display: flex;
+  gap: 12px;
+  flex-wrap: wrap;
+}
+
+.action-button {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 20px;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.action-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.action-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+.action-icon {
+  font-size: 16px;
+}
+
+.action-text {
+  font-size: 14px;
+}
+
+/* Progress Timeline */
+.progress-timeline {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+}
+
+.progress-timeline h5 {
+  margin: 0 0 16px 0;
+  font-size: 16px;
+  font-weight: 600;
+  color: #495057;
+}
+
+.timeline-items {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.timeline-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 12px;
+  padding: 12px;
+  border-radius: 8px;
+  transition: background-color 0.2s ease;
+}
+
+.timeline-item.completed {
+  background-color: #d1edff;
+  border-left: 3px solid #007bff;
+}
+
+.timeline-item.current {
+  background-color: #fff3cd;
+  border-left: 3px solid #ffc107;
+}
+
+.timeline-item.upcoming {
+  background-color: #f8f9fa;
+  border-left: 3px solid #dee2e6;
+}
+
+.timeline-dot {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  background: white;
+  border: 2px solid #dee2e6;
+}
+
+.timeline-item.completed .timeline-dot {
+  background: #007bff;
+  border-color: #007bff;
+}
+
+.timeline-item.current .timeline-dot {
+  background: #ffc107;
+  border-color: #ffc107;
+}
+
+.timeline-icon {
+  font-size: 14px;
+}
+
+.timeline-item.completed .timeline-icon,
+.timeline-item.current .timeline-icon {
+  filter: brightness(0) invert(1);
+}
+
+.timeline-content {
+  flex: 1;
+}
+
+.timeline-title {
+  display: block;
+  font-weight: 600;
+  color: #495057;
+  margin-bottom: 4px;
+  font-size: 14px;
+}
+
+.timeline-description {
+  display: block;
+  color: #6c757d;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+/* Legacy styles for backward compatibility */
+.auto-timer {
+  background: linear-gradient(135deg, #fff3cd 0%, #fef5e7 100%);
+  border: 1px solid #faebcd;
+  border-radius: 8px;
+  padding: 16px;
+  margin: 16px 0;
+}
+
+.timer-info {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.timer-text {
+  font-size: 14px;
+  color: #856404;
+  font-weight: 500;
+}
+
+.timer-value {
+  font-size: 16px;
+  font-weight: 600;
+  color: #533f03;
+}
+
+.next-actions {
+  margin-top: 16px;
+}
+
+.next-action-button {
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
+  color: white;
+  border: none;
+  padding: 12px 20px;
+  border-radius: 8px;
+  font-weight: 500;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.next-action-button:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.next-action-button:disabled {
+  background: #6c757d;
+  cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
+}
+
+/* GitHub Repository Section */
+.github-repo-section {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 24px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 24px;
+}
+
+.github-repo-field {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.github-repo-field label {
+  font-weight: 600;
+  color: #495057;
+  font-size: 14px;
+}
+
+.github-repo-input {
+  padding: 12px 16px;
+  border: 1px solid #ced4da;
+  border-radius: 8px;
+  font-size: 14px;
+  transition: border-color 0.2s ease, box-shadow 0.2s ease;
+  background: white;
+}
+
+.github-repo-input:focus {
+  outline: none;
+  border-color: #007bff;
+  box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.github-repo-help {
+  color: #6c757d;
+  font-size: 12px;
+}
+
+/* Progress Info */
+.progress-info {
+  background: #f8f9fa;
+  border-radius: 12px;
+  padding: 20px;
+  border: 1px solid #e9ecef;
+  margin-bottom: 24px;
+}
+
+.progress-info p {
+  margin: 0 0 8px 0;
+  color: #495057;
+  font-size: 14px;
+}
+
+.progress-info p:last-child {
+  margin-bottom: 0;
+}
+
+/* Response Modal */
+.response-modal {
+  max-width: 600px;
+  width: 95%;
+  max-height: none;
+  overflow: visible;
+}
+
+.response-options {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  margin-bottom: 24px;
+  max-height: none;
+  overflow: visible;
+}
+
+.response-option {
+  display: flex;
+  align-items: flex-start;
+  gap: 16px;
+  padding: 20px;
+  background: white;
+  border: 2px solid #e9ecef;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s ease;
+  text-align: left;
+}
+
+.response-option:hover:not(:disabled) {
+  border-color: #007bff;
+  background: #f8f9fa;
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+}
+
+.response-option:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.response-icon {
+  font-size: 24px;
+  flex-shrink: 0;
+}
+
+.response-content {
+  flex: 1;
+}
+
+.response-title {
+  font-weight: 600;
+  color: #1a1a1a;
+  margin-bottom: 4px;
+  font-size: 16px;
+}
+
+.response-description {
+  color: #6c757d;
+  font-size: 14px;
+  line-height: 1.4;
+}
+
+/* Modal Styles */
 .modal-overlay {
   position: fixed;
   top: 0;
@@ -137,20 +465,27 @@
   align-items: center;
   justify-content: center;
   z-index: 1000;
+  backdrop-filter: blur(4px);
+  padding: 20px;
+  box-sizing: border-box;
 }
 
 .modal-content {
   background: white;
   padding: 24px;
-  border-radius: 8px;
+  border-radius: 12px;
   max-width: 500px;
   width: 90%;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+  max-height: 90vh;
+  overflow: visible;
 }
 
 .modal-content h3 {
   margin: 0 0 16px 0;
   color: #1f2937;
+  font-size: 20px;
+  font-weight: 600;
 }
 
 .modal-content p {
@@ -166,41 +501,49 @@
 }
 
 .btn-primary {
-  background-color: #3b82f6;
+  background: linear-gradient(135deg, #007bff 0%, #0056b3 100%);
   color: white;
   border: none;
-  padding: 10px 20px;
-  border-radius: 6px;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
 }
 
-.btn-primary:hover {
-  background-color: #2563eb;
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #0056b3 0%, #004085 100%);
+  transform: translateY(-1px);
+  box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
 }
 
 .btn-primary:disabled {
-  background-color: #9ca3af;
+  background: #6c757d;
   cursor: not-allowed;
+  transform: none;
+  box-shadow: none;
 }
 
 .btn-secondary {
-  background-color: #f3f4f6;
-  color: #374151;
-  border: 1px solid #d1d5db;
-  padding: 10px 20px;
-  border-radius: 6px;
+  background: #f8f9fa;
+  color: #495057;
+  border: 1px solid #ced4da;
+  padding: 12px 24px;
+  border-radius: 8px;
   cursor: pointer;
   font-weight: 500;
+  transition: all 0.2s ease;
 }
 
-.btn-secondary:hover {
-  background-color: #e5e7eb;
+.btn-secondary:hover:not(:disabled) {
+  background: #e9ecef;
+  border-color: #adb5bd;
 }
 
 .btn-secondary:disabled {
-  background-color: #f9fafb;
-  color: #9ca3af;
+  background: #f8f9fa;
+  color: #6c757d;
   cursor: not-allowed;
 }
 
@@ -210,17 +553,58 @@
     padding: 16px;
   }
   
-  .email-status-steps {
-    grid-template-columns: 1fr;
+  .status-card {
+    padding: 20px;
   }
   
-  .email-step {
-    padding: 12px;
+  .status-header {
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 12px;
   }
   
-  .github-repo-section,
-  .email-tracker,
-  .progress-info {
+  .status-icon {
+    width: 48px;
+    height: 48px;
+    font-size: 24px;
+  }
+  
+  .action-buttons {
+    flex-direction: column;
+  }
+  
+  .action-button {
+    justify-content: center;
+  }
+  
+  .response-options {
+    gap: 8px;
+  }
+  
+  .response-option {
     padding: 16px;
   }
+  
+  .modal-overlay {
+    padding: 10px;
+  }
+  
+  .modal-content {
+    width: 100%;
+    max-width: none;
+    max-height: 95vh;
+    overflow-y: auto;
+  }
+  
+  .response-modal {
+    width: 100%;
+    max-width: none;
+  }
+}
+
+/* Remove old unused styles */
+.email-status-steps,
+.email-step,
+.cooldown-timer {
+  display: none; /* Hide old components */
 }
