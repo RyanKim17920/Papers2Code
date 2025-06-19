@@ -32,7 +32,6 @@ export interface Paper {
     isImplementableVotes: number; // from implementable_votes (was optional)
     implementabilityStatus: 'Voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'; // DO NOT CHANGE
     isImplementable: boolean; // from is_implementable (computed field in backend)
-
     implementationProgress?: ImplementationProgress; // ADDED
 }
 

@@ -33,7 +33,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         error,
         updateError,
         activeTab,
-        setActiveTab,
+        setActiveTab, 
         handleUpvote,
         handleImplementabilityVote,
         handleSetImplementabilityStatus,
@@ -55,7 +55,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         effortActionError,
         updateImplementationProgress // Added from usePaperDetail hook (will be implemented next)
     } = usePaperDetail(paperId, currentUser);
-
+    console.log(paper)
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
 
     const handleSetActiveTab = (tab: string) => {
@@ -73,10 +73,20 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         setShowStartEffortConfirmModal(true); // Show the confirmation modal
     };
 
-    const confirmAndStartEffort = () => {
-        handleInitiateJoinImplementationEffort(); // Call the function from the hook
-        setShowStartEffortConfirmModal(false);    // Close modal
-        window.location.reload(); // Without reloading the page is broken for some reason
+    const confirmAndStartEffort = async () => { // Make async
+        if (!paperId || !currentUser) { // Add guard clause
+            console.warn("Paper ID or user not available for initiating implementation effort.");
+            alert("You must be logged in to perform this action.");
+            setShowStartEffortConfirmModal(false); // Close modal on error too
+            return;
+        }
+        try {
+            await handleInitiateJoinImplementationEffort(); // Call the function from the hook
+            // No need to manually set isCurrentUserContributor, it will be derived from refreshed paper data
+        } finally {
+            setShowStartEffortConfirmModal(false);    // Close modal regardless of success or failure of the call
+            await loadPaperAndActions(); // Re-fetch paper data to update UI
+        }
     };
 
     // New handler for implementation progress changes
@@ -115,27 +125,27 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             <ImplementabilityNotice paper={paper} />
 
             {/* --- Community Implementation Effort Section --- */}
-            {/* MODIFIED: Added '&& paper.implementationProgress' to ensure this section only shows when implementationProgress exists */}
-            {currentUser && paper && !isCurrentUserContributor && paper.implementationProgress && (
+            {currentUser && paper && (
                 <div className="implementation-effort-section">
                     <h4>Community Implementation Progress</h4>
-                    {/* This inner condition will always be true now due to the parent, but kept for clarity */}
                     {paper.implementationProgress ? (
-                        <>
-                            <p>A community effort to implement this paper is active or has been initiated.</p>
-                            {/* Button to View or Join Effort */}
-                            <button 
-                                onClick={handleInitiateImplementationEffort} 
-                                className="button-secondary" 
-                                disabled={isProcessingEffortAction} 
-                            >
-                                View or Join Effort
-                            </button>
-                        </>
+                        // Effort exists
+                        isCurrentUserContributor ? (
+                            <p>You are contributing to this paper&apos;s implementation. <Link to="#" onClick={(e) => { e.preventDefault(); setActiveTab('implementationProgress'); }}>View Progress</Link></p>
+                        ) : (
+                            <>
+                                <p>A community effort to implement this paper is active or has been initiated.</p>
+                                <button 
+                                    onClick={handleInitiateImplementationEffort} 
+                                    className="button-secondary" 
+                                    disabled={isProcessingEffortAction} 
+                                >
+                                    View or Join Effort
+                                </button>
+                            </>
+                        )
                     ) : (
-                        // This 'else' block should ideally not be reached if the outer condition requires paper.implementationProgress
-                        // However, to be safe and cover unexpected states, we can leave a fallback or a simplified message.
-                        // For now, this block is effectively dead code due to the outer condition.
+                        // No effort exists yet
                         <>
                             <p>Be the first to lead or join a community effort to implement this paper!</p>
                             <button 

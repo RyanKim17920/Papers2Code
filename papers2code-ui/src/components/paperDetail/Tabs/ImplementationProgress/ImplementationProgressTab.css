@@ -1,126 +1,226 @@
+/* Implementation Progress Tab Styles */
 
-.implementation-progress-container {
-  font-family: sans-serif;
+.implementation-progress-view {
+  padding: 20px;
+  max-width: 800px;
+  margin: 0 auto;
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
 }
 
-.card {
-  border: 1px solid #ddd;
-  border-radius: 0.25rem;
-  box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+.implementation-progress-view h2 {
+  margin: 0 0 24px 0;
+  font-size: 24px;
+  font-weight: 600;
+  color: #1a1a1a;
 }
 
-.card-header {
+.implementation-progress-view h3 {
+  margin: 0 0 16px 0;
+  font-size: 18px;
+  font-weight: 500;
+  color: #333;
+}
+
+/* Error Message */
+.error-message {
+  background-color: #fee;
+  border: 1px solid #fcc;
+  color: #c33;
+  padding: 12px;
+  border-radius: 6px;
+  margin-bottom: 20px;
+  font-size: 14px;
+}
+
+/* Email Tracker Section */
+.email-tracker {
+  margin-bottom: 32px;
+  padding: 20px;
   background-color: #f8f9fa;
-  padding: 0.75rem 1.25rem;
-  border-bottom: 1px solid #ddd;
-  font-weight: bold;
+  border-radius: 8px;
+  border: 1px solid #e9ecef;
 }
 
-.card-body {
-  padding: 1.25rem;
+.email-status-steps {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+  gap: 16px;
+  margin-top: 16px;
 }
 
-.editable-field {
-  padding: 8px;
-  margin-bottom: 10px;
-  border-radius: 4px;
-  transition: background-color 0.2s ease-in-out;
+.email-step {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  padding: 16px;
+  border: 2px solid #e5e7eb;
+  border-radius: 8px;
+  transition: all 0.2s ease;
 }
 
-.editable-field.view {
-  cursor: pointer;
+.email-step.active {
+  border-color: #3b82f6;
+  background-color: #eff6ff;
 }
 
-.editable-field.view:hover {
-  background-color: #f0f0f0;
+.email-step.available {
+  border-color: #d1d5db;
 }
 
-.editable-field .edit-icon {
-  margin-left: 8px;
-  font-size: 0.8em;
-  color: #007bff;
-  visibility: hidden; /* Hidden by default */
+.email-step.available:hover {
+  border-color: #3b82f6;
+  background-color: #f9fafb;
 }
 
-.editable-field.view:hover .edit-icon {
-  visibility: visible; /* Show on hover */
+.email-step-icon {
+  font-size: 24px;
+  margin-bottom: 8px;
 }
 
-.editable-field input[type="text"],
-.editable-field textarea {
-  width: calc(100% - 100px); /* Adjust based on button sizes */
-  padding: 6px;
-  margin-right: 5px;
-  border: 1px solid #ccc;
-  border-radius: 4px;
+.email-step-label {
+  font-weight: 500;
+  text-align: center;
+  margin-bottom: 8px;
+  font-size: 14px;
 }
 
-.editable-field textarea {
-  min-height: 60px;
+/* Cooldown Timer */
+.cooldown-timer {
+    background-color: #fef3c7;
+    border: 1px solid #f59e0b;
+    border-radius: 8px;
+    padding: 16px;
+    margin-bottom: 20px;
 }
 
-.editable-field .save-btn,
-.editable-field .cancel-btn {
-  padding: 6px 10px;
-  border: none;
-  border-radius: 4px;
-  cursor: pointer;
-  margin-left: 5px;
+.cooldown-timer h4 {
+    margin: 0 0 8px 0;
+    color: #92400e;
+    font-size: 16px;
 }
 
-.editable-field .save-btn {
-  background-color: #28a745;
-  color: white;
+.cooldown-timer p {
+    margin: 0 0 12px 0;
+    color: #78350f;
+    font-size: 14px;
 }
 
-.editable-field .cancel-btn {
-  background-color: #dc3545;
-  color: white;
+.timer-display {
+    display: flex;
+    align-items: center;
+    gap: 8px;
 }
 
-.placeholder-text {
-  color: #888;
-  font-style: italic;
+.timer-value {
+    background-color: #f59e0b;
+    color: white;
+    padding: 4px 12px;
+    border-radius: 20px;
+    font-weight: bold;
+    font-size: 14px;
 }
 
-.implementation-step-view .card-header select {
-  font-size: 0.9rem;
+.timer-label {
+    color: #78350f;
+    font-size: 14px;
 }
 
-/* Basic Bootstrap-like styling for form elements if not using Bootstrap */
-.form-select {
-  display: block;
-  width: 100%;
-  padding: .375rem 2.25rem .375rem .75rem;
-  font-size: 1rem;
-  font-weight: 400;
+/* Confirmation Modal */
+.modal-overlay {
+  position: fixed;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 1000;
+}
+
+.modal-content {
+  background: white;
+  padding: 24px;
+  border-radius: 8px;
+  max-width: 500px;
+  width: 90%;
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.15);
+}
+
+.modal-content h3 {
+  margin: 0 0 16px 0;
+  color: #1f2937;
+}
+
+.modal-content p {
+  margin: 0 0 24px 0;
+  color: #6b7280;
   line-height: 1.5;
-  color: #212529;
-  background-color: #fff;
-  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%23343a40' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
-  background-repeat: no-repeat;
-  background-position: right .75rem center;
-  background-size: 16px 12px;
-  border: 1px solid #ced4da;
-  border-radius: .25rem;
-  appearance: none;
 }
 
-.form-select-sm {
-  padding-top: .25rem;
-  padding-bottom: .25rem;
-  padding-left: .5rem;
-  font-size: .875rem;
+.modal-actions {
+  display: flex;
+  gap: 12px;
+  justify-content: flex-end;
 }
 
-.w-auto {
-  width: auto !important;
+.btn-primary {
+  background-color: #3b82f6;
+  color: white;
+  border: none;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
 }
 
-.mb-2 { margin-bottom: 0.5rem !important; }
-.mb-3 { margin-bottom: 1rem !important; }
-.mb-4 { margin-bottom: 1.5rem !important; }
-.p-3 { padding: 1rem !important; }
-.d-flex { display: flex !important; }
-.justify-content-between { justify-content: space-between !important; }
-.align-items-center { align-items: center !important; }
+.btn-primary:hover {
+  background-color: #2563eb;
+}
+
+.btn-primary:disabled {
+  background-color: #9ca3af;
+  cursor: not-allowed;
+}
+
+.btn-secondary {
+  background-color: #f3f4f6;
+  color: #374151;
+  border: 1px solid #d1d5db;
+  padding: 10px 20px;
+  border-radius: 6px;
+  cursor: pointer;
+  font-weight: 500;
+}
+
+.btn-secondary:hover {
+  background-color: #e5e7eb;
+}
+
+.btn-secondary:disabled {
+  background-color: #f9fafb;
+  color: #9ca3af;
+  cursor: not-allowed;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+  .implementation-progress-view {
+    padding: 16px;
+  }
+  
+  .email-status-steps {
+    grid-template-columns: 1fr;
+  }
+  
+  .email-step {
+    padding: 12px;
+  }
+  
+  .github-repo-section,
+  .email-tracker,
+  .progress-info {
+    padding: 16px;
+  }
+}

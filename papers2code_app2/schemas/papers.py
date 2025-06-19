@@ -20,7 +20,8 @@ ImplementabilityStatusType = Literal[
     "Community Not Implementable",
     "Community Implementable",
     "Admin Not Implementable",
-    "Admin Implementable"
+    "Admin Implementable",
+    "Waiting for Author Response"
 ]
 
 # --- Base Models for Paper Representation ---

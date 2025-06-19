@@ -1,235 +1,48 @@
 from typing import List, Optional
-
 from datetime import datetime, timezone
 from enum import Enum
-
-from pydantic import (
-    BaseModel,
-    Field,
-    ConfigDict,
-    AnyUrl,
-)
+from pydantic import BaseModel, Field
 
 from .db_models import PyObjectId, _MongoModel
 from .shared import camel_case_config
 
 # -----------------------------------------------------------------------------
-# Enums
+# Simplified Enums
 # -----------------------------------------------------------------------------
-class AuthorOutreachStatus(str, Enum):  
-    NOT_INITIATED = "Not Initiated"
-    CONTACT_SENT = "Contact Initiated - Awaiting Response"
-    RESPONSE_APPROVED = "Response Received - Approved Proceeding"
-    RESPONSE_DECLINED = "Response Received - Declined Proceeding"
-    RESPONSE_OWN_CODE = "Response Received - Provided Own Code"
-    NO_RESPONSE = "No Response - Grace Period Ended"
-
-
-class ComponentCategory(str, Enum): 
-    CORE = "core"
-    ADDON = "addon"
-
-
-class ComponentStatus(str, Enum):  
-    TO_DO = "To Do"
-    IN_PROGRESS = "In Progress"
-    COMPLETED = "Completed"
-    BLOCKED = "Blocked"
-    SKIPPED = "Skipped"
-
-
-class ProgressStatus(str, Enum):
-    JUST_CREATED = "Just Created"  # New status
-    AUTHOR_OUTREACH_PENDING = "Author Outreach Pending"
-    AUTHOR_CONTACT_INITIATED = "Author Contact Initiated"
-    ROADMAP_DEFINITION = "Roadmap Definition"
-    IMPLEMENTATION_ACTIVE = "Implementation Active"
-    IMPLEMENTATION_PAUSED = "Implementation Paused"
-    REVIEW_READY = "Review Ready"
-    COMPLETED = "Completed"
-    ABANDONED = "Abandoned"
-
+class EmailStatus(str, Enum):  
+    NOT_SENT = "Not Sent"
+    SENT = "Sent"
+    RESPONSE_RECEIVED = "Response Received"
+    CODE_UPLOADED = "Code Uploaded"
+    CODE_NEEDS_REFACTORING = "Code Needs Refactoring"
+    REFUSED_TO_UPLOAD = "Refused to Upload"
+    NO_RESPONSE = "No Response"
 
 # -----------------------------------------------------------------------------
-# Author‑outreach sub‑docs (shortened names)
-# -----------------------------------------------------------------------------
-class ContactLog(BaseModel): 
-    date_initiated: Optional[datetime] = None
-    method: Optional[str] = None
-    recipient: Optional[str] = None
-    response_deadline: Optional[datetime] = None
-
-    model_config = camel_case_config
-
-
-class AuthResponse(BaseModel): 
-    date_received: Optional[datetime] = None
-    summary: Optional[str] = None
-    can_proceed: Optional[bool] = None
-
-    model_config = camel_case_config
-
-
-class EmailGuide(BaseModel): 
-    subject: str = "Inquiry about code for your paper"
-    body: str = "Dear Dr. …"
-    notes: str = "Replace placeholders such as {Paper Title}."
-
-    model_config = camel_case_config
-
-
-class AuthorOutreach(BaseModel):  
-    status: AuthorOutreachStatus = Field(default=AuthorOutreachStatus.NOT_INITIATED)
-    first_contact: ContactLog = Field(default_factory=ContactLog)
-    author_response: AuthResponse = Field(default_factory=AuthResponse)
-    email_guidance: EmailGuide = Field(default_factory=EmailGuide)
-
-    model_config = camel_case_config
-
-
-# -----------------------------------------------------------------------------
-# Road‑map 
-# -----------------------------------------------------------------------------
-class Component(_MongoModel):
-    name: str
-    description: Optional[str] = None
-    category: ComponentCategory = Field(default=ComponentCategory.CORE)
-    status: ComponentStatus = Field(default=ComponentStatus.TO_DO)
-    steps: List[str] = Field(default_factory=list)
-    notes: Optional[str] = None
-    order: int
-
-    model_config = camel_case_config
-
-
-class ComponentUpdate(BaseModel):
-    name: Optional[str] = None
-    description: Optional[str] = None
-    category: Optional[ComponentCategory] = None
-    status: Optional[ComponentStatus] = None
-    steps: Optional[List[str]] = None
-    notes: Optional[str] = None
-    order: Optional[int] = None
-    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True, **camel_case_config)
-
-
-class Section(_MongoModel): 
-    title: str
-    description: Optional[str] = None
-    order: int
-    is_default: bool = False
-    components: List[Component] = Field(default_factory=list)
-    model_config = camel_case_config
-
-
-class Roadmap(BaseModel):
-    repository_url: Optional[AnyUrl] = None
-    overall_progress: int = Field(0, ge=0, le=100)
-    sections: List[Section] = Field(default_factory=list)
-    model_config = camel_case_config
-
-
-# -----------------------------------------------------------------------------
-# Implementation progress
+# Simplified Implementation Progress
 # -----------------------------------------------------------------------------
 class ImplementationProgress(_MongoModel):
-    paper_id: PyObjectId
-    status: ProgressStatus = Field(default=ProgressStatus.AUTHOR_OUTREACH_PENDING) # Default if not set by .new()
+    # Note: _id will be the paper_id (ObjectId)
     initiated_by: PyObjectId
     contributors: List[PyObjectId] = Field(default_factory=list)
-    author_outreach: AuthorOutreach = Field(default_factory=AuthorOutreach)
-    implementation_roadmap: Roadmap = Field(default_factory=Roadmap)
+    email_status: EmailStatus = Field(default=EmailStatus.NOT_SENT)
+    email_sent_at: Optional[datetime] = None  # When the email was sent (for cooldown)
+    github_repo_id: Optional[str] = None  # GitHub repository ID/name
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @classmethod
     def new(cls, paper_id: PyObjectId, user_id: PyObjectId) -> 'ImplementationProgress':
         return cls(
-            paper_id=paper_id,
+            _id=paper_id,  # Use _id directly instead of id
             initiated_by=user_id,
             contributors=[user_id],
-            status=ProgressStatus.JUST_CREATED,  # Use new default status
-            implementation_roadmap=Roadmap(sections=create_default_sections()),
+            email_status=EmailStatus.NOT_SENT,
         )
+    
     model_config = camel_case_config
-
 
 class ProgressUpdate(BaseModel):  
-    status: Optional[ProgressStatus] = None
-    implementation_roadmap: Optional[Roadmap] = None
+    email_status: Optional[EmailStatus] = None
+    github_repo_id: Optional[str] = None
     model_config = camel_case_config
-
-
-# -----------------------------------------------------------------------------
-# Defaults helper (uses new names)
-# -----------------------------------------------------------------------------
-def create_default_sections() -> List[Section]:
-    core = Section(
-        title="Core Functionalities",
-        description="Bare minimum to reproduce the paper’s main result.",
-        order=1,
-        is_default=True,
-        components=[
-            Component(
-                name="Quick‑start Environment",
-                order=1,
-                steps=[
-                    "Create requirements.txt / environment.yml",
-                    "Add install instructions to README",
-                ],
-            ),
-            Component(
-                name="Core Model / Algorithm",
-                order=2,
-                steps=["Implement forward pass", "Unit‑test on toy data"],
-            ),
-            Component(
-                name="Minimal Train & Eval",
-                order=3,
-                steps=["Run once", "Compare metric to paper"],
-            ),
-        ],
-    )
-
-    addon = Section(
-        title="Add‑on Functionalities",
-        description="Nice extras volunteers can add if they have time.",
-        order=2,
-        is_default=True,
-        components=[
-            Component(
-                name="Small Improvement / Extension",
-                category=ComponentCategory.ADDON,
-                order=1,
-                steps=["e.g. extra loss term"],
-            ),
-            Component(
-                name="Tiny Visualization Notebook",
-                category=ComponentCategory.ADDON,
-                order=2,
-                steps=["Plot one key figure"],
-            ),
-            Component(
-                name="Pre‑trained Checkpoint",
-                category=ComponentCategory.ADDON,
-                order=3,
-                steps=["Save weights", "Upload to repo"],
-            ),
-        ],
-    )
-    return [core, addon]
-
-
-# Rebuild models to resolve any forward references
-def rebuild_implementation_models():
-    """Rebuild implementation progress models to resolve forward references."""
-    try:
-        ImplementationProgress.model_rebuild()
-        Component.model_rebuild()
-        Section.model_rebuild()
-    except Exception:
-        # If rebuild fails, continue anyway
-        pass
-
-# Call rebuild when module is imported
-rebuild_implementation_models()

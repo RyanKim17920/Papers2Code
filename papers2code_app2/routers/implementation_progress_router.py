@@ -1,13 +1,11 @@
 import logging
 from fastapi import APIRouter, Depends, HTTPException, status
 from typing import Optional
-from pydantic import BaseModel
 
 from ..schemas.implementation_progress import (
     ImplementationProgress, 
-    ComponentUpdate,
-    Component, 
-    ProgressStatus 
+    ProgressUpdate,
+    EmailStatus
 )
 from ..services.implementation_progress_service import ImplementationProgressService
 from ..dependencies import get_implementation_progress_service
@@ -31,6 +29,7 @@ async def join_or_create_implementation_progress(
     current_user: UserInDBMinimalSchema = Depends(get_current_user),
     service: ImplementationProgressService = Depends(get_implementation_progress_service)
 ):
+    """Join or create implementation progress for a paper."""
     try:
         progress = await service.join_or_create_progress(paper_id, str(current_user.id))
         return progress
@@ -44,6 +43,7 @@ async def get_implementation_progress_for_paper(
     paper_id: str,
     service: ImplementationProgressService = Depends(get_implementation_progress_service)
 ):
+    """Get implementation progress for a specific paper."""
     try:
         progress = await service.get_progress_by_paper_id(paper_id)
         if not progress:
@@ -55,86 +55,38 @@ async def get_implementation_progress_for_paper(
 
 @router.get("/{progress_id}", response_model=ImplementationProgress)
 @handle_service_errors
-async def get_implementation_progress_by_id_route(
+async def get_implementation_progress_by_id(
     progress_id: str,
     service: ImplementationProgressService = Depends(get_implementation_progress_service)
 ):
+    """Get implementation progress by ID."""
     try:
         progress = await service.get_progress_by_id(progress_id)
         if not progress:
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=f"Implementation progress with ID {progress_id} not found.")
         return progress
     except Exception as e:
-        logger.error(f"Error in get_implementation_progress_by_id_route: {e}", exc_info=True)
+        logger.error(f"Error in get_implementation_progress_by_id: {e}", exc_info=True)
         if isinstance(e, NotFoundException):
             raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
 
-@router.post("/{progress_id}/sections/{section_id}/components", response_model=ImplementationProgress, status_code=status.HTTP_201_CREATED)
+@router.put("/paper/{paper_id}", response_model=ImplementationProgress)
 @handle_service_errors
-async def add_component_to_progress_section(
-    progress_id: str,
-    section_id: str, 
-    component_data: Component, 
+async def update_implementation_progress_by_paper_id(
+    paper_id: str,
+    update_data: ProgressUpdate,
     current_user: UserInDBMinimalSchema = Depends(get_current_user),
     service: ImplementationProgressService = Depends(get_implementation_progress_service)
 ):
+    """Update implementation progress (email status and/or GitHub repo) by paper ID."""
     try:
-        progress = await service.add_component_to_progress(progress_id, str(current_user.id), component_data, section_id)
-        return progress
-    except Exception as e:
-        logger.error(f"Error in add_component_to_progress_section: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
-
-@router.put("/{progress_id}/sections/{section_id}/components/{component_id}", response_model=ImplementationProgress)
-@handle_service_errors
-async def update_component_in_progress_section(
-    progress_id: str,
-    section_id: str, 
-    component_id: str,
-    component_data: ComponentUpdate, 
-    current_user: UserInDBMinimalSchema = Depends(get_current_user),
-    service: ImplementationProgressService = Depends(get_implementation_progress_service)
-):
-    try:
-        progress = await service.update_component_in_progress(progress_id, section_id, component_id, str(current_user.id), component_data)
-        return progress
-    except Exception as e:
-        logger.error(f"Error in update_component_in_progress_section: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
-
-@router.delete("/{progress_id}/sections/{section_id}/components/{component_id}", response_model=ImplementationProgress)
-@handle_service_errors
-async def remove_component_from_progress_section(
-    progress_id: str,
-    section_id: str, 
-    component_id: str,
-    current_user: UserInDBMinimalSchema = Depends(get_current_user),
-    service: ImplementationProgressService = Depends(get_implementation_progress_service)
-):
-    try:
-        progress = await service.remove_component_from_progress(progress_id, section_id, component_id, str(current_user.id))
-        return progress
-    except Exception as e:
-        logger.error(f"Error in remove_component_from_progress_section: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
-
-class ProgressStatusUpdatePayload(BaseModel):
-    new_status: ProgressStatus
-
-@router.put("/{progress_id}/status", response_model=ImplementationProgress)
-@handle_service_errors
-async def update_progress_status_endpoint(
-    progress_id: str,
-    payload: ProgressStatusUpdatePayload,
-    current_user: UserInDBMinimalSchema = Depends(get_current_user),
-    service: ImplementationProgressService = Depends(get_implementation_progress_service)
-):
-    try:
-        progress = await service.update_progress_status(progress_id, str(current_user.id), payload.new_status)
+        progress = await service.update_progress_by_paper_id(paper_id, str(current_user.id), update_data)
         return progress
     except ValueError as e:
         raise HTTPException(status_code=status.HTTP_422_UNPROCESSABLE_ENTITY, detail=str(e))
+    except NotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
     except Exception as e:
-        logger.error(f"Error in update_progress_status_endpoint: {e}", exc_info=True)
+        logger.error(f"Error in update_implementation_progress_by_paper_id: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")

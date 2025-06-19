@@ -1,6 +1,6 @@
 // src/services/api.ts
 import { Paper, AdminSettableImplementabilityStatus } from '../types/paper';
-import type { ImplementationProgress } from '../types/implementation';
+import type { ImplementationProgress, ProgressUpdate } from '../types/implementation';
 import type { PaperActionUserProfile, UserProfile } from '../types/user'; // Added UserProfile import
 import { getCsrfToken } from './auth';
 import { API_BASE_URL, PAPERS_API_PREFIX } from './config';
@@ -287,8 +287,8 @@ export const joinOrCreateImplementationProgress = async (
 // --- NEW: Function to update implementation progress ---
 export const updateImplementationProgressInApi = async (
   paperId: string,
-  progressData: ImplementationProgress
-): Promise<Paper> => {
+  progressData: ProgressUpdate
+): Promise<ImplementationProgress> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/implementation-progress/paper/${paperId}`;
 
   const csrfToken = getCsrfToken();
@@ -302,15 +302,15 @@ export const updateImplementationProgressInApi = async (
   }
 
   const response = await fetch(url, {
-    method: 'PUT', // Assuming PUT for updates
+    method: 'PUT',
     headers: headers,
     body: JSON.stringify(progressData),
     credentials: 'include',
   });
 
-  // The backend is expected to return the updated Paper document
-  const updatedPaper = await handleApiResponse<Paper>(response);
-  return updatedPaper;
+  // The backend returns the updated ImplementationProgress
+  const updatedProgress = await handleApiResponse<ImplementationProgress>(response);
+  return updatedProgress;
 };
 // --- End NEW ---
 

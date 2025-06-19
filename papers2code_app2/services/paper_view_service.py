@@ -55,19 +55,37 @@ class PaperViewService:
         # Fetch and attach implementation progress
         implementation_progress_collection = await get_implementation_progress_collection_async()
         try:
-            query_filter = {"paperId": paper_id} # No matter what DO NOT CHANGE THIS LINE I SWEAR
-            #self.logger.info(f"Service: Using query filter: {query_filter}")
-
-            progress_document = await implementation_progress_collection.find_one(query_filter)
+            # Updated: Now we search by _id since the implementation progress document's _id is the paper_id
+            try:
+                paper_obj_id = ObjectId(paper_id)
+                # First try with ObjectId
+                query_filter = {"_id": paper_obj_id}
+                self.logger.info(f"Service: Using ObjectId query filter: {query_filter}")
+                progress_document = await implementation_progress_collection.find_one(query_filter)
+                
+                # If not found with ObjectId, try with string (backward compatibility)
+                if not progress_document:
+                    query_filter = {"_id": paper_id}
+                    self.logger.info(f"Service: Using string query filter: {query_filter}")
+                    progress_document = await implementation_progress_collection.find_one(query_filter)
+            except Exception:
+                # If ObjectId conversion fails, just try with string
+                query_filter = {"_id": paper_id}
+                self.logger.info(f"Service: Using string query filter: {query_filter}")
+                progress_document = await implementation_progress_collection.find_one(query_filter)
             
-            #self.logger.info(f"Service: Result of find_one for paper_id '{paper_id}': {progress_document}")
+            self.logger.info(f"Service: Result of find_one for paper_id '{paper_id}': {progress_document}")
             if progress_document:
-                # paper["implementationProgress"] will be this raw dictionary.
-                # Pydantic (in PaperResponse model which includes ImplementationProgress)
-                # will parse this. The ImplementationProgress schema has paper_id: PyObjectId,
-                # which should handle converting the string paper_id from progress_document
-                # into an ObjectId within the model instance.
-                paper["implementationProgress"] = progress_document
+                # Convert the raw document to a proper ImplementationProgress model
+                # This ensures that the _id field is converted to id and all other fields are properly validated
+                from ..schemas.implementation_progress import ImplementationProgress
+                progress_model = ImplementationProgress(**progress_document)
+                # Use model_dump() without by_alias to get proper field names, then ensure id is included
+                progress_dict = progress_model.model_dump()
+                progress_dict['id'] = str(progress_model.id)  # Ensure id is a string
+                self.logger.info(f"Service: Progress model ID: {progress_model.id}")
+                self.logger.info(f"Service: Progress dict: {progress_dict}")
+                paper["implementationProgress"] = progress_dict
             else:
                 paper["implementationProgress"] = None
         except PyMongoError as e:
