@@ -1,0 +1,559 @@
+/* SettingsPage.css - Matching App.css design scheme */
+
+/* Main Page Container */
+.settings-page {
+  min-height: calc(100vh - 120px);
+  width: 100%;
+  position: relative;
+  overflow-x: hidden;
+}
+
+/* Background pattern similar to App.css */
+.settings-page::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.3;
+  background-image: 
+    radial-gradient(var(--gradient-accent) 1px, transparent 1px),
+    radial-gradient(var(--gradient-accent) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+  z-index: -1;
+}
+
+/* Subtle accent gradient */
+.settings-page::after {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200px;
+  background: linear-gradient(180deg, 
+    rgba(25, 124, 154, 0.03) 0%,
+    rgba(25, 124, 154, 0) 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+/* Settings Container */
+.settings-container {
+  max-width: var(--content-max-width);
+  margin: 0 auto;
+  padding: 40px 35px;
+  width: 100%;
+  box-sizing: border-box;
+}
+
+/* Page Header */
+.settings-header {
+  margin-bottom: 40px;
+  text-align: left;
+}
+
+.settings-title {
+  color: var(--text-heading-color) !important;
+  font-weight: 700 !important;
+  margin-bottom: 8px !important;
+  font-size: 2.5rem !important;
+}
+
+.settings-subtitle {
+  color: var(--text-muted-color) !important;
+  font-size: 1.1rem !important;
+  font-weight: 400 !important;
+  opacity: 0.9;
+}
+
+
+
+/* Settings Section */
+/* Settings Section */
+.settings-section {
+  background-color: var(--card-background-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: var(--box-shadow-md);
+  margin-bottom: 30px;
+  padding: 30px;
+  border: 1px solid var(--border-color);
+  position: relative;
+  overflow: visible !important; /* This is the line causing the issue */
+  transition: all 0.3s ease;
+  margin-top:20px;
+}
+
+.settings-section::before {
+  content: '';
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  bottom: 0;
+  border-radius: var(--border-radius-lg); /* Match the parent */
+  box-shadow: var(--box-shadow-md);
+  transition: all 0.3s ease;
+  z-index: -1; /* Place it behind the content */
+}
+
+.settings-section:hover::before {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+
+.settings-section:hover {
+  box-shadow: 0 8px 20px rgba(0, 0, 0, 0.08);
+  transform: translateY(-2px);
+}
+
+/* Section Header */
+.settings-section-header {
+  margin-bottom: 24px;
+  padding-bottom: 12px;
+  border-bottom: 2px solid var(--border-color);
+}
+
+.settings-section-title {
+  color: var(--text-heading-color) !important;
+  font-weight: 600 !important;
+  font-size: 1.25rem !important;
+  margin: 0 !important;
+}
+/* GitHub Info Card */
+.github-info-card {
+  background: linear-gradient(135deg, 
+    var(--primary-light-color) 0%, 
+    rgba(var(--primary-rgb), 0.08) 100%);
+  border: 1px solid rgba(var(--primary-rgb), 0.15);
+  border-radius: var(--border-radius-md);
+  padding: 20px;
+  margin-bottom: 30px;
+  position: relative;
+  overflow: hidden;
+}
+
+.github-info-card::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--primary-color) 0%, var(--primary-hover-color) 100%);
+}
+
+.github-info-header {
+  margin-bottom: 12px;
+}
+
+.github-info-label {
+  color: var(--text-muted-color) !important;
+  font-weight: 600 !important;
+  text-transform: uppercase;
+  font-size: 0.75rem !important;
+  letter-spacing: 0.5px;
+}
+
+.github-info-content {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 16px;
+}
+
+.github-username {
+  color: var(--text-color) !important;
+  font-size: 0.95rem !important;
+  font-weight: 500 !important;
+}
+
+/* GitHub Edit Button */
+.btn-github-edit {
+  background-color: var(--card-background-color) !important;
+  color: var(--primary-color) !important;
+  border-color: var(--primary-color) !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  padding: 8px 16px !important;
+  border-radius: var(--border-radius-sm) !important;
+  transition: all 0.2s ease !important;
+  font-size: 0.875rem !important;
+}
+
+.btn-github-edit:hover {
+  background-color: var(--primary-color) !important;
+  color: var(--text-on-primary) !important;
+  transform: translateY(-1px);
+  box-shadow: var(--box-shadow-sm);
+}
+
+/* Profile Form */
+.profile-form {
+  width: 100%;
+}
+
+.form-grid {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 24px;
+  margin-bottom: 30px;
+  overflow: visible !important;
+  
+}
+
+.form-field {
+  display: flex;
+  flex-direction: column;
+  overflow:visible !important;
+}
+.form-field * {
+  overflow: visible !important;
+}
+.form-field-full {
+  grid-column: 1 / -1;
+}
+
+/* Settings Input Styling */
+.settings-input .MuiOutlinedInput-root {
+  background-color: var(--card-background-color);
+  border-radius: var(--border-radius-md) !important;
+  transition: all 0.2s ease;
+}
+
+.settings-input .MuiOutlinedInput-root:hover .MuiOutlinedInput-notchedOutline {
+  border-color: var(--primary-color) !important;
+}
+
+.settings-input .MuiInputLabel-root[data-shrink="true"] {
+  background-color: var(--card-background-color);
+  padding: 0 4px;
+}
+
+.settings-input .MuiOutlinedInput-root.Mui-focused .MuiOutlinedInput-notchedOutline {
+  border-color: var(--primary-color) !important;
+  border-width: 2px !important;
+}
+
+.settings-input .MuiInputLabel-root {
+  font-weight: 500 !important;
+  color: var(--text-muted-color) !important;
+}
+
+.settings-input .MuiInputLabel-root.Mui-focused {
+  color: var(--primary-color) !important;
+}
+
+.settings-input .MuiFormHelperText-root {
+  font-size: 0.75rem !important;
+  color: var(--text-muted-color) !important;
+  margin-top: 6px !important;
+  font-weight: 400 !important;
+}
+
+/* Alert Messages */
+.settings-alert {
+  padding: 16px 20px;
+  border-radius: var(--border-radius-md);
+  margin: 20px 0;
+  font-weight: 500;
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.settings-alert-success {
+  background-color: var(--success-light-color);
+  color: var(--success-dark-color);
+  border: 1px solid var(--success-color);
+}
+
+.settings-alert-error {
+  background-color: var(--danger-light-color);
+  color: var(--danger-text-color);
+  border: 1px solid var(--danger-color);
+}
+
+/* Form Actions */
+.form-actions {
+  display: flex;
+  justify-content: flex-start;
+  padding-top: 20px;
+  border-top: 1px solid var(--border-color);
+}
+
+/* Save Profile Button */
+.btn-save-profile {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark-color) 100%) !important;
+  color: var(--text-on-primary) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  padding: 12px 28px !important;
+  border-radius: var(--border-radius-md) !important;
+  box-shadow: var(--box-shadow-sm) !important;
+  transition: all 0.3s ease !important;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-save-profile::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: -100%;
+  width: 100%;
+  height: 100%;
+  background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.2), transparent);
+  transition: left 0.5s ease;
+}
+
+.btn-save-profile:hover::before {
+  left: 100%;
+}
+
+.btn-save-profile:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-hover-color) 0%, var(--primary-dark-color) 100%) !important;
+  transform: translateY(-2px);
+  box-shadow: 0 8px 16px rgba(var(--primary-rgb), 0.25) !important;
+}
+
+.btn-save-profile:disabled {
+  background: var(--secondary-light-color) !important;
+  color: var(--text-muted-color) !important;
+  transform: none !important;
+  box-shadow: none !important;
+}
+
+/* Coming Soon Section */
+.coming-soon-notice {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 20px;
+  background: linear-gradient(135deg, 
+    var(--secondary-light-color) 0%, 
+    rgba(var(--secondary-rgb), 0.08) 100%);
+  border-radius: var(--border-radius-md);
+  border: 1px solid var(--border-color);
+}
+
+.coming-soon-text {
+  color: var(--text-muted-color) !important;
+  font-style: italic;
+  font-size: 0.95rem !important;
+}
+
+.coming-soon-badge {
+  background: linear-gradient(135deg, var(--warning-color) 0%, #f39c12 100%);
+  color: var(--warning-text-color);
+  padding: 6px 12px;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.8rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+/* Danger Zone */
+.danger-zone {
+  border-color: var(--danger-color) !important;
+  background: linear-gradient(135deg, 
+    var(--card-background-color) 0%, 
+    rgba(var(--danger-rgb, 220, 53, 69), 0.02) 100%) !important;
+}
+
+.danger-zone::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 4px;
+  height: 100%;
+  background: linear-gradient(180deg, var(--danger-color) 0%, var(--danger-dark-color) 100%);
+}
+
+.danger-title {
+  color: var(--danger-color) !important;
+}
+
+.danger-divider {
+  border-color: var(--danger-color) !important;
+  opacity: 0.3;
+  margin: 16px 0 24px 0 !important;
+}
+
+/* Account Actions */
+.account-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 24px;
+}
+
+.account-action {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.danger-warning {
+  color: var(--danger-text-color);
+  font-size: 0.9rem;
+  font-weight: 500;
+  padding: 12px 16px;
+  background-color: var(--danger-light-color);
+  border-radius: var(--border-radius-sm);
+  border-left: 4px solid var(--danger-color);
+}
+
+/* Logout Button */
+.btn-logout {
+  background-color: transparent !important;
+  color: var(--text-muted-color) !important;
+  border: 2px solid var(--secondary-color) !important;
+  font-weight: 500 !important;
+  text-transform: none !important;
+  padding: 10px 24px !important;
+  border-radius: var(--border-radius-md) !important;
+  transition: all 0.3s ease !important;
+  align-self: flex-start;
+}
+
+.btn-logout:hover {
+  background-color: var(--secondary-color) !important;
+  color: var(--text-on-secondary) !important;
+  transform: translateY(-1px);
+}
+
+/* Delete Account Button */
+.btn-delete-account {
+  background: linear-gradient(135deg, var(--danger-color) 0%, var(--danger-dark-color) 100%) !important;
+  color: var(--text-on-dark) !important;
+  font-weight: 600 !important;
+  text-transform: none !important;
+  padding: 12px 24px !important;
+  border-radius: var(--border-radius-md) !important;
+  transition: all 0.3s ease !important;
+  align-self: flex-start;
+  position: relative;
+  overflow: hidden;
+}
+
+.btn-delete-account:hover {
+  background: linear-gradient(135deg, var(--danger-dark-color) 0%, #a71d2a 100%) !important;
+  transform: translateY(-1px);
+  box-shadow: 0 8px 16px rgba(var(--danger-rgb, 220, 53, 69), 0.25);
+}
+
+/* Loading State */
+.loading-state {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  min-height: 300px;
+  gap: 16px;
+}
+
+.loading-spinner {
+  color: var(--primary-color) !important;
+}
+
+.loading-text {
+  color: var(--text-muted-color) !important;
+  font-size: 1rem !important;
+  font-weight: 500 !important;
+}
+
+/* Responsive Design */
+@media (max-width: 1024px) {
+  .settings-container {
+    padding: 30px 25px;
+  }
+  
+  .form-grid {
+    grid-template-columns: 1fr;
+    gap: 20px;
+  }
+  
+  .form-field-full {
+    grid-column: 1;
+  }
+}
+
+@media (max-width: 768px) {
+  .settings-container {
+    padding: 20px 15px;
+  }
+  
+  .settings-section {
+    padding: 20px;
+    margin-bottom: 20px;
+    margin-top:20px;
+  }
+  
+  .settings-title {
+    font-size: 2rem !important;
+  }
+  
+  .settings-subtitle {
+    font-size: 1rem !important;
+  }
+  
+  .github-info-content {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .btn-github-edit {
+    width: 100%;
+    justify-content: center;
+  }
+  
+  .form-grid {
+    gap: 16px;
+  }
+  
+  .coming-soon-notice {
+    flex-direction: column;
+    gap: 12px;
+    text-align: center;
+  }
+  
+  .account-actions {
+    gap: 16px;
+  }
+  
+  .btn-logout,
+  .btn-delete-account,
+  .btn-save-profile {
+    width: 100% !important;
+    justify-content: center !important;
+  }
+}
+
+@media (max-width: 480px) {
+  .settings-container {
+    padding: 15px 10px;
+  }
+  
+  .settings-section {
+    padding: 15px;
+  }
+  
+  .settings-title {
+    font-size: 1.75rem !important;
+  }
+  
+  .github-info-card {
+    padding: 15px;
+  }
+  
+  .form-grid {
+    gap: 12px;
+  }
+}

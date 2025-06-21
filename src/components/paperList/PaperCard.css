@@ -1,0 +1,307 @@
+.paper-card {
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  padding: 20px 25px;
+  background: linear-gradient(
+    to bottom right,
+    rgb(0, 72, 90, .01) 0%,
+    rgba(0, 72, 90, 0.15) 100%
+  );
+  box-shadow: var(--box-shadow-sm);
+  transition: box-shadow 0.25s ease-in-out, transform 0.25s ease-in-out;
+  display: flex;
+  flex-direction: column;
+  /* Adjust height slightly if needed, or keep fixed */
+  height: 300px; /* Increased height slightly for actions */
+  flex-basis: calc(33.333% - 20px);
+  flex-grow: 0;
+  flex-shrink: 0;
+  min-width: 300px;
+  box-sizing: border-box;
+  overflow-y:hidden;
+}
+/* Card hover effect with gradient */
+.paper-card:hover {
+  box-shadow: var(--box-shadow-md);
+  transform: translateY(-4px);
+  border-color: rgba(25, 124, 154, 0.2);
+}
+
+
+/* Title area with fixed height */
+.paper-card h3 {
+  margin: 0 0 15px 0;
+  font-size: 1.15em;
+  font-weight: 600;
+  line-height: 1.4;
+  color: var(--text-heading-color);
+  /* Fixed height for title - allows for 2 lines */
+  height: 4.2em;
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  -webkit-box-orient: vertical;
+}
+
+.paper-card h3 a {
+  text-decoration: none;
+  color: inherit;
+}
+
+.paper-card h3 a:hover {
+  color: var(--primary-color);
+}
+
+/* Meta content section with fixed positioning */
+.card-meta-content {
+  display: flex;
+  flex-direction: column;
+  flex-grow: 1; /* Allows this section to push actions down */
+  justify-content: flex-start; /* Align items top */
+}
+
+/* Top meta section - contains authors */
+.card-meta-top {
+  margin-bottom: 10px;
+}
+
+/* Bottom meta section - contains date and status */
+.card-meta-bottom {
+  margin-bottom: 15px;
+}
+
+.paper-card .authors,
+.paper-card .date,
+.paper-card  {
+  font-size: 0.87em;
+  color: var(--text-muted-color);
+  margin: 0 0 5px 0;
+  line-height: 1.5;
+}
+
+
+
+.paper-card .authors {
+  font-weight: 400;
+  /* If authors text is too long, add ellipsis */
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.paper-card .date,
+.paper-card  {
+  font-weight: 500;
+}
+
+.paper-card .details-link {
+  /* display: block; */ /* No longer block */
+  /* width: auto; */ /* No longer fixed width */
+  /* margin: 0; */ /* No longer centered */
+  padding: 6px 12px; /* Slightly smaller padding */
+  background-color: var(--primary-light-color); /* Lighter background */
+  color: var(--primary-color); /* Primary text color */
+  text-decoration: none;
+  border-radius: var(--border-radius-md);
+  font-size: 0.85em; /* Slightly smaller font */
+  font-weight: 500;
+  text-align: center;
+  transition: background-color 0.2s ease, box-shadow 0.2s ease, color 0.2s ease;
+  border: 1px solid var(--primary-color); /* Add border */
+  /* margin-top: 0; */ /* No longer needed */
+}
+
+.status {
+  display: inline-flex; /* Use flex to align symbol and text */
+  align-items: center; /* Vertically center */
+  gap: 5px; /* Space between symbol and text */
+  padding: 4px 10px; /* Adjusted padding */
+  border-radius: var(--border-radius-md); /* Slightly more rounded */
+  font-size: 0.8em;
+  font-weight: 500;
+  /* line-height: 1.2; /* Remove specific line-height, rely on flex alignment */
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-left: 10px;
+  border: 1px solid transparent; /* Base border */
+  white-space: nowrap; /* Prevent text wrapping which might cause overflow */
+  overflow: hidden; /* Hide any potential overflow */
+  vertical-align: middle; /* Helps alignment when used inline with other text */
+}
+
+.status-symbol {
+  font-size: 0.9em; /* Adjust symbol size relative to text */
+  flex-shrink: 0; /* Prevent symbol from shrinking */
+}
+
+.status-text {
+  /* Text specific styles if needed */
+  overflow: hidden; /* Hide overflow on text specifically if needed */
+  text-overflow: ellipsis; /* Add ellipsis if text is too long */
+}
+
+
+/* Default/Needs Code/Other Statuses */
+.status-default,
+.status-needs-code,
+.status-unknown { /* Added .status-unknown here */
+  background-color: #f8f9fa; /* Very light grey */
+  color: #6c757d; /* Muted text */
+  border-color: #dee2e6; /* Light border */
+}
+
+/* Not Started Status */
+.status-not-started {
+  background-color: #e9ecef; /* Slightly darker light grey */
+  color: #495057; /* Darker muted text */
+  border-color: #ced4da; /* Grey border */
+}
+
+/* Started Status */
+.status-started {
+  background-color: #d1ecf1; /* Light cyan/blue */
+  color: #0c5460; /* Dark cyan/blue text */
+  border-color: #bee5eb; /* Softer cyan/blue border */
+}
+
+/* Waiting for Author Response Status */
+.status-waiting-author {
+  background-color: #fff3cd; /* Light yellow/orange */
+  color: #856404; /* Dark yellow/orange text */
+  border-color: #ffeeba; /* Softer yellow/orange border */
+}
+
+/* In Progress */
+.status-in-progress {
+  background-color: #e7f3ff; /* Lighter blue */
+  color: #0056b3; /* Darker blue text */
+  border-color: #b8daff; /* Softer blue border */
+}
+
+/* Completed */
+.status-completed {
+  background-color: #e6f9f0; /* Lighter green */
+  color: #198754; /* Darker green text */
+  border-color: #a3e9c1; /* Softer green border */
+}
+
+/* Non-Implementable Status */
+.status-non-implementable {
+  background-color: #fff5f5; /* Lighter red */
+  color: #c82333; /* Darker red text */
+  border-color: #f5c6cb; /* Softer red border */
+  font-weight: 600; /* Slightly bolder */
+}
+
+/* Official Code Status */
+.status-official-code {
+  background-color: #c8e6c9; /* Light Green for official code */
+  color: #2e7d32; /* Dark Green text */
+}
+
+/* Not Started Disputed Status */
+.status-not-started-disputed {
+  background-color: #fff59d; /* Light Yellow for disputed */
+  color: #f57f17; /* Dark Yellow/Orange text */
+  border: 1px solid #f57f17; /* Add a border to make it stand out */
+}
+
+.paper-card .details-link:hover {
+  background-color: var(--primary-color); /* Darker on hover */
+  color: var(--text-on-primary); /* White text on hover */
+  text-decoration: none;
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.card-actions {
+  display: flex;
+  justify-content: space-between; /* Space out votes and details link */
+  align-items: center;
+  margin-top: auto; /* Pushes actions to the bottom */
+  padding-top: 10px; /* Add a little space above actions */
+  border-top: 1px solid var(--border-color); /* Separator line */
+}
+.vote-section {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative; /* For error tooltip positioning */
+}
+
+.vote-button {
+  background: none;
+  border: none;
+  padding: 5px;
+  cursor: pointer;
+  color: var(--text-muted-color); /* Default icon color */
+  transition: color 0.2s ease, transform 0.1s ease;
+  display: flex; /* Align icon properly */
+  align-items: center;
+  justify-content: center;
+}
+
+.vote-button:focus {
+  outline: none;
+  box-shadow: none; /* Also remove any potential focus box-shadow if needed */
+}
+
+.vote-button:hover:not(:disabled) {
+  color: var(--primary-color); /* Hover color */
+}
+
+.vote-button.active {
+  color: var(--primary-color); /* Active color */
+}
+
+.vote-button:disabled {
+  cursor: not-allowed;
+  opacity: 0.6;
+}
+
+.vote-button svg {
+  display: block; /* Prevent extra space below icon */
+}
+
+.upvote-count {
+  font-size: 0.9em;
+  font-weight: 600;
+  color: var(--text-color);
+  min-width: 20px; /* Ensure space for count */
+  text-align: left;
+}
+
+/* Simple tooltip for vote errors */
+.vote-error-tooltip {
+    position: absolute;
+    bottom: 110%; /* Position above the button */
+    left: 50%;
+    transform: translateX(-50%);
+    background-color: var(--danger-color);
+    color: white;
+    padding: 4px 8px;
+    border-radius: var(--border-radius-sm);
+    font-size: 0.8em;
+    white-space: nowrap;
+    z-index: 10;
+    opacity: 0.9;
+}
+/* Responsive Adjustments */
+@media (max-width: 1100px) {
+  .paper-card {
+    flex-basis: calc(50% - 15px);
+  }
+}
+@media (max-width: 680px) {
+  .paper-card {
+    flex-basis: 100%;
+    min-width: unset;
+    height: auto; /* Allow height to adjust on mobile */
+  }
+  .card-actions {
+      flex-direction: column; /* Stack actions vertically */
+      align-items: flex-start; /* Align left */
+      gap: 10px; /* Add gap between stacked items */
+  }
+  .paper-card .details-link {
+      align-self: stretch; /* Make button full width */
+      text-align: center;
+  }
+}

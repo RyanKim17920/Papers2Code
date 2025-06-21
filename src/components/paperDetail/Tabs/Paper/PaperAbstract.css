@@ -1,0 +1,13 @@
+/* c:\Users\ilove\CODING\Papers-2-code\papers2code-ui\src\components\PaperDetailComponents\PaperAbstract.css */
+.paper-abstract {
+  margin-top: 30px;
+  margin-bottom: 30px; /* Standardized bottom margin */
+  line-height: 1.75; /* More line height for abstract */
+  color: var(--text-color);
+}
+.paper-abstract h3 {
+    margin-bottom: 15px;
+    color: var(--text-heading-color);
+    font-size: 1.5em; /* Adjust size */
+    font-weight: 600;
+}

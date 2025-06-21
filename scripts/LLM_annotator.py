@@ -68,9 +68,8 @@ LIMIT = int(os.getenv("LIMIT", 10000))
 DELETE_THRESHOLD = float(os.getenv("DELETE_THRESHOLD", 90)) # percentage
 
 # --- Rate Limiting Configuration for Gemini ---
-# Gemini's free tier typically allows 15 requests per minute.
 # We'll set a slightly conservative rate to be safe.
-GEMINI_RPM_LIMIT = 15
+GEMINI_RPM_LIMIT = 10
 GEMINI_TIME_WINDOW = 60 # seconds
 
 # --- Database Connection ---

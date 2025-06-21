@@ -1,0 +1,71 @@
+/* c:\Users\ilove\CODING\Papers-2-code\papers2code-ui\src\components\PaperDetailComponents\VotingButtons.css */
+/* --- Voting Buttons (Consolidated) --- */
+.vote-button { /* General style for reuse */
+    display: inline-flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px; /* Slightly larger padding */
+    border: 1px solid var(--border-color);
+    border-radius: var(--border-radius-md);
+    background-color: var(--button-secondary-bg);
+    color: var(--button-secondary-text);
+    cursor: pointer;
+    transition: all 0.2s ease;
+    font-size: 0.95em;
+    font-weight: 500;
+}
+.vote-button:hover:not(:disabled) {
+    background-color: var(--button-secondary-hover-bg);
+    border-color: #adb5bd;
+}
+.vote-button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+}
+.vote-button svg {
+    font-size: 1.1em;
+}
+.vote-button .vote-count {
+    font-weight: 600;
+    min-width: 10px; /* Ensure space for count */
+    text-align: right;
+}
+
+/* Clickable Vote Count */
+.vote-count.clickable {
+    cursor: pointer;
+    text-decoration: underline;
+    text-decoration-color: var(--text-muted-color);
+    transition: color 0.2s ease, text-decoration-color 0.2s ease;
+}
+.vote-count.clickable:hover {
+    color: var(--primary-color);
+    text-decoration-color: var(--primary-color);
+}
+
+/* Voted states */
+.vote-button.upvote-tab.voted {
+    background-color: var(--primary-light-color);
+    border-color: var(--primary-color);
+    color: var(--primary-dark-color);
+}
+
+.vote-button.thumbs-up.voted,
+.vote-button.thumbs-down.voted {
+    font-weight: 600;
+}
+.vote-button.thumbs-up.voted {
+    border-color: var(--success-color);
+    background-color: var(--success-light-color);
+    color: var(--success-dark-color);
+}
+.vote-button.thumbs-down.voted {
+    border-color: var(--danger-color);
+    background-color: var(--danger-light-color);
+    color: var(--danger-dark-color);
+}
+
+.retract-vote-button {
+    margin-left: 10px;
+    font-size: 0.9em;
+}

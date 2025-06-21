@@ -1,0 +1,320 @@
+import React, { useState } from 'react';
+import { useParams, Link } from 'react-router-dom';
+
+import { usePaperDetail } from '../common/hooks/usePaperDetail';
+import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../common/hooks/usePaperDetail';
+import type { UserProfile } from '../common/types/user';
+import type { ImplementationProgress } from '../common/types/implementation';
+
+import { LoadingSpinner } from '../common/components';
+import ConfirmationModal from '../common/components/ConfirmationModal';
+
+import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
+import PaperAbstract from '../components/paperDetail/Tabs/Paper/PaperAbstract';
+import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
+import PaperTabs from '../components/paperDetail/PaperTabs';
+import { UpvotesTab } from '../components/paperDetail/Tabs/Upvote/UpvotesTab';
+import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
+import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
+import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
+import './PaperDetailPage.css';
+
+interface PaperDetailPageProps {
+    currentUser: UserProfile | null;
+}
+
+const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
+    const { paperId } = useParams<{ paperId: string }>();
+    const [showStartEffortConfirmModal, setShowStartEffortConfirmModal] = useState<boolean>(false); // New state for the modal
+
+    const {
+        paper,
+        isLoading,
+        error,
+        updateError,
+        activeTab,
+        setActiveTab, 
+        handleUpvote,
+        handleImplementabilityVote,
+        handleSetImplementabilityStatus,
+        handleRemovePaper,
+        showConfirmRemoveModal,
+        setShowConfirmRemoveModal,
+        showConfirmStatusModal,
+        setShowConfirmStatusModal,
+        openConfirmStatusModal,
+        isRemoving,
+        isUpdatingStatus,
+        isVoting,
+        actionUsers,
+        isLoadingActionUsers,
+        actionUsersError,
+        loadPaperAndActions, 
+        handleInitiateJoinImplementationEffort, 
+        isProcessingEffortAction,          
+        effortActionError,
+        updateImplementationProgress // Added from usePaperDetail hook (will be implemented next)
+    } = usePaperDetail(paperId, currentUser);
+    console.log(paper)
+    const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
+
+    const handleSetActiveTab = (tab: string) => {
+        setActiveTab(tab as ActiveTabType);
+    };
+
+    // Modified to show confirmation modal first
+    const handleInitiateImplementationEffort = () => {
+        if (!paperId || !currentUser) {
+            console.warn("Paper ID or user not available for initiating implementation effort.");
+            // Consider using a more integrated notification system if available
+            alert("You must be logged in to perform this action.");
+            return;
+        }
+        setShowStartEffortConfirmModal(true); // Show the confirmation modal
+    };
+
+    const confirmAndStartEffort = async () => { // Make async
+        if (!paperId || !currentUser) { // Add guard clause
+            console.warn("Paper ID or user not available for initiating implementation effort.");
+            alert("You must be logged in to perform this action.");
+            setShowStartEffortConfirmModal(false); // Close modal on error too
+            return;
+        }
+        try {
+            await handleInitiateJoinImplementationEffort(); // Call the function from the hook
+            // No need to manually set isCurrentUserContributor, it will be derived from refreshed paper data
+        } finally {
+            setShowStartEffortConfirmModal(false);    // Close modal regardless of success or failure of the call
+            await loadPaperAndActions(); // Re-fetch paper data to update UI
+        }
+    };
+
+    // New handler for implementation progress changes
+    const handleImplementationProgressChange = async (updatedProgress: ImplementationProgress) => {
+        if (!paperId) return;
+        // Call the function from the hook to update local state and make API call
+        // This function will be added to usePaperDetail hook
+        await updateImplementationProgress(updatedProgress);
+        // Optionally, refetch paper data or rely on optimistic update
+        // loadPaperAndActions(); // Or a more specific refresh if available
+    };
+
+    if (isLoading) {
+        return <LoadingSpinner />;
+    }
+
+    if (error) {
+        return <div className="error-message">Error loading paper: {error}</div>;
+    }
+
+    if (!paper) {
+        return <div className="error-message">Paper not found or failed to load.</div>;
+    }
+
+    const isCurrentUserContributor = paper.implementationProgress?.contributors?.some(
+        (contributorId) => contributorId === currentUser?.id
+    );
+
+    return (
+        <div className="paper-detail-page">
+            <Link to="/papers" className="back-link">Back to List</Link>
+
+            {updateError && <div className="update-error">{updateError}</div>}
+            <h1>{paper.title}</h1>
+
+            <ImplementabilityNotice paper={paper} />
+
+            {/* --- Community Implementation Effort Section --- */}
+            {currentUser && paper && (
+                <div className="implementation-effort-section">
+                    <h4>Community Implementation Progress</h4>
+                    {paper.implementationProgress ? (
+                        // Effort exists
+                        isCurrentUserContributor ? (
+                            <p>You are contributing to this paper&apos;s implementation. <Link to="#" onClick={(e) => { e.preventDefault(); setActiveTab('implementationProgress'); }}>View Progress</Link></p>
+                        ) : (
+                            <>
+                                <p>A community effort to implement this paper is active or has been initiated.</p>
+                                <button 
+                                    onClick={handleInitiateImplementationEffort} 
+                                    className="button-secondary" 
+                                    disabled={isProcessingEffortAction} 
+                                >
+                                    View or Join Effort
+                                </button>
+                            </>
+                        )
+                    ) : (
+                        // No effort exists yet
+                        <>
+                            <p>Be the first to lead or join a community effort to implement this paper!</p>
+                            <button 
+                                onClick={handleInitiateImplementationEffort}
+                                className="button-secondary" 
+                                disabled={isProcessingEffortAction} 
+                            >
+                                Start Implementation Effort
+                            </button>
+                        </>
+                    )}
+                    {effortActionError && <div className="error-message">{effortActionError}</div>}
+                    {updateError && !effortActionError && <div className="error-message">{updateError}</div>} 
+                </div>
+            )}
+
+            <PaperTabs
+                activeTab={activeTab}
+                onSelectTab={handleSetActiveTab}
+                paper={paper}
+                isAdminView={isAdminView}
+            />
+
+            {showConfirmRemoveModal && (
+                <ConfirmationModal // Standardized to ConfirmationModal
+                    isOpen={showConfirmRemoveModal}
+                    onClose={() => setShowConfirmRemoveModal(false)}
+                    onConfirm={handleRemovePaper}
+                    title="Confirm Removal"
+                    confirmText="Remove"
+                    confirmButtonClass="button-danger"
+                    isConfirming={isRemoving}
+                >
+                    <p>Are you sure you want to remove this paper? This action cannot be undone.</p>
+                </ConfirmationModal>
+            )}
+
+            {showConfirmStatusModal.show && showConfirmStatusModal.status && (
+                <ConfirmationModal // Standardized to ConfirmationModal
+                    isOpen={showConfirmStatusModal.show}
+                    onClose={() => setShowConfirmStatusModal({ show: false, status: null })}
+                    onConfirm={() => handleSetImplementabilityStatus(showConfirmStatusModal.status!)}
+                    title="Confirm Status Change"
+                    confirmText="Confirm Status"
+                    isConfirming={isUpdatingStatus}
+                >
+                    <p>{`Are you sure you want to set the status to "${showConfirmStatusModal.status}"?`}</p>
+                </ConfirmationModal>
+            )}
+
+            <div className="tab-content">
+                {activeTab === 'paperInfo' && (
+                    <div className="tab-pane-container">
+                        <PaperMetadata paper={paper} />
+                        <PaperAbstract abstract={paper.abstract} />
+                    </div>
+                )}
+
+                {activeTab === 'upvotes' && (
+                    <UpvotesTab
+                        paper={paper}
+                        currentUser={currentUser}
+                        isVoting={isVoting}
+                        handleUpvote={handleUpvote}
+                        actionUsers={actionUsers}
+                        isLoadingActionUsers={isLoadingActionUsers}
+                        actionUsersError={actionUsersError}
+                    />
+                )}
+
+                {activeTab === 'implementability' && (
+                    <ImplementabilityVotingTab
+                        paper={paper}
+                        currentUser={currentUser}
+                        isVoting={isVoting}
+                        handleImplementabilityVote={handleImplementabilityVote}
+                        actionUsers={actionUsers}
+                        isLoadingActionUsers={isLoadingActionUsers}
+                        actionUsersError={actionUsersError}
+                    />
+                )}
+
+                {activeTab === 'admin' && isAdminView && ( // Use isAdminView here
+                    <div className="tab-pane-container">
+                        <OwnerActions
+                            paper={paper}
+                            currentUser={currentUser}
+                            onPaperUpdate={loadPaperAndActions}
+                            openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
+                            onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)} // Pass handler for new prop
+                            isUpdatingStatus={isUpdatingStatus}
+                            isRemoving={isRemoving}
+                        />
+                    </div>
+                )}
+
+                {activeTab === 'implementationProgress' && paper.implementationProgress && (
+                    <div className="tab-pane-container">
+                        <ImplementationProgressTab 
+                            progress={paper.implementationProgress} 
+                            onImplementationProgressChange={handleImplementationProgressChange} // Updated prop
+                            // onUpdateStep is no longer used by ImplementationProgressTab, can be removed if not needed elsewhere
+                        />
+                    </div>
+                )}
+            </div>
+
+            {/* New Confirmation Modal for Starting/Joining Effort */}
+            {showStartEffortConfirmModal && (
+                <ConfirmationModal
+                    isOpen={showStartEffortConfirmModal}
+                    onClose={() => setShowStartEffortConfirmModal(false)}
+                    onConfirm={confirmAndStartEffort} // Use the new wrapper function
+                    title="Confirm Start Implementation Effort"
+                    confirmText="Yes, Start Effort"
+                    isConfirming={isProcessingEffortAction} 
+                >
+                    <p>Starting an implementation effort indicates this paper is considered implementable, you will work on it, and community implementability voting will be superseded.</p>
+                    <p>Do you want to proceed?</p>
+                </ConfirmationModal>
+            )}
+
+            <ConfirmationModal
+                isOpen={showConfirmRemoveModal}
+                onClose={() => setShowConfirmRemoveModal(false)}
+                onConfirm={handleRemovePaper}
+                title="Confirm Paper Removal"
+                confirmText="Yes, Remove Paper"
+                confirmButtonClass="button-danger"
+                isConfirming={isRemoving}
+            >
+                <p>Are you sure you want to permanently remove this paper?</p>
+                <p><strong>Title:</strong> {paper.title}</p>
+                <p>This action cannot be undone.</p>
+            </ConfirmationModal>
+
+            <ConfirmationModal
+                isOpen={showConfirmStatusModal.show}
+                onClose={() => setShowConfirmStatusModal({ show: false, status: null })}
+                onConfirm={() => showConfirmStatusModal.status && handleSetImplementabilityStatus(showConfirmStatusModal.status as AdminSettableImplementabilityStatus)}
+                title={`Confirm Status: ${
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' ? 'Implementable' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' ? 'Not-Implementable' :
+                    'Revert to Voting'
+                }`}
+                confirmText={`Yes, ${
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' ? 'Confirm Implementable' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' ? 'Confirm Not-Implementable' :
+                    'Revert to Voting'
+                }`}
+                confirmButtonClass={
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' ? 'button-secondary' :
+                    (showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' ? 'button-warning' :
+                    'button-secondary'
+                }
+                isConfirming={isUpdatingStatus}
+            >
+                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Implementable' && (
+                    <p>Are you sure you want to set the status to <strong>Confirmed Implementable</strong>? Community voting will be disabled.</p>
+                )}
+                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Admin Not Implementable' && (
+                    <p>Are you sure you want to set the status to <strong>Confirmed Not-Implementable</strong>? Community voting will be disabled.</p>
+                )}
+                {(showConfirmStatusModal.status as AdminSettableImplementabilityStatus) === 'Voting' && (
+                    <p>Are you sure you want to revert to <strong>community voting</strong>? Community voting will be re-enabled.</p>
+                )}
+            </ConfirmationModal>
+        </div>
+    );
+};
+
+export default PaperDetailPage;

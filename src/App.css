@@ -1,0 +1,584 @@
+/* src/App.css */
+@import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;400;500;600;700&display=swap');
+*{
+  overflow-x:hidden;
+}
+/* Enhanced Color Palette & Variables */
+:root {
+  /* --- Primary Palette (Teal/Green focus) --- */
+  --primary-color: #197c9a; /* Teal */
+  --primary-dark-color: #0f4c6e; /* Dark Teal - ADJUSTED */
+  --primary-accent-color: #3ab0ff; /* Light Teal/Blue - ADJUSTED */
+  --primary-hover-color: #13687E; /* Darker Teal - ADJUSTED */
+  --primary-light-color: #e8f7fa; /* Very Light Teal/Blue - Slightly adjusted for better harmony */
+  --primary-rgb: 25, 124, 154; /* Added for rgba() usage */
+
+
+  --secondary-dark-color: #5a6268; /* Dark Gray - ADJUSTED */
+  --secondary-color: #6c757d; /* Medium Gray - ADJUSTED */
+  --secondary-light-color: #e9ecef; /* Light Gray - ADJUSTED */
+  --secondary-accent-color: #adb5bd; /* Neutral Gray - ADJUSTED */
+  --secondary-rgb: 108, 117, 125; /* Added for rgba() usage */
+  --secondary-accent-rgb: 173, 181, 189; /* Added for rgba() usage */
+  
+  /* --- Gradient Colors --- */
+  --gradient-start: #f9fdfe; /* Very light blue-white */
+  --gradient-middle: #f5fbfd; /* Light blue-white */
+  --gradient-end: #f0f9fa; /* Subtle teal tint */
+  --gradient-accent: rgba(var(--primary-rgb), 0.03); /* Use RGB variable */
+
+  /* --- Neutrals --- */
+  --background-color: #fdfdfe; /* Slightly off-white */
+  --card-background-color: #ffffff;
+  --header-footer-bg: #ffffff;
+  --border-color: #e9ecef; /* Lighter border */
+  --light-gray-bg: #f1f3f5;
+  --dark-color: #343a40; /* Added for dark elements */
+  
+
+  /* --- Text --- */
+  --text-color: #212529; /* Dark Gray/Soft Black */
+  --text-muted-color: #6c757d; /* Medium Gray */
+  --text-heading-color: #1a3a3a; /* Dark Teal/Gray for headings */
+  --text-on-primary: #ffffff; /* Text color for on primary background */
+  --text-on-dark: #ffffff; /* Text color for on dark background */
+  --text-on-secondary: #ffffff; /* Text color for on secondary background */
+
+
+  /* --- Status/Accent Colors --- */
+  --success-color: #28a745;
+  --success-light-color: #eafaf1; /* Added */
+  --warning-color: #ffc107;
+  --warning-light-color: #fffbeb; /* Added */
+  --warning-text-color: #5d4a00; /* Darker text for yellow bg */
+  --info-color: #17a2b8;
+  --info-light-color: #e7f6f8;   /* Added */
+  --danger-color: #dc3545;
+  --danger-light-color: #f8d7da;  /* Added */  --skipped-color: #adb5bd;      /* Added (Neutral/Skipped) */
+  --skipped-light-color: #f8f9fa; /* Added */
+
+  /* --- Additional Variables for Modal and Button System --- */
+  --border-color-light: #f8f9fa; /* Very light border */
+  --card-alt-background-color: #fafbfc; /* Alternate card background */
+  --background-alt-color: #f8f9fa; /* Alternate background */
+  --background-hover-light: rgba(var(--primary-rgb), 0.05); /* Light hover background */
+  --primary-background-medium: #d1eaff; /* Medium primary background */
+  --button-secondary-bg: #f8f9fa;
+  --button-secondary-text: var(--text-color);
+  --button-secondary-hover-bg: #e9ecef;
+  --danger-text-color: #721c24; /* Dark text for danger backgrounds */
+  --danger-dark-color: #c62828; /* Dark danger color */
+  --success-dark-color: #1f7a3b; /* Dark success color */
+  --info-text-color: #0c5460; /* Dark text for info backgrounds */
+  --info-dark-color: #117a8b; /* Dark info color */
+  --grey-color: #ccc; /* General grey */
+  --grey-light-color: #f0f0f0; /* Light grey */
+  --grey-dark-color: #555; /* Dark grey */
+
+  /* --- Shadows & Radii --- */
+  --box-shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --box-shadow-md: 0 5px 10px rgba(0,0,0,0.07);
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+
+  --content-max-width: 1400px;
+}
+
+/* Dynamic background animation */
+@keyframes gradientShift {
+  0% {
+    background-position: 0% 50%;
+  }
+  50% {
+    background-position: 100% 50%;
+  }
+  100% {
+    background-position: 0% 50%;
+  }
+}
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", "Poppins", Arial, "Noto Sans", "Liberation Sans", sans-serif, "Apple Color Emoji", "Segoe UI Emoji", "Segoe UI Symbol", "Noto Color Emoji";
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+  color: var(--text-color);
+  line-height: 1.65;
+  /* width: 100vw; <-- Remove this if present, let body size naturally */
+  /* Create subtle gradient background */
+  background: linear-gradient(135deg, 
+    var(--gradient-start) 0%, 
+    var(--gradient-middle) 50%,
+    var(--gradient-end) 100%);
+  background-size: 400% 400%;
+  animation: gradientShift 15s ease infinite;
+  overflow-x: hidden; /* Ensure body itself doesn't cause horizontal scroll */
+}
+
+/* Add subtle pattern overlay */
+.app-container::before {
+  content: "";
+  position: fixed;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 100%;
+  pointer-events: none;
+  opacity: 0.4;
+  background-image: 
+    radial-gradient(var(--gradient-accent) 1px, transparent 1px),
+    radial-gradient(var(--gradient-accent) 1px, transparent 1px);
+  background-size: 40px 40px;
+  background-position: 0 0, 20px 20px;
+  z-index: -1;
+}
+
+/* Code styling */
+code {
+  font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New',
+    monospace;
+  background-color: var(--light-gray-bg);
+  padding: 0.2em 0.4em;
+  border-radius: var(--border-radius-sm);
+  font-size: 0.9em;
+}
+
+a {
+  color: var(--primary-color);
+  text-decoration: none;
+  transition: color 0.2s ease;
+}
+a:hover {
+  color: var(--primary-hover-color);
+  text-decoration: none;
+}
+
+.app-container {
+  display: flex;
+  flex-direction: column;
+  min-height: 100vh;
+  width: 100%;
+  max-width: 100%;
+  box-sizing: border-box;
+  position: relative; /* For the pseudo-element positioning */
+}
+
+.app-header {
+  background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent */
+  padding: 12px 35px; /* Padding remains inside the max-width */
+  box-shadow: var(--box-shadow-sm);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  width: 100vw; /* Take full width up to max-width */
+  margin-left: auto; /* Center the header */
+  margin-right: auto; /* Center the header */
+  box-sizing: border-box;
+  border-bottom: 1px solid var(--border-color);
+  backdrop-filter: blur(5px); /* Adds a modern frosted glass effect */
+  -webkit-backdrop-filter: blur(5px); /* For Safari support */
+  position: sticky;
+  top: 0;
+  z-index: 1000;
+  overflow: visible; /* Allow dropdown to extend outside header */
+}
+
+.app-header .logo-link {
+  display: flex;
+  align-items: center;
+  text-decoration: none;
+}
+
+.app-logo {
+  height: 45px;
+  width: auto;
+  display: block;
+}
+
+.app-header nav a {
+  margin-left: 25px;
+  text-decoration: none;
+  color: var(--text-muted-color);
+  font-weight: 500;
+  transition: color 0.2s ease;
+}
+.app-header nav a:hover {
+  color: var(--primary-color);
+}
+
+.app-main {
+  flex-grow: 1;
+  padding: 40px 35px;
+  width: 100%;
+  box-sizing: border-box;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  position: relative; /* For potential overlays */
+  overflow-y: auto; /* Allow vertical scrolling if content overflows */
+  overflow-x: hidden; /* Prevent horizontal scrolling */
+}
+
+/* Add subtle accent gradient to main content area */
+.app-main::before {
+  content: "";
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 200px; /* Gradient fades out after this height */
+  background: linear-gradient(180deg, 
+    rgba(25, 124, 154, 0.03) 0%,
+    rgba(25, 124, 154, 0) 100%);
+  z-index: -1;
+  pointer-events: none;
+}
+
+.app-footer {
+  background-color: rgba(241, 243, 245, 0.8);
+  color: var(--text-muted-color);
+  text-align: center;
+  padding: 25px 35px;
+  margin-top: auto;
+  font-size: 0.9em;
+  border-top: 1px solid var(--border-color);
+  width: 100%;
+  box-sizing: border-box;
+  backdrop-filter: blur(5px);
+  -webkit-backdrop-filter: blur(5px);
+}
+
+/* Global Error Message Style */
+.error-message {
+  color: var(--danger-color); /* Use variable */
+  text-align: center;
+  margin: 20px auto;
+  padding: 12px 15px;
+  border: 1px solid var(--danger-color); /* Use variable */
+  background-color: var(--danger-light-color); /* Use variable */
+  border-radius: var(--border-radius-md);
+  max-width: 800px;
+  box-shadow: 0 3px 6px rgba(var(--danger-rgb, 220, 53, 69), 0.1); /* Define --danger-rgb if needed */
+}
+.error-message a {
+  color: var(--danger-color);
+  font-weight: 500;
+  text-decoration: underline;
+}
+.error-message a:hover {
+  color: #a71d2a;
+}
+
+.main-nav {
+  flex-grow: 1;
+  text-align: center;
+}
+
+
+
+.auth-section {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  position: relative; /* Needed for dropdown positioning */
+  overflow-x:visible;
+  overflow-y:visible;
+}
+
+/* Styles for User Avatar Dropdown */
+
+.user-info-container {
+  position: relative; /* Crucial for anchoring the absolute dropdown */
+  overflow-x: visible; /* Override global overflow-x: hidden to allow dropdown visibility */
+  overflow-y: visible; /* Override global overflow-y: hidden to allow dropdown visibility */
+}
+
+.user-avatar-button {
+  background-color: transparent;
+  border: none;
+  border-radius: var(--border-radius-lg);
+  padding: 4px;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.3s ease;
+}
+
+.user-avatar-button:hover {
+  transform: translateY(-2px);
+}
+
+.user-avatar-button:focus,
+.user-avatar-button:focus-visible { /* Improved focus state */
+  outline: none;
+  transform: translateY(-2px);
+}
+
+.user-avatar {
+  width: 44px;
+  height: 44px;
+  border-radius: 50%;
+  display: block; /* Ensure it behaves well within the button */
+  object-fit: cover;
+  border: 2px solid var(--border-color);
+  transition: all 0.3s ease;
+  box-shadow: var(--box-shadow-sm);
+}
+
+/* Hover effects on the avatar itself */
+.user-avatar-button:hover .user-avatar {
+  border-color: var(--primary-color);
+  box-shadow: 0 8px 16px rgba(var(--primary-rgb), 0.15);
+}
+
+.user-avatar-button:focus .user-avatar,
+.user-avatar-button:focus-visible .user-avatar {
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2), 0 8px 16px rgba(var(--primary-rgb), 0.15);
+}
+
+.user-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 15px); /* Position below the avatar button with more gap to clear header */
+  right: 0; /* Align to the right of the user-info-container */
+  background-color: var(--card-background-color);
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-lg);
+  box-shadow: 0 10px 25px rgba(0, 0, 0, 0.1), 0 5px 15px rgba(0, 0, 0, 0.05);
+  z-index: 1010; /* Ensure it's above other header elements */
+  min-width: 200px; /* Adjust as needed */
+  padding: 12px 0; /* Vertical padding for the menu */
+  opacity: 0;
+  visibility: hidden;
+  transform: translateY(-15px) scale(0.95); /* Initial state for transition */
+  transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+  max-height: 70vh; /* For internal scroll of long dropdowns */
+  overflow-y: auto;   /* For internal scroll */
+  backdrop-filter: blur(10px);
+  -webkit-backdrop-filter: blur(10px);
+}
+
+.user-dropdown-menu.open {
+  opacity: 1;
+  visibility: visible;
+  transform: translateY(0) scale(1); /* Final state for transition */
+}
+
+.dropdown-item {
+  display: block;
+  padding: 14px 20px; /* Increased padding for better touch targets */
+  color: var(--text-color);
+  text-decoration: none;
+  white-space: nowrap;
+  background-color: transparent;
+  border: none;
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+  font-size: 0.95rem;
+  font-weight: 500;
+  position: relative;
+  transition: all 0.2s ease;
+  border-left: 3px solid transparent;
+}
+
+.dropdown-item:hover,
+.dropdown-item:focus {
+  background-color: var(--primary-light-color);
+  color: var(--primary-color);
+  outline: none;
+  border-left-color: var(--primary-color);
+  transform: translateX(2px);
+}
+
+/* Specific styling for the button version of dropdown-item */
+.dropdown-item-button {
+  background: transparent; /* Remove default button background */
+  border: none;            /* Remove default button border */
+  padding: 0;              /* Padding should come from .dropdown-item class */
+  margin: 0;               /* Reset margin */
+  font: inherit;           /* Inherit font styles from parent */
+  color: inherit;          /* Inherit text color from .dropdown-item */
+  text-align: left;        /* Align text to the left */
+  width: 100%;             /* Make button take full width */
+  cursor: pointer;         /* Show pointer cursor */
+}
+
+.dropdown-item-button:hover,
+.dropdown-item-button:focus {
+  outline: none; /* Remove default browser outline if custom focus is handled by .dropdown-item */
+}
+
+/* Add a subtle separator line between menu items */
+.dropdown-item:not(:last-child)::after {
+  content: "";
+  position: absolute;
+  bottom: 0;
+  left: 20px;
+  right: 20px;
+  height: 1px;
+  background-color: var(--border-color);
+  opacity: 0.3;
+}
+
+/* Removed special styling for logout button to maintain consistency */
+
+/* Primary Button */
+.btn-primary {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark-color) 100%);
+  color: var(--text-on-primary);
+  border-color: var(--primary-color);
+}
+
+.btn-primary:hover:not(:disabled) {
+  background: linear-gradient(135deg, var(--primary-dark-color) 0%, #0a3045 100%);
+  border-color: var(--primary-dark-color);
+}
+
+/* Secondary Button */
+.btn-secondary {
+  background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+  color: var(--text-color);
+  border-color: #dee2e6;
+}
+
+.btn-secondary:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e9ecef 0%, #dee2e6 100%);
+  border-color: #adb5bd;
+}
+
+/* Danger Button */
+.btn-danger {
+  background: linear-gradient(135deg, var(--danger-color) 0%, #c82333 100%);
+  color: white;
+  border-color: var(--danger-color);
+}
+
+.btn-danger:hover:not(:disabled) {
+  background: linear-gradient(135deg, #c82333 0%, #bd2130 100%);
+  border-color: #c82333;
+}
+
+/* Success Button */
+.btn-success {
+  background: linear-gradient(135deg, var(--success-color) 0%, #1e7e34 100%);
+  color: white;
+  border-color: var(--success-color);
+}
+
+.btn-success:hover:not(:disabled) {
+  background: linear-gradient(135deg, #1e7e34 0%, #155724 100%);
+  border-color: #1e7e34;
+}
+
+/* Warning Button */
+.btn-warning {
+  background: linear-gradient(135deg, var(--warning-color) 0%, #e0a800 100%);
+  color: var(--warning-text-color);
+  border-color: var(--warning-color);
+}
+
+.btn-warning:hover:not(:disabled) {
+  background: linear-gradient(135deg, #e0a800 0%, #d39e00 100%);
+  border-color: #e0a800;
+  color: white;
+}
+
+/* Outline variants */
+.btn-outline-primary {
+  background: transparent;
+  color: var(--primary-color);
+  border-color: var(--primary-color);
+}
+
+.btn-outline-primary:hover:not(:disabled) {
+  background: var(--primary-color);
+  color: var(--text-on-primary);
+}
+
+.btn-outline-secondary {
+  background: transparent;
+  color: var(--text-color);
+  border-color: #6c757d;
+}
+
+.btn-outline-secondary:hover:not(:disabled) {
+  background: #6c757d;
+  color: white;
+}
+
+/* Link style button */
+.btn-link {
+  background: transparent;
+  color: var(--primary-color);
+  border: 2px solid transparent;
+  text-decoration: underline;
+  padding: 6px 12px;
+  min-width: unset;
+}
+
+.btn-link:hover:not(:disabled) {
+  color: var(--primary-dark-color);
+  background: rgba(var(--primary-rgb), 0.05);
+  transform: none;
+  box-shadow: none;
+}
+
+.btn-link:before {
+  display: none;
+}
+
+/* Size variants */
+.btn-sm {
+  padding: 6px 16px;
+  font-size: 0.875rem;
+  min-width: 60px;
+}
+
+.btn-lg {
+  padding: 14px 28px;
+  font-size: 1.1rem;
+  min-width: 120px;
+}
+
+/* Block button */
+.btn-block {
+  width: 100%;
+  justify-content: center;
+}
+
+/* Global spinner removal - nuclear option */
+input[type="number"]::-webkit-outer-spin-button,
+input[type="number"]::-webkit-inner-spin-button {
+  -webkit-appearance: none !important;
+  margin: 0 !important;
+  display: none !important;
+}
+
+input[type="number"] {
+  -moz-appearance: textfield !important;
+  appearance: textfield !important;
+}
+
+/* Ensure all inputs have proper overflow handling */
+input {
+  overflow: hidden;
+}
+
+/* Media queries for responsive design */
+@media (max-width: 768px) {
+  .app-header {
+    padding: 10px 20px;
+  }
+  
+  .app-main {
+    padding: 30px 20px;
+  }
+  
+  .app-main::before {
+    height: 100px; /* Smaller gradient area on mobile */
+  }
+}

@@ -1,0 +1,66 @@
+/* c:\Users\ilove\CODING\Papers-2-code\papers2code-ui\src\components\PaperDetailComponents\PaperMetadata.css */
+.paper-meta {
+  margin-bottom: 30px; /* Standardized bottom margin */
+  font-size: 0.95em;
+  line-height: 1.7;
+  color: var(--text-muted-color);
+  background-color: var(--primary-light-color); /* Use light primary bg */
+  padding: 20px 25px;
+  border-radius: var(--border-radius-md);
+  border: 1px solid #d1f3e9; /* Border matching light bg */
+}
+
+.paper-meta p {
+  margin-bottom: 10px;
+}
+.paper-meta p:last-child {
+    margin-bottom: 0;
+}
+
+.paper-meta strong {
+    color: var(--text-color);
+    margin-right: 8px; /* More space after strong tag */
+    font-weight: 500;
+}
+
+.paper-meta a {
+  color: var(--primary-color);
+  text-decoration: none;
+  font-weight: 500;
+}
+.paper-meta a:hover {
+  text-decoration: underline; /* Underline links in meta for clarity */
+  color: var(--primary-hover-color);
+}
+
+.status {
+    padding: 3px 8px;
+    border-radius: var(--border-radius-sm);
+    font-weight: 500;
+    font-size: 0.9em;
+    margin-left: 8px;
+}
+
+.status-not-started {
+    background-color: var(--grey-light-color, #f0f0f0);
+    color: var(--grey-dark-color, #555);
+    border: 1px solid var(--grey-color, #ccc);
+}
+
+.status-started, .status-waiting-author, status-in-progress {
+    background-color: var(--info-light-color, #e7f3ff);
+    color: var(--info-dark-color, #0056b3);
+    border: 1px solid var(--info-color, #007bff);
+}
+
+.status-completed, .status-official-code {
+    background-color: var(--success-light-color, #e6ffed);
+    color: var(--success-dark-color, #1f7a3b);
+    border: 1px solid var(--success-color, #28a745);
+}
+
+.status-not-implementable { /* For confirmed non-implementable */
+    background-color: var(--danger-light-color, #ffebee);
+    color: var(--danger-dark-color, #c62828);
+    border: 1px solid var(--danger-color, #e53935);
+}
