@@ -35,7 +35,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <h2>{title}</h2>
                 <div className="modal-body">
                     {children}
-                </div>
+                </div> 
                 <div className="modal-actions">
                     <button
                         className={`btn ${confirmButtonClass}`}
