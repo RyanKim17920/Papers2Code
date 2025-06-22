@@ -1,5 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
 import { ImplementationProgress, EmailStatus } from '../../../../common/types/implementation';
+import ConfirmationModal from '../../../../common/components/ConfirmationModal';
+import Modal from '../../../../common/components/Modal';
 import './ImplementationProgressTab.css';
 
 interface ImplementationProgressProps {
@@ -18,20 +20,21 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [pendingStatus, setPendingStatus] = useState<EmailStatus | null>(null);
     const [showResponseModal, setShowResponseModal] = useState(false);
+    const [isEditingRepo, setIsEditingRepo] = useState(false);
+    const [showContributorsModal, setShowContributorsModal] = useState(false);
 
     // Update local state when progress changes
     useEffect(() => {
         setGithubRepoValue(progress.githubRepoId || '');
     }, [progress.githubRepoId]);
 
-    // Check for automatic status update to "No Response"
+    // Auto-update to "No Response" when cooldown expires
     useEffect(() => {
         const checkAutoNoResponse = async () => {
             if (progress.emailStatus === EmailStatus.SENT && 
                 progress.emailSentAt && 
                 hasReachedNoResponseTime()) {
                 
-                // Automatically update to No Response
                 try {
                     const updatedProgress: ImplementationProgress = {
                         ...progress,
@@ -48,7 +51,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         checkAutoNoResponse();
     }, [progress.emailStatus, progress.emailSentAt, onImplementationProgressChange]);
 
-    // Cleanup debounce timer on unmount
+    // Cleanup debounce timer
     useEffect(() => {
         return () => {
             if (debounceTimer) {
@@ -59,78 +62,55 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
 
     if (!progress) {
         return (
-            <div className="implementation-progress-view">
-                <p>No implementation progress data available.</p>
+            <div className="progress-container">
+                <div className="empty-state">
+                    <div className="empty-icon">📊</div>
+                    <h3>No Progress Data</h3>
+                    <p>Implementation progress information is not available.</p>
+                </div>
             </div>
         );
     }
 
-    // Debug logging to see what the progress object looks like
-    console.log('ImplementationProgressTab: progress object:', progress);
-    console.log('ImplementationProgressTab: progress.id:', progress.id);
-    console.log('ImplementationProgressTab: progress.emailSentAt:', progress.emailSentAt);
-    console.log('ImplementationProgressTab: progress.emailSentAt type:', typeof progress.emailSentAt);
-
     const handleEmailStatusUpdate = async (newStatus: EmailStatus) => {
         if (newStatus === EmailStatus.RESPONSE_RECEIVED) {
-            // Show response options modal instead of direct update
             setShowResponseModal(true);
             return;
         }
         
-        // For other statuses, show confirmation modal
         setPendingStatus(newStatus);
         setShowConfirmModal(true);
     };
 
     const handleResponseTypeSelection = async (responseType: EmailStatus) => {
         setShowResponseModal(false);
-        setIsUpdating(true);
-        setError(null);
-
-        try {
-            const updatedProgress: ImplementationProgress = {
-                ...progress,
-                emailStatus: responseType,
-                updatedAt: new Date().toISOString()
-            };
-            
-            await onImplementationProgressChange(updatedProgress);
-        } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update response type');
-        } finally {
-            setIsUpdating(false);
-        }
+        await updateProgress(responseType);
     };
 
     const confirmStatusUpdate = async () => {
         if (!pendingStatus) return;
-        
+        setShowConfirmModal(false);
+        await updateProgress(pendingStatus);
+        setPendingStatus(null);
+    };
+
+    const updateProgress = async (newStatus: EmailStatus) => {
         setIsUpdating(true);
         setError(null);
-        setShowConfirmModal(false);
 
         try {
-            // Create updated progress object
             const updatedProgress: ImplementationProgress = {
                 ...progress,
-                emailStatus: pendingStatus,
+                emailStatus: newStatus,
                 updatedAt: new Date().toISOString()
             };
             
-            // Call parent handler which will handle the API call through the hook
             await onImplementationProgressChange(updatedProgress);
         } catch (err) {
-            setError(err instanceof Error ? err.message : 'Failed to update email status');
+            setError(err instanceof Error ? err.message : 'Failed to update progress');
         } finally {
             setIsUpdating(false);
-            setPendingStatus(null);
         }
-    };
-
-    const cancelStatusUpdate = () => {
-        setShowConfirmModal(false);
-        setPendingStatus(null);
     };
 
     const handleGithubRepoUpdate = async (githubRepoId: string) => {
@@ -138,15 +118,16 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         setError(null);
 
         try {
-            // Create updated progress object
+            const cleanRepoId = cleanGithubRepoId(githubRepoId);
+            
             const updatedProgress: ImplementationProgress = {
                 ...progress,
-                githubRepoId,
+                githubRepoId: cleanRepoId,
                 updatedAt: new Date().toISOString()
             };
             
-            // Call parent handler which will handle the API call through the hook
             await onImplementationProgressChange(updatedProgress);
+            setIsEditingRepo(false);
         } catch (err) {
             setError(err instanceof Error ? err.message : 'Failed to update GitHub repository');
         } finally {
@@ -157,12 +138,10 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     const handleGithubRepoInputChange = useCallback((value: string) => {
         setGithubRepoValue(value);
         
-        // Clear existing timer
         if (debounceTimer) {
             clearTimeout(debounceTimer);
         }
         
-        // Set new timer to update after 1 second of no changes
         const newTimer = setTimeout(() => {
             if (value !== progress.githubRepoId) {
                 handleGithubRepoUpdate(value);
@@ -172,24 +151,29 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         setDebounceTimer(newTimer);
     }, [debounceTimer, progress.githubRepoId]);
 
-    const getEmailStatusIcon = (status: EmailStatus) => {
+    const getStatusIcon = (status: EmailStatus) => {
         switch (status) {
-            case EmailStatus.NOT_SENT:
-                return '📧';
-            case EmailStatus.SENT:
-                return '✉️';
-            case EmailStatus.RESPONSE_RECEIVED:
-                return '📬';
-            case EmailStatus.CODE_UPLOADED:
-                return '✅';
-            case EmailStatus.CODE_NEEDS_REFACTORING:
-                return '🔧';
-            case EmailStatus.REFUSED_TO_UPLOAD:
-                return '❌';
-            case EmailStatus.NO_RESPONSE:
-                return '📭';
-            default:
-                return '📧';
+            case EmailStatus.NOT_SENT: return '📧';
+            case EmailStatus.SENT: return '✉️';
+            case EmailStatus.RESPONSE_RECEIVED: return '📬';
+            case EmailStatus.CODE_UPLOADED: return '✅';
+            case EmailStatus.CODE_NEEDS_REFACTORING: return '🔧';
+            case EmailStatus.REFUSED_TO_UPLOAD: return '❌';
+            case EmailStatus.NO_RESPONSE: return '📭';
+            default: return '📧';
+        }
+    };
+
+    const getStatusColor = (status: EmailStatus) => {
+        switch (status) {
+            case EmailStatus.NOT_SENT: return 'neutral';
+            case EmailStatus.SENT: return 'info';
+            case EmailStatus.RESPONSE_RECEIVED: return 'warning';
+            case EmailStatus.CODE_UPLOADED: return 'success';
+            case EmailStatus.CODE_NEEDS_REFACTORING: return 'warning';
+            case EmailStatus.REFUSED_TO_UPLOAD: return 'error';
+            case EmailStatus.NO_RESPONSE: return 'error';
+            default: return 'neutral';
         }
     };
 
@@ -198,14 +182,13 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
             case EmailStatus.NOT_SENT:
                 return [EmailStatus.SENT];
             case EmailStatus.SENT:
-                // Only show Response Received button, No Response happens automatically
                 return [EmailStatus.RESPONSE_RECEIVED];
             case EmailStatus.RESPONSE_RECEIVED:
             case EmailStatus.CODE_UPLOADED:
             case EmailStatus.CODE_NEEDS_REFACTORING:
             case EmailStatus.REFUSED_TO_UPLOAD:
             case EmailStatus.NO_RESPONSE:
-                return []; // End states - no further manual progression
+                return [];
             default:
                 return [];
         }
@@ -216,7 +199,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         
         const sentDate = new Date(progress.emailSentAt);
         const now = new Date();
-        const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000; // 4 weeks in milliseconds
+        const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
         
         return (now.getTime() - sentDate.getTime()) >= fourWeeksInMs;
     };
@@ -226,19 +209,15 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         
         const sentDate = new Date(progress.emailSentAt);
         const now = new Date();
-        const fourWeeksInMs = 28 * 24 * 60 * 60 * 1000; // Exactly 28 days
+        const fourWeeksInMs = 28 * 24 * 60 * 60 * 1000;
         const timePassedMs = now.getTime() - sentDate.getTime();
         const timeRemainingMs = fourWeeksInMs - timePassedMs;
         
-        // If less than an hour remaining, don't show timer
-        if (timeRemainingMs < 60 * 60 * 1000) {
-            return null;
-        }
+        if (timeRemainingMs < 60 * 60 * 1000) return null;
         
         const days = Math.floor(timeRemainingMs / (24 * 60 * 60 * 1000));
         const hours = Math.floor((timeRemainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
         
-        // Clean display - only show days if > 0, otherwise show hours
         if (days > 0) {
             return `${days} day${days !== 1 ? 's' : ''}`;
         } else if (hours > 0) {
@@ -246,32 +225,6 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         }
         
         return null;
-    };
-
-    const getStatusConfirmationMessage = (status: EmailStatus): string => {
-        switch (status) {
-            case EmailStatus.SENT:
-                return "Are you sure you want to mark the email as sent? This means you have contacted the paper's authors about implementing their work. A 4-week cooldown period will start.";
-            case EmailStatus.RESPONSE_RECEIVED:
-                return "Are you sure the authors have responded? This means you received a reply from the paper's authors. You'll then be able to specify the nature of their response.";
-            case EmailStatus.CODE_UPLOADED:
-                return "Are you sure the authors uploaded their code? This means the authors have published their implementation and it's ready to use.";
-            case EmailStatus.CODE_NEEDS_REFACTORING:
-                return "Are you sure the code needs refactoring? This means the authors uploaded code but it needs improvement or cleanup.";
-            case EmailStatus.REFUSED_TO_UPLOAD:
-                return "Are you sure the authors refused to upload their code? This means they declined to share their implementation.";
-            case EmailStatus.NO_RESPONSE:
-                return "Are you sure there was no response? This means you haven't received a reply from the authors after the 4-week waiting period.";
-            default:
-                return `Are you sure you want to update the status to ${status}?`;
-        }
-    };
-
-    const shouldShowGithubField = () => {
-        return progress.emailStatus === EmailStatus.CODE_UPLOADED || 
-               progress.emailStatus === EmailStatus.CODE_NEEDS_REFACTORING ||
-               progress.emailStatus === EmailStatus.REFUSED_TO_UPLOAD ||
-               progress.emailStatus === EmailStatus.NO_RESPONSE;
     };
 
     const getStatusDescription = (status: EmailStatus): string => {
@@ -295,176 +248,362 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         }
     };
 
+    const getGithubUrl = (repoId: string): string => {
+        if (repoId.startsWith('http://') || repoId.startsWith('https://')) {
+            return repoId;
+        }
+        return `https://github.com/${repoId}`;
+    };
+
+    const cleanGithubRepoId = (input: string): string => {
+        if (!input.includes('github.com') && input.includes('/') && !input.includes(' ')) {
+            return input.trim();
+        }
+        
+        const githubUrlPattern = /github\.com\/([^\/]+\/[^\/\?#]+)/;
+        const match = input.match(githubUrlPattern);
+        
+        if (match) {
+            return match[1];
+        }
+        
+        return input.trim();
+    };
+
+    const formatDateDistance = (dateString: string): string => {
+        const date = new Date(dateString);
+        const now = new Date();
+        const diffMs = now.getTime() - date.getTime();
+        
+        const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
+        const hours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+        const minutes = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
+        
+        if (days > 0) {
+            return `${days}d ago`;
+        } else if (hours > 0) {
+            return `${hours}h ago`;
+        } else if (minutes > 5) {
+            return `${minutes}m ago`;
+        } else {
+            return 'Just now';
+        }
+    };
+
+    const shouldShowGithubField = () => {
+        return [
+            EmailStatus.CODE_UPLOADED,
+            EmailStatus.CODE_NEEDS_REFACTORING,
+            EmailStatus.REFUSED_TO_UPLOAD,
+            EmailStatus.NO_RESPONSE
+        ].includes(progress.emailStatus);
+    };
+
     return (
-        <div className="implementation-progress-view">
-            <h2>Implementation Progress</h2>
-            
+        <div className="progress-container">
+            {/* Header */}
+            <div className="progress-header">
+                <div className="header-content">
+                    <h2>Implementation Progress</h2>
+                    <p className="header-subtitle">Track the progress of implementing this paper's methodology</p>
+                </div>
+            </div>
+
             {error && (
-                <div className="error-message">
-                    {error}
+                <div className="alert alert-error">
+                    <span className="alert-icon">⚠️</span>
+                    <span>{error}</span>
                 </div>
             )}
 
-            {/* Email Status Tracker */}
-            <div className="email-tracker">
-                <h3>Author Contact Progress</h3>
-                
-                {/* Status Card */}
-                <div className="status-card">
-                    <div className="status-header">
-                        <span className="status-icon">{getEmailStatusIcon(progress.emailStatus)}</span>
-                        <div className="status-details">
-                            <h4 className="status-title">{progress.emailStatus}</h4>
-                            <p className="status-description">{getStatusDescription(progress.emailStatus)}</p>
-                        </div>
-                    </div>
-                    
-                    {/* Timer for Sent status */}
-                    {progress.emailStatus === EmailStatus.SENT && !hasReachedNoResponseTime() && (
-                        <div className="timer-section">
-                            <div className="timer-info">
-                                <span className="timer-icon">⏱️</span>
-                                <div className="timer-text">
-                                    <span className="timer-label">Auto "No Response" in:</span>
-                                    <span className="timer-value">{getTimeUntilNoResponse()}</span>
+            {/* Progress Overview */}
+            <div className="progress-overview">
+                <div className="overview-cards">
+                    {/* Status Card */}
+                    <div className={`status-card status-${getStatusColor(progress.emailStatus)}`}>
+                        <div className="card-header">
+                            <div className="status-info">
+                                <span className="status-icon">{getStatusIcon(progress.emailStatus)}</span>
+                                <div className="status-details">
+                                    <h3 className="status-title">{progress.emailStatus}</h3>
+                                    <p className="status-description">{getStatusDescription(progress.emailStatus)}</p>
                                 </div>
                             </div>
                         </div>
-                    )}
-                    
-                    {/* Next Actions */}
-                    {getNextAllowedStatuses(progress.emailStatus).length > 0 && (
-                        <div className="action-section">
-                            <h5>Next Step:</h5>
-                            <div className="action-buttons">
+
+                        {/* Countdown Timer */}
+                        {progress.emailStatus === EmailStatus.SENT && !hasReachedNoResponseTime() && (
+                            <div className="countdown-section">
+                                <div className="countdown-info">
+                                    <div className="countdown-icon">⏱️</div>
+                                    <div className="countdown-content">
+                                        <span className="countdown-label">Auto "No Response" in:</span>
+                                        <span className="countdown-value">{getTimeUntilNoResponse()}</span>
+                                    </div>
+                                </div>
+                            </div>
+                        )}
+
+                        {/* Action Buttons */}
+                        {getNextAllowedStatuses(progress.emailStatus).length > 0 && (
+                            <div className="card-actions">
                                 {getNextAllowedStatuses(progress.emailStatus).map((nextStatus) => (
                                     <button
                                         key={nextStatus}
-                                        className="action-button"
+                                        className="btn btn-primary action-button"
                                         onClick={() => handleEmailStatusUpdate(nextStatus)}
                                         disabled={isUpdating}
                                     >
-                                        <span className="action-icon">{getEmailStatusIcon(nextStatus)}</span>
+                                        <span className="action-icon">{getStatusIcon(nextStatus)}</span>
                                         <span className="action-text">
                                             {nextStatus === EmailStatus.RESPONSE_RECEIVED ? 'Authors Responded' : `Mark as ${nextStatus}`}
                                         </span>
                                     </button>
                                 ))}
                             </div>
+                        )}
+                    </div>
+
+                    {/* Community Stats */}
+                    <div className="stats-card">
+                        <div className="card-header">
+                            <h3 className="card-title">Community Interest</h3>
+                        </div>
+                        <div className="stats-grid">
+                            <div className="stat-item">
+                                <div className="stat-icon">👥</div>
+                                <div className="stat-content">
+                                    <div className="stat-number">{progress.contributors.length}</div>
+                                    <div className="stat-label">
+                                        {progress.contributors.length === 1 ? 'Contributor' : 'Contributors'}
+                                    </div>
+                                </div>
+                            </div>
+                            <div className="stat-item">
+                                <div className="stat-icon">📅</div>
+                                <div className="stat-content">
+                                    <div className="stat-number">{formatDateDistance(progress.createdAt)}</div>
+                                    <div className="stat-label">Since started</div>
+                                </div>
+                            </div>
+                            <div className="stat-item">
+                                <div className="stat-icon">⚡</div>
+                                <div className="stat-content">
+                                    <div className="stat-number">{formatDateDistance(progress.updatedAt)}</div>
+                                    <div className="stat-label">Last activity</div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        {progress.contributors.length > 0 && (
+                            <div className="card-actions">
+                                <button 
+                                    className="btn btn-secondary action-button"
+                                    onClick={() => setShowContributorsModal(true)}
+                                >
+                                    <span className="action-icon">👥</span>
+                                    <span className="action-text">View Contributors</span>
+                                </button>
+                            </div>
+                        )}
+                    </div>
+                </div>
+            </div>
+
+            {/* GitHub Repository */}
+            {shouldShowGithubField() && (
+                <div className="section">
+                    <div className="section-header">
+                        <h3 className="section-title">Implementation Repository</h3>
+                        <p className="section-subtitle">GitHub repository where the implementation is hosted</p>
+                    </div>
+
+                    <div className="repo-card">
+                        {progress.githubRepoId && !isEditingRepo ? (
+                            <div className="repo-display">
+                                <div className="repo-info">
+                                    <div className="repo-icon">📁</div>
+                                    <div className="repo-details">
+                                        <a 
+                                            href={getGithubUrl(progress.githubRepoId)} 
+                                            target="_blank" 
+                                            rel="noopener noreferrer"
+                                            className="repo-link"
+                                        >
+                                            {progress.githubRepoId}
+                                        </a>
+                                        <span className="repo-hint">Click to visit repository</span>
+                                    </div>
+                                </div>
+                                <button 
+                                    className="btn btn-outline-secondary"
+                                    onClick={() => setIsEditingRepo(true)}
+                                    disabled={isUpdating}
+                                >
+                                    Edit
+                                </button>
+                            </div>
+                        ) : (
+                            <div className="repo-form">
+                                <div className="form-group">
+                                    <label htmlFor="github-repo" className="form-label">
+                                        GitHub Repository
+                                    </label>
+                                    <input
+                                        id="github-repo"
+                                        type="text"
+                                        value={githubRepoValue}
+                                        onChange={(e) => handleGithubRepoInputChange(e.target.value)}
+                                        placeholder="e.g., username/repo-name or https://github.com/username/repo-name"
+                                        disabled={isUpdating}
+                                        className="form-input"
+                                    />
+                                    <div className="form-hint">
+                                        Enter the GitHub repository ID (username/repo-name) or full URL
+                                    </div>
+                                </div>
+                                
+                                {progress.githubRepoId && (
+                                    <div className="form-actions">
+                                        <button 
+                                            className="btn btn-outline-secondary"
+                                            onClick={() => {
+                                                setIsEditingRepo(false);
+                                                setGithubRepoValue(progress.githubRepoId || '');
+                                            }}
+                                            disabled={isUpdating}
+                                        >
+                                            Cancel
+                                        </button>
+                                    </div>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+            )}
+
+            {/* Response Type Modal */}
+            <Modal
+                isOpen={showResponseModal}
+                onClose={() => setShowResponseModal(false)}
+                title="What was the author's response?"
+                maxWidth="600px"
+            >
+                <p style={{ marginBottom: '24px', color: 'var(--text-muted-color, #6c757d)' }}>
+                    Please select the type of response you received from the paper's authors:
+                </p>
+                
+                <div className="response-options">
+                    <button 
+                        className="response-option success"
+                        onClick={() => handleResponseTypeSelection(EmailStatus.CODE_UPLOADED)}
+                        disabled={isUpdating}
+                    >
+                        <div className="response-icon">✅</div>
+                        <div className="response-content">
+                            <div className="response-title">Code Uploaded</div>
+                            <div className="response-description">Authors published their working implementation</div>
+                        </div>
+                    </button>
+                    
+                    <button 
+                        className="response-option warning"
+                        onClick={() => handleResponseTypeSelection(EmailStatus.CODE_NEEDS_REFACTORING)}
+                        disabled={isUpdating}
+                    >
+                        <div className="response-icon">🔧</div>
+                        <div className="response-content">
+                            <div className="response-title">Code Needs Refactoring</div>
+                            <div className="response-description">Authors shared code but it needs improvement</div>
+                        </div>
+                    </button>
+                    
+                    <button 
+                        className="response-option error"
+                        onClick={() => handleResponseTypeSelection(EmailStatus.REFUSED_TO_UPLOAD)}
+                        disabled={isUpdating}
+                    >
+                        <div className="response-icon">❌</div>
+                        <div className="response-content">
+                            <div className="response-title">Refused to Upload</div>
+                            <div className="response-description">Authors declined to share their implementation</div>
+                        </div>
+                    </button>
+                </div>
+                
+                <div className="modal-actions">
+                    <button 
+                        className="btn btn-secondary" 
+                        onClick={() => setShowResponseModal(false)}
+                        disabled={isUpdating}
+                    >
+                        Cancel
+                    </button>
+                </div>
+            </Modal>
+
+            {/* Confirmation Modal */}
+            <ConfirmationModal
+                isOpen={showConfirmModal && !!pendingStatus}
+                onClose={() => setShowConfirmModal(false)}
+                onConfirm={confirmStatusUpdate}
+                title="Confirm Status Update"
+                confirmText={isUpdating ? 'Updating...' : `Confirm ${pendingStatus}`}
+                cancelText="Cancel"
+                confirmButtonClass="btn-primary"
+                isConfirming={isUpdating}
+            >
+                <p>
+                    Are you sure you want to mark the status as <strong>"{pendingStatus}"</strong>?
+                </p>
+            </ConfirmationModal>
+
+            {/* Contributors Modal */}
+            <Modal
+                isOpen={showContributorsModal}
+                onClose={() => setShowContributorsModal(false)}
+                title="Contributors"
+                maxWidth="500px"
+            >
+                <p style={{ marginBottom: '20px', color: 'var(--text-muted-color, #6c757d)' }}>
+                    People interested in implementing this paper
+                </p>
+                
+                <div className="contributors-content">
+                    {progress.contributors.length > 0 ? (
+                        <div className="contributors-list">
+                            {progress.contributors.map((contributorId, index) => (
+                                <div key={contributorId} className="contributor-item">
+                                    <div className="contributor-avatar">
+                                        <div className="avatar-placeholder">
+                                            {(index + 1).toString()}
+                                        </div>
+                                    </div>
+                                    <div className="contributor-info">
+                                        <div className="contributor-name">Contributor {index + 1}</div>
+                                        <div className="contributor-id">ID: {contributorId}</div>
+                                    </div>
+                                </div>
+                            ))}
+                        </div>
+                    ) : (
+                        <div className="empty-state">
+                            <div className="empty-icon">👥</div>
+                            <p>No contributors yet</p>
                         </div>
                     )}
                 </div>
-            </div>
-
-            {/* GitHub Repository Field - Only show if email was responded to or no response */}
-            {shouldShowGithubField() && (
-                <div className="github-repo-section">
-                    <h3>Implementation Repository</h3>
-                    <div className="github-repo-field">
-                        <label htmlFor="github-repo">GitHub Repository ID:</label>
-                        <input
-                            id="github-repo"
-                            type="text"
-                            value={githubRepoValue}
-                            onChange={(e) => handleGithubRepoInputChange(e.target.value)}
-                            placeholder="e.g., username/repo-name"
-                            disabled={isUpdating}
-                            className="github-repo-input"
-                        />
-                        <small className="github-repo-help">
-                            Enter the GitHub repository where the implementation will be hosted
-                        </small>
-                    </div>
+                
+                <div className="modal-actions">
+                    <button 
+                        className="btn btn-primary" 
+                        onClick={() => setShowContributorsModal(false)}
+                    >
+                        Close
+                    </button>
                 </div>
-            )}
-
-            {/* Progress Info */}
-            <div className="progress-info">
-                <p><strong>Started by:</strong> {progress.initiatedBy}</p>
-                <p><strong>Contributors:</strong> {progress.contributors.length}</p>
-                <p><strong>Created:</strong> {new Date(progress.createdAt).toLocaleDateString()}</p>
-                <p><strong>Last updated:</strong> {new Date(progress.updatedAt).toLocaleDateString()}</p>
-            </div>
-
-            {/* Response Type Selection Modal */}
-            {showResponseModal && (
-                <div className="modal-overlay">
-                    <div className="modal-content response-modal">
-                        <h3>What was the author's response?</h3>
-                        <p>Please select the type of response you received from the paper's authors:</p>
-                        <div className="response-options">
-                            <button 
-                                className="response-option code-uploaded"
-                                onClick={() => handleResponseTypeSelection(EmailStatus.CODE_UPLOADED)}
-                                disabled={isUpdating}
-                            >
-                                <div className="response-icon">✅</div>
-                                <div className="response-content">
-                                    <div className="response-title">Code Uploaded</div>
-                                    <div className="response-description">Authors published their working implementation</div>
-                                </div>
-                            </button>
-                            <button 
-                                className="response-option code-needs-work"
-                                onClick={() => handleResponseTypeSelection(EmailStatus.CODE_NEEDS_REFACTORING)}
-                                disabled={isUpdating}
-                            >
-                                <div className="response-icon">🔧</div>
-                                <div className="response-content">
-                                    <div className="response-title">Code Needs Refactoring</div>
-                                    <div className="response-description">Authors shared code but it needs improvement</div>
-                                </div>
-                            </button>
-                            <button 
-                                className="response-option refused"
-                                onClick={() => handleResponseTypeSelection(EmailStatus.REFUSED_TO_UPLOAD)}
-                                disabled={isUpdating}
-                            >
-                                <div className="response-icon">❌</div>
-                                <div className="response-content">
-                                    <div className="response-title">Refused to Upload</div>
-                                    <div className="response-description">Authors declined to share their implementation</div>
-                                </div>
-                            </button>
-                        </div>
-                        <div className="modal-actions">
-                            <button 
-                                className="btn-secondary" 
-                                onClick={() => setShowResponseModal(false)}
-                                disabled={isUpdating}
-                            >
-                                Cancel
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
-
-            {/* Confirmation Modal */}
-            {showConfirmModal && pendingStatus && (
-                <div className="modal-overlay">
-                    <div className="modal-content">
-                        <h3>Confirm Status Update</h3>
-                        <p>{getStatusConfirmationMessage(pendingStatus)}</p>
-                        <div className="modal-actions">
-                            <button 
-                                className="btn-secondary" 
-                                onClick={cancelStatusUpdate}
-                                disabled={isUpdating}
-                            >
-                                Cancel
-                            </button>
-                            <button 
-                                className="btn-primary" 
-                                onClick={confirmStatusUpdate}
-                                disabled={isUpdating}
-                            >
-                                {isUpdating ? 'Updating...' : `Confirm ${pendingStatus}`}
-                            </button>
-                        </div>
-                    </div>
-                </div>
-            )}
+            </Modal>
         </div>
     );
 };

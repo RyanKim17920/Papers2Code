@@ -1,4 +1,4 @@
-import React, { useState, useEffect, FC } from 'react';
+import React, { useEffect, FC } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import { Code } from 'lucide-react';
@@ -17,22 +17,24 @@ const ResearchPaperVisual = ({ isStacked }: { isStacked: boolean }) => (
 // Master component to handle all paper & chart animations
 const VisualsController = ({ activeScene }: { activeScene: number }) => {
   const totalPapers = 30;
-  const papers2023Count = 13;
-  const papers2025Count = 17;
+  const papers2023Count = 12;
+  const papers2025Count = 15;
   const totalPapersInStacks = papers2023Count + papers2025Count;
 
   // Data: Implemented stacks are a small fraction
   const implemented2023Count = 3;
-  const implemented2025Count = 3;
+  const implemented2025Count = 2;
 
   const getPaperAnimation = (i: number) => {
     let opacity = 0, x = 0, y = 0, rotateX = 0, rotateZ = 0, zIndex = 1;
 
     if (activeScene === 0) { // Scatter
-      opacity = 0.9;
-      x = (Math.random() - 0.5) * 500;
-      y = (Math.random() - 0.5) * 450;
-      rotateZ = (Math.random() - 0.5) * 90;
+      if (i < totalPapers) {
+        opacity = 0.9;
+        x = (Math.random() - 0.5) * 500;
+        y = (Math.random() - 0.5) * 450;
+        rotateZ = (Math.random() - 0.5) * 90;
+      }
     }
     else if (activeScene === 1) { // Single Stack
       if (i < totalPapersInStacks) {
@@ -62,7 +64,6 @@ const VisualsController = ({ activeScene }: { activeScene: number }) => {
         } else {
             const rightIndex = i - papers2023Count;
             const isImplemented = rightIndex < implemented2025Count;
-            // This value was increased from 250 to 280 to prevent overlap
             x = isImplemented ? 170 : 280; 
             y = -rightIndex * 4;
             zIndex = isImplemented ? 10 : 1;
@@ -101,10 +102,12 @@ const VisualsController = ({ activeScene }: { activeScene: number }) => {
         {(activeScene < 5) && Array.from({ length: totalPapers }).map((_, i) => {
           const is2023Paper = i < papers2023Count;
           let isImplemented = false;
-          if (is2023Paper) {
-            isImplemented = i < implemented2023Count;
-          } else if (i < totalPapersInStacks) {
-            isImplemented = (i - papers2023Count) < implemented2025Count;
+          if (activeScene >= 3) {
+            if (is2023Paper) {
+              isImplemented = i < implemented2023Count;
+            } else if (i < totalPapersInStacks) {
+              isImplemented = (i - papers2023Count) < implemented2025Count;
+            }
           }
 
           return (
@@ -128,7 +131,6 @@ const VisualsController = ({ activeScene }: { activeScene: number }) => {
   );
 };
 
-// The chart component
 const ProblemChart = ({ show }: { show: boolean }) => {
     const controls = useAnimation();
     useEffect(() => {
@@ -150,67 +152,22 @@ const ProblemChart = ({ show }: { show: boolean }) => {
       </motion.div>
     );
 };
-
-// The text content for each step of the animation
-const storyContent = [
-    { index: 0, title: 'Reproducibility in ML Research is Broken', isIntro: true },
-    { index: 1, title: 'A Sea of Research', subtitle: 'Each year, a flood of new papers is published, adding to a mountain of human knowledge.' },
-    { index: 2, title: 'A Troubling Trend', subtitle: 'When we organize the research by year, we see not just growth in volume, but a story of a worsening problem.' },
-    { index: 3, title: 'The Widening Gap', subtitle: 'An alarmingly small fraction of papers have usable code. Worryingly, that fraction appears to be shrinking as the field accelerates.' },
-    { index: 4, title: 'Quantifying the Crisis', subtitle: 'The trend is clear: the percentage of non-reproducible papers is increasing. This is the challenge we exist to solve.'},
-    { index: 5, title: 'Join the Mission', subtitle: 'Help us reverse the trend. Every implementation saves countless hours and unlocks the future of science.', isOutro: true },
-];
-
-// TYPED Helper component for triggering state changes on scroll
-interface ScrollSlideProps {
-    index: number;
-    setActiveScene: (index: number) => void;
-    activeScene: number;
-    title?: string;
-    subtitle?: string;
-    isIntro?: boolean;
-    isOutro?: boolean;
-}
-
-const ScrollSlide: FC<ScrollSlideProps> = ({ index, setActiveScene, activeScene, title, subtitle, isIntro, isOutro }) => {
-    const { ref } = useInView({ threshold: 0.6, onChange: (inView) => inView && setActiveScene(index) });
-    const isActive = activeScene === index;
   
+// The main component that assembles the visuals
+export const HeroAnimation = ({ activeScene }: { activeScene: number }) => {
     return (
-      <section ref={ref} className="scroll-slide">
-        <div className={`slide-content ${isActive ? 'is-active' : ''}`}>
-          {isIntro && <h1 className='intro-title'>Reproducibility in ML Research is <span className="highlight-text">Broken</span></h1>}
-          {!isIntro && title && <h2 className='slide-title'>{title}</h2>}
-          {subtitle && <p className="slide-subtitle">{subtitle}</p>}
-          {isOutro && <div className="cta-buttons"><button className="btn btn-primary btn-lg">Browse Projects</button></div>}
-        </div>
-      </section>
-    );
-};
-  
-// The main component that assembles the scrollytelling experience
-export const HeroAnimation = () => {
-    const [activeScene, setActiveScene] = useState(0);
-    return (
-      <div className="scrollytelling-height-manager">
-        <div className="scrollytelling-container">
-          <div className="sticky-visual-pane">
-            <VisualsController activeScene={activeScene} />
-            <ProblemChart show={activeScene === 4} />
+      <div className="sticky-visual-pane">
+        <VisualsController activeScene={activeScene} />
+        <ProblemChart show={activeScene === 4} />
+        <div className="viz-container labels-container">
             <AnimatePresence>
                 {activeScene >= 2 && activeScene < 5 && (
                 <>
-                    <motion.div className="stack-label label-2023" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, opacity: 1 }} exit={{ opacity: 0 }}>2023</motion.div>
-                    <motion.div className="stack-label label-2025" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, opacity: 1 }} exit={{ opacity: 0 }}>2025</motion.div>
+                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: -170, opacity: 1 }} exit={{ opacity: 0 }}>2023</motion.div>
+                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: 170, opacity: 1 }} exit={{ opacity: 0 }}>2025</motion.div>
                 </>
                 )}
             </AnimatePresence>
-          </div>
-          <div className="scroll-slides-container">
-            {storyContent.map((section) => (
-              <ScrollSlide key={section.index} setActiveScene={setActiveScene} activeScene={activeScene} {...section} />
-            ))}
-          </div>
         </div>
       </div>
     );

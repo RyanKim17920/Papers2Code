@@ -18,7 +18,7 @@
     padding: 20px; /* Consider a variable if global padding scale exists */
     box-sizing: border-box;
     animation: modalBackdropFadeIn 0.2s ease-out;
-    overflow-y:hidden;
+    overflow: hidden; /* Prevent scroll on backdrop */
 }
 
 @keyframes modalBackdropFadeIn {
@@ -43,7 +43,7 @@
     max-width: 520px;
     width: 100%;
     max-height: 90vh;
-    overflow: hidden;
+    overflow: visible; /* Allow close button to be clickable */
     position: relative;
     display: flex;
     flex-direction: column;
@@ -82,12 +82,13 @@
     align-items: center;
     justify-content: center;
     transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
-    overflow: hidden;
+    overflow: visible; /* Fix scroll bar issue */
+    z-index: 1060; /* Ensure it's above backdrop */
 }
 
 .modal-close-button:hover {
-    color: var(--text-color, #333333);
-    background: rgba(var(--secondary-accent-rgb, 0,0,0), 0.12);
+    color: var(--danger-color, #dc3545); /* Change to red/danger color for better visibility */
+    background: rgba(var(--danger-color, 220, 53, 69), 0.1); /* Light red background */
     transform: scale(1.1);
 }
 
@@ -104,7 +105,7 @@
     padding-bottom: 16px;
     border-bottom: 2px solid var(--border-color, rgba(0, 0, 0, 0.1));
     position: relative;
-    overflow-y:hidden;
+    overflow: visible; /* Allow close button to be clickable */
 }
 
 .modal-content h2:after {
@@ -137,7 +138,7 @@
 }
 
 .modal-body strong {
-    color: var(--text-heading-color, #1a1a1a); /* Or var(--dark-color) */
+    color: var(--text-heading-color, #1a1a1a) !important; /* Force proper color */
     font-weight: 600;
 }
 
@@ -272,10 +273,9 @@
     .modal-close-button {
         background: rgba(255, 255, 255, 0.1); /* Lighter background for dark mode */
         color: var(--text-muted-color, #cccccc); /* Ensure icon is visible */
-    }
-    .modal-close-button:hover {
-        background: rgba(255, 255, 255, 0.2);
-        color: var(--text-on-dark, #ffffff);
+    }    .modal-close-button:hover {
+        background: rgba(var(--danger-color, 220, 53, 69), 0.2); /* Light red background for dark mode */
+        color: var(--danger-color, #ff6b7a); /* Lighter red for dark mode visibility */
     }
     
     .modal-content h2:after {

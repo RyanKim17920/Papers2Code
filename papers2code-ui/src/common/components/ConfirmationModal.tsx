@@ -26,12 +26,23 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
 }) => {
     if (!isOpen) {
         return null;
-    }
+    }    const handleBackdropClick = (e: React.MouseEvent) => {
+        if (e.target === e.currentTarget) {
+            onClose();
+        }
+    };
 
     return (
-        <div className="modal-backdrop" onClick={onClose}>
+        <div className="modal-backdrop" onClick={handleBackdropClick}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
-                <button className="modal-close-button" onClick={onClose} aria-label="Close modal">&times;</button>
+                <button 
+                    className="modal-close-button" 
+                    onClick={onClose} 
+                    aria-label="Close modal"
+                    type="button"
+                >
+                    &times;
+                </button>
                 <h2>{title}</h2>
                 <div className="modal-body">
                     {children}

@@ -139,6 +139,7 @@
   .btn-advanced-toggle {
     padding: 8px 15px; /* Match select padding */
     height: 40px; /* Match select height approx */
+    overflow-y:hidden;
     box-sizing: border-box;
     white-space: nowrap; /* Prevent text wrapping */
   }
