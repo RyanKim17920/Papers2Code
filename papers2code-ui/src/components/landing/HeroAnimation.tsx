@@ -151,8 +151,8 @@ const ProblemChart = ({ show }: { show: boolean }) => {
         </motion.svg>
       </motion.div>
     );
-}; 
-    
+};
+  
 // The main component that assembles the visuals
 export const HeroAnimation = ({ activeScene }: { activeScene: number }) => {
     return (
