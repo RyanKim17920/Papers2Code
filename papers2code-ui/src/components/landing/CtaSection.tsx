@@ -9,25 +9,25 @@ const CtaSection: React.FC<CtaSectionProps> = () => {
   return (
     <section className="cta-section">
       <div className="cta-content">
-        <h2>Join the Community</h2>
-        <p>We're connecting research with implementation through collaborative development. Work with researchers, developers, and organizations to make ML research more accessible and practical.</p>
+        <h2>Ready to Make a Difference?</h2>
+        <p>Join the movement to unlock trapped innovation. Whether you're building, researching, or leading, there's a place for you in solving the reproducibility crisis.</p>
         
         <div className="cta-options">
           <div className="cta-option">
             <h3>For Developers</h3>
-            <p>Help implement cutting-edge research and build your portfolio with meaningful projects.</p>
-            <button className="btn btn-primary">Start Contributing</button>
+            <p>Build your portfolio by implementing cutting-edge research. Help make breakthrough ideas accessible to everyone.</p>
+            <button className="btn btn-primary">Start Building</button>
           </div>
           
           <div className="cta-option">
             <h3>For Researchers</h3>
-            <p>Submit your papers for implementation and connect with the developer community.</p>
-            <button className="btn btn-outline-primary">Submit Paper</button>
+            <p>Find missing implementations of papers in your field. Connect with developers who can bring research to life.</p>
+            <button className="btn btn-outline-primary">Find Implementations</button>
           </div>
           
           <div className="cta-option">
             <h3>For Organizations</h3>
-            <p>Support open science by sponsoring implementations or providing computing resources.</p>
+            <p>Support open science by sponsoring implementations or providing computing resources to accelerate progress.</p>
             <button className="btn btn-secondary">Partner With Us</button>
           </div>
         </div>

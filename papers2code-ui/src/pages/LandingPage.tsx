@@ -1,4 +1,4 @@
-import React, { useState, FC } from 'react';
+import { useState, FC } from 'react';
 import { motion, useScroll } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import './LandingPage.css';
@@ -8,12 +8,12 @@ import CtaSection from '../components/landing/CtaSection';
 
 // The text content for each step of the animation
 const storyContent = [
-    { index: 0, title: 'Reproducibility in ML Research is Broken', isIntro: true, subtitle: "A hidden crisis in scientific research is causing a massive drain on time and innovation. Scroll to see the problem." },
-    { index: 1, title: 'A Sea of Research', subtitle: 'Each year, a flood of new papers is published, adding to a mountain of human knowledge.' },
-    { index: 2, title: 'A Troubling Trend', subtitle: 'When we organize the research by year, we see not just growth in volume, but a story of a worsening problem.' },
-    { index: 3, title: 'The Widening Gap', subtitle: 'An alarmingly small fraction of papers have usable code. Worryingly, that fraction appears to be shrinking as the field accelerates.' },
-    { index: 4, title: 'Quantifying the Crisis', subtitle: 'The trend is clear: the percentage of non-reproducible papers is increasing. This is the challenge we exist to solve.'},
-    { index: 5, title: 'Our Measured Impact', subtitle: 'By rallying a community, we are beginning to reverse the trend. Below are the results of our collective effort.', isOutro: true },
+    { index: 0, title: 'Reproducibility in ML Research is Broken', isIntro: true, subtitle: "Brilliant ideas trapped in papers. Researchers wasting months recreating basic work. A crisis hiding in plain sight. Scroll to see the problem." },
+    { index: 1, title: 'The Research Explosion', subtitle: 'Thousands of cutting-edge papers flood the field each year. Each one represents months of brilliant work, promising breakthroughs that could change everything.' },
+    { index: 2, title: 'The Hidden Pattern', subtitle: 'But when we look closer at the timeline, a disturbing pattern emerges. The very progress we celebrate is masking a growing crisis.' },
+    { index: 3, title: 'The Reproducibility Crisis', subtitle: 'The devastating truth: most papers have no usable code. Researchers spend 60% of their time recreating work that already exists, instead of pushing boundaries.' },
+    { index: 4, title: 'The Worsening Reality', subtitle: 'Year after year, the problem grows worse. More papers, less reproducibility. Innovation is suffocating under the weight of wasted effort.'},
+    { index: 5, title: 'The Solution in Action', subtitle: 'We\'re changing this. By connecting researchers with missing implementations, we\'re unlocking trapped innovation and accelerating real progress.' },
 ];
 
 // TYPED Helper component for each text slide. It now handles its own scroll detection.
@@ -24,10 +24,9 @@ interface ScrollSlideProps {
     title?: string;
     subtitle?: string;
     isIntro?: boolean;
-    isOutro?: boolean;
 }
 
-const ScrollSlide: FC<ScrollSlideProps> = ({ index, setActiveScene, activeScene, title, subtitle, isIntro, isOutro }) => {
+const ScrollSlide: FC<ScrollSlideProps> = ({ index, setActiveScene, activeScene, title, subtitle, isIntro }) => {
     // This hook reliably detects when the text slide is in the middle of the screen
     const { ref } = useInView({
         threshold: 0.6,
@@ -46,7 +45,6 @@ const ScrollSlide: FC<ScrollSlideProps> = ({ index, setActiveScene, activeScene,
                 {isIntro && <h1 className='intro-title'>Reproducibility in ML Research is <span className="highlight-text">Broken</span></h1>}
                 {!isIntro && title && <h2 className='slide-title'>{title}</h2>}
                 {subtitle && <p className="slide-subtitle">{subtitle}</p>}
-                {isOutro && <div className="cta-buttons"><button className="btn btn-primary btn-lg">View Our Impact</button></div>}
             </div>
         </section>
     );
@@ -81,6 +79,7 @@ const LandingPage = () => {
 
       {/* The rest of the page flows naturally after the text */}
       <div className="page-content-after-hero">
+        <div className="transition-spacer" />
         <StatsSection animateStats={activeScene >= 5} />
         <CtaSection />
       </div>
