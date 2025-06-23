@@ -13,7 +13,7 @@ const SolutionSection = () => {
             transition={{ duration: 0.8 }}
             viewport={{ once: true }}
           >
-            The Solution in Action
+            How Papers2Code Works
           </motion.h2>
           <motion.p 
             initial={{ opacity: 0, y: 30 }}
@@ -21,7 +21,7 @@ const SolutionSection = () => {
             transition={{ duration: 0.8, delay: 0.2 }}
             viewport={{ once: true }}
           >
-            We're building the bridge between brilliant research and practical implementation
+            A simple platform connecting researchers and developers to make research reproducible
           </motion.p>
         </div>
         
@@ -42,7 +42,7 @@ const SolutionSection = () => {
             >
               <Code className="node-icon" />
               <h3>Developers</h3>
-              <p>Build breakthrough implementations</p>
+              <p>Find code implementations for research papers</p>
             </motion.div>
             
             <motion.div 
@@ -54,7 +54,7 @@ const SolutionSection = () => {
             >
               <Users className="node-icon" />
               <h3>Researchers</h3>
-              <p>Share groundbreaking work</p>
+              <p>Share code and get implementation feedback</p>
             </motion.div>
             
             <motion.div 
@@ -92,7 +92,7 @@ const SolutionSection = () => {
             viewport={{ once: true }}
           >
             <ArrowRight className="impact-arrow" />
-            <span>Unlocked Innovation</span>
+            <span>Better Research Reproducibility</span>
           </motion.div>
         </div>
       </div>

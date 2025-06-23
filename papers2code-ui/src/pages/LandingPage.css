@@ -2,7 +2,7 @@
 .landing-container {
   width: 100%;
   max-width: 100vw;
-  overflow-x: hidden;
+  overflow-x: hidden; /* Prevent any horizontal scroll */
   position: relative;
 }
 
@@ -106,7 +106,7 @@
 .scrollytelling-container {
   display: flex;
   position: relative;
-  height: 500vh; /* Explicit height for 5 sections */
+  height: 500vh; /* Increase back to 500vh to ensure all 5 scenes are reachable */
   overflow: visible;
 }
 
@@ -140,12 +140,13 @@
   width: 100%;
   z-index: 15; /* Higher z-index to ensure it's above the animation */
   background: white; /* Give it a solid background */
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1); /* Add shadow to visually separate from animation */
-  border-top: 3px solid #e2e8f0; /* Visual separator to show where content starts */
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.15); /* Stronger shadow */
+  border-top: 4px solid #3b82f6; /* More prominent blue separator */
+  margin-top: 2rem; /* Add top margin for extra separation */
 }
 
 .transition-spacer {
-  height: 20rem; /* Even larger spacer - 320px */
+  height: 10rem; /* Increase spacer to 160px for clearer separation */
   background: linear-gradient(to bottom, rgba(233, 236, 239, 0.3), white);
 }
 

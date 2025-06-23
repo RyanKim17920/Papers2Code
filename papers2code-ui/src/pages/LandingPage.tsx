@@ -2,9 +2,9 @@ import { useState, FC } from 'react';
 import { motion, useScroll } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
 import './LandingPage.css';
+import HeroHeader from '../components/landing/HeroHeader';
 import { HeroAnimation } from '../components/landing/HeroAnimation'; 
 import StatsSection from '../components/landing/StatsSection';
-import SolutionSection from '../components/landing/SolutionSection';
 import CtaSection from '../components/landing/CtaSection';
 
 // The text content for each step of the animation
@@ -60,6 +60,9 @@ const LandingPage = () => {
       {/* The animated blue scrollbar */}
       <motion.div className="scroll-progress-bar" style={{ scaleX: scrollYProgress }} />
 
+      {/* Hero Header - Logo, search, overview */}
+      <HeroHeader />
+
       {/* This container provides the scrollable height and contains both text and visuals */}
       <div className="scrollytelling-container">
         <div className="scrollytelling-text-wrapper">
@@ -84,7 +87,6 @@ const LandingPage = () => {
       {/* The rest of the page flows naturally after the scrollytelling */}
       <div className="page-content-after-hero">
         <div className="transition-spacer" />
-        <SolutionSection />
         <StatsSection animateStats={activeScene >= 4} />
         <CtaSection />
       </div>
