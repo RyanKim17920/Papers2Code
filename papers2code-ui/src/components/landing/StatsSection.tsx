@@ -39,6 +39,10 @@ interface StatsSectionProps {
 const StatsSection: React.FC<StatsSectionProps> = ({ animateStats }) => {
   return (
     <section className="stats-section">
+      <div className="section-header">
+        <h2>The Cost of Missing Implementations</h2>
+        <p>When research papers lack code, it creates measurable delays and inefficiencies across the scientific community. Here's how we're helping teams save time and accelerate progress.</p>
+      </div>
       <div className="stats-grid">
         <div className="stat-card">
           <div className="stat-number">
@@ -52,7 +56,7 @@ const StatsSection: React.FC<StatsSectionProps> = ({ animateStats }) => {
           <div className="stat-number">
             <StatCounter end={1247} animateStats={animateStats} />
           </div>
-          <div className="stat-label">Hours saved by our implementations</div>
+          <div className="stat-label">Developer hours saved from re-implementation</div>
         </div>
         
         <div className="stat-card">
@@ -66,7 +70,7 @@ const StatsSection: React.FC<StatsSectionProps> = ({ animateStats }) => {
           <div className="stat-number">
             <StatCounter end={156} animateStats={animateStats} />
           </div>
-          <div className="stat-label">Papers successfully implemented</div>
+          <div className="stat-label">Papers made accessible with working code</div>
         </div>
       </div>
     </section>

@@ -9,14 +9,20 @@ const CtaSection: React.FC<CtaSectionProps> = () => {
   return (
     <section className="cta-section">
       <div className="cta-content">
-        <h2>🌟 Be Part of the Solution</h2>
-        <p>Join our community of researchers, developers, and open science advocates working to make ML research more reproducible and accessible.</p>
+        <h2>Join the Community</h2>
+        <p>We're connecting research with implementation through collaborative development. Work with researchers, developers, and organizations to make ML research more accessible and practical.</p>
         
         <div className="cta-options">
           <div className="cta-option">
             <h3>For Developers</h3>
             <p>Help implement cutting-edge research and build your portfolio with meaningful projects.</p>
             <button className="btn btn-primary">Start Contributing</button>
+          </div>
+          
+          <div className="cta-option">
+            <h3>For Researchers</h3>
+            <p>Submit your papers for implementation and connect with the developer community.</p>
+            <button className="btn btn-outline-primary">Submit Paper</button>
           </div>
           
           <div className="cta-option">
