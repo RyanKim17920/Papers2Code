@@ -163,8 +163,8 @@ export const HeroAnimation = ({ activeScene }: { activeScene: number }) => {
             <AnimatePresence>
                 {activeScene >= 2 && activeScene < 5 && (
                 <>
-                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: -170, opacity: 1 }} exit={{ opacity: 0 }}>2023</motion.div>
-                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: 170, opacity: 1 }} exit={{ opacity: 0 }}>2025</motion.div>
+                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: -170, opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5, ease: "easeOut" }}>2023</motion.div>
+                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: 170, opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5, ease: "easeOut" }}>2025</motion.div>
                 </>
                 )}
             </AnimatePresence>
