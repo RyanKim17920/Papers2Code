@@ -1,4 +1,12 @@
 /* Papers2Code Landing Page Styles */
+
+/* Override app-main styles when containing the landing page to prevent scroll bars */
+.app-main:has(.landing-container) {
+  padding: 0 !important; /* Remove padding to allow full-screen hero */
+  overflow-y: auto !important; /* Allow vertical scroll for the page content */
+  overflow-x: hidden !important; /* Prevent horizontal scroll */
+}
+
 .landing-container {
   width: 100%;
   max-width: 100vw;
