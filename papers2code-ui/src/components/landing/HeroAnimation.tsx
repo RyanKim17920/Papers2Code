@@ -1,6 +1,5 @@
-import React, { useEffect, FC } from 'react';
+import { useEffect, useState } from 'react';
 import { motion, AnimatePresence, useAnimation } from 'framer-motion';
-import { useInView } from 'react-intersection-observer';
 import { Code } from 'lucide-react';
 import './HeroAnimation.css';
 
@@ -69,8 +68,8 @@ const VisualsController = ({ activeScene }: { activeScene: number }) => {
             zIndex = isImplemented ? 10 : 1;
         }
       }
-    }
-    else if (activeScene === 4) { // Stacks move up for chart
+    } 
+    if (activeScene === 4) { // Stacks move up for chart - final scene
       if (i < totalPapersInStacks) {
         opacity = 1; rotateX = 70; rotateZ = -45; y = -180;
         const is2023Paper = i < papers2023Count;
@@ -88,10 +87,6 @@ const VisualsController = ({ activeScene }: { activeScene: number }) => {
         }
       }
     }
-    
-    if (activeScene === 5) { // Animate all out
-      opacity = 0; y = -400;
-    }
 
     return { x, y, rotateX, rotateZ, opacity, zIndex };
   };
@@ -99,7 +94,7 @@ const VisualsController = ({ activeScene }: { activeScene: number }) => {
   return (
     <div className="three-d-space">
       <AnimatePresence>
-        {(activeScene < 5) && Array.from({ length: totalPapers }).map((_, i) => {
+        {Array.from({ length: totalPapers }).map((_, i) => {
           const is2023Paper = i < papers2023Count;
           let isImplemented = false;
           if (activeScene >= 3) {
@@ -152,23 +147,45 @@ const ProblemChart = ({ show }: { show: boolean }) => {
       </motion.div>
     );
 };
-  
+   
 // The main component that assembles the visuals
 export const HeroAnimation = ({ activeScene }: { activeScene: number }) => {
+    const [isVisible, setIsVisible] = useState(true);
+
+    useEffect(() => {
+        const handleScroll = () => {
+            // Hide animation when we scroll past the scrollytelling section
+            const scrollytellingContainer = document.querySelector('.hero-animation-wrapper');
+            
+            if (!scrollytellingContainer) return;
+            
+            const containerRect = scrollytellingContainer.getBoundingClientRect();
+            
+            // Hide when the scrollytelling container is scrolled past
+            setIsVisible(containerRect.bottom > 0);
+        };
+
+        window.addEventListener('scroll', handleScroll);
+        handleScroll(); // Initial check
+        return () => window.removeEventListener('scroll', handleScroll);
+    }, []);
+
+    if (!isVisible) return null;
+
     return (
-      <div className="sticky-visual-pane">
-        <VisualsController activeScene={activeScene} />
-        <ProblemChart show={activeScene === 4} />
-        <div className="viz-container labels-container">
-            <AnimatePresence>
-                {activeScene >= 2 && activeScene < 5 && (
-                <>
-                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: -170, opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5, ease: "easeOut" }}>2023</motion.div>
-                    <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene === 4 ? -180 : 0, x: 170, opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5, ease: "easeOut" }}>2025</motion.div>
-                </>
-                )}
-            </AnimatePresence>
+        <div className="sticky-visual-pane">
+          <VisualsController activeScene={activeScene} />
+          <ProblemChart show={activeScene === 4} />
+          <div className="viz-container labels-container">
+              <AnimatePresence>
+                  {activeScene >= 2 && (
+                  <>
+                      <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene >= 4 ? -180 : 0, x: -170, opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5, ease: "easeOut" }}>2023</motion.div>
+                      <motion.div className="stack-label" initial={{ opacity: 0 }} animate={{ y: activeScene >= 4 ? -180 : 0, x: 170, opacity: 1 }} exit={{ opacity: 0 }} transition={{ duration: 1.5, ease: "easeOut" }}>2025</motion.div>
+                  </>
+                  )}
+              </AnimatePresence>
+          </div>
         </div>
-      </div>
     );
 };

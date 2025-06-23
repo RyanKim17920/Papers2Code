@@ -4,6 +4,7 @@ import { useInView } from 'react-intersection-observer';
 import './LandingPage.css';
 import { HeroAnimation } from '../components/landing/HeroAnimation'; 
 import StatsSection from '../components/landing/StatsSection';
+import SolutionSection from '../components/landing/SolutionSection';
 import CtaSection from '../components/landing/CtaSection';
 
 // The text content for each step of the animation
@@ -13,7 +14,6 @@ const storyContent = [
     { index: 2, title: 'The Hidden Pattern', subtitle: 'But when we look closer at the timeline, a disturbing pattern emerges. The very progress we celebrate is masking a growing crisis.' },
     { index: 3, title: 'The Reproducibility Crisis', subtitle: 'The devastating truth: most papers have no usable code. Researchers spend 60% of their time recreating work that already exists, instead of pushing boundaries.' },
     { index: 4, title: 'The Worsening Reality', subtitle: 'Year after year, the problem grows worse. More papers, less reproducibility. Innovation is suffocating under the weight of wasted effort.'},
-    { index: 5, title: 'The Solution in Action', subtitle: 'We\'re changing this. By connecting researchers with missing implementations, we\'re unlocking trapped innovation and accelerating real progress.' },
 ];
 
 // TYPED Helper component for each text slide. It now handles its own scroll detection.
@@ -60,27 +60,32 @@ const LandingPage = () => {
       {/* The animated blue scrollbar */}
       <motion.div className="scroll-progress-bar" style={{ scaleX: scrollYProgress }} />
 
-      {/* HeroAnimation receives the activeScene as a simple number */}
-      <HeroAnimation activeScene={activeScene} />
-
-      {/* This container provides the scrollable height */}
-      <div className="scrollytelling-text-wrapper">
-        <div className="story-text-container">
-          {storyContent.map(story => (
-            <ScrollSlide
-              key={story.index}
-              activeScene={activeScene}
-              setActiveScene={setActiveScene}
-              {...story}
-            />
-          ))}
+      {/* This container provides the scrollable height and contains both text and visuals */}
+      <div className="scrollytelling-container">
+        <div className="scrollytelling-text-wrapper">
+          <div className="story-text-container">
+            {storyContent.map(story => (
+              <ScrollSlide
+                key={story.index}
+                activeScene={activeScene}
+                setActiveScene={setActiveScene}
+                {...story}
+              />
+            ))}
+          </div>
+        </div>
+        
+        {/* Animation wrapper ensures proper sticky containment */}
+        <div className="hero-animation-wrapper">
+          <HeroAnimation activeScene={activeScene} />
         </div>
       </div>
 
-      {/* The rest of the page flows naturally after the text */}
+      {/* The rest of the page flows naturally after the scrollytelling */}
       <div className="page-content-after-hero">
         <div className="transition-spacer" />
-        <StatsSection animateStats={activeScene >= 5} />
+        <SolutionSection />
+        <StatsSection animateStats={activeScene >= 4} />
         <CtaSection />
       </div>
     </div>

@@ -102,10 +102,118 @@
   }
 }
 
-/* Base Responsive Design - Adjustments here should be for global elements or fallbacks */
+/* Scrollytelling Layout Styles */
+.scrollytelling-container {
+  display: flex;
+  position: relative;
+  height: 500vh; /* Explicit height for 5 sections */
+  overflow: visible;
+}
+
+.scrollytelling-text-wrapper {
+  width: 50%;
+  position: relative;
+  z-index: 10;
+  height: 500vh; /* Must match container height */
+  overflow: visible;
+}
+
+.hero-animation-wrapper {
+  width: 50%;
+  height: 500vh; /* Must match the scrollytelling height */
+  position: relative;
+  display: block;
+  /* Ensure this creates a proper sticky context */
+  overflow: visible;
+}
+
+.story-text-container {
+  width: 100%; 
+  position: relative;
+  z-index: 10;
+}
+
+.page-content-after-hero {
+  position: relative;
+  top: 0;
+  left: 0;
+  width: 100%;
+  z-index: 15; /* Higher z-index to ensure it's above the animation */
+  background: white; /* Give it a solid background */
+  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1); /* Add shadow to visually separate from animation */
+  border-top: 3px solid #e2e8f0; /* Visual separator to show where content starts */
+}
+
+.transition-spacer {
+  height: 20rem; /* Even larger spacer - 320px */
+  background: linear-gradient(to bottom, rgba(233, 236, 239, 0.3), white);
+}
+
+/* Scroll slides and text content */
+.scroll-slide {
+  height: 100vh;
+  width: 100%;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  padding: 5vh 8%;
+  box-sizing: border-box;
+}
+
+.slide-content {
+  opacity: 0.2;
+  filter: blur(5px);
+  transform: translateY(15px);
+  transition: opacity 0.8s ease-out, filter 0.8s ease-out, transform 0.8s ease-out;
+}
+
+.slide-content.is-active {
+  opacity: 1;
+  filter: blur(0px);
+  transform: translateY(0);
+}
+
+.intro-title, .slide-title { 
+  font-size: clamp(2.2rem, 4vw, 3.2rem); 
+  font-weight: 700; 
+  line-height: 1.2; 
+  margin-bottom: 1.5rem; 
+  color: var(--text-heading-color); 
+}
+
+.slide-subtitle { 
+  font-size: 1.2rem; 
+  line-height: 1.7; 
+  color: var(--text-muted-color); 
+}
+
+.highlight-text { 
+  color: var(--danger-color); 
+}
+
+/* Responsive Design - Adjustments here should be for global elements or fallbacks */
 @media (max-width: 992px) {
-  /* Example: Global font adjustment for medium screens if needed */
-  /* .hero-title, .section-header h2 might have base adjustments here if not overridden */
+  /* Scrollytelling responsive adjustments */
+  .scrollytelling-container { 
+    flex-direction: column; 
+    height: auto;
+  }
+  
+  .scrollytelling-text-wrapper, 
+  .hero-animation-wrapper,
+  .story-text-container { 
+    width: 100%; 
+    height: auto;
+  }
+  
+  .scroll-slide { 
+    height: auto; 
+    min-height: 50vh; 
+  }
+  
+  .transition-spacer { 
+    display: none; 
+  }
 }
 
 @media (max-width: 768px) {
@@ -117,5 +225,14 @@
   .section-header p {
     font-size: 0.95rem; /* General adjustment for section paragraphs on mobile */
   }
+  
+  .intro-title, .slide-title {
+    font-size: clamp(1.8rem, 6vw, 2.5rem);
+  }
+  
+  .slide-subtitle {
+    font-size: 1rem;
+  }
+  
   /* Specific component responsive styles are in their respective CSS files */
 }

@@ -33,7 +33,7 @@ Env requirements (set via .env or shell):
 dotenv.load_dotenv()
 
 # --- LLM Provider Configuration ---
-LLM_PROVIDER = os.getenv("LLM_PROVIDER", "openai").lower()
+LLM_PROVIDER = os.getenv("LLM_PROVIDER", "gemini").lower()
 
 openai_client = None
 gemini_client = None
@@ -44,6 +44,10 @@ if LLM_PROVIDER == "openai":
         raise RuntimeError("OPENAI_API_KEY not set in environment or .env file for OpenAI provider.")
     openai.api_key = openai_api_key
     MODEL_NAME = os.getenv("MODEL_NAME", "gpt-4o-mini")
+    # Ensure we're not using a Gemini model with OpenAI
+    if "gemini" in MODEL_NAME.lower():
+        MODEL_NAME = "gpt-4o-mini"
+        print(f"Warning: Gemini model detected with OpenAI provider. Using {MODEL_NAME} instead.")
     openai_client = openai.chat.completions
 elif LLM_PROVIDER == "gemini":
     google_api_key = os.getenv("GOOGLE_API_KEY")
@@ -51,7 +55,11 @@ elif LLM_PROVIDER == "gemini":
         raise RuntimeError("GOOGLE_API_KEY not set in environment or .env file for Gemini provider.")
     
     gemini_client = genai.Client(api_key=google_api_key) 
-    MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.0-flash")
+    MODEL_NAME = os.getenv("MODEL_NAME", "gemini-2.5-flash-lite-preview-06-17")
+    # Ensure we're not using an OpenAI model with Gemini
+    if "gpt" in MODEL_NAME.lower():
+        MODEL_NAME = "gemini-2.5-flash-lite-preview-06-17"
+        print(f"Warning: OpenAI model detected with Gemini provider. Using {MODEL_NAME} instead.")
 else:
     raise ValueError(f"Unsupported LLM_PROVIDER: '{LLM_PROVIDER}'. Please set LLM_PROVIDER to 'openai' or 'gemini'.")
 
@@ -230,7 +238,7 @@ def _call_gemini_api(batch: List[dict]) -> List[str]:
                     )
                 )
                 if resp.candidates and resp.candidates[0].content.parts:
-                    results.append(resp.text.strip())
+                    results.append(resp.candidates[0].content.parts[0].text.strip())
                     break
                 else:
                     print(f"Gemini returned no content for doc {doc.get('_id')} after {attempt+1} attempts.", file=sys.stderr)

@@ -14,61 +14,27 @@ body::-webkit-scrollbar-thumb:hover {
   background-color: var(--primary-dark-color);
 }
 
-
-/* --- ARCHITECTURE & LAYOUT FIXES --- */
-.landing-container {
-  display: flex;
-  position: relative;
-}
-
-/* This provides the scrollable height that drives the entire page */
-.scrollytelling-text-wrapper {
-    width: 50%;
-    position: relative;
-    z-index: 10;
-}
-
-/* MODIFICATION: Changed width to 100% to fill its parent wrapper */
-.story-text-container {
-  width: 100%; 
-  position: relative;
-  z-index: 10;
-}
-
-.page-content-after-hero {
-  position: absolute;
-  top: 600vh; /* Positioned after all 6 text slides */
-  left: 0;
-  width: 100%;
-  z-index: 15; /* Higher z-index to ensure it's above the animation */
-  background: white; /* Give it a solid background */
-  box-shadow: 0 -10px 30px rgba(0, 0, 0, 0.1); /* Add shadow to visually separate from animation */
-}
-
-.transition-spacer {
-  height: 2rem;
-  background: linear-gradient(to bottom, rgba(233, 236, 239, 0.5), white);
-}
-
-/* Visuals are fixed to the right half of the viewport */
+/* Visuals are sticky within the animation wrapper */
 .sticky-visual-pane {
-  height: 100vh;
-  width: 50%;
   position: fixed;
   top: 0;
   right: 0;
+  height: 100vh;
+  width: 50vw;
   display: grid;
   place-items: center;
-  background-color: #e9ecef;
-  z-index: 1;
+  background: white;
+  z-index: 5; /* Lower z-index so it stays behind page content */
   overflow: hidden;
-  /* Add a subtle border to visually separate from content */
   border-left: 1px solid rgba(0, 0, 0, 0.1);
+  /* Only show during scrollytelling section */
 }
+
 /* This makes all direct children of the pane stack in the same grid cell */
 .sticky-visual-pane > * {
   grid-area: 1 / -1;
 }
+
 .viz-container {
   width: 100%;
   height: 100%;
@@ -77,6 +43,7 @@ body::-webkit-scrollbar-thumb:hover {
   align-items: center;
   justify-content: center;
 }
+
 .three-d-space {
   width: 100%;
   height: 100%;
@@ -87,34 +54,6 @@ body::-webkit-scrollbar-thumb:hover {
   align-items: center;
   justify-content: center;
 }
-
-/* --- SCROLL SLIDES & TEXT --- */
-.scroll-slide {
-  height: 100vh;
-  width: 100%;
-  display: flex;
-  flex-direction: column;
-  justify-content: center;
-  /* MODIFICATION: Adjusted padding for better text flow */
-  padding: 5vh 8%;
-  box-sizing: border-box;
-}
-.slide-content {
-  /* MODIFICATION: Removed restrictive max-width to allow text to fill the container */
-  opacity: 0.2;
-  filter: blur(5px);
-  transform: translateY(15px);
-  transition: opacity 0.8s ease-out, filter 0.8s ease-out, transform 0.8s ease-out;
-}
-.slide-content.is-active {
-  opacity: 1;
-  filter: blur(0px);
-  transform: translateY(0);
-}
-.intro-title, .slide-title { font-size: clamp(2.2rem, 4vw, 3.2rem); font-weight: 700; line-height: 1.2; margin-bottom: 1.5rem; color: var(--text-heading-color); }
-.slide-subtitle { font-size: 1.2rem; line-height: 1.7; color: var(--text-muted-color); }
-.highlight-text { color: var(--danger-color); }
-.cta-buttons { display: flex; gap: 1rem; flex-wrap: wrap; margin-top: 2rem; }
 
 /* --- VISUAL ELEMENTS STYLING --- */
 .paper-wrapper { position: absolute; }
@@ -136,8 +75,10 @@ body::-webkit-scrollbar-thumb:hover {
 
 /* --- RESPONSIVE DESIGN --- */
 @media (max-width: 992px) {
-  .landing-container { flex-direction: column; }
-  .scrollytelling-text-wrapper, .story-text-container { width: 100%; }
+  .animation-sticky-wrapper {
+    height: auto;
+  }
+  
   .sticky-visual-pane { 
     width: 100%; 
     position: sticky; 
@@ -147,7 +88,4 @@ body::-webkit-scrollbar-thumb:hover {
     border-left: none;
     border-bottom: 1px solid rgba(0, 0, 0, 0.1);
   }
-  .page-content-after-hero { position: relative; top: 0; box-shadow: none; }
-  .scroll-slide { height: auto; min-height: 50vh; }
-  .transition-spacer { display: none; } /* Hide spacer on mobile since layout is different */
 }
