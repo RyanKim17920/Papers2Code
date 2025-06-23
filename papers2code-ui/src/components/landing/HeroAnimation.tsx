@@ -17,13 +17,13 @@ const ResearchPaperVisual = ({ isStacked }: { isStacked: boolean }) => (
 // Master component to handle all paper & chart animations
 const VisualsController = ({ activeScene }: { activeScene: number }) => {
   const totalPapers = 30;
-  const papers2023Count = 12;
-  const papers2025Count = 15;
+  const papers2023Count = 13;
+  const papers2025Count = 17;
   const totalPapersInStacks = papers2023Count + papers2025Count;
 
   // Data: Implemented stacks are a small fraction
   const implemented2023Count = 3;
-  const implemented2025Count = 2;
+  const implemented2025Count = 3;
 
   const getPaperAnimation = (i: number) => {
     let opacity = 0, x = 0, y = 0, rotateX = 0, rotateZ = 0, zIndex = 1;
@@ -151,8 +151,8 @@ const ProblemChart = ({ show }: { show: boolean }) => {
         </motion.svg>
       </motion.div>
     );
-};
-  
+}; 
+    
 // The main component that assembles the visuals
 export const HeroAnimation = ({ activeScene }: { activeScene: number }) => {
     return (

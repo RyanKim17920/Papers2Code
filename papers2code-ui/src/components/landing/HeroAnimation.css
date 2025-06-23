@@ -19,13 +19,6 @@ body::-webkit-scrollbar-thumb:hover {
 .landing-container {
   display: flex;
   position: relative;
-  /* This parent allows the two-column layout */
-}
-
-.story-text-container {
-  width: 50%;
-  position: relative;
-  z-index: 10;
 }
 
 /* This provides the scrollable height that drives the entire page */
@@ -33,6 +26,13 @@ body::-webkit-scrollbar-thumb:hover {
     width: 50%;
     position: relative;
     z-index: 10;
+}
+
+/* MODIFICATION: Changed width to 100% to fill its parent wrapper */
+.story-text-container {
+  width: 100%; 
+  position: relative;
+  z-index: 10;
 }
 
 .page-content-after-hero {
@@ -87,11 +87,12 @@ body::-webkit-scrollbar-thumb:hover {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  padding: 5vh 4rem;
+  /* MODIFICATION: Adjusted padding for better text flow */
+  padding: 5vh 8%;
   box-sizing: border-box;
 }
 .slide-content {
-  max-width: 700px;
+  /* MODIFICATION: Removed restrictive max-width to allow text to fill the container */
   opacity: 0.2;
   filter: blur(5px);
   transform: translateY(15px);
@@ -128,7 +129,7 @@ body::-webkit-scrollbar-thumb:hover {
 /* --- RESPONSIVE DESIGN --- */
 @media (max-width: 992px) {
   .landing-container { flex-direction: column; }
-  .story-text-container { width: 100%; }
+  .scrollytelling-text-wrapper, .story-text-container { width: 100%; }
   .sticky-visual-pane { width: 100%; position: sticky; height: 50vh; opacity: 1; filter: none; }
   .page-content-after-hero { position: relative; top: 0; }
   .scroll-slide { height: auto; min-height: 50vh; }

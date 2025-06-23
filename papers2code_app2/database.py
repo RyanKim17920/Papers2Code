@@ -42,11 +42,11 @@ def get_mongo_uri_and_db_name() -> Tuple[str, str]:
         uri = config_settings.MONGO_URI_PROD
     elif env_type == "PROD_TEST":
         uri = config_settings.MONGO_URI_PROD_TEST
-    elif env_type == "DEV":
-        uri = config_settings.MONGO_URI_DEV
+    elif env_type == "DEV" or env_type == "DEVELOPMENT":
+        uri = getattr(config_settings, 'MONGO_URI_DEV', None) or getattr(config_settings, 'MONGO_URI_DEVELOPMENT', None)
     else:
         logger.warning(f"Unknown ENV_TYPE: '{config_settings.ENV_TYPE}'. Defaulting to DEV URI if available.")
-        uri = config_settings.MONGO_URI_DEV
+        uri = getattr(config_settings, 'MONGO_URI_DEV', None) or getattr(config_settings, 'MONGO_URI_DEVELOPMENT', None)
 
     if not uri:
         logger.critical(f"CRITICAL: MongoDB URI for ENV_TYPE '{env_type}' is not set. Check .env file for MONGO_URI_{env_type} or MONGO_URI_DEV.")

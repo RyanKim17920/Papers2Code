@@ -1,6 +1,6 @@
 import logging
-from fastapi import APIRouter, Depends, HTTPException, status, Request
-from typing import Optional
+from fastapi import APIRouter, Depends, HTTPException, status, Request, Body
+from typing import Optional, List
 from bson import ObjectId
 import jwt
 from ..schemas.users import UserProfileResponse
@@ -92,6 +92,30 @@ async def get_user_settings(
     except Exception as e:
         logger.error(f"Error fetching settings for user {current_user.id}: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch user settings.")
+
+@router.post("/profiles", response_model=List[UserSchema])
+@handle_service_errors
+async def get_user_profiles_by_ids(
+    user_ids: List[str] = Body(..., description="List of user IDs to fetch profiles for"),
+    user_service: UserService = Depends(get_user_service)
+):
+    """Retrieve user profiles by their IDs. Used for displaying contributor information."""
+    try:
+        if not user_ids:
+            return []
+        
+        # Limit the number of user IDs to prevent abuse
+        if len(user_ids) > 50:
+            raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Too many user IDs requested (max 50)")
+        
+        user_profiles = await user_service.get_user_profiles_by_ids(user_ids)
+        return user_profiles
+    except ValueError as e:
+        raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error fetching user profiles for IDs {user_ids}: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="Failed to fetch user profiles.")
+
 # Add this router to papers2code_app2/main.py
 # from .routers import user_router
 # app.include_router(user_router.router)

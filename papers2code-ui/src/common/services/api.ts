@@ -413,6 +413,33 @@ export const deleteUserAccount = async (): Promise<void> => {
   await handleApiResponse<void>(response);
 };
 
+// --- NEW: Function to fetch user profiles by IDs ---
+export const fetchUserProfilesByIds = async (userIds: string[]): Promise<UserProfile[]> => {
+  if (!userIds || userIds.length === 0) {
+    return [];
+  }
+
+  const url = `${API_BASE_URL}/api/users/profiles`;
+  
+  const csrfToken = getCsrfToken();
+  const headers: HeadersInit = {
+    'Content-Type': 'application/json',
+  };
+  if (csrfToken) {
+    headers['X-CSRFToken'] = csrfToken;
+  }
+  
+  const response = await fetch(url, {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify(userIds),
+    credentials: 'include',
+  });
+
+  const userProfiles = await handleApiResponse<UserProfile[]>(response);
+  return userProfiles;
+};
+
 
 // --- BEGIN ADDED TYPE DEFINITIONS ---
 // These interfaces define the expected structure of the raw JSON response

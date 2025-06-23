@@ -1,6 +1,7 @@
 import logging
-from typing import Optional
+from typing import Optional, List
 from bson import ObjectId
+from bson.errors import InvalidId
 from datetime import datetime
 
 from ..database import (
@@ -97,6 +98,38 @@ class UserService:
             raise UserNotFoundException(f"User with ID '{user_id}' not found.")
         
         return UserSchema(**user_doc)
+
+    async def get_user_profiles_by_ids(self, user_id_strings: List[str]) -> List[UserSchema]:
+        """Retrieve multiple user profiles by their IDs."""
+        await self._init_collections()
+        
+        if not user_id_strings:
+            return []
+        
+        # Convert string IDs to ObjectIds
+        user_obj_ids = []
+        for user_id_str in user_id_strings:
+            try:
+                user_obj_ids.append(ObjectId(user_id_str))
+            except InvalidId:
+                logger.warning(f"Invalid ObjectId format: {user_id_str}")
+                continue
+        
+        if not user_obj_ids:
+            return []
+        
+        # Fetch users from database
+        user_docs = []
+        cursor = self.users_collection.find({"_id": {"$in": user_obj_ids}})
+        async for user_doc in cursor:
+            try:
+                user_schema = UserSchema(**user_doc)
+                user_docs.append(user_schema)
+            except Exception as e:
+                logger.warning(f"Failed to convert user doc to schema: {e}")
+                continue
+        
+        return user_docs
 
     async def update_user_profile(self, user_id: ObjectId, profile_update: UserUpdateProfile) -> UserSchema:
         """Update a user's profile information."""

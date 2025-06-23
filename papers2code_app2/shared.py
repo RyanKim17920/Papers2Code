@@ -51,10 +51,10 @@ class VotingThresholdSettings(BaseSettings):
     IMPLEMENTABLE_CONFIRM_THRESHOLD: int = Field(2, env="IMPLEMENTABLE_CONFIRM_THRESHOLD")
     model_config = SettingsConfigDict(extra="ignore")
 
-class AppSettings(BaseSettings):
-    # Core settings
+class AppSettings(BaseSettings):    # Core settings
     ENV_TYPE: str = "DEV"
     MONGO_URI_DEV: Optional[str] = None
+    MONGO_URI_DEVELOPMENT: Optional[str] = None
     MONGO_URI_PROD: Optional[str] = None
     MONGO_URI_PROD_TEST: Optional[str] = None
     FLASK_SECRET_KEY: Optional[str] = None

@@ -240,12 +240,11 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             isRemoving={isRemoving}
                         />
                     </div>
-                )}
-
-                {activeTab === 'implementationProgress' && paper.implementationProgress && (
+                )}                {activeTab === 'implementationProgress' && paper.implementationProgress && (
                     <div className="tab-pane-container">
                         <ImplementationProgressTab 
                             progress={paper.implementationProgress} 
+                            currentUser={currentUser}
                             onImplementationProgressChange={handleImplementationProgressChange} // Updated prop
                             // onUpdateStep is no longer used by ImplementationProgressTab, can be removed if not needed elsewhere
                         />
