@@ -151,18 +151,34 @@ const ProblemChart = ({ show }: { show: boolean }) => {
 // The main component that assembles the visuals
 export const HeroAnimation = ({ activeScene }: { activeScene: number }) => {
     const [isVisible, setIsVisible] = useState(true);
+    const [positionClass, setPositionClass] = useState('phase-initial'); // Track positioning phase
 
     useEffect(() => {
         const handleScroll = () => {
-            // Hide animation when we scroll past the scrollytelling section
-            const scrollytellingContainer = document.querySelector('.hero-animation-wrapper');
+            const scrollytellingContainer = document.querySelector('.scrollytelling-container');
+            const heroHeader = document.querySelector('.hero-header');
             
-            if (!scrollytellingContainer) return;
+            if (!scrollytellingContainer || !heroHeader) return;
             
             const containerRect = scrollytellingContainer.getBoundingClientRect();
+            const heroRect = heroHeader.getBoundingClientRect();
             
-            // Hide when the scrollytelling container is scrolled past
-            setIsVisible(containerRect.bottom > 0);
+            // Phase 1: Initially positioned below header (not overlapping)
+            if (heroRect.bottom > 0) {
+                setPositionClass('phase-initial');
+            }
+            // Phase 2: During scrolling - follows/sticks as you scroll through scenes
+            else if (containerRect.top <= 0 && containerRect.bottom > 0) {
+                setPositionClass('phase-following');
+            }
+            // Phase 3: At the end - sticks when scrollytelling ends
+            else if (containerRect.bottom <= 0) {
+                setPositionClass('phase-end');
+                setIsVisible(false); // Hide when completely past scrollytelling
+                return;
+            }
+            
+            setIsVisible(true);
         };
 
         window.addEventListener('scroll', handleScroll);
@@ -173,7 +189,7 @@ export const HeroAnimation = ({ activeScene }: { activeScene: number }) => {
     if (!isVisible) return null;
 
     return (
-        <div className="sticky-visual-pane">
+        <div className={`sticky-visual-pane ${positionClass}`}>
           <VisualsController activeScene={activeScene} />
           <ProblemChart show={activeScene === 4} />
           <div className="viz-container labels-container">
