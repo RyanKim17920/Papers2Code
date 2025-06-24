@@ -1,8 +1,29 @@
 import { motion } from 'framer-motion';
 import { Search, Github, BookOpen } from 'lucide-react';
+import { useNavigate } from 'react-router-dom';
+import { useState } from 'react';
 import './HeroHeader.css';
 
 const HeroHeader = () => {
+  const navigate = useNavigate();
+  const [searchQuery, setSearchQuery] = useState('');
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/papers?searchQuery=${encodeURIComponent(searchQuery.trim())}`);
+    }
+  };
+
+  const handleBrowsePapers = () => {
+    navigate('/papers');
+  };
+
+  const handleAddImplementation = () => {
+    // Navigate to papers page with a filter for papers needing implementation
+    navigate('/papers?filter=needs-implementation');
+  };
+
   return (
     <section className="hero-header">
       <div className="hero-content">
@@ -23,20 +44,22 @@ const HeroHeader = () => {
           </p>
           
           <div className="hero-actions">
-            <div className="search-container">
+            <form onSubmit={handleSearch} className="search-container">
               <Search className="search-icon" />
               <input 
                 type="text" 
                 placeholder="Search papers, models, implementations..." 
                 className="search-input"
+                value={searchQuery}
+                onChange={(e) => setSearchQuery(e.target.value)}
               />
-            </div>
+            </form>
             <div className="action-buttons">
-              <button className="btn-primary">
+              <button className="btn-primary" onClick={handleBrowsePapers}>
                 <BookOpen size={20} />
                 Browse Papers
               </button>
-              <button className="btn-secondary">
+              <button className="btn-secondary" onClick={handleAddImplementation}>
                 <Github size={20} />
                 Add Implementation
               </button>
