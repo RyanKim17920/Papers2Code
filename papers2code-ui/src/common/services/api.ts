@@ -34,6 +34,9 @@ export interface AdvancedPaperFilters {
   startDate?: string; // Expecting YYYY-MM-DD string format
   endDate?: string;   // Expecting YYYY-MM-DD string format
   searchAuthors?: string;
+  mainStatus?: string; // Implementation status filter
+  implStatus?: string; // Implementability status filter
+  hasOfficialImpl?: boolean; // Filter by presence of official implementation
 }
 
 // --- Type for the response from the /actions endpoint ---
@@ -68,7 +71,6 @@ export const fetchPapersFromApi = async (
   if (sort) {
     params.append('sort', sort);
   }
-
   if (advancedFilters) {
     if (advancedFilters.startDate) {
       params.append('startDate', advancedFilters.startDate);
@@ -79,9 +81,27 @@ export const fetchPapersFromApi = async (
     if (advancedFilters.searchAuthors && advancedFilters.searchAuthors.trim()) {
       params.append('searchAuthors', advancedFilters.searchAuthors.trim());
     }
+    if (advancedFilters.mainStatus) {
+      params.append('mainStatus', advancedFilters.mainStatus);
+    }
+    if (advancedFilters.implStatus) {
+      params.append('implStatus', advancedFilters.implStatus);
+    }
+    if (advancedFilters.hasOfficialImpl !== undefined) {
+      params.append('hasOfficialImpl', String(advancedFilters.hasOfficialImpl));
+    }
   }
-
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/?${params.toString()}`;
+  
+  console.log('🌐 Final API URL:', url);
+  console.log('📦 Request parameters:', {
+    page,
+    limit,
+    searchTerm,
+    sort,
+    advancedFilters
+  });
+  
   const response = await fetch(url, { credentials: 'include', signal }); // <-- MODIFIED: Pass signal to fetch
   // MODIFIED: Use handleApiResponse with correct camelCase types for pageSize and hasMore from the backend's PaginatedPaperResponse
   const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; page: number; pageSize: number; hasMore: boolean}>(response);

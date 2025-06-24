@@ -10,11 +10,13 @@ const CtaSection: React.FC<CtaSectionProps> = () => {
   const navigate = useNavigate();
 
   const handleStartBuilding = () => {
-    navigate('/papers?filter=needs-implementation');
+    // Navigate to papers that need implementation
+    navigate('/papers?mainStatus=Not%20Started');
   };
 
   const handleFindImplementations = () => {
-    navigate('/papers?filter=has-implementation');
+    // Navigate to papers that have implementations
+    navigate('/papers?mainStatus=Completed');
   };
 
   const handlePartnerWithUs = () => {

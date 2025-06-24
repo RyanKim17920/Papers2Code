@@ -15,6 +15,9 @@ const initialAdvancedFilters: AdvancedPaperFilters = {
   startDate: '',
   endDate: '',
   searchAuthors: '',
+  mainStatus: '',
+  implStatus: '',
+  hasOfficialImpl: undefined,
 };
 
 export function usePaperList(authLoading?: boolean) {
@@ -31,17 +34,22 @@ export function usePaperList(authLoading?: boolean) {
   );
   const [totalPages, setTotalPages] = useState(1);
   const { showLoginPrompt } = useModal();
-
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(() => ({
     startDate: searchParams.get('startDate') || '',
     endDate: searchParams.get('endDate') || '',
     searchAuthors: searchParams.get('searchAuthors') || '',
+    mainStatus: searchParams.get('mainStatus') || '',
+    implStatus: searchParams.get('implStatus') || '',
+    hasOfficialImpl: searchParams.get('hasOfficialImpl') ? searchParams.get('hasOfficialImpl') === 'true' : undefined,
   }));
   const [showAdvancedSearch, setShowAdvancedSearch] = useState<boolean>(false);
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState<AdvancedPaperFilters>(() => ({
     startDate: searchParams.get('startDate') || '',
     endDate: searchParams.get('endDate') || '',
     searchAuthors: searchParams.get('searchAuthors') || '',
+    mainStatus: searchParams.get('mainStatus') || '',
+    implStatus: searchParams.get('implStatus') || '',
+    hasOfficialImpl: searchParams.get('hasOfficialImpl') ? searchParams.get('hasOfficialImpl') === 'true' : undefined,
   }));
 
   // New state to control data loading based on auth status
@@ -56,18 +64,45 @@ export function usePaperList(authLoading?: boolean) {
       setIsLoading(true); // Show loading spinner if auth is in progress
     }
     // If authLoading is undefined, readyToLoadData's initial state handles it.
-  }, [authLoading, setIsLoading]);
-
-  useEffect(() => {
+  }, [authLoading, setIsLoading]);  useEffect(() => {
     const currentSearchParamsStr = searchParams.toString();
+    console.log('🔍 URL params changed:', currentSearchParamsStr);
+    
     if (currentSearchParamsStr !== prevSearchParamsRef.current) {
         const queryFromUrl = searchParams.get('searchQuery') || '';
+        const mainStatusFromUrl = searchParams.get('mainStatus') || '';
+        const implStatusFromUrl = searchParams.get('implStatus') || '';
+        
+        console.log('📥 Reading from URL:', {
+          searchQuery: queryFromUrl,
+          mainStatus: mainStatusFromUrl,
+          implStatus: implStatusFromUrl
+        });
+        
         if (queryFromUrl !== searchTerm) {
+            console.log('📝 Setting searchTerm:', queryFromUrl);
             setSearchTerm(queryFromUrl);
         }
+        
+        // Auto-apply filters from URL parameters
+        const filtersFromUrl = {
+          startDate: searchParams.get('startDate') || '',
+          endDate: searchParams.get('endDate') || '',
+          searchAuthors: searchParams.get('searchAuthors') || '',
+          mainStatus: mainStatusFromUrl,
+          implStatus: implStatusFromUrl,
+          hasOfficialImpl: searchParams.get('hasOfficialImpl') ? searchParams.get('hasOfficialImpl') === 'true' : undefined,
+        };
+        
+        console.log('🔧 Auto-applying filters from URL:', filtersFromUrl);
+        
+        // Update both filter states when URL changes
+        setAdvancedFilters(filtersFromUrl);
+        setAppliedAdvancedFilters(filtersFromUrl);
+        
         prevSearchParamsRef.current = currentSearchParamsStr;
     }
-  }, [searchParams, searchTerm]);
+  }, [searchParams]); // Remove searchTerm from dependencies to avoid circular updates
 
 
   const isSearchInputActive = !!searchTerm; 
@@ -76,21 +111,29 @@ export function usePaperList(authLoading?: boolean) {
 
   const uiSortValue = isSearchInputActive ? 'relevance' : sortPreference;
   const activeSortDisplay = uiSortValue; // Added for clarity, can be used directly if preferred
-
   useEffect(() => {
     const newParams = new URLSearchParams();
-    if (debouncedSearchTerm) {
-      newParams.set('searchQuery', debouncedSearchTerm);
+    
+    // Always preserve searchQuery if it exists (either from current state or URL)
+    const currentSearchQuery = debouncedSearchTerm || searchParams.get('searchQuery');
+    if (currentSearchQuery) {
+      newParams.set('searchQuery', currentSearchQuery);
     }
+    
     if (currentPage !== 1) {
       newParams.set('page', currentPage.toString());
     }
     if (!isDebouncedSearchActive && sortPreference !== DEFAULT_SORT_PREFERENCE) {
       newParams.set('sort', sortPreference);
     }
+    
+    // Preserve all advanced filter parameters
     if (appliedAdvancedFilters.startDate) newParams.set('startDate', appliedAdvancedFilters.startDate);
     if (appliedAdvancedFilters.endDate) newParams.set('endDate', appliedAdvancedFilters.endDate);
     if (appliedAdvancedFilters.searchAuthors) newParams.set('searchAuthors', appliedAdvancedFilters.searchAuthors);
+    if (appliedAdvancedFilters.mainStatus) newParams.set('mainStatus', appliedAdvancedFilters.mainStatus);
+    if (appliedAdvancedFilters.implStatus) newParams.set('implStatus', appliedAdvancedFilters.implStatus);
+    if (appliedAdvancedFilters.hasOfficialImpl !== undefined) newParams.set('hasOfficialImpl', String(appliedAdvancedFilters.hasOfficialImpl));
     
     // Check if newParams are different from current searchParams before setting
     // to avoid unnecessary re-renders and effect runs.
@@ -103,7 +146,6 @@ export function usePaperList(authLoading?: boolean) {
   useEffect(() => {
     setCurrentPage(1);
   }, [debouncedSearchTerm, sortPreference, appliedAdvancedFilters]);
-
   // API Fetching Logic
   useEffect(() => {
     const abortController = new AbortController();
@@ -114,6 +156,14 @@ export function usePaperList(authLoading?: boolean) {
         const sortForAPI = isDebouncedSearchActive ? undefined : sortPreference;
         const effectivePage = currentPage;
 
+        console.log('🚀 Making API call with:', {
+          page: effectivePage,
+          limit: ITEMS_PER_PAGE,
+          searchTerm: isAuthorSearchActive ? undefined : debouncedSearchTerm,
+          sort: sortForAPI,
+          appliedAdvancedFilters: appliedAdvancedFilters
+        });
+
         const response = await fetchPapersFromApi(
           effectivePage,
           ITEMS_PER_PAGE,
@@ -122,6 +172,11 @@ export function usePaperList(authLoading?: boolean) {
           appliedAdvancedFilters,
           abortController.signal
         );
+
+        console.log('✅ API response received:', {
+          totalPapers: response.papers.length,
+          totalPages: response.totalPages
+        });
 
         if (!abortController.signal.aborted) {
           setPapers(response.papers);

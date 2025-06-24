@@ -11,17 +11,23 @@ const HeroHeader = () => {
   const handleSearch = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/papers?searchQuery=${encodeURIComponent(searchQuery.trim())}`);
+      const searchUrl = `/papers?searchQuery=${encodeURIComponent(searchQuery.trim())}`;
+      console.log('🔍 Navigating to search URL:', searchUrl);
+      navigate(searchUrl);
     }
   };
 
   const handleBrowsePapers = () => {
+    console.log('📚 Navigating to browse papers');
     navigate('/papers');
   };
 
   const handleAddImplementation = () => {
     // Navigate to papers page with a filter for papers needing implementation
-    navigate('/papers?filter=needs-implementation');
+    // Use "Not Started" as the primary filter for papers needing implementation
+    const filterUrl = '/papers?mainStatus=Not%20Started';
+    console.log('⚙️ Navigating to filter URL:', filterUrl);
+    navigate(filterUrl);
   };
 
   return (
