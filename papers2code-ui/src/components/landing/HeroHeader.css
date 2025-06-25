@@ -1,7 +1,6 @@
 /* Hero Header Section */
 .hero-header {
-  height: 100vh; /* Use fixed height to prevent scroll bars */
-  min-height: 100vh; /* Ensure minimum height */
+  height: 100vh; /* Fixed height to prevent initial scrollbar */
   background: linear-gradient(135deg, #f8fafc 0%, #e2e8f0 100%);
   display: flex;
   flex-direction: column;
@@ -13,12 +12,17 @@
   padding: 0.25rem; /* Minimal padding for maximum content space */
   overflow: hidden; /* Prevent any scrollbars within hero */
   box-sizing: border-box; /* Include padding in height calculation */
+  /* Prevent any content from causing overflow */
+  contain: layout style;
 } 
 
 .hero-content {
   max-width: 800px;
   width: 100%;
   margin-bottom: 0.25rem; /* Minimal margin for maximum space efficiency */
+  /* Prevent content overflow */
+  overflow: hidden;
+  flex-shrink: 1;
 }
 
 /* Hero Text */
@@ -63,6 +67,8 @@
   gap: 0.5rem; /* Minimal gap to save maximum space */
   align-items: center;
   margin-bottom: 0.75rem; /* Minimal margin to save maximum space */
+  flex-shrink: 1;
+  min-height: 0; /* Allow flex shrinking */
 }
 
 .search-container {
@@ -166,6 +172,8 @@
   margin-bottom: 0.75rem; /* Minimal margin to prevent overflow */
   max-width: 100%;
   overflow: hidden;
+  flex-shrink: 1;
+  min-height: 0; /* Allow flex shrinking */
 }
 
 .stat-item {

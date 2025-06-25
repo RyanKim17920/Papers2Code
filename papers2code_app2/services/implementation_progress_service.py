@@ -186,12 +186,14 @@ class ImplementationProgressService:
         update_fields = {}
         update_data = progress_update.model_dump(exclude_unset=True)
         
-        # Check if email status is being updated to SENT
+        # Check if email status is being updated to trigger paper status changes
         email_status_changed_to_sent = False
+        email_status_changed = None
         
         for key, value in update_data.items():
             if key == 'email_status' and isinstance(value, EmailStatus):
                 update_fields["emailStatus"] = value.value  # Use camelCase field name
+                email_status_changed = value
                 if value == EmailStatus.SENT:
                     email_status_changed_to_sent = True
                     # Set the timestamp when email was sent
@@ -213,16 +215,66 @@ class ImplementationProgressService:
             {"$set": update_fields}
         )
         
-        # If email status was changed to SENT, update the paper's implementability status
-        if email_status_changed_to_sent:
+        # Update paper status based on email status changes
+        if email_status_changed:
+            paper_status_update = None
+            implementability_status_update = None
+            
+            if email_status_changed == EmailStatus.SENT:
+                # Email sent - waiting for author response
+                paper_status_update = "Waiting for Author Response"
+                
+            elif email_status_changed == EmailStatus.RESPONSE_RECEIVED:
+                # Author responded - now in progress  
+                paper_status_update = "Work in Progress"
+                
+            elif email_status_changed == EmailStatus.CODE_UPLOADED:
+                # Code uploaded by author - work completed
+                paper_status_update = "Official Code Posted"
+                
+            elif email_status_changed == EmailStatus.CODE_NEEDS_REFACTORING:
+                # Code needs work - still in progress
+                paper_status_update = "Work in Progress"
+                
+            elif email_status_changed == EmailStatus.REFUSED_TO_UPLOAD:
+                # Author refused - back to started but no official code
+                paper_status_update = "Started"
+                
+            elif email_status_changed == EmailStatus.NO_RESPONSE:
+                # No response from author - community can continue
+                paper_status_update = "Started"
+            
+            # Apply the paper status updates
+            paper_updates = {}
+            if paper_status_update:
+                paper_updates["status"] = paper_status_update
+            if implementability_status_update:
+                paper_updates["implementabilityStatus"] = implementability_status_update
+                
+            if paper_updates:
+                try:
+                    await papers_collection.update_one(
+                        {"_id": paper_obj_id},
+                        {"$set": paper_updates}
+                    )
+                    logger.info(f"Updated paper {paper_id} with status updates: {paper_updates}")
+                except Exception as e:
+                    logger.error(f"Failed to update paper status for paper {paper_id}: {e}")
+                    # Don't raise the exception as the progress update was successful
+        
+        # Update paper status when GitHub repo is added (community implementation started)
+        elif 'github_repo_id' in update_data and update_data['github_repo_id']:
+            # GitHub repo added - implementation work has started
             try:
-                await papers_collection.update_one(
-                    {"_id": paper_obj_id},
-                    {"$set": {"implementabilityStatus": "Waiting for Author Response"}}
-                )
-                logger.info(f"Updated paper {paper_id} implementability status to 'Waiting for Author Response' due to email being sent")
+                current_paper = await papers_collection.find_one({"_id": paper_obj_id})
+                if current_paper and current_paper.get("status") == "Not Started":
+                    await papers_collection.update_one(
+                        {"_id": paper_obj_id},
+                        {"$set": {"status": "Started"}}
+                    )
+                    logger.info(f"Updated paper {paper_id} status to 'Started' due to GitHub repo being added")
             except Exception as e:
-                logger.error(f"Failed to update paper implementability status for paper {paper_id}: {e}")
+                logger.error(f"Failed to update paper status for GitHub repo addition on paper {paper_id}: {e}")
                 # Don't raise the exception as the progress update was successful
         
         # Return the updated progress

@@ -292,15 +292,26 @@
 
 /* Enhanced button states - these should align with or use App.css's .btn-primary, .btn-secondary etc. */
 .modal-actions .btn-primary {
-    background: linear-gradient(135deg, var(--primary-color, #007bff) 0%, var(--primary-dark-color, #0056b3) 100%);
-    color: var(--text-on-primary, white);
-    border-color: var(--primary-color, #007bff); /* Or transparent if global .btn handles borders differently */
+    background: linear-gradient(135deg, var(--primary-color, #3b82f6) 0%, var(--primary-dark-color, #2563eb) 100%) !important;
+    color: white !important;
+    border: 2px solid var(--primary-color, #3b82f6) !important;
+}
+
+.modal-actions .btn-primary:hover {
+    background: linear-gradient(135deg, var(--primary-dark-color, #2563eb) 0%, #1d4ed8 100%) !important;
+    border-color: var(--primary-dark-color, #2563eb) !important;
 }
 
 .modal-actions .btn-secondary {
-    background: linear-gradient(135deg, var(--button-secondary-bg, #f8f9fa) 0%, var(--button-secondary-hover-bg, #e9ecef) 100%);
-    color: var(--button-secondary-text, var(--text-color));
-    border-color: var(--border-color, #dee2e6);
+    background: white !important;
+    color: var(--text-color, #374151) !important;
+    border: 2px solid var(--border-color, #d1d5db) !important;
+}
+
+.modal-actions .btn-secondary:hover {
+    background: var(--background-color-light, #f9fafb) !important;
+    border-color: var(--primary-color, #3b82f6) !important;
+    color: var(--primary-color, #3b82f6) !important;
 }
 
 .modal-actions .btn-danger {

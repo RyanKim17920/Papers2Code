@@ -26,7 +26,7 @@ export function usePaperList(authLoading?: boolean) {
   const [papers, setPapers] = useState<Paper[]>([]);
   const [isLoading, setIsLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
-  const [searchTerm, setSearchTerm] = useState<string>('');
+  const [searchTerm, setSearchTerm] = useState<string>(() => searchParams.get('searchQuery') || '');
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
   const [sortPreference, setSortPreference] = useState<SortPreference>('newest');
   const [currentPage, setCurrentPage] = useState<number>(

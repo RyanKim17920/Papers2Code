@@ -1,5 +1,6 @@
 // Base URL for the backend API
-export const API_BASE_URL = 'http://localhost:5000';
+// Uses environment variable in production, falls back to localhost in dev
+export const API_BASE_URL = import.meta.env.VITE_API_BASE_URL || 'http://localhost:5000';
 
 // Common API route prefixes
 export const AUTH_API_PREFIX = '/api/auth';

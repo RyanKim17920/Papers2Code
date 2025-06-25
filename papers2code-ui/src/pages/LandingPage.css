@@ -6,6 +6,12 @@
   position: relative;
 }
 
+/* Override app-main styles for landing page to prevent initial scrollbars */
+.app-main {
+  padding: 0 !important; /* Remove default padding that can cause scrollbars */
+  overflow: hidden !important; /* Prevent initial scrollbar flash */
+}
+
 /* Enhanced scroll progress bar */
 .scroll-progress-bar {
   position: fixed;

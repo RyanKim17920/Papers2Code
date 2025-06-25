@@ -31,13 +31,13 @@ const LoginPromptModal: React.FC = () => {
                 </div>
                 <div className="modal-actions">
                     <button
-                        className="btn button-primary"
+                        className="btn btn-primary"
                         onClick={handleConfirmLogin}
                     >
                         Connect with GitHub
                     </button>
                     <button
-                        className="btn button-secondary"
+                        className="btn btn-secondary"
                         onClick={handleCancel}
                     >
                         Cancel

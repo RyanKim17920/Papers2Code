@@ -1,0 +1,12 @@
+# Vercel API Dependencies
+mangum==0.17.0
+fastapi
+uvicorn
+pymongo[srv]
+motor
+pydantic
+python-jose[cryptography]
+passlib[bcrypt]
+python-multipart
+slowapi
+dnspython

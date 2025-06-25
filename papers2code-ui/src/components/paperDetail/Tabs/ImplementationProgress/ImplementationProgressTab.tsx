@@ -21,7 +21,6 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     const [isUpdating, setIsUpdating] = useState(false);
     const [error, setError] = useState<string | null>(null);
     const [githubRepoValue, setGithubRepoValue] = useState(progress.githubRepoId || '');
-    const [debounceTimer, setDebounceTimer] = useState<NodeJS.Timeout | null>(null);
     const [showConfirmModal, setShowConfirmModal] = useState(false);
     const [pendingStatus, setPendingStatus] = useState<EmailStatus | null>(null);
     const [showResponseModal, setShowResponseModal] = useState(false);
@@ -79,15 +78,6 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
 
         checkAutoNoResponse();
     }, [progress.emailStatus, progress.emailSentAt, onImplementationProgressChange]);
-
-    // Cleanup debounce timer
-    useEffect(() => {
-        return () => {
-            if (debounceTimer) {
-                clearTimeout(debounceTimer);
-            }
-        };
-    }, [debounceTimer]);
 
     if (!progress) {
         return (
@@ -166,19 +156,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
 
     const handleGithubRepoInputChange = useCallback((value: string) => {
         setGithubRepoValue(value);
-        
-        if (debounceTimer) {
-            clearTimeout(debounceTimer);
-        }
-        
-        const newTimer = setTimeout(() => {
-            if (value !== progress.githubRepoId) {
-                handleGithubRepoUpdate(value);
-            }
-        }, 1000);
-        
-        setDebounceTimer(newTimer);
-    }, [debounceTimer, progress.githubRepoId]);
+        // Removed auto-save debounce - user must click Save button explicitly
+    }, []);
 
     const getStatusIcon = (status: EmailStatus) => {
         switch (status) {
@@ -542,10 +521,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                                             <span className="summary-value">{formatDateDistance(progress.emailSentAt)}</span>
                                         </div>
                                     )}
-                                    <div className="summary-item">
-                                        <span className="summary-label">Last updated:</span>
-                                        <span className="summary-value">{formatDateDistance(progress.updatedAt)}</span>
-                                    </div>
+                                    {/* Removed redundant "Last updated" as it's shown in "Last activity" below */}
                                 </div>
                             </div>
                         )}
