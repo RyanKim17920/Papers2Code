@@ -10,6 +10,7 @@ import type { UserProfile } from './common/types/user';
 import { UserAvatar } from './common/components';
 import { ModalProvider } from './common/context/ModalContext'; // Import ModalProvider
 import LoginPromptModal from './common/components/LoginPromptModal'; // Import LoginPromptModal
+import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from './common/components/ErrorBoundary';
 
 import ProfilePage from './pages/ProfilePage'; // Added import for ProfilePage
 import SettingsPage from './pages/SettingsPage'; // Added import for SettingsPage
@@ -97,16 +98,31 @@ function App() {
             </div>
           </header>
           <main className="app-main">
-            <Routes>
-              <Route path="/" element={<LandingPage />} />
-              <Route path="/papers" element={<PaperListPage authLoading={authLoading} />} />
-              <Route
-                path="/paper/:paperId"
-                element={<PaperDetailPage currentUser={currentUser} />}
-              />              <Route path="/user/:github_username" element={<ProfilePage />} /> {/* Added route for ProfilePage */}
-              <Route path="/settings" element={<SettingsPage />} /> {/* Added route for SettingsPage */}
-              <Route path="*" element={<NotFoundPage />} />
-            </Routes>          </main>          
+            <ErrorBoundary>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route 
+                  path="/papers" 
+                  element={
+                    <PaperListErrorBoundary>
+                      <PaperListPage authLoading={authLoading} />
+                    </PaperListErrorBoundary>
+                  } 
+                />
+                <Route
+                  path="/paper/:paperId"
+                  element={
+                    <PaperDetailErrorBoundary>
+                      <PaperDetailPage currentUser={currentUser} />
+                    </PaperDetailErrorBoundary>
+                  }
+                />              
+                <Route path="/user/:github_username" element={<ProfilePage />} /> {/* Added route for ProfilePage */}
+                <Route path="/settings" element={<SettingsPage />} /> {/* Added route for SettingsPage */}
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+            </ErrorBoundary>
+          </main>          
           <LoginPromptModal /> {/* Add LoginPromptModal here so it can be displayed globally */}
 
           <footer className="app-footer">

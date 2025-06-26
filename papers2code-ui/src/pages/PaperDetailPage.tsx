@@ -1,7 +1,8 @@
-import React, { useState } from 'react';
-import { useParams, Link } from 'react-router-dom';
+import React, { useState, useEffect } from 'react';
+import { useParams, Link, useLocation } from 'react-router-dom';
 
 import { usePaperDetail } from '../common/hooks/usePaperDetail';
+import { useActivityTracking } from '../common/hooks/useActivityTracking';
 import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../common/hooks/usePaperDetail';
 import type { UserProfile } from '../common/types/user';
 import type { ImplementationProgress } from '../common/types/implementation';
@@ -25,7 +26,11 @@ interface PaperDetailPageProps {
 
 const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const { paperId } = useParams<{ paperId: string }>();
+    const location = useLocation();
     const [showStartEffortConfirmModal, setShowStartEffortConfirmModal] = useState<boolean>(false); // New state for the modal
+
+    // Activity tracking
+    const { trackPaperView } = useActivityTracking();
 
     const {
         paper,
@@ -55,8 +60,19 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         effortActionError,
         updateImplementationProgress // Added from usePaperDetail hook (will be implemented next)
     } = usePaperDetail(paperId, currentUser);
-    console.log(paper)
+    // Debug log removed for production
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
+
+    // Track paper view when component mounts or paper changes
+    useEffect(() => {
+        if (paperId && paper) {
+            // Track paper view
+            trackPaperView({ 
+                paperId, 
+                cameFrom: location.state?.from || 'direct' 
+            });
+        }
+    }, [paperId, paper, trackPaperView, location.state]);
 
     const handleSetActiveTab = (tab: string) => {
         setActiveTab(tab as ActiveTabType);
@@ -245,8 +261,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         <ImplementationProgressTab 
                             progress={paper.implementationProgress} 
                             currentUser={currentUser}
-                            onImplementationProgressChange={handleImplementationProgressChange} // Updated prop
-                            // onUpdateStep is no longer used by ImplementationProgressTab, can be removed if not needed elsewhere
+                            onImplementationProgressChange={handleImplementationProgressChange}
                         />
                     </div>
                 )}

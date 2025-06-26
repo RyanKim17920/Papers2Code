@@ -92,4 +92,5 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   );
 };
 
+
 export default PaperCard;

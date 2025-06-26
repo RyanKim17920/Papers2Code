@@ -4,6 +4,7 @@ import type { ImplementationProgress, ProgressUpdate } from '../types/implementa
 import type { PaperActionUserProfile, UserProfile } from '../types/user'; // Added UserProfile import
 import { getCsrfToken } from './auth';
 import { API_BASE_URL, PAPERS_API_PREFIX } from './config';
+import axios from 'axios';
 
 // --- User Profile Types ---
 export interface UserProfileResponse {
@@ -561,3 +562,8 @@ async function handleApiResponse<T>(response: Response): Promise<T> {
   }
   return response.json(); // response.json() already returns a Promise.
 }
+
+export const api = axios.create({
+  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
+  withCredentials: true,
+});

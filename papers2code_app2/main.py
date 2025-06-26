@@ -20,8 +20,17 @@ from .shared import config_settings
 from .routers import auth_routes # Corrected import for auth_routes
 
 # Import the paper routers
-from .routers import paper_views_router, paper_actions_router, paper_moderation_router, implementation_progress_router, auth_routes
-from .routers import user_router # Added
+from .routers import (
+    user_router, 
+    auth_routes, 
+    paper_actions_router, 
+    paper_moderation_router, 
+    implementation_progress_router,
+    paper_views_router,
+    activity_router,
+    background_tasks_router,
+    dashboard_router
+)
 
 # ADDED: CSRF Protection Middleware
 class CSRFProtectMiddleware(BaseHTTPMiddleware):
@@ -231,7 +240,10 @@ api_router.include_router(paper_views_router.router)
 api_router.include_router(paper_actions_router.router)
 api_router.include_router(paper_moderation_router.router)
 api_router.include_router(implementation_progress_router.router)
-api_router.include_router(user_router.router) # Added
+api_router.include_router(user_router.router)
+api_router.include_router(activity_router.router)
+api_router.include_router(background_tasks_router.router)
+api_router.include_router(dashboard_router.router)
 # Include the auth_routes router into the api_router
 api_router.include_router(auth_routes.router)
 # Include the api_router into the main app

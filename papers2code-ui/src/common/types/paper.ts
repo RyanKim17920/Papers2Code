@@ -5,6 +5,7 @@ export type Status =
     | 'Started'
     | 'Waiting for Author Response'
     | 'Work in Progress'
+    | 'Waiting for Review'
     | 'Completed'
     | 'Official Code Posted';
 

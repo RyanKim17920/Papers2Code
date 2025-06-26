@@ -182,8 +182,8 @@ export function usePaperList(authLoading?: boolean) {
           setPapers(response.papers);
           setTotalPages(response.totalPages);
         }
-      } catch (err: any) {
-        if (err.name !== 'AbortError' && !abortController.signal.aborted) {
+      } catch (err: unknown) {
+        if (err instanceof Error && err.name !== 'AbortError' && !abortController.signal.aborted) {
           console.error("Failed to fetch papers:", err);
           if (err instanceof AuthenticationError) {
             setError("Authentication failed. Please log in again.");
@@ -270,12 +270,14 @@ export function usePaperList(authLoading?: boolean) {
       setPapers(prevPapers =>
         prevPapers.map(p => (p.id === paperId ? { ...p, ...updatedPaper } : p))
       );
-    } catch (error: any) {
+    } catch (error: unknown) {
       console.error('Voting error:', error);
       if (error instanceof AuthenticationError || error instanceof CsrfError) {
         showLoginPrompt();
-      } else {
+      } else if (error instanceof Error) {
         setError(error.message || 'Failed to vote. Please try again.');
+      } else {
+        setError('Failed to vote. Please try again.');
       }
     }
   };

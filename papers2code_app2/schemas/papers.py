@@ -24,6 +24,17 @@ ImplementabilityStatusType = Literal[
     "Waiting for Author Response"
 ]
 
+ImplementationStatusType = Literal[
+    "Not Implementable",
+    "Not Started",
+    "Started",
+    "Waiting for Author Response",
+    "Work in Progress",
+    "Waiting for Review",
+    "Completed",
+    "Official Code Posted"
+]
+
 # --- Base Models for Paper Representation ---
 class BasePaper(BaseModel):
     """Base schema for core paper attributes, based on the provided dictionary structure."""
@@ -40,7 +51,7 @@ class BasePaper(BaseModel):
 
     # --- Implementability Fields ---
     upvote_count: int = Field(0, alias="upvoteCount")
-    status: str = Field("Not Started", alias="status")
+    status: ImplementationStatusType = Field("Not Started", alias="status")
     implementability_status: ImplementabilityStatusType = Field("Voting", alias="implementabilityStatus") # 'voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'
 
     model_config = camel_case_config

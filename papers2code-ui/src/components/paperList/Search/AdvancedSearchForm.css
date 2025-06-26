@@ -1,13 +1,15 @@
 .advanced-search-form {
-    background-color: var(--card-background-alt, #f8f9fa); /* Slightly different background */
+    background-color: var(--card-background-color, #ffffff); /* Use white background for better contrast */
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
     padding: 20px;
     margin-top: 15px; /* Space below list controls */
-    margin-bottom: 25px;    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
+    margin-bottom: 25px;
+    box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
     overflow: visible;
-  }
-  
+    color: var(--text-color, #212529); /* Ensure text is dark */
+  } 
+    
   .advanced-search-form h4 {
     margin-top: 0;
     margin-bottom: 15px;
@@ -47,14 +49,14 @@
     margin-bottom: 5px;
     font-size: 0.9em;
     font-weight: 500;
-    color: var(--text-muted-color);
+    color: var(--text-color, #212529); /* Use main text color instead of muted for better contrast */
   }
     .form-control {
     padding: 8px 12px;
     font-size: 0.95em;
-    text-align:center;
+    text-align: left; /* Changed from center to left for better readability */
     font-family: inherit;
-    color: var(--text-color);
+    color: var(--text-color, #212529); /* Ensure dark text */
     background-color: var(--input-background, #fff);
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-sm);
@@ -101,13 +103,14 @@
   }
   
   .btn-secondary {
-    background-color: var(--secondary-color, #6c757d);
-    color: var(--text-on-secondary, #fff);
-    border-color: var(--secondary-color, #6c757d);
+    background-color: var(--button-secondary-bg, #f8f9fa); /* Light gray background */
+    color: var(--text-color, #212529); /* Dark text for better contrast */
+    border: 1px solid var(--border-color, #e9ecef); /* Add border for definition */
   }
   .btn-secondary:hover {
-    background-color: var(--secondary-dark-color, #5a6268);
-    border-color: var(--secondary-dark-color, #5a6268);
+    background-color: var(--button-secondary-hover-bg, #e9ecef); /* Darker on hover */
+    border-color: var(--border-color, #e9ecef);
+    color: var(--text-color, #212529); /* Keep dark text on hover */
   }
   
   .btn-link {
@@ -223,7 +226,7 @@
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-sm);
   background-color: var(--input-background, #fff);
-  color: var(--text-color);
+  color: var(--text-color, #212529); /* Ensure dark text */
   cursor: pointer;
   outline: none;
 }
@@ -241,7 +244,7 @@
   }
 
 .react-datepicker__day {
-  color: var(--text-color);
+  color: var(--text-color, #212529); /* Ensure dark text for good contrast */
   border-radius: 50%; /* Make days circular */
   transition: background-color 0.2s ease, color 0.2s ease;
 }
@@ -459,4 +462,23 @@ input[type="number"] {
 .form-group,
 .form-group-full-width {
   overflow: visible;
+}
+
+/* Ensure all text elements have proper contrast */
+.advanced-search-form,
+.advanced-search-form * {
+  color: inherit;
+}
+
+.advanced-search-form input,
+.advanced-search-form select,
+.advanced-search-form textarea {
+  color: var(--text-color, #212529) !important; /* Force dark text in all inputs */
+  background-color: var(--input-background, #ffffff) !important; /* Force white background */
+}
+
+.advanced-search-form label,
+.advanced-search-form .form-group label {
+  color: var(--text-color, #212529) !important; /* Force dark text for labels */
+  font-weight: 500; /* Make labels slightly bolder for better readability */
 }

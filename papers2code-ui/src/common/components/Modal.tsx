@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import './ConfirmationModal.css'; // Reuse the same CSS since they have similar structure
 
 interface ModalProps {
@@ -36,7 +37,7 @@ const Modal: React.FC<ModalProps> = ({
         }
     };
 
-    return (
+    const modalContent = (
         <div 
             className="modal-backdrop" 
             onClick={handleBackdropClick}
@@ -67,6 +68,8 @@ const Modal: React.FC<ModalProps> = ({
             </div>
         </div>
     );
+
+    return ReactDOM.createPortal(modalContent, document.body);
 };
 
 export default Modal;

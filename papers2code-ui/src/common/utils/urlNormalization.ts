@@ -79,7 +79,7 @@ export function normalizeTwitterUrl(input: string): NormalizedUrlResult {
   }
 
   // Remove @ if present
-  let username = cleanInput.startsWith('@') ? cleanInput.slice(1) : cleanInput;
+  const username = cleanInput.startsWith('@') ? cleanInput.slice(1) : cleanInput;
 
   // Validate username
   if (usernamePattern.test(username)) {

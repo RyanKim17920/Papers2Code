@@ -2,6 +2,7 @@ import { motion } from 'framer-motion';
 import { Search, Github, BookOpen } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { useState } from 'react';
+import { debugLog } from '../../common/utils/logger';
 import './HeroHeader.css';
 
 const HeroHeader = () => {
@@ -12,13 +13,13 @@ const HeroHeader = () => {
     e.preventDefault();
     if (searchQuery.trim()) {
       const searchUrl = `/papers?searchQuery=${encodeURIComponent(searchQuery.trim())}`;
-      console.log('🔍 Navigating to search URL:', searchUrl);
+      debugLog.navigation('Navigating to search URL:', searchUrl);
       navigate(searchUrl);
     }
   };
 
   const handleBrowsePapers = () => {
-    console.log('📚 Navigating to browse papers');
+    debugLog.navigation('Navigating to browse papers');
     navigate('/papers');
   };
 
@@ -26,7 +27,7 @@ const HeroHeader = () => {
     // Navigate to papers page with a filter for papers needing implementation
     // Use "Not Started" as the primary filter for papers needing implementation
     const filterUrl = '/papers?mainStatus=Not%20Started';
-    console.log('⚙️ Navigating to filter URL:', filterUrl);
+    debugLog.navigation('Navigating to filter URL:', filterUrl);
     navigate(filterUrl);
   };
 

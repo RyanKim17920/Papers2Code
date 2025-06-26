@@ -2,6 +2,7 @@
 import axios from 'axios';
 import { API_BASE_URL, AUTH_API_PREFIX, CSRF_API_ENDPOINT } from './config';
 import type { UserProfile } from '../types/user';
+import { useState, useEffect } from 'react';
 
 
 // Create an Axios instance for API calls
@@ -47,7 +48,7 @@ export const logoutUser = async (): Promise<void> => {
         }
 
         // MODIFIED: Use apiClient and set X-CSRFToken header        
-        const response = await apiClient.post<{ message: string, csrfToken: string }>(`${AUTH_API_PREFIX}/logout`, {}, { // Send empty object as data if no body needed
+        await apiClient.post<{ message: string, csrfToken: string }>(`${AUTH_API_PREFIX}/logout`, {}, { // Send empty object as data if no body needed
             headers: csrfToken ? { 'X-CSRFToken': csrfToken } : {},
         });
         // Note: The new CSRF token is automatically set as a cookie by the backend,
@@ -62,7 +63,7 @@ export const logoutUser = async (): Promise<void> => {
 export const getCsrfToken = (): string | null => {
     // Read CSRF token from cookie instead of localStorage to match backend expectations
     const cookies = document.cookie.split(';');
-    for (let cookie of cookies) {
+    for (const cookie of cookies) {
         const [name, value] = cookie.trim().split('=');
         if (name === 'csrf_token_cookie') {
             return decodeURIComponent(value);
@@ -108,3 +109,22 @@ export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
         return null;
     }
 };
+
+export function useAuth() {
+  const [user, setUser] = useState<UserProfile | null>(null);
+  const [loading, setLoading] = useState(true);
+
+  useEffect(() => {
+    // ... logic to check current user
+  }, []);
+
+  const login = () => {
+    // ... login logic
+  };
+
+  const logout = () => {
+    // ... logout logic
+  };
+
+  return { user, loading, login, logout };
+}

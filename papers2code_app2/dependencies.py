@@ -7,6 +7,7 @@ from .services.paper_action_service import PaperActionService
 from .services.paper_moderation_service import PaperModerationService
 from .services.implementation_progress_service import ImplementationProgressService
 from .services.user_service import UserService
+from .services.activity_tracking_service import ActivityTrackingService
 
 limiter = Limiter(key_func=get_remote_address, default_limits=["200 per day", "50 per hour"])
 
@@ -29,3 +30,7 @@ def get_implementation_progress_service() -> ImplementationProgressService:
 
 def get_user_service() -> UserService:
     return UserService()
+
+
+def get_activity_tracking_service() -> ActivityTrackingService:
+    return ActivityTrackingService()

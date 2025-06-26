@@ -16,6 +16,7 @@ from ..schemas.implementation_progress import (
 from .exceptions import NotFoundException, UserNotContributorException, InvalidRequestException
 # Import PaperActionService and action types
 from .paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED
+from ..schemas.db_models import PyObjectId
 
 logger = logging.getLogger(__name__)
 
@@ -55,8 +56,8 @@ class ImplementationProgressService:
     async def join_or_create_progress(self, paper_id: str, user_id: str) -> ImplementationProgress: 
         papers_collection = await get_papers_collection_async()
         try:
-            paper_obj_id = ObjectId(paper_id)
-            user_obj_id = ObjectId(user_id)
+            paper_obj_id = PyObjectId(paper_id)
+            user_obj_id = PyObjectId(user_id)
         except Exception as e:
             logger.error(f"Invalid ObjectId format for paper_id or user_id: {e}")
             raise InvalidRequestException("Invalid paper or user ID format.")
@@ -112,6 +113,13 @@ class ImplementationProgressService:
             
             try:
                 result = await progress_collection.insert_one(progress_to_insert)
+
+                # Update the paper's status to 'Started'
+                await papers_collection.update_one(
+                    {"_id": paper_obj_id},
+                    {"$set": {"status": "Started"}}
+                )
+
                 created_progress_data = await progress_collection.find_one({"_id": result.inserted_id})
                 if not created_progress_data:
                     raise NotFoundException("Failed to retrieve newly created progress.")
@@ -161,8 +169,8 @@ class ImplementationProgressService:
         progress_collection = await get_implementation_progress_collection_async() 
         papers_collection = await get_papers_collection_async()
         try:
-            paper_obj_id = ObjectId(paper_id)
-            user_obj_id = ObjectId(user_id)
+            paper_obj_id = PyObjectId(paper_id)
+            user_obj_id = PyObjectId(user_id)
             logger.info(f"Converted to ObjectId - paper_obj_id: {paper_obj_id}, user_obj_id: {user_obj_id}")
         except Exception:
             raise InvalidRequestException("Invalid paper or user ID format.")
@@ -218,66 +226,28 @@ class ImplementationProgressService:
         # Update paper status based on email status changes
         if email_status_changed:
             paper_status_update = None
-            implementability_status_update = None
             
             if email_status_changed == EmailStatus.SENT:
-                # Email sent - waiting for author response
                 paper_status_update = "Waiting for Author Response"
-                
             elif email_status_changed == EmailStatus.RESPONSE_RECEIVED:
-                # Author responded - now in progress  
                 paper_status_update = "Work in Progress"
-                
             elif email_status_changed == EmailStatus.CODE_UPLOADED:
-                # Code uploaded by author - work completed
                 paper_status_update = "Official Code Posted"
-                
             elif email_status_changed == EmailStatus.CODE_NEEDS_REFACTORING:
-                # Code needs work - still in progress
                 paper_status_update = "Work in Progress"
-                
             elif email_status_changed == EmailStatus.REFUSED_TO_UPLOAD:
-                # Author refused - back to started but no official code
                 paper_status_update = "Started"
-                
             elif email_status_changed == EmailStatus.NO_RESPONSE:
-                # No response from author - community can continue
                 paper_status_update = "Started"
             
             # Apply the paper status updates
-            paper_updates = {}
             if paper_status_update:
-                paper_updates["status"] = paper_status_update
-            if implementability_status_update:
-                paper_updates["implementabilityStatus"] = implementability_status_update
-                
-            if paper_updates:
-                try:
-                    await papers_collection.update_one(
-                        {"_id": paper_obj_id},
-                        {"$set": paper_updates}
-                    )
-                    logger.info(f"Updated paper {paper_id} with status updates: {paper_updates}")
-                except Exception as e:
-                    logger.error(f"Failed to update paper status for paper {paper_id}: {e}")
-                    # Don't raise the exception as the progress update was successful
-        
-        # Update paper status when GitHub repo is added (community implementation started)
-        elif 'github_repo_id' in update_data and update_data['github_repo_id']:
-            # GitHub repo added - implementation work has started
-            try:
-                current_paper = await papers_collection.find_one({"_id": paper_obj_id})
-                if current_paper and current_paper.get("status") == "Not Started":
-                    await papers_collection.update_one(
-                        {"_id": paper_obj_id},
-                        {"$set": {"status": "Started"}}
-                    )
-                    logger.info(f"Updated paper {paper_id} status to 'Started' due to GitHub repo being added")
-            except Exception as e:
-                logger.error(f"Failed to update paper status for GitHub repo addition on paper {paper_id}: {e}")
-                # Don't raise the exception as the progress update was successful
-        
-        # Return the updated progress
+                await papers_collection.update_one(
+                    {"_id": actual_id},
+                    {"$set": {"status": paper_status_update}}
+                )
+
+        # Re-fetch the updated progress to return
         updated_progress_data = await progress_collection.find_one({"_id": actual_id})
         if not updated_progress_data:
             raise NotFoundException(f"Failed to retrieve progress for paper {paper_id} after update.")

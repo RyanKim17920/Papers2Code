@@ -139,9 +139,11 @@
   .btn-advanced-toggle {
     padding: 8px 15px; /* Match select padding */
     height: 40px; /* Match select height approx */
-    overflow-y:hidden;
+    overflow-y: hidden;
     box-sizing: border-box;
     white-space: nowrap; /* Prevent text wrapping */
+    color: #212529 !important; /* Force dark text for good contrast */
+    font-weight: 500; /* Make text slightly bolder for readability */
   }
 
 /* Container that holds all pagination controls (prev, pages, next, go-to) */

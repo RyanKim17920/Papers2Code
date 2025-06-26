@@ -23,6 +23,8 @@ export const getStatusClass = (paper: Paper | undefined | null): string => {
             return 'status-waiting-author';
         case 'Work in Progress':
             return 'status-in-progress';
+        case 'Waiting for Review':
+            return 'status-waiting-review';
         case 'Completed':
             return 'status-completed';
         case 'Official Code Posted':
@@ -55,6 +57,8 @@ export const getStatusSymbol = (paper: Paper | undefined | null): string => {
             return '✉️';
         case 'Work in Progress':
             return '🚧';
+        case 'Waiting for Review':
+            return '👀';
         case 'Completed':
             return '✅';
         case 'Official Code Posted':

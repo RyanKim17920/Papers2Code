@@ -176,13 +176,13 @@
   min-height: 0; /* Allow flex shrinking */
 }
 
-.stat-item {
+.hero-stats .stat-item {
   text-align: center;
   padding: 0 0.5rem; /* Add padding to prevent text overflow */
   overflow: hidden;
 }
 
-.stat-number {
+.hero-stats .stat-number {
   font-size: clamp(1.3rem, 2.8vw, 1.6rem); /* More compact sizing */
   font-weight: 700;
   color: #3b82f6;
@@ -190,7 +190,7 @@
   white-space: nowrap; /* Prevent wrapping */
 }
 
-.stat-label {
+.hero-stats .stat-label {
   font-size: 0.875rem;
   color: #64748b;
   font-weight: 500;
@@ -256,7 +256,7 @@
     margin-bottom: 2rem;
   }
   
-  .stat-number {
+  .hero-stats .stat-number {
     font-size: 1.5rem;
   }
   
@@ -295,15 +295,15 @@
     height: 24px;
   }
   
-  .stat-item {
+  .hero-stats .stat-item {
     padding: 0 0.25rem;
   }
   
-  .stat-number {
+  .hero-stats .stat-number {
     font-size: 1.2rem; /* Smaller stats on mobile */
   }
   
-  .stat-label {
+  .hero-stats .stat-label {
     font-size: 0.7rem;
   }
 }
