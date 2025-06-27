@@ -1,4 +1,5 @@
 import React from 'react';
+import ReactDOM from 'react-dom';
 import './ConfirmationModal.css'; // Create this CSS file
 
 interface ConfirmationModalProps {
@@ -32,7 +33,7 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
         }
     };
 
-    return (
+    const modalContent = (
         <div className="modal-backdrop" onClick={handleBackdropClick}>
             <div className="modal-content" onClick={(e) => e.stopPropagation()}>
                 <button 
@@ -65,6 +66,11 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 </div>
             </div>
         </div>
+    );
+
+    return ReactDOM.createPortal(
+        modalContent,
+        document.body
     );
 };
 
