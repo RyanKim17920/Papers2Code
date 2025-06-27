@@ -19,6 +19,14 @@ def create_token(data: Dict, token_type: str, expires_delta: Optional[timedelta]
     payload.update({"exp": expire, "token_type": token_type})
     return jwt.encode(payload, SECRET_KEY, algorithm=ALGORITHM)
 
+def create_access_token(data: Dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create an access token with a default expiration of 15 minutes."""
+    return create_token(data, "access", expires_delta or timedelta(minutes=15))
+
+def create_refresh_token(data: Dict, expires_delta: Optional[timedelta] = None) -> str:
+    """Create a refresh token with a default expiration of 30 days."""
+    return create_token(data, "refresh", expires_delta or timedelta(days=30))
+
 
 def get_session_id(request: Request) -> str:
     """Generate or retrieve a session ID for anonymous users."""

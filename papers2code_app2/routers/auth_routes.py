@@ -12,6 +12,7 @@ from ..schemas.minimal import (
 from ..shared import config_settings
 from ..auth import get_current_user # SECRET_KEY, ALGORITHM, create_refresh_token are used by service
 from ..services.auth_service import AuthService
+from ..services.github_oauth_service import GitHubOAuthService
 from ..constants import OAUTH_STATE_COOKIE_NAME, CSRF_TOKEN_COOKIE_NAME
 from ..services.exceptions import (
     InvalidTokenException,
@@ -28,6 +29,7 @@ router = APIRouter(
 )
 
 auth_service = AuthService()
+github_oauth_service = GitHubOAuthService()
 
 @router.get("/csrf-token", response_model=CsrfToken)
 async def get_csrf_token(request: Request, response: Response):
@@ -49,7 +51,7 @@ async def get_csrf_token(request: Request, response: Response):
 async def github_login(request: Request): # Removed unused response: Response
     try:
         # This method now returns a RedirectResponse with the cookie set on it
-        return auth_service.prepare_github_login_redirect(request)
+        return github_oauth_service.prepare_github_login_redirect(request)
     except OAuthException as e:
         logger.error(f"OAuth login preparation failed: {e.message}")
         # Return a JSONResponse for API-like error, or redirect to a frontend error page
@@ -69,7 +71,7 @@ async def github_callback(code: str, state: str, request: Request): # Removed re
     try:
         # This call will handle all logic and return the appropriate RedirectResponse
         # The RedirectResponse will have cookies set by the service method.
-        return await auth_service.handle_github_callback(code, state, request)
+        return await github_oauth_service.handle_github_callback(code, state, request)
     except Exception as e:
         # This is a fallback catch-all. Specific errors should be handled within handle_github_callback
         # and result in a RedirectResponse to the frontend with an error query parameter.
