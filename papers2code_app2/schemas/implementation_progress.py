@@ -15,8 +15,9 @@ class EmailStatus(str, Enum):
     RESPONSE_RECEIVED = "Response Received"
     CODE_UPLOADED = "Code Uploaded"
     CODE_NEEDS_REFACTORING = "Code Needs Refactoring"
+    REFACTORING_IN_PROGRESS = "Refactoring in Progress"
     REFUSED_TO_UPLOAD = "Refused to Upload"
-    NO_RESPONSE = "No Response"
+    NO_RESPONSE = "No Response" 
 
 # -----------------------------------------------------------------------------
 # Simplified Implementation Progress

@@ -90,3 +90,25 @@ async def update_implementation_progress_by_paper_id(
     except Exception as e:
         logger.error(f"Error in update_implementation_progress_by_paper_id: {e}", exc_info=True)
         raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
+
+@router.post("/paper/{paper_id}/send-author-email", status_code=status.HTTP_200_OK)
+@handle_service_errors
+async def send_author_outreach_email_route(
+    paper_id: str,
+    current_user: UserInDBMinimalSchema = Depends(get_current_user), # Consider adding admin check here
+    service: ImplementationProgressService = Depends(get_implementation_progress_service)
+):
+    """Trigger sending of author outreach email for a paper."""
+    # In a real application, you'd want to ensure only authorized users (e.g., admins) can trigger this.
+    # For now, we'll just check if a user is logged in.
+    if not current_user:
+        raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required to send emails.")
+    
+    try:
+        result = await service.send_author_outreach_email(paper_id)
+        return result
+    except NotFoundException as e:
+        raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))
+    except Exception as e:
+        logger.error(f"Error in send_author_outreach_email_route for paper {paper_id}: {e}", exc_info=True)
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred while sending the email.")

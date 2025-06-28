@@ -91,7 +91,7 @@ async def initialize_async_db():
 
 def initialize_sync_db():
     """Initializes the synchronous database connection and collections."""
-    global sync_client, sync_db, db_papers_sync, db_user_actions_sync, db_removed_papers_sync, db_users_sync, db_implementation_progress_sync 
+    global sync_client, sync_db, db_papers_sync, db_user_actions_sync, db_removed_papers_sync, db_users_sync, db_implementation_progress_sync
     
     if sync_client and sync_db:
         #logger.info("Synchronous database connection already initialized.")

@@ -17,6 +17,7 @@ from .exceptions import NotFoundException, UserNotContributorException, InvalidR
 # Import PaperActionService and action types
 from .paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED
 from ..schemas.db_models import PyObjectId
+from ..email_templates import get_author_outreach_email_template
 
 logger = logging.getLogger(__name__)
 
@@ -162,6 +163,23 @@ class ImplementationProgressService:
                             return ImplementationProgress(**updated_progress_data)
                 raise e
 
+    async def send_author_outreach_email(self, paper_id: str):
+        """Fetches paper details and generates the author outreach email template."""
+        papers_collection = await get_papers_collection_async()
+        paper = await papers_collection.find_one({"_id": ObjectId(paper_id)})
+        if not paper:
+            raise NotFoundException(f"Paper with ID {paper_id} not found for email outreach.")
+
+        paper_title = paper.get("title", "")
+        # Assuming a base URL for paper details page
+        paper_link = f"https://papers2code.com/paper/{paper_id}" # Replace with your actual domain
+
+        email_content = get_author_outreach_email_template(paper_title, paper_link)
+        # In a real application, you would integrate with an email sending service here.
+        # For now, we'll just log the content.
+        logger.info(f"Generated Author Outreach Email for Paper {paper_id}:\nSubject: {email_content['subject']}\nBody: {email_content['body']}")
+        return {"message": "Email content generated and logged (email not actually sent).", "subject": email_content['subject'], "body": email_content['body']}
+
     async def update_progress_by_paper_id(self, paper_id: str, user_id: str, progress_update: ProgressUpdate) -> ImplementationProgress:
         """Update email status or GitHub repo ID for a progress by paper ID."""
         logger.info(f"update_progress_by_paper_id called with paper_id: {paper_id}, user_id: {user_id}")
@@ -195,7 +213,6 @@ class ImplementationProgressService:
         update_data = progress_update.model_dump(exclude_unset=True)
         
         # Check if email status is being updated to trigger paper status changes
-        email_status_changed_to_sent = False
         email_status_changed = None
         
         for key, value in update_data.items():
@@ -203,7 +220,6 @@ class ImplementationProgressService:
                 update_fields["emailStatus"] = value.value  # Use camelCase field name
                 email_status_changed = value
                 if value == EmailStatus.SENT:
-                    email_status_changed_to_sent = True
                     # Set the timestamp when email was sent
                     update_fields["emailSentAt"] = datetime.now(timezone.utc)
             elif key == 'github_repo_id':
@@ -235,6 +251,8 @@ class ImplementationProgressService:
                 paper_status_update = "Official Code Posted"
             elif email_status_changed == EmailStatus.CODE_NEEDS_REFACTORING:
                 paper_status_update = "Work in Progress"
+            elif email_status_changed == EmailStatus.REFACTORING_IN_PROGRESS:
+                paper_status_update = "Refactoring in Progress"
             elif email_status_changed == EmailStatus.REFUSED_TO_UPLOAD:
                 paper_status_update = "Started"
             elif email_status_changed == EmailStatus.NO_RESPONSE:

@@ -1,4 +1,5 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react';
+import React, { createContext, useContext, useState, ReactNode, useEffect } from 'react';
+import { setLoginPromptHandler } from '../services/api';
 
 interface ModalAction {
   label: string;
@@ -51,6 +52,11 @@ export const ModalProvider: React.FC<{ children: ReactNode }> = ({ children }) =
     setIsModalOpen(false);
     setModalOptions(null);
   };
+
+  // Register the showLoginPrompt with the API service on mount
+  useEffect(() => {
+    setLoginPromptHandler(showLoginPrompt);
+  }, []);
 
   return (
     <ModalContext.Provider value={{ 

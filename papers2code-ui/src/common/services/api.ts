@@ -4,7 +4,7 @@ import type { ImplementationProgress, ProgressUpdate } from '../types/implementa
 import type { PaperActionUserProfile, UserProfile } from '../types/user'; // Added UserProfile import
 import { getCsrfToken } from './auth';
 import { API_BASE_URL, PAPERS_API_PREFIX } from './config';
-import axios from 'axios';
+import axios, { AxiosResponse } from 'axios';
 
 // --- User Profile Types ---
 export interface UserProfileResponse {
@@ -103,9 +103,9 @@ export const fetchPapersFromApi = async (
     advancedFilters
   });
   
-  const response = await fetch(url, { credentials: 'include', signal }); // <-- MODIFIED: Pass signal to fetch
+  const response = await api.get(url, { signal }); // <-- MODIFIED: Pass signal to fetch
   // MODIFIED: Use handleApiResponse with correct camelCase types for pageSize and hasMore from the backend's PaginatedPaperResponse
-  const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; page: number; pageSize: number; hasMore: boolean}>(response);
+  const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; page: number; pageSize: number; hasMore: boolean}>(response, true);
   // MODIFIED: Check for camelCase properties from the backend's PaginatedPaperResponse
   if (!data || !Array.isArray(data.papers) || typeof data.totalCount !== 'number' || typeof data.page !== 'number' || typeof data.pageSize !== 'number' || typeof data.hasMore !== 'boolean') {
     console.error("Unexpected API response structure after handleApiResponse:", data);
@@ -118,9 +118,9 @@ export const fetchPapersFromApi = async (
 
 // --- fetchPaperByIdFromApi ---
 export const fetchPaperByIdFromApi = async (id: string): Promise<Paper | undefined> => {
-  const response = await fetch(`${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${id}`, { credentials: 'include' });
+  const response = await api.get(`${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${id}`);
   if (response.status === 404) return undefined;
-  const paper =  handleApiResponse<Paper>(response);
+  const paper =  handleApiResponse<Paper>(response, true);
   return paper;
 };
 
@@ -132,16 +132,7 @@ export const flagImplementabilityInApi = async (
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${paperId}/flag_implementability`;
 
-  const csrfToken = getCsrfToken(); // Get token
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRFToken': csrfToken }) // Add token header if available
-    },
-    body: JSON.stringify({ action }),
-    credentials: 'include',
-  });
+  const response = await api.post(url, { action });
 
   // MODIFIED: Use handleApiResponse
   const updatedPaper = await handleApiResponse<Paper>(response);
@@ -155,21 +146,7 @@ export const setImplementabilityInApi = async (
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${paperId}/set_implementability`;
 
-
-  const csrfToken = getCsrfToken(); 
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  }
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify({ statusToSet: adminStatus }), // Send adminStatus directly
-    credentials: 'include',
-  });
+  const response = await api.post(url, { statusToSet: adminStatus });
 
   const updatedPaper = await handleApiResponse<Paper>(response);
   return updatedPaper;
@@ -181,15 +158,7 @@ export const voteOnPaperInApi = async (
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${paperId}/vote`;
 
-  const csrfToken = getCsrfToken(); // Get token
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      ...(csrfToken && { 'X-CSRFToken': csrfToken })    },
-    body: JSON.stringify({ vote_type: voteType }), // MODIFIED: Changed voteType to vote_type
-    credentials: 'include',
-  });
+  const response = await api.post(url, { vote_type: voteType });
 
   // MODIFIED: Use handleApiResponse
   const updatedPaper = await handleApiResponse<Paper>(response);
@@ -200,14 +169,7 @@ export const voteOnPaperInApi = async (
 export const removePaperFromApi = async (paperId: string): Promise<void> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${paperId}`;
 
-  const csrfToken = getCsrfToken(); // Get token
-  const response = await fetch(url, {
-    method: 'DELETE',
-    credentials: 'include',
-    headers: {
-      ...(csrfToken && { 'X-CSRFToken': csrfToken }) // Add token header if available
-    },
-  });
+  const response = await api.delete(url);
 
   // MODIFIED: Use handleApiResponse. It will return null for 204 or throw for errors.
   await handleApiResponse<void>(response); 
@@ -219,10 +181,10 @@ export const removePaperFromApi = async (paperId: string): Promise<void> => {
 // --- NEW: Function to fetch users who performed actions on a paper ---
 export const fetchPaperActionUsers = async (paperId: string): Promise<PaperActionUsers> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${paperId}/actions`;
-  const response = await fetch(url, { credentials: 'include' });
+  const response = await api.get(url);
 
   // Use the BackendPaperActionsSummaryResponse type for the raw data
-  const rawData = await handleApiResponse<BackendPaperActionsSummaryResponse>(response);
+  const rawData = (await handleApiResponse<BackendPaperActionsSummaryResponse>(response, true)) || { upvotes: [], saves: [], votedIsImplementable: [], votedNotImplementable: [] };
 
   // Helper to map backend detail to frontend PaperActionUserProfile
   const mapToPaperActionUserProfile = (detail: BackendPaperActionUserDetail): PaperActionUserProfile => ({
@@ -252,22 +214,7 @@ export const updatePaperStatusInApi = async (
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/${paperId}/status`;
 
-  const csrfToken = getCsrfToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  } else {
-    console.warn("CSRF Token is missing for updatePaperStatusInApi, X-CSRFToken header NOT added.");
-  }
-
-  const response = await fetch(url, {
-    method: 'POST', // Or PUT, depending on backend API design
-    headers: headers,
-    body: JSON.stringify({ status, userId }), // Sending userId in case backend needs it
-    credentials: 'include',
-  });
+  const response = await api.post(url, { status, userId });
 
   // MODIFIED: Use handleApiResponse
   const updatedPaper = await handleApiResponse<Paper>(response);
@@ -281,28 +228,12 @@ export const joinOrCreateImplementationProgress = async (
 ): Promise<Paper> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/implementation-progress/paper/${paperId}/join`;
 
-  const csrfToken = getCsrfToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  } else {
-    console.warn("CSRF Token is missing for joinOrCreateImplementationProgress, X-CSRFToken header NOT added.");
-    // Depending on backend strictness, this might still fail or succeed if CSRF is not enforced on this endpoint
-  }
-
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: headers,
-    // No body is needed for this specific endpoint as per backend definition
-    credentials: 'include',
-  });
+  const response = await api.post(url);
 
   // The backend is expected to return the updated Paper document which includes the ImplementationProgress
   const updatedPaper = await handleApiResponse<Paper>(response);
   return updatedPaper;
-};
+}; 
 // --- End NEW ---
 
 // --- NEW: Function to update implementation progress ---
@@ -312,22 +243,7 @@ export const updateImplementationProgressInApi = async (
 ): Promise<ImplementationProgress> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/implementation-progress/paper/${paperId}`;
 
-  const csrfToken = getCsrfToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  } else {
-    console.warn("CSRF Token is missing for updateImplementationProgressInApi, X-CSRFToken header NOT added.");
-  }
-
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers: headers,
-    body: JSON.stringify(progressData),
-    credentials: 'include',
-  });
+  const response = await api.put(url, progressData);
 
   // The backend returns the updated ImplementationProgress
   const updatedProgress = await handleApiResponse<ImplementationProgress>(response);
@@ -338,15 +254,13 @@ export const updateImplementationProgressInApi = async (
 // --- User Profile API Functions ---
 export const fetchUserProfileFromApi = async (username: string): Promise<UserProfileResponse | null> => {
   try {
-    const response = await fetch(`${API_BASE_URL}/api/users/${username}/profile`, { 
-      credentials: 'include' 
-    });
+    const response = await api.get(`${API_BASE_URL}/api/users/${username}/profile`);
     
     if (response.status === 404) {
       return null; // User not found
     }
     
-    const profileData = await handleApiResponse<UserProfileResponse>(response);
+    const profileData = await handleApiResponse<UserProfileResponse>(response, true);
     return profileData;
   } catch (error) {
     console.error('Failed to fetch user profile:', error);
@@ -357,9 +271,7 @@ export const fetchUserProfileFromApi = async (username: string): Promise<UserPro
 export const getUserProfileSettings = async (): Promise<UserProfileResponse | null> => {
   try {
     const url = `${API_BASE_URL}/api/users/settings`;
-    const response = await fetch(url, {
-      credentials: 'include'
-    });
+    const response = await api.get(url);
     
     if (response.status === 401) {
       return null; // Not authenticated
@@ -397,20 +309,7 @@ export const updateUserProfile = async (profileData: {
 }): Promise<UserProfile> => {
   const url = `${API_BASE_URL}/api/users/profile`;
 
-  const csrfToken = getCsrfToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  }
-
-  const response = await fetch(url, {
-    method: 'PUT',
-    headers: headers,
-    body: JSON.stringify(profileData),
-    credentials: 'include',
-  });
+  const response = await api.put(url, profileData);
 
   const updatedUser = await handleApiResponse<UserProfile>(response);
   return updatedUser;
@@ -419,17 +318,7 @@ export const updateUserProfile = async (profileData: {
 export const deleteUserAccount = async (): Promise<void> => {
   const url = `${API_BASE_URL}/api/users/profile`;
 
-  const csrfToken = getCsrfToken();
-  const headers: HeadersInit = {};
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  }
-
-  const response = await fetch(url, {
-    method: 'DELETE',
-    headers: headers,
-    credentials: 'include',
-  });
+  const response = await api.delete(url);
 
   await handleApiResponse<void>(response);
 };
@@ -442,25 +331,34 @@ export const fetchUserProfilesByIds = async (userIds: string[]): Promise<UserPro
 
   const url = `${API_BASE_URL}/api/users/profiles`;
   
-  const csrfToken = getCsrfToken();
-  const headers: HeadersInit = {
-    'Content-Type': 'application/json',
-  };
-  if (csrfToken) {
-    headers['X-CSRFToken'] = csrfToken;
-  }
-  
-  const response = await fetch(url, {
-    method: 'POST',
-    headers: headers,
-    body: JSON.stringify(userIds),
-    credentials: 'include',
-  });
+  const response = await api.post(url, userIds);
 
   const userProfiles = await handleApiResponse<UserProfile[]>(response);
   return userProfiles;
 };
 
+
+// --- NEW: Activity Tracking API ---
+export interface PaperViewData {
+  paperId: string;
+  cameFrom?: string;
+}
+
+export const trackPaperViewInApi = async (data: PaperViewData): Promise<void> => {
+  const url = `${API_BASE_URL}/activity/paper-view`;
+  try {
+    await api.post(url, {
+      paperId: data.paperId,
+      metadata: {
+        cameFrom: data.cameFrom || 'direct',
+      },
+    });
+  } catch (error) {
+    console.error('Failed to track paper view:', error);
+    // Non-blocking
+  }
+}
+// --- End NEW ---
 
 // --- BEGIN ADDED TYPE DEFINITIONS ---
 // These interfaces define the expected structure of the raw JSON response
@@ -483,87 +381,97 @@ interface BackendPaperActionsSummaryResponse {
 }
 // --- END ADDED TYPE DEFINITIONS ---
 
+let _showLoginPrompt: ((message?: string) => void) | undefined;
+
+export const setLoginPromptHandler = (handler: (message?: string) => void) => {
+  _showLoginPrompt = handler;
+};
+
 // NEW: Private helper function to handle API responses and 401 errors
-async function handleApiResponse<T>(response: Response): Promise<T> {
-  if (response.status === 401) {
-    // Handle 401: e.g., redirect to login, clear session, throw specific error
-    console.error('Authentication error (401):', await response.text().catch(() => ""));
+async function handleApiResponse<T>(response: AxiosResponse, isPublicEndpoint: boolean = false): Promise<T> {
+  const { status, data } = response;
+
+  if (status === 401) {
+    console.error('Authentication error (401):', data);
+    if (!isPublicEndpoint && _showLoginPrompt) {
+      _showLoginPrompt('Your session has expired or you are not authenticated. Please log in again.');
+    }
     throw new AuthenticationError('User not authenticated or session expired.');
   }
 
-  // MODIFIED: Add specific handling for 403 CSRF/Forbidden errors
-  if (response.status === 403) {
-    const errorData = await response.json().catch(() => ({ detail: "Forbidden access" }));
-    // Check if the detail specifically mentions CSRF, as 403 is generic "Forbidden"
-    // Backend uses "CSRF token mismatch or missing."
+  if (status === 403) {
+    const errorData = data || { detail: "Forbidden access" };
     if (errorData.detail && typeof errorData.detail === 'string' && 
         (errorData.detail.toLowerCase().includes('csrf') || errorData.detail.toLowerCase().includes('forbidden'))) { 
         console.error('CSRF or Forbidden error (403):', errorData.detail);
+        if (_showLoginPrompt) {
+          _showLoginPrompt('Your session has expired or you are not authenticated. Please log in again.');
+        }
         if (errorData.detail.toLowerCase().includes('csrf')) {
             throw new CsrfError(errorData.detail);
         } else {
-            // For a general "Forbidden" that isn't CSRF, it's likely a permission issue.
             throw new AuthenticationError(errorData.detail || 'Access denied. You may not have permission to perform this action.');
         }
     }
-    // For other 403 errors not matching the CSRF/Forbidden detail pattern (e.g. if response wasn't JSON)
-    const errorText = await response.text().catch(() => "Forbidden access");
-    console.error('Generic Forbidden error (403):', errorText);
-    throw new AuthenticationError(errorText || 'Permission denied.');
+    console.error('Generic Forbidden error (403):', data);
+    throw new AuthenticationError(data || 'Permission denied.');
   }
 
-  if (response.status === 400) {
-    const errorData = await response.json().catch(() => ({ error: "Bad Request", description: "Unknown CSRF or validation error" }));
+  if (status === 400) {
+    const errorData = data || { error: "Bad Request", description: "Unknown CSRF or validation error" };
     if (errorData.error === "CSRF validation failed") {
         console.error('CSRF validation failed:', errorData.description);
+        if (_showLoginPrompt) {
+          _showLoginPrompt('Your session has expired or you are not authenticated. Please log in again.');
+        }
         throw new CsrfError(errorData.description || 'CSRF validation failed.');
     }
-    // Handle other 400 errors
     console.error(`API Error 400: ${errorData.description || 'Bad Request'}`);
     throw new Error(`API request failed with status 400: ${errorData.description || 'Bad Request'}`);
-  }  // NEW: Handle 422 Unprocessable Entity for validation errors
-  if (response.status === 422) {
-    const errorData = await response.json().catch(() => null);
-    
-    // Check if it's a simple detail string (our custom validation errors)
-    if (errorData && errorData.detail && typeof errorData.detail === 'string') {
-      console.error('API Validation Error (422):', errorData.detail);
-      throw new Error(errorData.detail); // Throw with the specific validation message
-    }
-    
-    // Handle FastAPI's default validation error format (array of validation errors)
-    if (errorData && errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
-      // Extract the first validation error message
-      const firstError = errorData.detail[0];
-      const userMessage = firstError.msg;
-      // Optionally, make the message more specific if location info is useful
-      // if (firstError.loc && Array.isArray(firstError.loc) && firstError.loc.length > 1) {
-      //   userMessage = `Error with field '${firstError.loc[1]}': ${userMessage}`;
-      // }
-      console.error('API Validation Error (422):', userMessage, errorData.detail);
-      throw new Error(userMessage); // Throw with the specific validation message
-    }
-    
-    // Fallback if the 422 error format is not as expected
-    const errorBody = await response.text().catch(() => `Status: ${response.status}`);
-    console.error(`API Validation Error (422):`, errorBody);
-    throw new Error(`Validation failed: ${errorBody}`);
-  }
-  if (!response.ok) {
-    // Handle other errors (e.g., 404, 500)
-    const errorBody = await response.text().catch(() => `Status: ${response.status}`);
-    console.error(`API Error ${response.status}:`, errorBody);
-    throw new Error(`API request failed with status ${response.status}: ${errorBody}`);
   }
 
-  // Handle 204 No Content specifically, as .json() will fail
-  if (response.status === 204) {
-    return undefined as T; // Or null as T, depending on how you want to represent "void"
+  if (status === 422) {
+    const errorData = data || null;
+    
+    if (errorData && errorData.detail && typeof errorData.detail === 'string') {
+      console.error('API Validation Error (422):', errorData.detail);
+      throw new Error(errorData.detail);
+    }
+    
+    if (errorData && errorData.detail && Array.isArray(errorData.detail) && errorData.detail.length > 0) {
+      const firstError = errorData.detail[0];
+      const userMessage = firstError.msg;
+      console.error('API Validation Error (422):', userMessage, errorData.detail);
+      throw new Error(userMessage);
+    }
+    
+    console.error(`API Validation Error (422):`, data);
+    throw new Error(`Validation failed: ${data}`);
   }
-  return response.json(); // response.json() already returns a Promise.
+
+  if (status < 200 || status >= 300) {
+    console.error(`API Error ${status}:`, data);
+    throw new Error(`API request failed with status ${status}: ${data}`);
+  }
+
+  if (status === 204) {
+    return undefined as T;
+  }
+  return data;
 }
 
 export const api = axios.create({
-  baseURL: import.meta.env.VITE_API_BASE_URL || 'http://127.0.0.1:8000',
+  baseURL: import.meta.env.VITE_API_BASE_URL || API_BASE_URL,
   withCredentials: true,
+  validateStatus: (status) => {
+    return (status >= 200 && status < 300) || [400, 401, 403, 422].includes(status);
+  },
 });
+
+api.interceptors.request.use(async (config) => {
+  const csrfToken = getCsrfToken();
+  if (csrfToken) {
+    config.headers['X-CSRFToken'] = csrfToken;
+  }
+  return config;
+});  

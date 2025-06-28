@@ -4,6 +4,8 @@ import type { UserProfile } from '../../../../common/types/user';
 import { EmailStatusManager } from './EmailStatusManager';
 import { GitHubRepoManager } from './GitHubRepoManager';
 import { ContributorsDisplay } from './ContributorsDisplay';
+import { useModal } from '../../../../common/context/ModalContext';
+import { Modal } from '../../../../common/components/Modal';
 import './ImplementationProgressTab.css';
 
 interface ImplementationProgressProps {

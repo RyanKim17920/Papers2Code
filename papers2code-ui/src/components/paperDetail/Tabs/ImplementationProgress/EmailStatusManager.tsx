@@ -41,13 +41,11 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
 
   const handleResponseTypeSelection = async (responseType: EmailStatus) => {
     setShowResponseModal(false);
-    
     const updatedProgress: ImplementationProgress = {
       ...progress,
       emailStatus: responseType,
       updatedAt: new Date().toISOString()
     };
-    
     try {
       onUpdatingChange(true);
       await onProgressChange(updatedProgress);
@@ -61,6 +59,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   const confirmStatusUpdate = async () => {
     if (!pendingStatus) return;
     
+    console.log('pendingStatus', pendingStatus);
     const isMarkingAsSent = pendingStatus === EmailStatus.SENT;
     const updatedProgress: ImplementationProgress = {
       ...progress,
@@ -99,7 +98,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       case EmailStatus.NOT_SENT:
         return [EmailStatus.SENT];
       case EmailStatus.SENT:
-        return [EmailStatus.RESPONSE_RECEIVED];
+        return [EmailStatus.RESPONSE_RECEIVED, EmailStatus.NO_RESPONSE];
       case EmailStatus.RESPONSE_RECEIVED:
       case EmailStatus.CODE_UPLOADED:
       case EmailStatus.CODE_NEEDS_REFACTORING:
@@ -282,26 +281,26 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       {/* Action Buttons - Only show if user has permission */}
       {(canMarkAsSent || canModifyPostSentStatus) && (
         <div className="card-actions">
-          {getNextAllowedStatuses(progress.emailStatus).map((nextStatus) => {
-            const canPerformAction = 
-              nextStatus === EmailStatus.SENT ? canMarkAsSent : canModifyPostSentStatus;
-            
-            if (!canPerformAction) return null;
-            
-            return (
-              <button
-                key={nextStatus}
-                className="btn btn-primary action-button"
-                onClick={() => handleEmailStatusUpdate(nextStatus)}
-                disabled={isUpdating}
-              >
-                <span className="action-icon">{getStatusIcon(nextStatus)}</span>
-                <span className="action-text">
-                  {nextStatus === EmailStatus.RESPONSE_RECEIVED ? 'Authors Responded' : `Mark as ${nextStatus}`}
-                </span>
-              </button>
-            );
-          })}
+          {getNextAllowedStatuses(progress.emailStatus)
+            .filter((nextStatus) => nextStatus !== EmailStatus.NO_RESPONSE) // Remove NO_RESPONSE button
+            .map((nextStatus) => {
+              const canPerformAction = 
+                nextStatus === EmailStatus.SENT ? canMarkAsSent : canModifyPostSentStatus;
+              if (!canPerformAction) return null;
+              return (
+                <button
+                  key={nextStatus}
+                  className="btn btn-primary action-button"
+                  onClick={() => handleEmailStatusUpdate(nextStatus)}
+                  disabled={isUpdating}
+                >
+                  <span className="action-icon">{getStatusIcon(nextStatus)}</span>
+                  <span className="action-text">
+                    {nextStatus === EmailStatus.RESPONSE_RECEIVED ? 'Authors Responded' : `Mark as ${nextStatus}`}
+                  </span>
+                </button>
+              );
+            })}
         </div>
       )}
       

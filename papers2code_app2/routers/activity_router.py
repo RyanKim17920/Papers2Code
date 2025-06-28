@@ -93,11 +93,12 @@ async def get_popular_papers(
     activity_service: ActivityTrackingService = Depends(get_activity_tracking_service)
 ) -> Dict[str, Any]:
     """Get the most viewed papers for analytics."""
-    try:
+    print("Getting the views")
+    try: 
         # Get all paper view counts from the dedicated views collection
         from ..database import get_paper_views_collection_async
         collection = await get_paper_views_collection_async()
-        
+        print("Collection initialized")
         # Aggregate view counts by paper
         pipeline = [
             {"$group": {
@@ -116,8 +117,11 @@ async def get_popular_papers(
             {"$sort": {"view_count": -1}},
             {"$limit": limit}
         ]
-        
+        print("Pipeline created")
         results = await collection.aggregate(pipeline).to_list(length=limit)
+        print("Results fetched")
+        print(results)
+        
         return {
             "popular_papers": results,
             "total_papers_with_views": len(results)

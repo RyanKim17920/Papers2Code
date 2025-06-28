@@ -1,6 +1,6 @@
 // src/App.tsx
-import React, { useState, useEffect, useRef } from 'react';
-import { BrowserRouter as Router, Routes, Route, Link } from 'react-router-dom';
+import { useState, useEffect, useRef } from 'react';
+import { Routes, Route, Link } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
@@ -8,31 +8,43 @@ import logo from './assets/images/papers2codelogo.png';
 import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './common/services/auth';
 import type { UserProfile } from './common/types/user';
 import { UserAvatar } from './common/components';
+import AuthInitializer from './common/components/AuthInitializer'; // Import AuthInitializer
 import { ModalProvider } from './common/context/ModalContext'; // Import ModalProvider
 import LoginPromptModal from './common/components/LoginPromptModal'; // Import LoginPromptModal
 import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from './common/components/ErrorBoundary';
+import { AuthenticationError } from './common/services/api'; // Import AuthenticationError
 
 import ProfilePage from './pages/ProfilePage'; // Added import for ProfilePage
 import SettingsPage from './pages/SettingsPage'; // Added import for SettingsPage
+import NotFoundPage from './pages/NotFoundPage';
 import './App.css';
-
+  
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false); // State for dropdown
   const dropdownRef = useRef<HTMLDivElement>(null); // Ref for dropdown click outside
 
-  // Check login status and fetch CSRF token when the app loads
+  // Check login status and fetch CSRF token when the app loads or location changes
   useEffect(() => {
     const initializeApp = async () => {
       setAuthLoading(true);
       await fetchAndStoreCsrfToken(); // Fetch and store the token
-      const user = await checkCurrentUser();
-      setCurrentUser(user);
-      setAuthLoading(false);
+      try {
+        const user = await checkCurrentUser();
+        setCurrentUser(user);
+      } catch (error) {
+        if (error instanceof AuthenticationError) {
+          setCurrentUser(null);
+        } else {
+          console.error("Error initializing app:", error);
+        }
+      } finally {
+        setAuthLoading(false);
+      }
     };
     initializeApp();
-  }, []);
+  }, [location.pathname]); // Re-run when the path changes
 
   // Handle clicking outside of dropdown to close it
   useEffect(() => {
@@ -56,10 +68,10 @@ function App() {
   };
 
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
-
+  console.log(currentUser);
   return (
     <ModalProvider>
-      <Router>
+      <AuthInitializer /> {/* Initialize Auth-related hooks here */}
         <div className="app-container">
           <header className="app-header">
             <Link to="/" className="logo-link">
@@ -125,23 +137,12 @@ function App() {
           </main>          
           <LoginPromptModal /> {/* Add LoginPromptModal here so it can be displayed globally */}
 
-          <footer className="app-footer">
-            <p>© {new Date().getFullYear()} Papers2Code Community. Data sourced from PapersWithCode, licensed under <a href="https://creativecommons.org/licenses/by-sa/4.0/" target="_blank" rel="noopener noreferrer">CC BY-SA 4.0</a>.</p>
+          <footer className="app-footer"> 
           </footer>
         </div>
-      </Router>
     </ModalProvider>
   );
 }
 
-const NotFoundPage: React.FC = () => {
-    return (
-        <div style={{ textAlign: 'center', marginTop: '50px', width: '100vw' }}>
-            <h1>404 - Page Not Found</h1>
-            <p>Sorry, the page you are looking for does not exist.</p>
-            <Link to="/">Go back to the homepage</Link>
-        </div>
-    );
-}
 
 export default App;

@@ -33,7 +33,7 @@ ImplementationStatusType = Literal[
     "Waiting for Review",
     "Completed",
     "Official Code Posted"
-]
+] 
 
 # --- Base Models for Paper Representation ---
 class BasePaper(BaseModel):
@@ -48,7 +48,7 @@ class BasePaper(BaseModel):
     publication_date: Optional[datetime] = Field(None, alias="publicationDate")
     venue: Optional[str] = Field(None, alias="proceeding")
     tags: Optional[List[str]] = Field([], alias="tasks")
-
+ 
     # --- Implementability Fields ---
     upvote_count: int = Field(0, alias="upvoteCount")
     status: ImplementationStatusType = Field("Not Started", alias="status")

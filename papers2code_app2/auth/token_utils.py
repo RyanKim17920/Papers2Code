@@ -3,7 +3,7 @@ from typing import Optional, Dict
 import uuid
 import hashlib
 
-from jose import jwt
+from jose import jwt 
 from fastapi import Request
 
 from ..shared import config_settings
@@ -45,3 +45,4 @@ def get_session_id(request: Request) -> str:
         session_id = hashlib.md5(session_data.encode()).hexdigest()
     
     return session_id
+   
