@@ -1153,11 +1153,6 @@
   transform: none;
 }
 
-.response-option > * {
-  position: relative;
-  z-index: 1;
-}
-
 .response-option.success {
   border-color: var(--success-color, #28a745);
 }
@@ -1841,4 +1836,59 @@
   font-weight: 600;
   margin-bottom: 0.5rem;
   color: var(--text-heading-color);
+}
+
+/* Email Template Modal Specific Styles */
+.email-template-modal-content h4 {
+  margin-top: 15px;
+  margin-bottom: 5px;
+  color: var(--text-heading-color);
+  font-size: 1rem;
+}
+
+.email-subject-textarea,
+.email-body-textarea {
+  width: 100%;
+  padding: 10px;
+  border: 1px solid var(--border-color);
+  border-radius: var(--border-radius-sm);
+  font-family: 'Monaco', 'Consolas', monospace;
+  font-size: 0.875rem;
+  background-color: var(--background-alt-color);
+  color: var(--text-color);
+  resize: vertical;
+  box-sizing: border-box; /* Include padding and border in the element's total width and height */
+}
+
+.email-subject-textarea {
+  min-height: 60px; /* Ensure subject textarea is visible */
+}
+
+.email-body-textarea {
+  min-height: 200px; /* Ensure body textarea is large enough */
+}
+
+.copy-instruction {
+  font-size: 0.8rem;
+  color: var(--text-muted-color);
+  margin-top: 15px;
+  text-align: center;
+}
+
+/* Dark mode adjustments for email template modal */
+@media (prefers-color-scheme: dark) {
+  .email-template-modal-content h4 {
+    color: var(--text-heading-color-dark);
+  }
+
+  .email-subject-textarea,
+  .email-body-textarea {
+    background-color: var(--background-alt-color-dark);
+    border-color: var(--border-color-dark);
+    color: var(--text-color-dark);
+  }
+
+  .copy-instruction {
+    color: var(--text-muted-color-dark);
+  }
 }

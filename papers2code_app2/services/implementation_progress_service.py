@@ -177,7 +177,6 @@ class ImplementationProgressService:
         email_content = get_author_outreach_email_template(paper_title, paper_link)
         # In a real application, you would integrate with an email sending service here.
         # For now, we'll just log the content.
-        logger.info(f"Generated Author Outreach Email for Paper {paper_id}:\nSubject: {email_content['subject']}\nBody: {email_content['body']}")
         return {"message": "Email content generated and logged (email not actually sent).", "subject": email_content['subject'], "body": email_content['body']}
 
     async def update_progress_by_paper_id(self, paper_id: str, user_id: str, progress_update: ProgressUpdate) -> ImplementationProgress:

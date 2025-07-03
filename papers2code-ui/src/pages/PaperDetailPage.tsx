@@ -114,15 +114,15 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         // Optionally, refetch paper data or rely on optimistic update
         // loadPaperAndActions(); // Or a more specific refresh if available
     };
-
+ 
     if (isLoading) {
-        return <LoadingSpinner />;
+        return <LoadingSpinner />; 
     }
-
+ 
     if (error) {
         return <div className="error-message">Error loading paper: {error}</div>;
     }
-
+ 
     if (!paper) {
         return <div className="error-message">Paper not found or failed to load.</div>;
     }
@@ -260,13 +260,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     <div className="tab-pane-container">
                         <ImplementationProgressTab 
                             progress={paper.implementationProgress} 
+                            paperId={paper.id} 
                             currentUser={currentUser}
                             onImplementationProgressChange={handleImplementationProgressChange}
                         />
                     </div>
                 )}
             </div>
-
+ 
             {/* New Confirmation Modal for Starting/Joining Effort */}
             {showStartEffortConfirmModal && (
                 <ConfirmationModal

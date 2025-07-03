@@ -11,7 +11,7 @@ export const redirectToGitHubLogin = () => {
 
 // Function to check current user status
 export const checkCurrentUser = async (): Promise<UserProfile | null> => {
-    try {
+    try { 
         // The API will now return camelCase, so no transformation needed here
         const response = await api.get<UserProfile>(`${AUTH_API_PREFIX}/me`);
         const output = response.data;

@@ -5,22 +5,25 @@ import { EmailStatusManager } from './EmailStatusManager';
 import { GitHubRepoManager } from './GitHubRepoManager';
 import { ContributorsDisplay } from './ContributorsDisplay';
 import { useModal } from '../../../../common/context/ModalContext';
-import { Modal } from '../../../../common/components/Modal';
+import Modal from '../../../../common/components/Modal';
+import { useAuthorOutreachEmail } from '../../../../common/hooks/useAuthorOutreachEmail';
 import './ImplementationProgressTab.css';
 
 interface ImplementationProgressProps {
     progress: ImplementationProgress;
+    paperId: string;
     currentUser: UserProfile | null;
     onImplementationProgressChange: (updatedProgress: ImplementationProgress) => void;
 }
 
-export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = ({ 
-    progress, 
+export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = ({
+    progress,
+    paperId,
     currentUser,
     onImplementationProgressChange
 }) => {
-    const [isUpdating, setIsUpdating] = useState(false);
-    const [error, setError] = useState<string | null>(null);
+    const { showModal, hideModal } = useModal();
+    const { emailContent, fetchEmailContent, isFetchingEmail, emailError, clearEmailContent } = useAuthorOutreachEmail(paperId);
  
     // Permission helpers
     const isLoggedIn = !!currentUser;
@@ -36,6 +39,13 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     // Basic permissions
     const canMarkAsSent = isLoggedIn && isContributor && progress.emailStatus === EmailStatus.NOT_SENT;
     const canModifyRepo = isLoggedIn && isInitiator;
+
+    // Effect to set error from hook
+    useEffect(() => {
+        if (emailError) {
+            console.error("Email fetch error:", emailError);
+        }
+    }, [emailError]);
 
     const getStatusIcon = (status: EmailStatus): string => {
         switch (status) {
@@ -73,7 +83,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                 return 'status-neutral';
         }
     };
-
+ 
     // Auto-update to "No Response" when cooldown expires
     useEffect(() => {
         const hasReachedNoResponseTime = (): boolean => {
@@ -138,13 +148,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                 </div>
             </div>
 
-            {/* Error Display */}
-            {error && (
-                <div className="alert alert-error">
-                    <span className="alert-icon">⚠️</span>
-                    <span>{error}</span>
-                </div>
-            )}
+            
 
             {/* Main Content Grid */}
             <div className="status-timeline-grid">
@@ -169,9 +173,6 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                                 progress={progress}
                                 onProgressChange={onImplementationProgressChange}
                                 canModifyRepo={canModifyRepo}
-                                isUpdating={isUpdating}
-                                onUpdatingChange={setIsUpdating}
-                                onError={setError}
                             />
                         </div>
                     )}
@@ -196,10 +197,16 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                             onProgressChange={onImplementationProgressChange}
                             canMarkAsSent={canMarkAsSent}
                             canModifyPostSentStatus={canModifyPostSentStatus}
-                            isUpdating={isUpdating}
-                            onUpdatingChange={setIsUpdating}
-                            onError={setError}
                         />
+                        {isContributor && (
+                            <button 
+                                className="button button-secondary" 
+                                onClick={fetchEmailContent}
+                                disabled={isFetchingEmail}
+                            >
+                                {isFetchingEmail ? 'Loading...' : 'View Author Outreach Email'}
+                            </button>
+                        )}
                     </div>
                 </div>
 
@@ -259,6 +266,32 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                     />
                 </div>
             </div>
+
+            {/* Email Content Modal */}
+            <Modal isOpen={!!emailContent} onClose={clearEmailContent} title="Author Outreach Email Template">
+                {emailContent && (
+                    <div className="email-template-modal-content">
+                        <h4>Subject:</h4>
+                        <textarea 
+                            className="email-subject-textarea"
+                            value={emailContent.subject} 
+                            readOnly 
+                            rows={2}
+                        />
+                        <h4>Body:</h4>
+                        <textarea 
+                            className="email-body-textarea"
+                            value={emailContent.body} 
+                            readOnly 
+                            rows={15}
+                        />
+                        <p className="copy-instruction">
+                            Copy the content above and send it manually.
+                        </p>
+                    </div>
+                )}
+            </Modal>
         </div>
     );
 };
+

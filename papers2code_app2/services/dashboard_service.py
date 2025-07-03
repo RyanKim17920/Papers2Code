@@ -70,7 +70,7 @@ class DashboardService:
         """
         Retrieves recently viewed papers for a user from the analytics collection.
         """
-        if not async_db:
+        if not async_db: 
             raise RuntimeError("Database not initialized.")
 
         recent_views_coll = async_db["user_recent_views"]
@@ -94,4 +94,4 @@ class DashboardService:
         return [PaperResponse(**p) for p in ordered_papers]
 
 # Singleton instance
-dashboard_service = DashboardService() 
+dashboard_service = DashboardService()  

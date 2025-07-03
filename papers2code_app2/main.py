@@ -130,7 +130,7 @@ async def lifespan(app: FastAPI):
     yield
     # Code to run when the application is shutting down
     #logger.info("Application shutdown in lifespan context")
-
+ 
 app = FastAPI(
     title="Papers2Code API",
     description="API for Papers2Code platform.",
@@ -167,7 +167,8 @@ app.add_middleware(
     allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS", "HEAD", "PATCH"],  # Explicitly list allowed methods
     allow_headers=["Content-Type", "X-CSRFToken", "Authorization", "Accept", "Access-Control-Allow-Origin", "Vary"],  # Added Access-Control-Allow-Origin and Vary
 )
-
+ 
+ 
 # ADDED: Add CSRFProtectMiddleware after CORS and before routes
 app.add_middleware(CSRFProtectMiddleware)
 
