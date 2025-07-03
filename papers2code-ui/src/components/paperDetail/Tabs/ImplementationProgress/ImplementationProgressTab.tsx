@@ -1,10 +1,9 @@
-import React, { useState, useEffect } from 'react';
+import React, { useEffect } from 'react';
 import { ImplementationProgress, EmailStatus } from '../../../../common/types/implementation';
 import type { UserProfile } from '../../../../common/types/user';
 import { EmailStatusManager } from './EmailStatusManager';
 import { GitHubRepoManager } from './GitHubRepoManager';
 import { ContributorsDisplay } from './ContributorsDisplay';
-import { useModal } from '../../../../common/context/ModalContext';
 import Modal from '../../../../common/components/Modal';
 import { useAuthorOutreachEmail } from '../../../../common/hooks/useAuthorOutreachEmail';
 import './ImplementationProgressTab.css';
@@ -22,7 +21,6 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     currentUser,
     onImplementationProgressChange
 }) => {
-    const { showModal, hideModal } = useModal();
     const { emailContent, fetchEmailContent, isFetchingEmail, emailError, clearEmailContent } = useAuthorOutreachEmail(paperId);
  
     // Permission helpers
@@ -39,6 +37,10 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     // Basic permissions
     const canMarkAsSent = isLoggedIn && isContributor && progress.emailStatus === EmailStatus.NOT_SENT;
     const canModifyRepo = isLoggedIn && isInitiator;
+
+    // State for managing updating status and errors
+    const [isUpdating, setIsUpdating] = React.useState(false);
+    const [error, setError] = React.useState<string | null>(null);
 
     // Effect to set error from hook
     useEffect(() => {
@@ -148,7 +150,32 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                 </div>
             </div>
 
-            
+            {/* Error Display */}
+            {error && (
+                <div className="error-banner" style={{
+                    backgroundColor: '#fee', 
+                    border: '1px solid #f99', 
+                    borderRadius: '4px', 
+                    padding: '12px', 
+                    margin: '16px 0',
+                    color: '#c33'
+                }}>
+                    <strong>Error:</strong> {error}
+                    <button 
+                        onClick={() => setError(null)}
+                        style={{
+                            marginLeft: '8px',
+                            background: 'none',
+                            border: 'none',
+                            color: '#c33',
+                            cursor: 'pointer',
+                            fontSize: '16px'
+                        }}
+                    >
+                        ×
+                    </button>
+                </div>
+            )}
 
             {/* Main Content Grid */}
             <div className="status-timeline-grid">
@@ -173,6 +200,9 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                                 progress={progress}
                                 onProgressChange={onImplementationProgressChange}
                                 canModifyRepo={canModifyRepo}
+                                isUpdating={isUpdating}
+                                onUpdatingChange={setIsUpdating}
+                                onError={setError}
                             />
                         </div>
                     )}
@@ -197,6 +227,9 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                             onProgressChange={onImplementationProgressChange}
                             canMarkAsSent={canMarkAsSent}
                             canModifyPostSentStatus={canModifyPostSentStatus}
+                            isUpdating={isUpdating}
+                            onUpdatingChange={setIsUpdating}
+                            onError={setError}
                         />
                         {isContributor && (
                             <button 

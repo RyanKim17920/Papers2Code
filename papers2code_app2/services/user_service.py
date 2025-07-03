@@ -59,22 +59,109 @@ class UserService:
         async for action in upvote_actions:
             paper_doc = await self.papers_collection.find_one({"_id": action["paperId"]})
             if paper_doc:
+                # Attach implementation progress to paper document before transformation
+                # This ensures the transform_paper_async function has the implementationProgress field it expects
+                try:
+                    # Fetch the implementation progress document for this paper
+                    paper_id = str(action["paperId"])
+                    try:
+                        paper_obj_id = ObjectId(paper_id)
+                        # First try with ObjectId
+                        progress_document = await self.implementation_progress_collection.find_one({"_id": paper_obj_id})
+                        
+                        # If not found with ObjectId, try with string (backward compatibility)
+                        if not progress_document:
+                            progress_document = await self.implementation_progress_collection.find_one({"_id": paper_id})
+                    except Exception:
+                        # If ObjectId conversion fails, just try with string
+                        progress_document = await self.implementation_progress_collection.find_one({"_id": paper_id})
+                    
+                    if progress_document:
+                        # Convert the raw document to a proper ImplementationProgress model
+                        from ..schemas.implementation_progress import ImplementationProgress
+                        progress_model = ImplementationProgress(**progress_document)
+                        # Use model_dump() to get proper field names, then ensure id is included
+                        progress_dict = progress_model.model_dump()
+                        progress_dict['id'] = str(progress_model.id)  # Ensure id is a string
+                        paper_doc["implementationProgress"] = progress_dict
+                    else:
+                        paper_doc["implementationProgress"] = None
+                except Exception as e:
+                    logger.error(f"Error fetching implementation progress for paper {paper_id}: {e}", exc_info=True)
+                    paper_doc["implementationProgress"] = None
+                
                 # Use full transformation to get all fields needed by frontend PaperCard
                 # Pass requesting user's ID to get correct currentUserVote status
-                print(paper_doc)  # Debugging line to check paper_doc structure
                 transformed_paper_dict = await transform_paper_async(paper_doc, detail_level="full", current_user_id_str=requesting_user_id_str)
-                print(transformed_paper_dict)  # Debugging line to check transformed paper dict
                 if transformed_paper_dict:
                     # Convert dictionary to PaperResponse object
                     paper_response = PaperResponse(**transformed_paper_dict)
                     upvoted_papers_list.append(paper_response)
 
-        # Get contributed papers (papers where user is in ImplementationProgress.contributors)
+        # Get contributed papers (papers where user is in ImplementationProgress.contributors OR has project actions)
         contributed_papers_list = []
+        contributed_paper_ids = set()
+        
+        # First, check implementation progress records where user is a contributor
         progress_records = self.implementation_progress_collection.find({"contributors": user_id})
+        print(f"Looking for contributed papers for user_id: {user_id}")
+        
+        progress_count = 0
         async for progress in progress_records:
-            paper_doc = await self.papers_collection.find_one({"_id": progress["paperId"]})
+            progress_count += 1
+            contributed_paper_ids.add(progress["_id"])
+
+        # Also check user actions for "Project Joined" and "Project Started" to identify contributed papers
+        project_actions = self.user_actions_collection.find({
+            "userId": user_id,
+            "actionType": {"$in": ["Project Joined", "Project Started"]}
+        })
+        project_action_count = 0
+        async for action in project_actions:
+            project_action_count += 1
+            paper_id = action.get('paperId')
+            if paper_id:
+                contributed_paper_ids.add(paper_id)
+        
+        print(f"Total progress records processed: {progress_count}")
+        print(f"Total project actions found: {project_action_count}")
+        print(f"Total unique contributed paper IDs: {len(contributed_paper_ids)}")
+        
+        # Now fetch and transform all contributed papers
+        for paper_id in contributed_paper_ids:
+            paper_doc = await self.papers_collection.find_one({"_id": paper_id})
             if paper_doc:
+                # Attach implementation progress to paper document before transformation
+                # This ensures the transform_paper_async function has the implementationProgress field it expects
+                try:
+                    # Fetch the implementation progress document for this paper
+                    paper_id_str = str(paper_id)
+                    try:
+                        paper_obj_id = ObjectId(paper_id_str)
+                        # First try with ObjectId
+                        progress_document = await self.implementation_progress_collection.find_one({"_id": paper_obj_id})
+                        
+                        # If not found with ObjectId, try with string (backward compatibility)
+                        if not progress_document:
+                            progress_document = await self.implementation_progress_collection.find_one({"_id": paper_id_str})
+                    except Exception:
+                        # If ObjectId conversion fails, just try with string
+                        progress_document = await self.implementation_progress_collection.find_one({"_id": paper_id_str})
+                    
+                    if progress_document:
+                        # Convert the raw document to a proper ImplementationProgress model
+                        from ..schemas.implementation_progress import ImplementationProgress
+                        progress_model = ImplementationProgress(**progress_document)
+                        # Use model_dump() to get proper field names, then ensure id is included
+                        progress_dict = progress_model.model_dump()
+                        progress_dict['id'] = str(progress_model.id)  # Ensure id is a string
+                        paper_doc["implementationProgress"] = progress_dict
+                    else:
+                        paper_doc["implementationProgress"] = None
+                except Exception as e:
+                    logger.error(f"Error fetching implementation progress for paper {paper_id_str}: {e}", exc_info=True)
+                    paper_doc["implementationProgress"] = None
+                
                 # Use full transformation to get all fields needed by frontend PaperCard
                 # Pass requesting user's ID to get correct currentUserVote status
                 transformed_paper_dict = await transform_paper_async(paper_doc, detail_level="full", current_user_id_str=requesting_user_id_str)
@@ -82,6 +169,10 @@ class UserService:
                     # Convert dictionary to PaperResponse object
                     paper_response = PaperResponse(**transformed_paper_dict)
                     contributed_papers_list.append(paper_response)
+            else:
+                logger.warning(f"No paper found with _id: {paper_id}")
+
+        print(f"Total contributed papers found: {len(contributed_papers_list)}")
 
         return UserProfileResponse(
             user_details=user_details,
