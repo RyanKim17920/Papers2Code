@@ -30,6 +30,7 @@ db_removed_papers_async: Optional[AsyncCollection] = None # Changed type
 db_users_async: Optional[AsyncCollection] = None # Changed type
 db_implementation_progress_async: Optional[AsyncCollection] = None 
 db_paper_views_async: Optional[AsyncCollection] = None 
+db_popular_papers_recent_async: Optional[AsyncCollection] = None
 
 
 def get_mongo_uri_and_db_name() -> Tuple[str, str]:
@@ -58,25 +59,25 @@ def get_mongo_uri_and_db_name() -> Tuple[str, str]:
     return uri, db_name
 
 async def initialize_async_db():
-    """Initializes the asynchronous database connection and collections using PyMongo Async API."""
-    global async_client, async_db, db_papers_async, db_user_actions_async, db_removed_papers_async, db_users_async, db_implementation_progress_async, db_paper_views_async
+    """Initializes the asynchronous database connection and collections using PyMongo Async API.""" 
+    global async_client, async_db, db_papers_async, db_user_actions_async, db_removed_papers_async, db_users_async, db_implementation_progress_async, db_paper_views_async, db_popular_papers_recent_async
     
-    if async_client and async_db:
+    if async_client is not None and async_db is not None:
         #logger.info("Asynchronous database connection already initialized.")
         return
 
     actual_mongo_uri, actual_db_name = get_mongo_uri_and_db_name()
     
     try:
-        #logger.info(f"Attempting to connect to MongoDB asynchronously using PyMongo. Database: {actual_db_name}")
+        logger.info(f"Attempting to connect to MongoDB asynchronously using PyMongo. Database: {actual_db_name}")
         async_client = AsyncMongoClient(actual_mongo_uri) 
         
         # Ping the server to confirm connection
         await async_client.admin.command('ping')
-        #logger.info("Async MongoDB server ping successful (PyMongo Async). Connection established.")
+        logger.info("Async MongoDB server ping successful (PyMongo Async). Connection established.")
         
         async_db = async_client[actual_db_name]
-        #logger.info(f"Successfully connected to async MongoDB database (PyMongo Async): '{actual_db_name}'.")
+        logger.info(f"Successfully connected to async MongoDB database (PyMongo Async): '{actual_db_name}'.")
         
         db_papers_async = async_db["papers"]
         db_user_actions_async = async_db["user_actions"]
@@ -84,10 +85,12 @@ async def initialize_async_db():
         db_users_async = async_db["users"]
         db_implementation_progress_async = async_db["implementation_progress"] # ADDED: Initialize implementation_progress collection
         db_paper_views_async = async_db["paper_views"]
-        #logger.info("Async database collections initialized (PyMongo Async): papers, user_actions, removed_papers, users, implementation_progress, paper_views.") : Updated log message
+        db_popular_papers_recent_async = async_db["popular_papers_recent"]
+        logger.info("Async database collections initialized (PyMongo Async): papers, user_actions, removed_papers, users, implementation_progress, paper_views.")
 
     except Exception as e:
-        logger.critical(f"CRITICAL: Failed to connect to MongoDB asynchronously. URI attempted: {globals().get('actual_mongo_uri', 'Not determined')}, DB Name attempted: {globals().get('actual_db_name', 'Not determined')}. Error: {e}", exc_info=True)
+        logger.critical(f"CRITICAL: Failed to connect to MongoDB asynchronously. URI attempted: {actual_mongo_uri}, DB Name attempted: {actual_db_name}. Error: {e}", exc_info=True)
+        raise  # Re-raise the exception so the caller knows it failed
 
 def initialize_sync_db():
     """Initializes the synchronous database connection and collections."""
@@ -176,8 +179,26 @@ async def get_paper_views_collection_async() -> AsyncCollection:
     if db_paper_views_async is None:
         await initialize_async_db()
     if db_paper_views_async is None:
-        raise Exception("Asynchronous paper_views collection not initialized after attempt.")
+        raise RuntimeError("Failed to initialize db_paper_views_async collection.")
     return db_paper_views_async
+
+
+async def get_popular_papers_recent_collection_async() -> AsyncCollection:
+    """Returns the async popular_papers_recent collection, initializing the db if necessary."""
+    if db_popular_papers_recent_async is None:
+        await initialize_async_db()
+    if db_popular_papers_recent_async is None:
+        raise RuntimeError("Failed to initialize db_popular_papers_recent_async collection.")
+    return db_popular_papers_recent_async
+
+
+async def get_popular_papers_cache_collection_async() -> AsyncCollection:
+    """Returns the async popular_papers_cache collection, initializing the db if necessary."""
+    if async_db is None:
+        await initialize_async_db()
+    if async_db is None:
+        raise RuntimeError("Failed to initialize async_db.")
+    return async_db["popular_papers_cache"]
 
 async def ensure_db_indexes_async():
     """
@@ -202,7 +223,8 @@ async def ensure_db_indexes_async():
         "removed_papers": db_removed_papers_async,
         "user_actions": db_user_actions_async,
         "implementation_progress": db_implementation_progress_async,
-        "paper_views": db_paper_views_async
+        "paper_views": db_paper_views_async,
+        "popular_papers_recent": db_popular_papers_recent_async
     }
     
     # Check and re-initialize if any collection is None
@@ -217,7 +239,7 @@ async def ensure_db_indexes_async():
             collections_to_check["user_actions"] = db_user_actions_async
             collections_to_check["implementation_progress"] = db_implementation_progress_async
             collections_to_check["paper_views"] = db_paper_views_async
-            
+            collections_to_check["popular_papers_recent"] = db_popular_papers_recent_async
             if collections_to_check[col_name] is None:
                 logger.critical(f"CRITICAL: Async collection '{col_name}' still not initialized after re-attempt. Aborting index creation.")
                 return 
@@ -263,7 +285,13 @@ async def ensure_db_indexes_async():
                 ([("status", ASCENDING)], {"name": "status_1_impl_progress_async"}),
                 ([("initiatedBy", ASCENDING)], {"name": "initiatedBy_1_impl_progress_async"}),
                 ([("emailStatus", ASCENDING)], {"name": "emailStatus_1_impl_progress_async"}),
-            ])
+            ]),
+            (collections_to_check["popular_papers_recent"], [
+                ([("paperId", ASCENDING)], {"name": "paperId_1_popular_papers_recent_async", "unique": True}),
+                ([("timestamp", DESCENDING)], {"name": "timestamp_-1_popular_papers_recent_async"}),
+                ([("viewsCount", DESCENDING)], {"name": "viewsCount_-1_popular_papers_recent_async"}),
+                ([("upvoteCount", DESCENDING)], {"name": "upvoteCount_-1_popular_papers_recent_async"}),
+            ]),
         ]
 
         for collection_obj, index_list_for_collection in all_index_definitions:

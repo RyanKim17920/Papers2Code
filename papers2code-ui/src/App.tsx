@@ -4,6 +4,7 @@ import { Routes, Route, Link } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
+import DashboardPage from './pages/DashboardPage';
 import logo from './assets/images/papers2codelogo.png';
 import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './common/services/auth';
 import type { UserProfile } from './common/types/user';
@@ -79,7 +80,7 @@ function App() {
             </Link>
             <nav className="main-nav">
               <Link to="/papers" className="nav-link">Papers</Link>
-              {/* Add other nav links here if needed */}
+              {currentUser && <Link to="/dashboard" className="nav-link">Dashboard</Link>}
             </nav>
             <div className="auth-section">
               {authLoading ? (
@@ -94,6 +95,7 @@ function App() {
                     />
                   </button>                  {isDropdownOpen && (
                     <div className={`user-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
+                      <Link to="/dashboard" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Dashboard</Link>
                       <Link to={`/user/${currentUser.username}`} className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
                       <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
                       <Link to="" onClick={handleLogout} className="dropdown-item">
@@ -129,6 +131,7 @@ function App() {
                     </PaperDetailErrorBoundary>
                   }
                 />              
+                <Route path="/dashboard" element={<DashboardPage />} /> {/* Added route for DashboardPage */}
                 <Route path="/user/:github_username" element={<ProfilePage />} /> {/* Added route for ProfilePage */}
                 <Route path="/settings" element={<SettingsPage />} /> {/* Added route for SettingsPage */}
                 <Route path="*" element={<NotFoundPage />} />

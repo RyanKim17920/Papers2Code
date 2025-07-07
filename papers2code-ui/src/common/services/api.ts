@@ -12,6 +12,15 @@ export interface UserProfileResponse {
   upvotedPapers: Paper[];
   contributedPapers: Paper[];
 }
+
+// --- Dashboard Types ---
+export interface DashboardData {
+  trendingPapers: Paper[];
+  myContributions: Paper[];
+  recentlyViewed: Paper[];
+}
+// --- End Dashboard Types ---
+
 // --- End User Profile Types ---
 
 
@@ -360,6 +369,21 @@ export const trackPaperViewInApi = async (data: PaperViewData): Promise<void> =>
 }
 // --- End NEW ---
 
+// --- Dashboard API Functions ---
+export const fetchDashboardDataFromApi = async (): Promise<DashboardData> => {
+  try {
+    const response = await api.get(`${API_BASE_URL}/api/dashboard/data`);
+    
+    const dashboardData = await handleApiResponse<DashboardData>(response, true);
+    return dashboardData;
+  } catch (error) {
+    console.error('Failed to fetch dashboard data:', error);
+    throw error;
+  }
+};
+// --- End Dashboard API Functions ---
+
+
 // --- BEGIN ADDED TYPE DEFINITIONS ---
 // These interfaces define the expected structure of the raw JSON response
 // from the backend /actions endpoint, after camelCase conversion.
@@ -474,4 +498,5 @@ api.interceptors.request.use(async (config) => {
     config.headers['X-CSRFToken'] = csrfToken;
   }
   return config;
-});  
+});
+

@@ -3,9 +3,10 @@ from typing import List, Dict, Any
 from bson import ObjectId
 
 from ..database import (
-    async_db,
     get_papers_collection_async,
     get_implementation_progress_collection_async,
+    get_paper_views_collection_async,
+    get_popular_papers_recent_collection_async,
 )
 from ..schemas.papers import PaperResponse
 
@@ -13,85 +14,110 @@ logger = logging.getLogger(__name__)
 
 class DashboardService:
     async def get_trending_papers(self) -> List[Dict[str, Any]]:
-        """
-        Retrieves the most viewed papers from the pre-aggregated analytics collection.
-        """
-        if not async_db:
-            raise RuntimeError("Database not initialized.")
-        
-        popular_coll = async_db["popular_papers_recent"]
-        papers_coll = await get_papers_collection_async()
-        
-        trending_data = await popular_coll.find_one({"_id": "global_recent"})
-        if not trending_data or not trending_data.get("papers"):
-            return []
+        logger.info("Starting get_trending_papers")
+        try:
+            popular_coll = await get_popular_papers_recent_collection_async()
+            papers_coll = await get_papers_collection_async()
+            
+            logger.info("Fetching trending data from popular_papers_recent collection")
+            trending_data = await popular_coll.find_one({"_id": "global_recent"})
+            
+            if not trending_data or not trending_data.get("papers"):
+                logger.warning("No trending paper data found.")
+                return []
 
-        # Extract paper IDs and create a map of view counts
-        paper_views_map = {item["_id"]: item["view_count"] for item in trending_data["papers"]}
-        paper_ids = list(paper_views_map.keys())
+            paper_views_map = {item["_id"]: item["view_count"] for item in trending_data["papers"]}
+            paper_ids = list(paper_views_map.keys())
+            logger.info(f"Found {len(paper_ids)} trending paper IDs.")
 
-        # Fetch full paper details
-        papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}})
-        papers_list = await papers_cursor.to_list(length=len(paper_ids))
+            logger.info("Fetching full paper details for trending papers.")
+            papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}})
+            papers_list = await papers_cursor.to_list(length=len(paper_ids))
+            logger.info(f"Fetched {len(papers_list)} paper details.")
 
-        # Add view count to each paper object and sort by it
-        for paper in papers_list:
-            paper["recent_view_count"] = paper_views_map.get(paper["_id"], 0)
-        
-        papers_list.sort(key=lambda p: p["recent_view_count"], reverse=True)
-
-        return papers_list
+            for paper in papers_list:
+                paper["recent_view_count"] = paper_views_map.get(paper["_id"], 0)
+            
+            papers_list.sort(key=lambda p: p["recent_view_count"], reverse=True)
+            logger.info("Successfully retrieved and sorted trending papers.")
+            return papers_list
+        except Exception as e:
+            logger.error(f"Error in get_trending_papers: {e}", exc_info=True)
+            raise
 
     async def get_user_contributions(self, user_id: str) -> List[PaperResponse]:
-        """
-        Retrieves papers a user is contributing to.
-        """
-        progress_coll = await get_implementation_progress_collection_async()
-        papers_coll = await get_papers_collection_async()
-        
-        user_obj_id = ObjectId(user_id)
+        logger.info(f"Starting get_user_contributions for user_id: {user_id}")
+        try:
+            progress_coll = await get_implementation_progress_collection_async()
+            papers_coll = await get_papers_collection_async()
+            user_obj_id = ObjectId(user_id)
 
-        # Find all progress docs the user is a contributor to
-        progress_cursor = progress_coll.find({"contributors": user_obj_id})
-        progress_docs = await progress_cursor.to_list(length=100) # Limit to 100 contributions
-        
-        paper_ids = [doc["_id"] for doc in progress_docs]
+            logger.info(f"Finding progress docs for user {user_id}")
+            progress_cursor = progress_coll.find({"contributors": user_obj_id})
+            progress_docs = await progress_cursor.to_list(length=100)
+            logger.info(f"Found {len(progress_docs)} contribution documents.")
+            
+            paper_ids = [doc["_id"] for doc in progress_docs]
 
-        if not paper_ids:
-            return []
+            if not paper_ids:
+                logger.info("User has no contributions.")
+                return []
 
-        # Fetch the full paper details for these contributions
-        papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}})
-        papers_list = await papers_cursor.to_list(length=len(paper_ids))
-        
-        return [PaperResponse(**p) for p in papers_list]
+            logger.info(f"Fetching paper details for {len(paper_ids)} contributions.")
+            papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}})
+            papers_list = await papers_cursor.to_list(length=len(paper_ids))
+            logger.info(f"Fetched {len(papers_list)} paper details for contributions.")
+             
+            response = [PaperResponse(**p) for p in papers_list]
+            logger.info(f"Successfully retrieved {len(response)} user contributions.")
+            return response
+        except Exception as e:
+            logger.error(f"Error in get_user_contributions for user {user_id}: {e}", exc_info=True)
+            raise
 
     async def get_recently_viewed_papers(self, user_id: str) -> List[PaperResponse]:
-        """
-        Retrieves recently viewed papers for a user from the analytics collection.
-        """
-        if not async_db: 
-            raise RuntimeError("Database not initialized.")
+        logger.info(f"Starting get_recently_viewed_papers for user_id: {user_id}")
+        try:
+            views_coll = await get_paper_views_collection_async()
+            papers_coll = await get_papers_collection_async()
+            user_obj_id = ObjectId(user_id)
 
-        recent_views_coll = async_db["user_recent_views"]
-        papers_coll = await get_papers_collection_async()
-        user_obj_id = ObjectId(user_id)
+            logger.info(f"Aggregating recent views for user {user_id}")
+            recent_views_pipeline = [
+                {"$match": {"userId": user_obj_id}},
+                {"$sort": {"timestamp": -1}},
+                {"$group": {
+                    "_id": "$paperId",
+                    "latest_view": {"$first": "$timestamp"}
+                }},
+                {"$sort": {"latest_view": -1}},
+                {"$limit": 10}
+            ]
+            
+            cursor = await views_coll.aggregate(recent_views_pipeline)
+            recent_views = await cursor.to_list(length=10)
+            logger.info(f"Found {len(recent_views)} recently viewed paper entries.")
+            
+            if not recent_views:
+                return []
 
-        user_views_data = await recent_views_coll.find_one({"_id": user_obj_id})
-        
-        if not user_views_data or not user_views_data.get("recent_papers"):
-            return []
+            paper_ids = [view["_id"] for view in recent_views]
+            logger.info(f"Fetching details for {len(paper_ids)} recently viewed papers.")
+            
+            papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}})
+            papers_list = await papers_cursor.to_list(length=None)
+            papers_map = {p["_id"]: p for p in papers_list}
+            logger.info(f"Fetched {len(papers_list)} paper details.")
+            
+            ordered_papers = [papers_map[pid] for pid in paper_ids if pid in papers_map]
+            logger.info(f"Ordered {len(ordered_papers)} papers based on recency.")
 
-        paper_ids = user_views_data["recent_papers"]
-        
-        # Fetch full paper details and preserve the recent viewing order
-        papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}})
-        papers_map = {p["_id"]: p for p in await papers_cursor.to_list(length=len(paper_ids))}
-        
-        # Order papers based on the user's recent view list
-        ordered_papers = [papers_map[pid] for pid in paper_ids if pid in papers_map]
-
-        return [PaperResponse(**p) for p in ordered_papers]
+            response = [PaperResponse(**p) for p in ordered_papers]
+            logger.info(f"Successfully retrieved {len(response)} recently viewed papers.")
+            return response
+        except Exception as e:
+            logger.error(f"Error in get_recently_viewed_papers for user {user_id}: {e}", exc_info=True)
+            raise
 
 # Singleton instance
-dashboard_service = DashboardService()  
+dashboard_service = DashboardService()

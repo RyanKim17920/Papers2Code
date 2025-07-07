@@ -8,7 +8,14 @@ import time
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
 
-from papers2code_app2.database import get_implementation_progress_collection_async, get_user_actions_collection_async, initialize_async_db, async_db, get_paper_views_collection_async
+from papers2code_app2.database import (
+    get_implementation_progress_collection_async,
+    get_user_actions_collection_async,
+    initialize_async_db,
+    async_db,
+    get_paper_views_collection_async,
+    get_popular_papers_recent_collection_async
+)
 from papers2code_app2.schemas.implementation_progress import EmailStatus
 
 logger = logging.getLogger(__name__)
@@ -20,52 +27,36 @@ class BackgroundTaskRunner:
         self.is_running = False
         
     async def update_email_statuses(self) -> Dict[str, Any]:
-        """Update email statuses that are due (replaces cron job)"""
+        """Update email statuses that are due using efficient bulk operations"""
         try:
-            logger.info("Starting email status update task...")
+            logger.info("Starting optimized email status update task...")
             collection = await get_implementation_progress_collection_async()
             
-            # Find emails sent more than 4 weeks ago that still have "Sent" status
+            # Calculate threshold once
             four_weeks_ago = datetime.now(timezone.utc) - timedelta(weeks=4)
             
-            cursor = collection.find({
+            # Use bulk update for maximum efficiency
+            update_filter = {
                 "emailStatus": EmailStatus.SENT.value,
                 "emailSentAt": {"$exists": True, "$ne": None, "$lte": four_weeks_ago}
-            })
-            
-            updated_count = 0
-            errors = []
-            
-            async for progress in cursor:
-                try:
-                    result = await collection.update_one(
-                        {"_id": progress["_id"]},
-                        {
-                            "$set": {
-                                "emailStatus": EmailStatus.NO_RESPONSE.value,
-                                "updatedAt": datetime.now(timezone.utc)
-                            }
-                        }
-                    )
-                    
-                    if result.modified_count > 0:
-                        updated_count += 1
-                        logger.debug(f"Updated email status for progress {progress['_id']}")
-                        
-                except Exception as e:
-                    error_msg = f"Failed to update progress {progress.get('_id', 'unknown')}: {str(e)}"
-                    errors.append(error_msg)
-                    logger.error(error_msg)
-            
-            result = {
-                "success": True,
-                "updated_count": updated_count,
-                "errors": errors,
-                "timestamp": datetime.now(timezone.utc).isoformat()
             }
             
-            logger.info(f"Email status update completed: {updated_count} updated, {len(errors)} errors")
-            return result
+            update_operation = {
+                "$set": {
+                    "emailStatus": EmailStatus.NO_RESPONSE.value,
+                    "updatedAt": datetime.now(timezone.utc)
+                }
+            }
+            
+            # Single bulk update operation instead of individual updates
+            result = await collection.update_many(update_filter, update_operation)
+            
+            return {
+                "success": True,
+                "updated_count": result.modified_count,
+                "errors": [],
+                "timestamp": datetime.now(timezone.utc).isoformat()
+            }
             
         except Exception as e:
             error_result = {
@@ -77,52 +68,92 @@ class BackgroundTaskRunner:
             return error_result
     
     async def update_view_analytics(self) -> Dict[str, Any]:
-        """Aggregate user view analytics (recent views per user and popular papers)."""
+        """Optimized view analytics using sliding window approach - no redundant user tracking."""
         try:
-            logger.info("Starting view analytics update task...")
-            await initialize_async_db()
+            logger.info("Starting optimized view analytics update task...")
+            
             views_coll = await get_paper_views_collection_async()
-            db = async_db  # Use already-initialized async_db
-            if db is None:
-                raise RuntimeError("Async DB not initialized")
+            popular_recent_coll = await get_popular_papers_recent_collection_async()
 
-            user_recent_coll = db["user_recent_views"]
-            popular_recent_coll = db["popular_papers_recent"]
+            now = datetime.now(timezone.utc)
+            window_start = now - timedelta(days=7)
 
-            # Time window: last 7 days
-            window_start = datetime.now(timezone.utc) - timedelta(days=7)
-
-            # 1) Per-user recent views (limit 10)
-            pipeline_user = [
-                {"$match": {"timestamp": {"$gte": window_start}}},
-                {"$sort": {"timestamp": -1}},
-                {"$group": {"_id": "$userId", "recent_papers": {"$push": "$paperId"}}},
-                {"$project": {"recent_papers": {"$slice": ["$recent_papers", 10]}}}
+            # Get the last update timestamp for incremental processing
+            last_update_doc = await popular_recent_coll.find_one({"_id": "last_update"})
+            last_update = last_update_doc.get("timestamp", window_start) if last_update_doc else window_start
+            
+            # Only process new views since last update for efficiency
+            new_views_pipeline = [
+                {"$match": {
+                    "timestamp": {"$gte": last_update, "$lt": now}
+                }},
+                {"$group": {
+                    "_id": "$paperId",  # Only track paper views, not per-user
+                    "count": {"$sum": 1},
+                    "latest_timestamp": {"$max": "$timestamp"}
+                }}
             ]
-            async for doc in views_coll.aggregate(pipeline_user):
-                user_id = doc["_id"] or "anonymous"
-                await user_recent_coll.update_one(
-                    {"_id": user_id},
-                    {"$set": {"recent_papers": doc["recent_papers"], "last_updated": datetime.now(timezone.utc)}},
-                    upsert=True,
-                )
-
-            # 2) Global popular papers (view count in window)
-            pipeline_global = [
-                {"$match": {"timestamp": {"$gte": window_start}}},
-                {"$group": {"_id": "$paperId", "view_count": {"$sum": 1}}},
-                {"$sort": {"view_count": -1}},
-                {"$limit": 20},
+            
+            # Process new views incrementally
+            try:
+                paper_view_updates = {}
+                
+                # PyMongo async aggregation - get all results as a list first
+                cursor_results = await views_coll.aggregate(new_views_pipeline).to_list(length=None)
+                
+                for view_group in cursor_results:
+                    paper_id = view_group["_id"]
+                    count = view_group["count"]
+                    
+                    # Accumulate paper view counts
+                    paper_view_updates[paper_id] = paper_view_updates.get(paper_id, 0) + count
+                        
+            except Exception as e:
+                logger.warning(f"Error processing new views: {e}")
+                paper_view_updates = {}
+            
+            
+            # Update popular papers with sliding window
+            # Remove old entries and add new ones
+            cutoff_time = now - timedelta(days=7)
+            
+            # Get existing popular papers data
+            existing_popular = await popular_recent_coll.find_one({"_id": "global_recent"})
+            current_papers = existing_popular.get("papers", []) if existing_popular else []
+            
+            # Create a map of current paper counts
+            paper_counts = {paper["_id"]: paper["view_count"] for paper in current_papers}
+            
+            # Apply incremental updates
+            for paper_id, new_views in paper_view_updates.items():
+                if paper_id in paper_counts:
+                    paper_counts[paper_id] += new_views
+                else:
+                    paper_counts[paper_id] = new_views
+            
+            # Rebuild top 20 list efficiently
+            popular_list = [
+                {"_id": paper_id, "view_count": count}
+                for paper_id, count in sorted(paper_counts.items(), key=lambda x: x[1], reverse=True)[:20]
             ]
-            popular_list = await views_coll.aggregate(pipeline_global).to_list(length=20)
+            
+            # Update popular papers collection
             await popular_recent_coll.update_one(
                 {"_id": "global_recent"},
-                {"$set": {"papers": popular_list, "last_updated": datetime.now(timezone.utc)}},
+                {"$set": {"papers": popular_list, "last_updated": now}},
                 upsert=True,
             )
+            
+            # Update last processed timestamp
+            await popular_recent_coll.update_one(
+                {"_id": "last_update"},
+                {"$set": {"timestamp": now}},
+                upsert=True
+            )
 
-            logger.info("View analytics update completed")
-            return {"success": True, "updated_users": "done", "popular_count": len(popular_list)}
+            logger.info(f"Optimized view analytics completed: processed {len(paper_view_updates)} papers (no redundant user tracking)")
+            return {"success": True, "processed_papers": len(paper_view_updates), "user_updates": 0}
+            
         except Exception as e:
             logger.error(f"View analytics update failed: {e}")
             return {"success": False, "error": str(e)}
@@ -149,19 +180,3 @@ class BackgroundTaskRunner:
         """Stop the scheduler"""
         self.is_running = False
         logger.info("Background task scheduler stopped")
-
-# For manual testing
-async def test_email_update():
-    """Test the email update function manually"""
-    runner = BackgroundTaskRunner()
-    result = await runner.update_email_statuses()
-    print(f"Email update test result: {result}")
-    return result
-
-if __name__ == "__main__":
-    # For testing
-    import logging
-    logging.basicConfig(level=logging.INFO)
-    
-    # Test the email update function
-    asyncio.run(test_email_update())

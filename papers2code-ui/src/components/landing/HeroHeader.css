@@ -178,7 +178,6 @@
 
 .hero-stats .stat-item {
   text-align: center;
-  padding: 0 0.5rem; /* Add padding to prevent text overflow */
   overflow: hidden;
 }
 

@@ -1,15 +1,9 @@
 import React, { useState, useEffect } from 'react';
 import { Paper } from '../common/types/paper';
-import { api } from '../common/services/api';
+import { fetchDashboardDataFromApi, DashboardData } from '../common/services/api';
 import PaperCard from '../components/paperList/PaperCard';
 import LoadingSpinner from '../common/components/LoadingSpinner';
 import './DashboardPage.css';
-
-interface DashboardData {
-  trendingPapers: Paper[];
-  myContributions: Paper[];
-  recentlyViewed: Paper[];
-}
 
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -20,8 +14,8 @@ const DashboardPage: React.FC = () => {
     const fetchDashboardData = async () => {
       setIsLoading(true);
       try {
-        const response = await api.get<DashboardData>('/dashboard/data');
-        setData(response.data);
+        const data = await fetchDashboardDataFromApi();
+        setData(data);
         setError(null);
       } catch (err) {
         setError('Failed to load dashboard data. Please try refreshing the page.');
@@ -34,6 +28,11 @@ const DashboardPage: React.FC = () => {
     fetchDashboardData();
   }, []);
 
+  const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
+    // For now, just a placeholder - voting functionality can be implemented later
+    console.log(`Vote ${voteType} for paper ${paperId}`);
+  };
+
   const renderPaperList = (papers: Paper[], emptyMessage: string) => {
     if (papers.length === 0) {
       return <p className="empty-message">{emptyMessage}</p>;
@@ -41,7 +40,7 @@ const DashboardPage: React.FC = () => {
     return (
       <div className="paper-grid">
         {papers.map((paper) => (
-          <PaperCard key={paper.id} paper={paper} />
+          <PaperCard key={paper.id} paper={paper} onVote={handleVote} />
         ))}
       </div>
     );
