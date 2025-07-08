@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Paper } from '../common/types/paper';
-import { fetchDashboardDataFromApi, DashboardData } from '../common/services/api';
+import { fetchDashboardDataFromApi, DashboardData, AuthenticationError } from '../common/services/api';
 import PaperCard from '../components/paperList/PaperCard';
 import LoadingSpinner from '../common/components/LoadingSpinner';
 import './DashboardPage.css';
@@ -9,6 +10,7 @@ const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const navigate = useNavigate();
 
   useEffect(() => {
     const fetchDashboardData = async () => {
@@ -18,7 +20,15 @@ const DashboardPage: React.FC = () => {
         setData(data);
         setError(null);
       } catch (err) {
-        setError('Failed to load dashboard data. Please try refreshing the page.');
+        if (err instanceof AuthenticationError) {
+          // Redirect to login or show login prompt
+          setError('Please log in to view your dashboard.');
+          setTimeout(() => {
+            navigate('/papers');
+          }, 2000);
+        } else {
+          setError('Failed to load dashboard data. Please try refreshing the page.');
+        }
         console.error(err);
       } finally {
         setIsLoading(false);
@@ -26,7 +36,7 @@ const DashboardPage: React.FC = () => {
     };
 
     fetchDashboardData();
-  }, []);
+  }, [navigate]);
 
   const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
     // For now, just a placeholder - voting functionality can be implemented later

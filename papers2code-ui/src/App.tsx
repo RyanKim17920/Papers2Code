@@ -75,7 +75,7 @@ function App() {
       <AuthInitializer /> {/* Initialize Auth-related hooks here */}
         <div className="app-container">
           <header className="app-header">
-            <Link to="/" className="logo-link">
+            <Link to={currentUser ? "/dashboard" : "/"} className="logo-link">
               <img src={logo} alt="Papers To Code Community Logo" className="app-logo" />
             </Link>
             <nav className="main-nav">
