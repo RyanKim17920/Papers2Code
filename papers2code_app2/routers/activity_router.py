@@ -5,6 +5,7 @@ from pydantic import BaseModel, Field
 from ..auth import get_current_user
 from ..dependencies import get_activity_tracking_service
 from ..services.activity_tracking_service import ActivityTrackingService
+from ..schemas.minimal import UserSchema
 
 router = APIRouter(prefix="/activity", tags=["activity"])
 
@@ -19,12 +20,12 @@ class TrackViewRequest(BaseModel):
 async def track_paper_view(
     request: TrackViewRequest,
     req: Request,
-    current_user: Optional[dict] = Depends(get_current_user),
+    current_user: Optional[UserSchema] = Depends(get_current_user),
     activity_service: ActivityTrackingService = Depends(get_activity_tracking_service)
 ) -> Dict[str, Any]:
     """Track a paper view."""
     
-    user_id = str(current_user["_id"]) if current_user else None
+    user_id = str(current_user.id) if current_user else None
     
     try:
         result = await activity_service.track_paper_view(

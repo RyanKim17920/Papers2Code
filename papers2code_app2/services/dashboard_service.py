@@ -45,8 +45,8 @@ class DashboardService:
             # Transform each paper using the utility function
             response = []
             for paper_doc in papers_list:
-                # For trending papers, we don't need user-specific data, so we can pass None for user_id
-                transformed_paper = await transform_paper_async(paper_doc, None, detail_level="full")
+                # For trending papers, use summary level for better performance
+                transformed_paper = await transform_paper_async(paper_doc, None, detail_level="summary")
                 response.append(PaperResponse(**transformed_paper))
                 
             logger.info("Successfully retrieved and sorted trending papers.")
@@ -107,7 +107,8 @@ class DashboardService:
             # Transform each paper using the utility function
             response = []
             for paper_doc in papers_list:
-                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="full")
+                # Use summary level for better performance
+                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="summary")
                 response.append(PaperResponse(**transformed_paper))
                 
             logger.info(f"Successfully retrieved {len(response)} user contributions.")
@@ -156,7 +157,8 @@ class DashboardService:
             # Transform each paper using the utility function
             response = []
             for paper_doc in ordered_papers:
-                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="full")
+                # Use summary level for better performance
+                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="summary")
                 response.append(PaperResponse(**transformed_paper))
                 
             logger.info(f"Successfully retrieved {len(response)} recently viewed papers.")
