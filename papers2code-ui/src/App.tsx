@@ -1,6 +1,6 @@
 // src/App.tsx
 import { useState, useEffect, useRef } from 'react';
-import { Routes, Route, Link } from 'react-router-dom';
+import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
 import LandingPage from './pages/LandingPage';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
@@ -25,6 +25,8 @@ function App() {
   const [authLoading, setAuthLoading] = useState<boolean>(true);
   const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false); // State for dropdown
   const dropdownRef = useRef<HTMLDivElement>(null); // Ref for dropdown click outside
+  const location = useLocation();
+  const navigate = useNavigate();
 
   // Check login status and fetch CSRF token when the app loads or location changes
   useEffect(() => {
@@ -47,7 +49,6 @@ function App() {
     initializeApp();
   }, [location.pathname]); // Re-run when the path changes
 
-  // Handle clicking outside of dropdown to close it
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
       if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
@@ -59,6 +60,17 @@ function App() {
       document.removeEventListener('mousedown', handleClickOutside);
     };
   }, [dropdownRef]);
+
+  // Prevent any rendering until authLoading is false
+  if (authLoading) {
+    return null;
+  }
+
+  // Redirect to dashboard if logged in and currently on /
+  if (currentUser && location.pathname === "/") {
+    navigate("/dashboard", { replace: true });
+    return null;
+  }
 
   // Handle Logout
   const handleLogout = async () => {
@@ -80,7 +92,6 @@ function App() {
             </Link>
             <nav className="main-nav">
               <Link to="/papers" className="nav-link">Papers</Link>
-              {currentUser && <Link to="/dashboard" className="nav-link">Dashboard</Link>}
             </nav>
             <div className="auth-section">
               {authLoading ? (

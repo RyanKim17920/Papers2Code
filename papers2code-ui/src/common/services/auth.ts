@@ -6,7 +6,9 @@ import { useState, useEffect } from 'react';
 
 // Function to initiate login - simply redirect to backend endpoint
 export const redirectToGitHubLogin = () => {
-    window.location.href = `${API_BASE_URL}${AUTH_API_PREFIX}/github/login`;
+    // Always redirect to /dashboard after login
+    const next = encodeURIComponent("/dashboard");
+    window.location.href = `${API_BASE_URL}${AUTH_API_PREFIX}/github/login?next=${next}`;
 };
 
 // Function to check current user status
