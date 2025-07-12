@@ -354,7 +354,7 @@ export interface PaperViewData {
 }
 
 export const trackPaperViewInApi = async (data: PaperViewData): Promise<void> => {
-  const url = `${API_BASE_URL}/activity/paper-view`;
+  const url = `${API_BASE_URL}/api/activity/paper-view`;
   try {
     await api.post(url, {
       paperId: data.paperId,
