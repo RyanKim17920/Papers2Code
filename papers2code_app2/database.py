@@ -273,12 +273,18 @@ async def ensure_db_indexes_async():
                 ([("paperId", ASCENDING), ("actionType", ASCENDING)], {"name": "paperId_1_actionType_1_user_actions_async"}),
                 # NEW: timestamp index for recency filters
                 ([("action", ASCENDING), ("timestamp", DESCENDING)], {"name": "action_1_timestamp_-1_user_actions_async"}),
+                # NEW: indexes for user profile aggregations
+                ([("userId", ASCENDING), ("actionType", ASCENDING)], {"name": "userId_1_actionType_1_user_actions_async"}),
+                ([("actionType", ASCENDING), ("userId", ASCENDING)], {"name": "actionType_1_userId_1_user_actions_async"}),
             ]),
             (collections_to_check["paper_views"], [
                 ([("timestamp", DESCENDING)], {"name": "timestamp_-1_paper_views"}),
                 ([("paperId", ASCENDING), ("timestamp", DESCENDING)], {"name": "paperId_1_timestamp_-1_paper_views"}),
                 ([("userId", ASCENDING), ("timestamp", DESCENDING)], {"name": "userId_1_timestamp_-1_paper_views"}),
-                ([("timestamp", ASCENDING)], {"name": "timestamp_ttl_90d_paper_views", "expireAfterSeconds": 7776000})
+                ([("timestamp", ASCENDING)], {"name": "timestamp_ttl_90d_paper_views", "expireAfterSeconds": 7776000}),
+                # New indexes for aggregation performance
+                ([("userId", ASCENDING), ("paperId", ASCENDING)], {"name": "userId_1_paperId_1_paper_views"}),
+                ([("paperId", ASCENDING)], {"name": "paperId_1_paper_views"}),
             ]),
             (collections_to_check["implementation_progress"], [
                 # No need for paperId index since _id is now the paper_id
