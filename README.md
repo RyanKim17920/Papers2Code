@@ -151,6 +151,9 @@ FLASK_SECRET_KEY=your-secret-key-here
 GITHUB_CLIENT_ID=your-github-oauth-id  
 GITHUB_CLIENT_SECRET=your-github-oauth-secret
 
+# Email (for author outreach - manual sending)
+OUTREACH_EMAIL_ADDRESS=your-email@example.com
+
 # Application
 ENV_TYPE=DEV
 FRONTEND_URL=http://localhost:5173

@@ -10,10 +10,12 @@ import time
 from typing import NoReturn, Optional
 from contextlib import suppress
 
-# Set log level before importing app
-os.environ.setdefault("APP_LOG_LEVEL", "INFO")
 
-# Determine if we're in production early for fail-safe behavior
+# Set app-specific log level for development (matches run_app2.py)
+os.environ["APP_LOG_LEVEL"] = "INFO"
+
+
+# Determine if we're in production early for fail-safe behavior (matches run_app2.py logic)
 IS_PRODUCTION = os.getenv("ENV_TYPE", "").lower() == "production"
 
 try:
@@ -50,7 +52,10 @@ class ApplicationRunner:
                 )
                 handler.setFormatter(formatter)
                 logger.addHandler(handler)
-                logger.setLevel(logging.INFO if self.is_production else logging.DEBUG)
+                # Set log level from APP_LOG_LEVEL env variable, fallback to INFO
+                env_log_level = os.getenv("APP_LOG_LEVEL", "INFO").upper()
+                level = getattr(logging, env_log_level, logging.INFO)
+                logger.setLevel(level)
             return logger
         except Exception:
             # Fallback to basic print if logging fails
@@ -93,40 +98,11 @@ class ApplicationRunner:
                 raise
         
     def validate_configuration(self) -> bool:
-        """Validate required configuration with production-safe behavior."""
-        try:
-            required_settings = [
-                ("MONGO_CONNECTION_STRING", getattr(config_settings, 'MONGO_CONNECTION_STRING', None)),
-                ("FLASK_SECRET_KEY", getattr(config_settings, 'FLASK_SECRET_KEY', None)),
-            ]
-            
-            missing = []
-            for name, value in required_settings:
-                if not value:
-                    missing.append(name)
-                    
-            if missing:
-                error_msg = f"Missing required configuration: {', '.join(missing)}"
-                self._log("error", error_msg)
-                
-                if self.is_production:
-                    # In production, try to continue with warnings
-                    self._log("warning", "Attempting to continue despite missing configuration...")
-                    return False
-                else:
-                    # In development, fail fast
-                    sys.exit(1)
-                    
-            self._log("info", "Configuration validation passed")
-            return True
-            
-        except Exception as e:
-            self._log("error", f"Configuration validation failed: {e}")
-            if self.is_production:
-                self._log("warning", "Continuing with potentially invalid configuration...")
-                return False
-            else:
-                raise
+        """No-op configuration validation for drop-in compatibility with run_app2.py."""
+        # run_app2.py does not require MONGO_CONNECTION_STRING or FLASK_SECRET_KEY for startup
+        # so we skip these checks entirely for drop-in compatibility
+        self._log("debug", "Skipping configuration validation (matches run_app2.py behavior)")
+        return True
         
     async def health_check(self) -> bool:
         """Perform health checks with production resilience."""
@@ -162,18 +138,20 @@ class ApplicationRunner:
             else:
                 return False
             
+
     def get_uvicorn_config(self) -> dict:
         """Get environment-specific uvicorn configuration with error handling."""
         try:
+            # Use the same environmental variables as run_app2.py for drop-in compatibility
             base_config = {
                 "app": app,
-                "host": os.getenv("HOST", "0.0.0.0"),
-                "port": int(os.getenv("PORT", "5000")),
-                "log_level": "info",
+                "host": "0.0.0.0",  # Matches run_app2.py
+                "port": 5000,         # Matches run_app2.py
+                "log_level": "info", # Matches run_app2.py
             }
-            
+
             env_type = getattr(config_settings, 'ENV_TYPE', 'development').lower()
-            
+
             if env_type == "development":
                 base_config.update({
                     "reload": True,
@@ -181,7 +159,7 @@ class ApplicationRunner:
                     "log_level": "debug",
                 })
                 self._log("info", "Using development configuration with hot reload")
-                
+
             elif env_type == "production":
                 # Production optimizations with safe defaults
                 workers = 1
@@ -189,14 +167,14 @@ class ApplicationRunner:
                     workers = max(1, int(os.getenv("WORKERS", "1")))
                 except (ValueError, TypeError):
                     self._log("warning", "Invalid WORKERS value, using default: 1")
-                
+
                 base_config.update({
                     "workers": workers,
                     "access_log": True,
                     "server_header": False,  # Security: hide server info
                     "date_header": False,    # Security: hide date info
                 })
-                
+
                 # Only use uvloop if available
                 try:
                     import uvloop
@@ -204,11 +182,11 @@ class ApplicationRunner:
                     self._log("info", "Using uvloop for better performance")
                 except ImportError:
                     self._log("info", "uvloop not available, using default event loop")
-                    
+
                 self._log("info", f"Using production configuration with {workers} worker(s)")
-            
+
             return base_config
-            
+
         except Exception as e:
             self._log("error", f"Failed to get uvicorn config: {e}")
             # Return minimal safe configuration

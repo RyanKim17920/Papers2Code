@@ -1,0 +1,9 @@
+# Agent Notes
+
+A place for the agent to keep short-term notes, observations, and approaches to problems.
+
+## YYYY-MM-DD
+
+-   **Observation**: ...
+-   **Approach**: ...
+-   **Stuck on**: ...

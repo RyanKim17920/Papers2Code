@@ -32,7 +32,6 @@ const SearchBar: React.FC = () => {
   return (
     <form onSubmit={handleSearch} className="search-bar">
       <div className="search-input-container">
-        <span className="search-icon">🔍</span>
         <input
           type="text"
           placeholder="Search papers, authors, conferences..."
@@ -99,51 +98,37 @@ const UserProfile: React.FC = () => {
     <div className="user-profile">
       <div className="profile-header">
         <div className="profile-avatar">
-          <div className="avatar-placeholder">
-            B
+          <img 
+            src="https://avatars.githubusercontent.com/u/17371329" 
+            alt="Profile" 
+            className="avatar-image"
+            onError={(e) => {
+              const target = e.target as HTMLImageElement;
+              target.style.display = 'none';
+              target.nextElementSibling?.classList.remove('hidden');
+            }}
+          />
+          <div className="avatar-placeholder hidden">
+            R
           </div>
         </div>
         <div className="profile-info">
-          <h3 className="profile-name">bjac</h3>
-          <p className="profile-role">Researcher</p>
+          <h3 className="profile-name">RyanKim17920</h3>
         </div>
-      </div>
-      <div className="profile-actions">
-        <button 
-          className="profile-btn profile-btn-primary"
-          onClick={() => navigate('/profile')}
-        >
-          Profile
-        </button>
-        <button 
-          className="profile-btn profile-btn-secondary"
-          onClick={() => navigate('/settings')}
-        >
-          Settings
-        </button>
-      </div>
-    </div>
-  );
-};
-
-const QuickStats: React.FC<{ data: DashboardData }> = ({ data }) => {
-  const totalContributions = data.myContributions.length;
-  const totalViewed = data.recentlyViewed.length;
-  const completedContributions = data.myContributions.filter(p => p.status === 'Completed').length;
-  
-  return (
-    <div className="quick-stats">
-      <div className="stat-item">
-        <span className="stat-number">{totalContributions}</span>
-        <span className="stat-label">Contributions</span>
-      </div>
-      <div className="stat-item">
-        <span className="stat-number">{completedContributions}</span>
-        <span className="stat-label">Completed</span>
-      </div>
-      <div className="stat-item">
-        <span className="stat-number">{totalViewed}</span>
-        <span className="stat-label">Recently Viewed</span>
+        <div className="profile-actions">
+          <button 
+            className="profile-btn profile-btn-primary"
+            onClick={() => navigate('/profile')}
+          >
+            Profile
+          </button>
+          <button 
+            className="profile-btn profile-btn-secondary"
+            onClick={() => navigate('/settings')}
+          >
+            Settings
+          </button>
+        </div>
       </div>
     </div>
   );
@@ -255,10 +240,9 @@ const DashboardPage: React.FC = () => {
   return (
     <div className="dashboard-container">
       <div className="dashboard-layout">
-        {/* Left Sidebar - User Profile, Stats & Contributions */}
+        {/* Left Sidebar - User Profile & Contributions */}
         <aside className="left-sidebar">
           <UserProfile />
-          {data && <QuickStats data={data} />}
           
           <section className="sidebar-section contributions-section">
             <div className="section-header">
