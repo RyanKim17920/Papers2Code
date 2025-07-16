@@ -281,7 +281,7 @@ async def ensure_db_indexes_async():
                 ([("timestamp", DESCENDING)], {"name": "timestamp_-1_paper_views"}),
                 ([("paperId", ASCENDING), ("timestamp", DESCENDING)], {"name": "paperId_1_timestamp_-1_paper_views"}),
                 ([("userId", ASCENDING), ("timestamp", DESCENDING)], {"name": "userId_1_timestamp_-1_paper_views"}),
-                ([("timestamp", ASCENDING)], {"name": "timestamp_ttl_90d_paper_views", "expireAfterSeconds": 7776000}),
+                ([("timestamp", ASCENDING)], {"name": "timestamp_ttl_30d_paper_views", "expireAfterSeconds": 2592000}),
                 # New indexes for aggregation performance
                 ([("userId", ASCENDING), ("paperId", ASCENDING)], {"name": "userId_1_paperId_1_paper_views"}),
                 ([("paperId", ASCENDING)], {"name": "paperId_1_paper_views"}),

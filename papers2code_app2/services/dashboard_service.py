@@ -1,6 +1,7 @@
 import logging
 from typing import List, Dict, Any
 from bson import ObjectId
+from datetime import datetime, timedelta
 
 from ..database import (
     get_papers_collection_async,
@@ -104,10 +105,11 @@ class DashboardService:
         try:
             views_coll = await get_paper_views_collection_async()
             papers_coll = await get_papers_collection_async()
-            user_obj_id = ObjectId(user_id)
+
             logger.info(f"Aggregating recent views for user {user_id}")
+            # Match userId directly as a string, as it's stored that way
             recent_views_pipeline = [
-                {"$match": {"userId": user_obj_id}},
+                {"$match": {"userId": user_id}},
                 {"$sort": {"timestamp": -1}},
                 {"$group": {
                     "_id": "$paperId",
@@ -116,26 +118,37 @@ class DashboardService:
                 {"$sort": {"latest_view": -1}},
                 {"$limit": 10}
             ]
+            
             cursor = await views_coll.aggregate(recent_views_pipeline)
             recent_views = await cursor.to_list(length=10)
             logger.info(f"Found {len(recent_views)} recently viewed paper entries.")
+
             if not recent_views:
                 return []
-            paper_ids = [view["_id"] for view in recent_views]
+
+            # Extract paper IDs (which are strings) and convert them to ObjectIds for the next query
+            paper_id_strings = [view["_id"] for view in recent_views]
+            paper_ids = [ObjectId(pid) for pid in paper_id_strings if ObjectId.is_valid(pid)]
+            
             logger.info(f"Fetching details for {len(paper_ids)} recently viewed papers.")
             summary_projection = {
                 "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
             }
+            
             papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}}, summary_projection)
-            papers_list = await papers_cursor.to_list(length=None)
+            papers_list = await papers_cursor.to_list(length=len(paper_ids))
             papers_map = {p["_id"]: p for p in papers_list}
             logger.info(f"Fetched {len(papers_list)} paper details.")
+
+            # Order the fetched papers based on the recency of views
             ordered_papers = [papers_map[pid] for pid in paper_ids if pid in papers_map]
+            
             logger.info(f"Ordered {len(ordered_papers)} papers based on recency.")
             response = []
             for paper_doc in ordered_papers:
                 transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="summary")
                 response.append(PaperResponse(**transformed_paper))
+                
             logger.info(f"Successfully retrieved {len(response)} recently viewed papers.")
             return response
         except Exception as e:
