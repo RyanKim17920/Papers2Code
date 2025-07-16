@@ -1,10 +1,17 @@
 import React, { useState, useEffect } from 'react';
-import { useNavigate } from 'react-router-dom';
+import { useNavigate, Link } from 'react-router-dom';
 import { Paper } from '../common/types/paper';
 import { fetchDashboardDataFromApi, DashboardData, AuthenticationError } from '../common/services/api';
-import PaperCard from '../components/paperList/PaperCard';
 import LoadingSpinner from '../common/components/LoadingSpinner';
 import './DashboardPage.css';
+
+const PaperListItem: React.FC<{ paper: Paper }> = ({ paper }) => (
+  <div className="paper-item-compact">
+    <Link to={`/paper/${paper.id}`} className="paper-title">
+      {paper.title}
+    </Link>
+  </div>
+);
 
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -21,7 +28,6 @@ const DashboardPage: React.FC = () => {
         setError(null);
       } catch (err) {
         if (err instanceof AuthenticationError) {
-          // Redirect to login or show login prompt
           setError('Please log in to view your dashboard.');
           setTimeout(() => {
             navigate('/papers');
@@ -38,19 +44,14 @@ const DashboardPage: React.FC = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
-    // For now, just a placeholder - voting functionality can be implemented later
-    console.log(`Vote ${voteType} for paper ${paperId}`);
-  };
-
   const renderPaperList = (papers: Paper[], emptyMessage: string) => {
     if (papers.length === 0) {
       return <p className="empty-message">{emptyMessage}</p>;
     }
     return (
-      <div className="paper-grid">
+      <div className="paper-list-compact">
         {papers.map((paper) => (
-          <PaperCard key={paper.id} paper={paper} onVote={handleVote} />
+          <PaperListItem key={paper.id} paper={paper} />
         ))}
       </div>
     );
@@ -66,22 +67,27 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="dashboard-container">
-      <h1>Your Dashboard</h1>
+      <header className="dashboard-header">
+        <h1>Your Dashboard</h1>
+        <p>Welcome back! Here's a quick overview of what's happening.</p>
+      </header>
       
-      <section className="dashboard-section">
-        <h2>🔥 Trending Papers (Last 7 Days)</h2>
-        {data && renderPaperList(data.trendingPapers, 'No trending papers at the moment.')}
-      </section>
+      <div className="dashboard-grid">
+        <section className="dashboard-card">
+          <h2>🔥 Trending Papers (Last 7 Days)</h2>
+          {data && renderPaperList(data.trendingPapers, 'No trending papers at the moment.')}
+        </section>
 
-      <section className="dashboard-section">
-        <h2>🚀 My Contributions</h2>
-        {data && renderPaperList(data.myContributions, "You haven't contributed to any papers yet.")}
-      </section>
+        <section className="dashboard-card">
+          <h2>🚀 My Contributions</h2>
+          {data && renderPaperList(data.myContributions, "You haven't contributed to any papers yet.")}
+        </section>
 
-      <section className="dashboard-section">
-        <h2>👀 Recently Viewed</h2>
-        {data && renderPaperList(data.recentlyViewed, 'You have no recently viewed papers.')}
-      </section>
+        <section className="dashboard-card">
+          <h2>👀 Recently Viewed</h2>
+          {data && renderPaperList(data.recentlyViewed, 'You have no recently viewed papers.')}
+        </section>
+      </div>
     </div>
   );
 };

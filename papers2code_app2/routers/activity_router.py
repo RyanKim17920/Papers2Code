@@ -4,6 +4,7 @@ from pydantic import BaseModel, Field
 
 from ..auth import get_current_user
 from ..dependencies import get_activity_tracking_service
+from ..schemas.user_activity import LoggedActionTypes
 from ..services.activity_tracking_service import ActivityTrackingService
 from ..schemas.minimal import UserSchema
 
@@ -88,46 +89,16 @@ async def test_activity_tracking(
         }
 
 
-@router.get("/analytics/paper-views")
+from ..services.paper_analytics_service import paper_analytics_service, PaperAnalyticsService
+
+@router.get("/analytics/popular-papers")
 async def get_popular_papers(
     limit: int = 10,
-    activity_service: ActivityTrackingService = Depends(get_activity_tracking_service)
+    analytics_service: PaperAnalyticsService = Depends(lambda: paper_analytics_service)
 ) -> Dict[str, Any]:
-    """Get the most viewed papers for analytics."""
-    print("Getting the views")
-    try: 
-        # Get all paper view counts from the dedicated views collection
-        from ..database import get_paper_views_collection_async
-        collection = await get_paper_views_collection_async()
-        print("Collection initialized")
-        # Aggregate view counts by paper
-        pipeline = [
-            {"$group": {
-                "_id": "$paperId",
-                "view_count": {"$sum": 1},
-                "unique_users": {"$addToSet": "$userId"},
-                "last_viewed": {"$max": "$timestamp"}
-            }},
-            {"$project": {
-                "paper_id": "$_id",
-                "view_count": 1,
-                "unique_viewers": {"$size": {"$ifNull": ["$unique_users", []]}},
-                "last_viewed": 1,
-                "_id": 0
-            }},
-            {"$sort": {"view_count": -1}},
-            {"$limit": limit}
-        ]
-        print("Pipeline created")
-        results = await collection.aggregate(pipeline).to_list(length=limit)
-        print("Results fetched")
-        print(results)
-        
-        return {
-            "popular_papers": results,
-            "total_papers_with_views": len(results)
-        }
-        
+    """Get the most upvoted papers for analytics."""
+    try:
+        return await analytics_service.get_popular_papers(limit=limit)
     except Exception as e:
         raise HTTPException(status_code=500, detail=f"Failed to get analytics: {str(e)}")
 

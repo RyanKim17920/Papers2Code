@@ -48,15 +48,16 @@ async def _get_user_specific_paper_data_async(paper_obj_id: ObjectId, current_us
         user_obj_id = ObjectId(current_user_id_str)
 
         # Fetch current_user_vote (upvote status)
-        if await user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_obj_id, "actionType": "upvote"}) > 0:
+        from .schemas.user_activity import LoggedActionTypes
+        if await user_actions_collection.count_documents({"userId": user_obj_id, "paperId": paper_obj_id, "actionType": LoggedActionTypes.UPVOTE.value}) > 0:
             user_data["current_user_vote"] = "up"
 
         # Fetch user-specific implementability vote
         implementability_action_types_map = {
-            "Implementable": "up",
-            "Community Implementable": "up",
-            "Community Not Implementable": "down",
-            "Not Implementable": "down",
+            LoggedActionTypes.ADMIN_IMPLEMENTABLE.value: "up",
+            LoggedActionTypes.COMMUNITY_IMPLEMENTABLE.value: "up",
+            LoggedActionTypes.COMMUNITY_NOT_IMPLEMENTABLE.value: "down",
+            LoggedActionTypes.ADMIN_NOT_IMPLEMENTABLE.value: "down",
         }
         user_implementability_action = await user_actions_collection.find_one(
             {"userId": user_obj_id, "paperId": paper_obj_id, "actionType": {"$in": list(implementability_action_types_map.keys())}},
@@ -68,24 +69,32 @@ async def _get_user_specific_paper_data_async(paper_obj_id: ObjectId, current_us
 
     except InvalidId:
         logger.warning(f"Invalid ObjectId for current_user_id_str: {current_user_id_str} when fetching user-specific paper data. Skipping.")
+        pass
     except Exception as e:
         logger.error(f"Error fetching user-specific data for paper {paper_obj_id} and user {current_user_id_str}: {e}", exc_info=True)
     return user_data
 
 # Async helper function to get aggregate vote counts
 async def _get_aggregate_vote_counts_async(paper_obj_id: ObjectId) -> Dict[str, int]:
+    from .schemas.user_activity import LoggedActionTypes
     counts = {
         "not_implementable_votes": 0,
         "implementable_votes": 0,
     }
     user_actions_collection = await get_user_actions_collection_async()
     try:
-        not_implementable_action_types = ["Community Not Implementable", "Not Implementable"]
+        not_implementable_action_types = [
+            LoggedActionTypes.COMMUNITY_NOT_IMPLEMENTABLE.value,
+            LoggedActionTypes.ADMIN_NOT_IMPLEMENTABLE.value
+        ]
         counts["not_implementable_votes"] = await user_actions_collection.count_documents(
             {"paperId": paper_obj_id, "actionType": {"$in": not_implementable_action_types}}
         )
 
-        implementable_action_types = ["Implementable", "Community Implementable"]
+        implementable_action_types = [
+            LoggedActionTypes.COMMUNITY_IMPLEMENTABLE.value,
+            LoggedActionTypes.ADMIN_IMPLEMENTABLE.value
+        ]
         counts["implementable_votes"] = await user_actions_collection.count_documents(
             {"paperId": paper_obj_id, "actionType": {"$in": implementable_action_types}}
         )

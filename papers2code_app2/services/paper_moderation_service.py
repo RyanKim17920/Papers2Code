@@ -189,10 +189,11 @@ class PaperModerationService:
 
         try:
             if user_action_operation == 'insert':
+                from papers2code_app2.schemas.user_activity import LoggedActionTypes
                 await user_actions_collection.insert_one({
                     "userId": user_obj_id,
                     "paperId": paper_obj_id,
-                    "actionType": new_user_action_type_for_db,
+                    "actionType": new_user_action_type_for_db if isinstance(new_user_action_type_for_db, str) else new_user_action_type_for_db.value,
                     "createdAt": datetime.now(timezone.utc)
                 })
             elif user_action_operation == 'update':
@@ -329,10 +330,11 @@ class PaperModerationService:
             })
 
             # Log the new admin action with the specific status as actionType
+            from papers2code_app2.schemas.user_activity import LoggedActionTypes
             await user_actions_collection.insert_one({
                 "userId": admin_obj_id,
                 "paperId": paper_obj_id,
-                "actionType": status_to_set_by_admin, # Use the status directly as actionType
+                "actionType": status_to_set_by_admin if isinstance(status_to_set_by_admin, str) else status_to_set_by_admin.value,
                 # "details": {"status_set_to": status_to_set_by_admin}, # Removed as actionType is now specific
                 "createdAt": datetime.now(timezone.utc)
             })

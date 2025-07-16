@@ -50,9 +50,10 @@ class UserService:
         requesting_user_id_str = str(requesting_user.id) if requesting_user and requesting_user.id else None
 
         # --- Upvoted Papers ---
+        from ..schemas.user_activity import LoggedActionTypes
         upvote_actions = self.user_actions_collection.find({
             "userId": user_id, 
-            "actionType": "upvote"
+            "actionType": LoggedActionTypes.UPVOTE.value
         })
         upvoted_paper_ids = set()
         async for action in upvote_actions:

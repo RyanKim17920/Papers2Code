@@ -12,15 +12,15 @@ from .shared import (
     camel_case_config_with_datetime,
     set_implementability_config,
 )
-
+from .user_activity import LoggedActionTypes
 
 # --- Type Definitions for Literal Strings ---
 ImplementabilityStatusType = Literal[
-    "Voting",
-    "Community Not Implementable",
-    "Community Implementable",
-    "Admin Not Implementable",
-    "Admin Implementable",
+    LoggedActionTypes.VOTING.value,
+    LoggedActionTypes.COMMUNITY_NOT_IMPLEMENTABLE.value,
+    LoggedActionTypes.COMMUNITY_IMPLEMENTABLE.value,
+    LoggedActionTypes.ADMIN_NOT_IMPLEMENTABLE.value,
+    LoggedActionTypes.ADMIN_IMPLEMENTABLE.value,
     "Waiting for Author Response"
 ]
 

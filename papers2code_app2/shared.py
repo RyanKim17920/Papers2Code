@@ -5,20 +5,19 @@ from datetime import datetime
 from dotenv import load_dotenv
 from pydantic_settings import BaseSettings, SettingsConfigDict
 from pydantic import Field
-
-# from .schemas_papers import camel_case_config, camel_case_config_with_datetime, set_implementability_config # Assuming this might be needed later
+from .schemas.user_activity import LoggedActionTypes
 
 logger = logging.getLogger(__name__)
 
 env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
 load_dotenv(dotenv_path=env_path, override=True)
 
-# Implementability Status Constants
-IMPL_STATUS_VOTING = "Voting"
-IMPL_STATUS_COMMUNITY_IMPLEMENTABLE = "Community Implementable"
-IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE = "Community Not Implementable"
-IMPL_STATUS_ADMIN_IMPLEMENTABLE = "Admin Implementable"
-IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE = "Admin Not Implementable"
+# Implementability Status Constants (migrated to enum)
+IMPL_STATUS_VOTING = LoggedActionTypes.VOTING.value
+IMPL_STATUS_COMMUNITY_IMPLEMENTABLE = LoggedActionTypes.COMMUNITY_IMPLEMENTABLE.value
+IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE = LoggedActionTypes.COMMUNITY_NOT_IMPLEMENTABLE.value
+IMPL_STATUS_ADMIN_IMPLEMENTABLE = LoggedActionTypes.ADMIN_IMPLEMENTABLE.value
+IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE = LoggedActionTypes.ADMIN_NOT_IMPLEMENTABLE.value
 
 # Main Status Constants
 MAIN_STATUS_NOT_IMPLEMENTABLE = "Not Implementable"

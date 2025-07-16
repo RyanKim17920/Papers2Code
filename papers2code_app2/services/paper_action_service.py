@@ -52,7 +52,8 @@ class PaperActionService:
             self.logger.warning(f"Service: Paper not found with paper_id: {paper_id}")
             raise PaperNotFoundException(f"Paper with ID {paper_id} not found.")
 
-        action_type_db = "upvote"
+        from papers2code_app2.schemas.user_activity import LoggedActionTypes
+        action_type_db = LoggedActionTypes.UPVOTE.value
         existing_action = await user_actions_collection.find_one({
             "userId": user_obj_id,
             "paperId": paper_obj_id,
@@ -148,7 +149,7 @@ class PaperActionService:
         action_document = {
             "userId": user_obj_id,
             "paperId": paper_obj_id,
-            "actionType": action_type,
+            "actionType": action_type if isinstance(action_type, str) else action_type.value,
             "createdAt": datetime.now(timezone.utc)
         }
         if details is not None:

@@ -2,6 +2,7 @@ import logging
 from typing import List, Dict, Any
 from bson import ObjectId
 from datetime import datetime, timedelta
+from ..schemas.user_activity import LoggedActionTypes
 
 from ..database import (
     get_papers_collection_async,
@@ -16,39 +17,60 @@ from ..utils import transform_paper_async
 logger = logging.getLogger(__name__)
 
 class DashboardService:
-    async def get_trending_papers(self) -> List[PaperResponse]:
-        logger.info("Starting get_trending_papers")
+    async def get_trending_papers(self, time_window_days: int = 7) -> List[PaperResponse]:
+        logger.info(f"Starting get_trending_papers based on upvotes in the last {time_window_days} days.")
         try:
-            popular_coll = await get_popular_papers_recent_collection_async()
+            user_actions_coll = await get_user_actions_collection_async()
             papers_coll = await get_papers_collection_async()
             
-            logger.info("Fetching trending data from popular_papers_recent collection")
-            trending_data = await popular_coll.find_one({"_id": "global_recent"})
+            # Calculate the cutoff date for trending calculation
+            cutoff_date = datetime.utcnow() - timedelta(days=time_window_days)
             
-            if not trending_data or not trending_data.get("papers"):
-                logger.warning("No trending paper data found.")
+            # Aggregation pipeline to find top upvoted papers
+            trending_pipeline = [
+                {"$match": {
+                    "actionType": LoggedActionTypes.UPVOTE.value,
+                    "createdAt": {"$gte": cutoff_date}
+                }},
+                {"$group": {
+                    "_id": "$paperId",
+                    "recent_upvotes": {"$sum": 1}
+                }},
+                {"$sort": {"recent_upvotes": -1}},
+                {"$limit": 10} # Limit to top 10 trending papers
+            ]
+            
+            cursor = await user_actions_coll.aggregate(trending_pipeline)
+            trending_data = await cursor.to_list(length=10)
+            
+            if not trending_data:
+                logger.warning("No trending paper data found based on recent upvotes.")
                 return []
 
-            paper_views_map = {item["_id"]: item["view_count"] for item in trending_data["papers"]}
-            paper_ids = list(paper_views_map.keys())
-            logger.info(f"Found {len(paper_ids)} trending paper IDs.")
+            paper_upvotes_map = {item["_id"]: item["recent_upvotes"] for item in trending_data}
+            paper_ids = list(paper_upvotes_map.keys())
+            logger.info(f"Found {len(paper_ids)} trending paper IDs based on upvotes.")
 
-            # Only fetch summary fields
+            # Fetch summary fields for the trending papers
             summary_projection = {
                 "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
             }
-            papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}}, summary_projection)
-            papers_list = await papers_cursor.to_list(length=len(paper_ids))
-            logger.info(f"Fetched {len(papers_list)} paper details.")
+            cursor = await views_coll.aggregate(recent_views_pipeline)
+            recent_views = await cursor.to_list(length=10)
+            logger.info(f"Fetched {len(recent_views)} recent view details.")
 
+            # Add recent upvote count and sort
             for paper in papers_list:
-                paper["recent_view_count"] = paper_views_map.get(paper["_id"], 0)
-            papers_list.sort(key=lambda p: p["recent_view_count"], reverse=True)
+                paper["recent_upvote_count"] = paper_upvotes_map.get(paper["_id"], 0)
+            
+            papers_list.sort(key=lambda p: p["recent_upvote_count"], reverse=True)
+            
             response = []
             for paper_doc in papers_list:
                 transformed_paper = await transform_paper_async(paper_doc, None, detail_level="summary")
                 response.append(PaperResponse(**transformed_paper))
-            logger.info("Successfully retrieved and sorted trending papers.")
+                
+            logger.info("Successfully retrieved and sorted trending papers based on upvotes.")
             return response
         except Exception as e:
             logger.error(f"Error in get_trending_papers: {e}", exc_info=True)
@@ -70,7 +92,7 @@ class DashboardService:
                 contributed_paper_ids.add(progress["_id"])
             project_actions_cursor = user_actions_coll.find({
                 "userId": user_obj_id,
-                "actionType": {"$in": ["Project Joined", "Project Started"]}
+                "actionType": {"$in": [LoggedActionTypes.PROJECT_JOINED.value, LoggedActionTypes.PROJECT_STARTED.value]}
             })
             project_actions = await project_actions_cursor.to_list(length=100)
             logger.info(f"Found {len(project_actions)} project actions.")
@@ -116,7 +138,7 @@ class DashboardService:
                     "latest_view": {"$first": "$timestamp"}
                 }},
                 {"$sort": {"latest_view": -1}},
-                {"$limit": 10}
+                {"$limit": 25}
             ]
             
             cursor = await views_coll.aggregate(recent_views_pipeline)

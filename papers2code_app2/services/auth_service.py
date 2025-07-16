@@ -188,9 +188,10 @@ class AuthService:
 
             # Record user action for profile update
             # For profile_updated, paperId is not relevant, so we can omit it or set to None
+            from papers2code_app2.schemas.user_activity import LoggedActionTypes
             await user_actions_collection.insert_one({
                 "userId": user_obj_id,
-                "actionType": "profile_updated",
+                "actionType": LoggedActionTypes.PROFILE_UPDATED.value,
                 "details": {"updated_fields": list(update_fields.keys())}, # Store which fields were updated
                 "createdAt": datetime.now(timezone.utc)
             })

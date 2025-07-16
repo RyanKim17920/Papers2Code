@@ -1,70 +1,108 @@
-/* papers2code-ui/src/pages/DashboardPage.css */
+/* DashboardPage.css */
+
+:root {
+  --dashboard-bg: #f0f2f5; /* Light gray background, common in modern UIs */
+  --card-bg: #ffffff; /* Pure white for cards */
+  --text-primary: #2c3e50; /* Darker text for headings */
+  --text-secondary: #7f8c8d; /* Lighter text for body/subtle info */
+  --border-color: #e0e0e0; /* Light border for subtle separation */
+  --accent-color: #3498db; /* A vibrant blue for links/highlights */
+  --shadow-light: rgba(0, 0, 0, 0.08); /* Soft shadow for cards */
+  --shadow-hover: rgba(0, 0, 0, 0.12); /* Slightly darker shadow on hover */
+}
 
 .dashboard-container {
-  max-width: 1200px;
-  margin: 2rem auto;
-  padding: 0 1rem;
-  animation: fadeIn 0.5s ease-in-out;
+  padding: 3rem 2rem; /* More generous padding */
+  background-color: var(--dashboard-bg);
+  min-height: calc(100vh - var(--header-height, 0px)); /* Adjust based on actual header height */
+  font-family: 'Inter', 'Helvetica Neue', Arial, sans-serif; /* Modern sans-serif font */
+  color: var(--text-primary);
 }
 
-.dashboard-container h1 {
-  font-size: 2.5rem;
-  font-weight: bold;
-  margin-bottom: 2rem;
-  color: #333;
-  border-bottom: 2px solid #eee;
-  padding-bottom: 0.5rem;
+.dashboard-header {
+  margin-bottom: 3rem; /* More space below header */
+  text-align: center; /* Center the main heading */
 }
 
-.dashboard-section {
-  margin-bottom: 3rem;
+.dashboard-header h1 {
+  font-size: 2.8rem; /* Larger, more impactful heading */
+  font-weight: 700; /* Bold */
+  color: var(--text-primary);
+  margin-bottom: 0.5rem;
 }
 
-.dashboard-section h2 {
-  font-size: 1.8rem;
-  font-weight: 600;
-  margin-bottom: 1.5rem;
-  color: #444;
+.dashboard-header p {
+  font-size: 1.1rem;
+  color: var(--text-secondary);
+}
+
+.dashboard-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); /* Slightly wider cards */
+  gap: 2.5rem; /* Increased gap between cards */
+}
+
+.dashboard-card {
+  background-color: var(--card-bg);
+  border-radius: 12px; /* More rounded corners */
+  box-shadow: 0 4px 15px var(--shadow-light); /* Softer, more spread out shadow */
+  padding: 2rem; /* More internal padding */
+  transition: transform 0.2s ease-in-out, box-shadow 0.2s ease-in-out; /* Smooth transitions */
+  display: flex; /* Use flexbox for internal layout */
+  flex-direction: column;
+}
+
+.dashboard-card:hover {
+  transform: translateY(-5px); /* Lift effect on hover */
+  box-shadow: 0 8px 25px var(--shadow-hover); /* More prominent shadow on hover */
+}
+
+.dashboard-card h2 {
+  font-size: 1.6rem; /* Larger section titles */
+  font-weight: 600; /* Semi-bold */
+  color: var(--text-primary);
+  margin-top: 0;
+  margin-bottom: 1.5rem; /* More space below section title */
+  padding-bottom: 1rem;
+  border-bottom: 1px solid var(--border-color); /* Subtle separator */
+}
+
+.paper-list-compact {
+  display: flex;
+  flex-direction: column;
+  gap: 1.2rem; /* More space between list items */
+}
+
+.paper-item-compact {
   display: flex;
   align-items: center;
+  padding: 0.5rem 0; /* Padding for each item */
+  border-bottom: 1px dashed #f0f0f0; /* Dotted separator */
 }
 
-.dashboard-section h2 {
-  margin-right: 0.5rem;
+.paper-item-compact:last-child {
+  border-bottom: none; /* No border for the last item */
 }
 
-.paper-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 1.5rem;
+.paper-item-compact .paper-title {
+  font-weight: 500;
+  color: var(--text-primary);
+  text-decoration: none;
+  font-size: 1.05rem;
+  transition: color 0.2s ease-in-out;
+}
+
+.paper-item-compact .paper-title:hover {
+  color: var(--accent-color); /* Accent color on hover */
+  text-decoration: underline;
 }
 
 .empty-message {
-  color: #666;
+  color: var(--text-secondary);
   font-style: italic;
+  text-align: center;
   padding: 2rem;
-  background-color: #fafafa;
+  background-color: #fdfdfd;
   border-radius: 8px;
-  text-align: center;
+  border: 1px dashed var(--border-color);
 }
-
-.error-message {
-  color: #d9534f;
-  background-color: #f2dede;
-  border: 1px solid #ebccd1;
-  padding: 1rem;
-  border-radius: 8px;
-  text-align: center;
-  font-size: 1.1rem;
-}
-
-@keyframes fadeIn {
-  from {
-    opacity: 0;
-    transform: translateY(-10px);
-  }
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-} 

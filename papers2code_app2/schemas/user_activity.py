@@ -1,61 +1,32 @@
 from datetime import datetime
-from typing import Optional, Dict, Any, Literal
+from typing import Optional, Dict, Any
 from pydantic import BaseModel, Field
+from enum import Enum
 
-from .db_models import PyObjectId, _MongoModel
+from .base import PyObjectId, _MongoModel
 
 
-# Activity Types
-ActivityType = Literal[
-    # Paper activities
-    "paper_viewed",
-    "paper_upvoted", 
-    "paper_downvoted",
-    "paper_vote_removed",
-    "paper_implementation_started",
-    
-    # Implementation activities
-    "implementation_progress_viewed",
-    "implementation_email_sent",
-    "implementation_email_response",
-    "implementation_github_added",
-    "implementation_github_updated",
-    
-    # User activities
-    "user_login",
-    "user_profile_updated",
-    "user_registered",
-    
-    # Search activities
-    "search_performed",
-    "filter_applied",
-    
-    # Dashboard activities
-    "dashboard_viewed",
-    "stats_viewed"
-]
+class LoggedActionTypes(str, Enum):
+    """Definitive list of all action types currently logged to the user_actions collection."""
+    UPVOTE = "upvote"
+    PROFILE_UPDATED = "profile_updated"
+    PROJECT_STARTED = "Project Started"
+    PROJECT_JOINED = "Project Joined"
+    COMMUNITY_IMPLEMENTABLE = "Community Implementable"
+    COMMUNITY_NOT_IMPLEMENTABLE = "Community Not Implementable"
+    ADMIN_IMPLEMENTABLE = "Admin Implementable"
+    ADMIN_NOT_IMPLEMENTABLE = "Admin Not Implementable"
+    VOTING = "Voting"
 
 
 class UserActivity(_MongoModel):
     """Schema for tracking all user activities for analytics and dashboards."""
-    
     user_id: Optional[PyObjectId] = Field(None, alias="userId")  # None for anonymous users
     session_id: Optional[str] = Field(None, alias="sessionId")  # Track anonymous sessions
-    activity_type: ActivityType = Field(..., alias="actionType")  # Changed to match existing user_actions
-    timestamp: datetime = Field(default_factory=datetime.utcnow, alias="createdAt")  # Changed to match existing user_actions
-    
-    # Resource identifiers
+    activity_type: LoggedActionTypes = Field(..., alias="actionType")
+    timestamp: datetime = Field(default_factory=datetime.utcnow, alias="createdAt")
     paper_id: Optional[PyObjectId] = Field(None, alias="paperId")
     implementation_id: Optional[PyObjectId] = Field(None, alias="implementationId")
-    
-    # Activity-specific metadata
-    metadata: Optional[Dict[str, Any]] = None
-    
-    # User context
-    ip_address: Optional[str] = Field(None, alias="ipAddress")
-    user_agent: Optional[str] = Field(None, alias="userAgent")
-    referrer: Optional[str] = None
-
 
 class PaperView(_MongoModel):
     """Optimized schema for tracking paper views with aggregated counts."""
@@ -88,8 +59,8 @@ class PaperStats(_MongoModel):
     anonymous_views: int = Field(0, alias="anonymousViews")
     
     # Engagement statistics
-    total_upvotes: int = Field(0, alias="totalUpvotes")
-    total_downvotes: int = Field(0, alias="totalDownvotes")
+    total_upvotes: int = Field(0, alias="totalUpVotes")
+    total_downvotes: int = Field(0, alias="totalDownVotes")
     net_score: int = Field(0, alias="netScore")
     
     # Implementation statistics
