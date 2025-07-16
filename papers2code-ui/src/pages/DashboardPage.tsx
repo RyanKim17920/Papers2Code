@@ -16,12 +16,44 @@ const getStatusColor = (status: string) => {
   }
 };
 
-const PaperCard: React.FC<{ paper: Paper; showStatus?: boolean; showMeta?: boolean }> = ({ 
+const SearchBar: React.FC = () => {
+  const [searchQuery, setSearchQuery] = useState('');
+  const navigate = useNavigate();
+
+  const handleSearch = (e: React.FormEvent) => {
+    e.preventDefault();
+    if (searchQuery.trim()) {
+      navigate(`/papers?search=${encodeURIComponent(searchQuery.trim())}`);
+    } else {
+      navigate('/papers');
+    }
+  };
+
+  return (
+    <form onSubmit={handleSearch} className="search-bar">
+      <div className="search-input-container">
+        <span className="search-icon">🔍</span>
+        <input
+          type="text"
+          placeholder="Search papers, authors, conferences..."
+          value={searchQuery}
+          onChange={(e) => setSearchQuery(e.target.value)}
+          className="search-input"
+        />
+        <button type="submit" className="search-button">
+          Search
+        </button>
+      </div>
+    </form>
+  );
+};
+
+const PaperCard: React.FC<{ paper: Paper; showStatus?: boolean; compact?: boolean }> = ({ 
   paper, 
-  showStatus = false, 
-  showMeta = true 
+  showStatus = false,
+  compact = false
 }) => (
-  <div className="paper-card">
+  <div className={`paper-card ${compact ? 'paper-card-compact' : ''}`}>
     <Link to={`/paper/${paper.id}`} className="paper-card-link">
       <div className="paper-card-header">
         <h3 className="paper-card-title">{paper.title}</h3>
@@ -35,32 +67,64 @@ const PaperCard: React.FC<{ paper: Paper; showStatus?: boolean; showMeta?: boole
         )}
       </div>
       
-      {showMeta && (
-        <div className="paper-card-meta">
-          {paper.authors && paper.authors.length > 0 && (
-            <span className="paper-authors">
-              {paper.authors.slice(0, 3).join(', ')}
-              {paper.authors.length > 3 && ` +${paper.authors.length - 3} more`}
+      <div className="paper-card-meta">
+        {paper.authors && paper.authors.length > 0 && (
+          <span className="paper-authors">
+            {paper.authors.slice(0, compact ? 2 : 3).join(', ')}
+            {paper.authors.length > (compact ? 2 : 3) && ` +${paper.authors.length - (compact ? 2 : 3)} more`}
+          </span>
+        )}
+        
+        <div className="paper-card-stats">
+          {paper.upvoteCount > 0 && (
+            <span className="paper-stat">
+              <span className="stat-icon">👍</span>
+              {paper.upvoteCount}
             </span>
           )}
           
-          <div className="paper-card-stats">
-            {paper.upvoteCount > 0 && (
-              <span className="paper-stat">
-                <span className="stat-icon">👍</span>
-                {paper.upvoteCount}
-              </span>
-            )}
-            
-            {paper.proceeding && (
-              <span className="paper-venue">{paper.proceeding}</span>
-            )}
-          </div>
+          {paper.proceeding && (
+            <span className="paper-venue">{paper.proceeding}</span>
+          )}
         </div>
-      )}
+      </div>
     </Link>
   </div>
 );
+
+const UserProfile: React.FC = () => {
+  const navigate = useNavigate();
+  
+  return (
+    <div className="user-profile">
+      <div className="profile-header">
+        <div className="profile-avatar">
+          <div className="avatar-placeholder">
+            B
+          </div>
+        </div>
+        <div className="profile-info">
+          <h3 className="profile-name">bjac</h3>
+          <p className="profile-role">Researcher</p>
+        </div>
+      </div>
+      <div className="profile-actions">
+        <button 
+          className="profile-btn profile-btn-primary"
+          onClick={() => navigate('/profile')}
+        >
+          Profile
+        </button>
+        <button 
+          className="profile-btn profile-btn-secondary"
+          onClick={() => navigate('/settings')}
+        >
+          Settings
+        </button>
+      </div>
+    </div>
+  );
+};
 
 const QuickStats: React.FC<{ data: DashboardData }> = ({ data }) => {
   const totalContributions = data.myContributions.length;
@@ -116,7 +180,7 @@ const DashboardPage: React.FC = () => {
     fetchDashboardData();
   }, [navigate]);
 
-  const renderPaperSection = (papers: Paper[], emptyMessage: string, showStatus = false) => {
+  const renderPaperGrid = (papers: Paper[], emptyMessage: string, showStatus = false, compact = false) => {
     if (papers.length === 0) {
       return (
         <div className="empty-state">
@@ -126,10 +190,47 @@ const DashboardPage: React.FC = () => {
       );
     }
     
+    const maxPapers = compact ? 8 : 6;
     return (
-      <div className="paper-grid">
-        {papers.slice(0, 12).map((paper) => (
-          <PaperCard key={paper.id} paper={paper} showStatus={showStatus} />
+      <div className={`paper-grid ${compact ? 'paper-grid-compact' : ''}`}>
+        {papers.slice(0, maxPapers).map((paper) => (
+          <PaperCard key={paper.id} paper={paper} showStatus={showStatus} compact={compact} />
+        ))}
+      </div>
+    );
+  };
+
+  const renderPaperList = (papers: Paper[], emptyMessage: string, showStatus = false) => {
+    if (papers.length === 0) {
+      return (
+        <div className="sidebar-empty">
+          <p className="empty-message">{emptyMessage}</p>
+        </div>
+      );
+    }
+    
+    return (
+      <div className="sidebar-paper-list">
+        {papers.slice(0, 5).map((paper) => (
+          <Link key={paper.id} to={`/paper/${paper.id}`} className="sidebar-paper-item">
+            <div className="sidebar-paper-header">
+              <h4 className="sidebar-paper-title">{paper.title}</h4>
+              {showStatus && (
+                <span 
+                  className="sidebar-status-badge"
+                  style={{ backgroundColor: getStatusColor(paper.status) }}
+                >
+                  {paper.status}
+                </span>
+              )}
+            </div>
+            {paper.authors && paper.authors.length > 0 && (
+              <p className="sidebar-paper-authors">
+                {paper.authors.slice(0, 2).join(', ')}
+                {paper.authors.length > 2 && '...'}
+              </p>
+            )}
+          </Link>
         ))}
       </div>
     );
@@ -153,84 +254,55 @@ const DashboardPage: React.FC = () => {
 
   return (
     <div className="dashboard-container">
-      <header className="dashboard-header">
-        <div className="welcome-section">
-          <h1>Welcome back!</h1>
-          <p>Here's what's happening with your research contributions</p>
-        </div>
-        
-        {data && <QuickStats data={data} />}
-      </header>
-      
-      <div className="dashboard-content">
-        <div className="dashboard-main">
-          <section className="dashboard-section">
+      <div className="dashboard-layout">
+        {/* Left Sidebar - User Profile, Stats & Contributions */}
+        <aside className="left-sidebar">
+          <UserProfile />
+          {data && <QuickStats data={data} />}
+          
+          <section className="sidebar-section contributions-section">
+            <div className="section-header">
+              <h3>
+                <span className="section-icon">🔧</span>
+                My Contributions
+              </h3>
+              {data && data.myContributions.length > 4 && (
+                <Link to="/papers?user=me" className="view-all-link">View all →</Link>
+              )}
+            </div>
+            {data && renderPaperList(data.myContributions, "Start contributing to research papers!", true)}
+          </section>
+        </aside>
+
+        {/* Main Content - Welcome, Search, Feed */}
+        <main className="main-content">
+          <header className="main-header">
+            <h1 className="welcome-title">Welcome back!</h1>
+            <SearchBar />
+          </header>
+          
+          <section className="feed-section popular-papers-section">
             <div className="section-header">
               <h2>
                 <span className="section-icon">🔥</span>
-                Trending Papers
+                Popular Papers
               </h2>
-              <span className="section-subtitle">Popular in the last 7 days</span>
+              <Link to="/papers" className="view-all-link">View all →</Link>
             </div>
-            {data && renderPaperSection(data.trendingPapers, 'No trending papers at the moment.')}
+            {data && renderPaperGrid(data.trendingPapers, 'No trending papers at the moment.', false, false)}
           </section>
+        </main>
 
-          <section className="dashboard-section">
-            <div className="section-header">
-              <h2>
-                <span className="section-icon">🚀</span>
-                My Contributions
-              </h2>
-              <span className="section-subtitle">Papers you're working on</span>
-            </div>
-            {data && renderPaperSection(data.myContributions, "You haven't contributed to any papers yet.", true)}
-          </section>
-        </div>
-
-        <aside className="dashboard-sidebar">
-          <section className="sidebar-section">
+        {/* Right Sidebar - Recently Viewed */}
+        <aside className="right-sidebar">
+          <section className="sidebar-section recently-viewed-section">
             <div className="section-header">
               <h3>
                 <span className="section-icon">👀</span>
                 Recently Viewed
               </h3>
             </div>
-            
-            {data && data.recentlyViewed.length === 0 ? (
-              <div className="sidebar-empty">
-                <p>No recently viewed papers</p>
-              </div>
-            ) : (
-              <div className="sidebar-paper-list">
-                {data && data.recentlyViewed.slice(0, 8).map((paper) => (
-                  <Link key={paper.id} to={`/paper/${paper.id}`} className="sidebar-paper-item">
-                    <h4 className="sidebar-paper-title">{paper.title}</h4>
-                    {paper.authors && paper.authors.length > 0 && (
-                      <p className="sidebar-paper-authors">
-                        {paper.authors.slice(0, 2).join(', ')}
-                        {paper.authors.length > 2 && '...'}
-                      </p>
-                    )}
-                  </Link>
-                ))}
-              </div>
-            )}
-          </section>
-
-          <section className="sidebar-section">
-            <div className="section-header">
-              <h3>Quick Actions</h3>
-            </div>
-            <div className="quick-actions">
-              <Link to="/papers" className="action-button primary">
-                <span>🔍</span>
-                Browse Papers
-              </Link>
-              <Link to="/papers?status=Not%20Started" className="action-button secondary">
-                <span>✨</span>
-                Find New Projects
-              </Link>
-            </div>
+            {data && renderPaperList(data.recentlyViewed, "Browse papers to see your recent activity here.", false)}
           </section>
         </aside>
       </div>
@@ -238,4 +310,4 @@ const DashboardPage: React.FC = () => {
   );
 };
 
-export default DashboardPage; 
+export default DashboardPage;
