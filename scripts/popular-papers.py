@@ -27,6 +27,7 @@ from papers2code_app2.database import (
     initialize_async_db, 
     get_papers_collection_async,
     get_paper_views_collection_async,
+    get_user_actions_collection_async,
     async_db
 )
 
@@ -66,93 +67,13 @@ async def calculate_popular_papers_metrics() -> Dict[str, Any]:
         month_ago = now - timedelta(days=30)
         
         analytics_result = {
-            "popular_by_views_24h": [],
-            "popular_by_views_7d": [],
-            "popular_by_views_30d": [],
             "trending_papers": [],
             "most_upvoted": [],
             "recently_added": [],
             "timestamp": now.isoformat()
         }
         
-        # 1. Most viewed papers in last 24h
-        pipeline_24h = [
-            {"$match": {"timestamp": {"$gte": day_ago}}},
-            {"$group": {"_id": "$paperId", "view_count": {"$sum": 1}}},
-            {"$sort": {"view_count": -1}},
-            {"$limit": 20},
-            {"$lookup": {
-                "from": "papers_without_code",  # Main papers collection
-                "localField": "_id",
-                "foreignField": "_id", 
-                "as": "paper_info"
-            }},
-            {"$unwind": "$paper_info"},
-            {"$project": {
-                "paper_id": "$_id",
-                "title": "$paper_info.title",
-                "view_count": 1,
-                "upvote_count": "$paper_info.upvoteCount",
-                "status": "$paper_info.status",
-                "publication_date": "$paper_info.publicationDate"
-            }}
-        ]
         
-        # 2. Most viewed papers in last 7 days
-        pipeline_7d = [
-            {"$match": {"timestamp": {"$gte": week_ago}}},
-            {"$group": {"_id": "$paperId", "view_count": {"$sum": 1}}},
-            {"$sort": {"view_count": -1}},
-            {"$limit": 20},
-            {"$lookup": {
-                "from": "papers_without_code",
-                "localField": "_id",
-                "foreignField": "_id",
-                "as": "paper_info"
-            }},
-            {"$unwind": "$paper_info"},
-            {"$project": {
-                "paper_id": "$_id",
-                "title": "$paper_info.title",
-                "view_count": 1,
-                "upvote_count": "$paper_info.upvoteCount",
-                "status": "$paper_info.status",
-                "publication_date": "$paper_info.publicationDate"
-            }}
-        ]
-        
-        # 3. Most viewed papers in last 30 days
-        pipeline_30d = [
-            {"$match": {"timestamp": {"$gte": month_ago}}},
-            {"$group": {"_id": "$paperId", "view_count": {"$sum": 1}}},
-            {"$sort": {"view_count": -1}},
-            {"$limit": 20},
-            {"$lookup": {
-                "from": "papers_without_code",
-                "localField": "_id",
-                "foreignField": "_id",
-                "as": "paper_info"
-            }},
-            {"$unwind": "$paper_info"},
-            {"$project": {
-                "paper_id": "$_id",
-                "title": "$paper_info.title",
-                "view_count": 1,
-                "upvote_count": "$paper_info.upvoteCount",
-                "status": "$paper_info.status",
-                "publication_date": "$paper_info.publicationDate"
-            }}
-        ]
-        
-        # Execute aggregations
-        cursor_24h = await views_coll.aggregate(pipeline_24h)
-        analytics_result["popular_by_views_24h"] = await cursor_24h.to_list(length=20)
-
-        cursor_7d = await views_coll.aggregate(pipeline_7d)
-        analytics_result["popular_by_views_7d"] = await cursor_7d.to_list(length=20)
-
-        cursor_30d = await views_coll.aggregate(pipeline_30d)
-        analytics_result["popular_by_views_30d"] = await cursor_30d.to_list(length=20)
         
         # 4. Most upvoted papers (all time)
         most_upvoted_cursor = papers_coll.find(
@@ -202,40 +123,31 @@ async def calculate_popular_papers_metrics() -> Dict[str, Any]:
             async for doc in recently_added_cursor
         ]
         
-        # 6. Trending papers (combination of recent views and upvotes)
-        # Calculate a trending score based on recent activity
+        # 4. Trending papers (upvotes in the last 7 days)
         trending_pipeline = [
-            {"$match": {"timestamp": {"$gte": week_ago}}},
-            {"$group": {"_id": "$paperId", "recent_views": {"$sum": 1}}},
+            {"$match": {"actionType": "upvote", "createdAt": {"$gte": week_ago}}},
+            {"$group": {"_id": "$paperId", "recent_upvotes": {"$sum": 1}}},
+            {"$sort": {"recent_upvotes": -1}},
+            {"$limit": 20},
             {"$lookup": {
-                "from": "papers_without_code",
+                "from": "papers",
                 "localField": "_id",
                 "foreignField": "_id",
                 "as": "paper_info"
             }},
             {"$unwind": "$paper_info"},
-            {"$addFields": {
-                "trending_score": {
-                    "$add": [
-                        {"$multiply": ["$recent_views", 2]},  # Weight recent views
-                        {"$ifNull": ["$paper_info.upvoteCount", 0]}  # Add upvotes
-                    ]
-                }
-            }},
-            {"$sort": {"trending_score": -1}},
-            {"$limit": 20},
             {"$project": {
                 "paper_id": "$_id",
                 "title": "$paper_info.title",
-                "recent_views": 1,
+                "recent_upvotes": 1,
                 "upvote_count": "$paper_info.upvoteCount",
-                "trending_score": 1,
                 "status": "$paper_info.status",
                 "publication_date": "$paper_info.publicationDate"
             }}
         ]
-        
-        trending_cursor = await views_coll.aggregate(trending_pipeline)
+
+        user_actions_coll = await get_user_actions_collection_async()
+        trending_cursor = await user_actions_coll.aggregate(trending_pipeline)
         analytics_result["trending_papers"] = await trending_cursor.to_list(length=20)
         
         logger.info("Popular papers analytics calculated successfully")
