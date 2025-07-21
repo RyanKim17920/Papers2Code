@@ -31,18 +31,18 @@
   min-height: calc(100vh - 200px);
 }
 
-/* Left Sidebar - Dark Theme */
+/* Left Sidebar - Light Dark Theme */
 .left-sidebar {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  background: #0d1117;
+  background: #f0f3f6;
   padding: 2rem 1.5rem;
-  border-right: 1px solid #21262d;
+  border-right: 1px solid #d0d7de;
   min-height: calc(100vh - 200px);
 }
 
-/* Main Content - Light Theme */
+/* Main Content - White Theme */
 .main-content {
   display: flex;
   flex-direction: column;
@@ -73,7 +73,7 @@
   display: flex;
   align-items: center;
   background: #ffffff;
-  border: 2px solid #d0d7de;
+  border: 1px solid #d0d7de;
   border-radius: 6px;
   padding: 0.75rem 1rem;
   transition: all 0.2s ease;
@@ -103,7 +103,7 @@
   color: white;
   border: none;
   padding: 0.5rem 1.25rem;
-  border-radius: 25px;
+  border-radius: 6px;
   font-size: 0.875rem;
   font-weight: 600;
   cursor: pointer;
@@ -126,43 +126,44 @@
   border: none;
 }
 
-/* Left Sidebar Contributions (Dark Theme) */
+/* Left Sidebar Contributions (Light Dark Theme) */
 .contributions-section {
   background: transparent;
-  border: 1px solid #21262d;
+  border: 1px solid #c6cbd1;
 }
 
 .contributions-section .section-header h3 {
-  color: #c9d1d9;
+  color: #24292f;
 }
 
 .contributions-section .view-all-link {
-  color: #58a6ff;
+  color: #0969da;
 }
 
 .contributions-section .sidebar-paper-item {
-  background: #161b22;
-  border-color: #21262d;
-  color: #c9d1d9;
+  background: #ffffff;
+  border-color: #d0d7de;
+  color: #24292f;
 }
 
 .contributions-section .sidebar-paper-item:hover {
-  background: #21262d;
-  border-color: #58a6ff;
+  background: #f6f8fa;
+  border-color: #0969da;
 }
 
 .contributions-section .sidebar-paper-title {
-  color: #c9d1d9;
+  color: #24292f;
 }
 
 .contributions-section .sidebar-paper-authors {
-  color: #8b949e;
+  color: #656d76;
 }
 
-/* Main Content Popular Papers (Light Theme) */
+/* Main Content Popular Papers (White Theme) */
 .popular-papers-section {
-  background: transparent;
+  background: #ffffff;
   border: 1px solid #d0d7de;
+  border-radius: var(--border-radius-lg);
 }
 
 .popular-papers-section .section-header h2 {
@@ -250,6 +251,9 @@
   color: var(--text-muted-color);
   margin: 0;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .sidebar-empty {
@@ -261,11 +265,11 @@
 
 /* Feed Section */
 .feed-section {
-  background: var(--card-background-color);
+  background: #ffffff;
   border-radius: var(--border-radius-lg);
   padding: 2rem;
-  box-shadow: var(--box-shadow-sm);
-  border: 1px solid var(--border-color);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  border: 1px solid #d0d7de;
 }
 
 /* Section Styling */
@@ -428,11 +432,14 @@
   line-clamp: 1;
   -webkit-box-orient: vertical;
   overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .paper-card-compact .paper-authors {
   font-size: 0.75rem;
   line-height: 1.2;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .paper-card-stats {
@@ -532,13 +539,13 @@
   margin: 0;
 }
 
-/* User Profile Component - Dark Sidebar Style */
+/* User Profile Component - Light Dark Sidebar Style */
 .user-profile {
   background: transparent;
   border-radius: var(--border-radius-lg);
   padding: 1rem;
   margin-bottom: 1rem;
-  border: 1px solid #21262d;
+  border: 1px solid #c6cbd1;
 }
 
 .profile-header {
@@ -552,11 +559,11 @@
   width: 32px;
   height: 32px;
   border-radius: 50%;
-  background: #21262d;
+  background: #e1e4e8;
   display: flex;
   align-items: center;
   justify-content: center;
-  border: 1px solid #30363d;
+  border: 1px solid #d0d7de;
   flex-shrink: 0;
 }
 
@@ -570,7 +577,7 @@
 .avatar-placeholder {
   font-size: 0.875rem;
   font-weight: 600;
-  color: #c9d1d9;
+  color: #24292f;
 }
 
 .avatar-placeholder.hidden {
@@ -586,7 +593,10 @@
   font-size: 0.9rem;
   font-weight: 600;
   margin: 0;
-  color: #c9d1d9;
+  color: #24292f;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .profile-actions {
@@ -606,25 +616,25 @@
 }
 
 .profile-btn-primary {
-  background: #238636;
+  background: #2da44e;
   color: white;
-  border-color: #238636;
+  border-color: #2da44e;
 }
 
 .profile-btn-primary:hover {
-  background: #2ea043;
+  background: #2c974b;
   transform: translateY(-1px);
 }
 
 .profile-btn-secondary {
   background: transparent;
-  color: #c9d1d9;
-  border-color: #30363d;
+  color: #24292f;
+  border-color: #d0d7de;
 }
 
 .profile-btn-secondary:hover {
-  background: #21262d;
-  border-color: #30363d;
+  background: #f6f8fa;
+  border-color: #d0d7de;
   transform: translateY(-1px);
 }
 
@@ -815,13 +825,17 @@ input::-webkit-outer-spin-button {
   margin: 0;
 }
 
-/* Ensure clean text rendering */
+/* Ensure clean text rendering and remove scrollbars */
 .search-input,
 .sidebar-paper-title,
-.paper-card-title {
+.paper-card-title,
+.welcome-title,
+.profile-name {
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   text-rendering: optimizeLegibility;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 .main-header {
@@ -837,4 +851,7 @@ input::-webkit-outer-spin-button {
   font-weight: 700;
   color: #24292f;
   margin: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
