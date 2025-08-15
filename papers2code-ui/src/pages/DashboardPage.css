@@ -3,8 +3,8 @@
 .dashboard-container {
   max-width: 1400px;
   margin: 0 auto;
-  padding: 2rem 1.5rem;
-  background: var(--background-color);
+  padding: 2rem 2rem;
+  background: #F6F8FA;
   min-height: calc(100vh - 80px);
   font-family: 'Poppins', -apple-system, BlinkMacSystemFont, 'Segoe UI', system-ui, sans-serif;
   position: relative;
@@ -22,11 +22,11 @@
   position: static;
 }
 
-/* Three Column Layout with Distinct Backgrounds */
+/* Three Column Layout with New Proportions - 20% 55% 25% */
 .dashboard-layout {
   display: grid;
-  grid-template-columns: 280px 1fr 280px;
-  gap: 0;
+  grid-template-columns: 20% 55% 25%;
+  gap: 24px;
   align-items: start;
   min-height: calc(100vh - 200px);
 }
@@ -37,28 +37,28 @@
   flex-direction: column;
   gap: 1.5rem;
   background: #f0f3f6;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem;
   border-right: 1px solid #d0d7de;
   min-height: calc(100vh - 200px);
 }
 
-/* Main Content - White Theme */
+/* Main Content - Clean Feed Layout */
 .main-content {
   display: flex;
   flex-direction: column;
-  gap: 2rem;
+  gap: 0;
   background: #ffffff;
-  padding: 2rem 2.5rem;
+  padding: 0;
   min-height: calc(100vh - 200px);
 }
 
-/* Right Sidebar - Light Gray Theme */
+/* Right Sidebar - Compact Discovery */
 .right-sidebar {
   display: flex;
   flex-direction: column;
-  gap: 1.5rem;
+  gap: 0;
   background: #f6f8fa;
-  padding: 2rem 1.5rem;
+  padding: 1.5rem;
   border-left: 1px solid #d0d7de;
   min-height: calc(100vh - 200px);
 }
@@ -73,9 +73,9 @@
   display: flex;
   align-items: center;
   background: #ffffff;
-  border: 1px solid #d0d7de;
+  border: 1px solid #D0D7DE;
   border-radius: 6px;
-  padding: 0.75rem 1rem;
+  padding: 10px 12px;
   transition: all 0.2s ease;
 }
 
@@ -137,13 +137,15 @@
 }
 
 .contributions-section .view-all-link {
-  color: #0969da;
+  color: #0969DA;
+  font-size: 12px;
 }
 
 .contributions-section .sidebar-paper-item {
   background: #ffffff;
   border-color: #d0d7de;
   color: #24292f;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.07);
 }
 
 .contributions-section .sidebar-paper-item:hover {
@@ -170,10 +172,34 @@
   color: #24292f;
 }
 
-/* Right Sidebar Recently Viewed (Light Gray Theme) */
+/* Scrollbar styling for Recently Viewed */
 .recently-viewed-section {
-  background: transparent;
+  background: #FFFFFF;
   border: 1px solid #d0d7de;
+  border-radius: 6px;
+  padding: 16px;
+  box-shadow: 0 1px 2px rgba(0,0,0,0.07);
+  max-height: 400px;
+  overflow-y: auto;
+}
+
+.recently-viewed-section::-webkit-scrollbar {
+  width: 8px;
+}
+
+.recently-viewed-section::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.recently-viewed-section::-webkit-scrollbar-thumb {
+  background-color: #8b949e;
+  border-radius: 4px;
+  border: 2px solid transparent;
+  background-clip: content-box;
+}
+
+.recently-viewed-section::-webkit-scrollbar-thumb:hover {
+  background-color: #6e7681;
 }
 
 .recently-viewed-section .section-header h3 {
@@ -181,20 +207,30 @@
 }
 
 .recently-viewed-section .sidebar-paper-item {
-  background: #ffffff;
-  border-color: #d0d7de;
+  background: transparent;
+  border: none;
+  border-bottom: 1px solid #D8DEE4;
   color: #24292f;
+  border-radius: 0;
+  padding: 12px 0;
+  margin: 0;
+  transition: background-color 0.2s ease;
+}
+
+.recently-viewed-section .sidebar-paper-item:last-child {
+  border-bottom: none;
 }
 
 .recently-viewed-section .sidebar-paper-item:hover {
-  background: #f6f8fa;
-  border-color: #0969da;
+  background: #F6F8FA;
+  border-color: #D8DEE4;
+  transform: none;
 }
 
 .sidebar-paper-list {
   display: flex;
   flex-direction: column;
-  gap: 0.75rem;
+  gap: 12px;
 }
 
 .sidebar-paper-item {
@@ -237,10 +273,10 @@
 }
 
 .sidebar-status-badge {
-  padding: 0.125rem 0.5rem;
+  padding: 2px 8px;
   border-radius: 12px;
-  font-size: 0.65rem;
-  font-weight: 600;
+  font-size: 12px;
+  font-weight: 500;
   color: white;
   white-space: nowrap;
   flex-shrink: 0;
@@ -307,9 +343,9 @@
 }
 
 .view-all-link {
-  color: var(--primary-color);
+  color: #0969DA;
   text-decoration: none;
-  font-size: 0.875rem;
+  font-size: 12px;
   font-weight: 500;
   transition: color 0.2s ease;
 }
@@ -497,19 +533,25 @@
 .empty-state {
   text-align: center;
   padding: 3rem 2rem;
-  color: var(--text-muted-color);
+  color: #57606A;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
 }
 
 .empty-state-icon {
-  font-size: 3rem;
+  font-size: 48px;
   margin-bottom: 1rem;
   opacity: 0.5;
+  color: #C8D1D9;
 }
 
 .empty-message {
   font-size: 1rem;
   margin: 0;
   font-style: italic;
+  color: #57606A;
 }
 
 /* Error State */
@@ -556,8 +598,8 @@
 }
 
 .profile-avatar {
-  width: 32px;
-  height: 32px;
+  width: 96px;
+  height: 96px;
   border-radius: 50%;
   background: #e1e4e8;
   display: flex;
@@ -608,7 +650,7 @@
 .profile-btn {
   padding: 0.375rem 0.75rem;
   border-radius: var(--border-radius-md);
-  font-size: 0.75rem;
+  font-size: 14px;
   font-weight: 500;
   cursor: pointer;
   transition: all 0.2s ease;
@@ -616,9 +658,9 @@
 }
 
 .profile-btn-primary {
-  background: #2da44e;
+  background: #2EA44F;
   color: white;
-  border-color: #2da44e;
+  border-color: #2EA44F;
 }
 
 .profile-btn-primary:hover {
@@ -629,7 +671,7 @@
 .profile-btn-secondary {
   background: transparent;
   color: #24292f;
-  border-color: #d0d7de;
+  border-color: #D0D7DE;
 }
 
 .profile-btn-secondary:hover {
@@ -643,7 +685,8 @@
 /* Responsive Design */
 @media (max-width: 1200px) {
   .dashboard-layout {
-    grid-template-columns: 260px 1fr 260px;
+    grid-template-columns: 22% 53% 25%;
+    gap: 20px;
   }
   
   .paper-grid {
@@ -653,9 +696,13 @@
 }
 
 @media (max-width: 1024px) {
+  .dashboard-container {
+    padding: 2rem 1.5rem;
+  }
+  
   .dashboard-layout {
     grid-template-columns: 1fr;
-    gap: 0;
+    gap: 16px;
   }
   
   .left-sidebar,
@@ -697,6 +744,11 @@
     border-color: #d0d7de;
     color: #24292f;
   }
+  
+  .recently-viewed-section {
+    background: #FFFFFF;
+    max-height: none;
+  }
 }
 
 @media (max-width: 768px) {
@@ -705,11 +757,11 @@
   }
   
   .welcome-title {
-    font-size: 2rem;
+    font-size: 28px;
   }
   
   .search-input-container {
-    padding: 0.75rem 1rem;
+    padding: 8px 10px;
   }
   
   .sidebar-section,
@@ -727,7 +779,12 @@
   
   .profile-btn {
     padding: 0.25rem 0.5rem;
-    font-size: 0.7rem;
+    font-size: 12px;
+  }
+  
+  .profile-avatar {
+    width: 64px;
+    height: 64px;
   }
   
   .paper-grid {
@@ -747,7 +804,7 @@
   }
   
   .welcome-title {
-    font-size: 1.75rem;
+    font-size: 24px;
   }
   
   .main-header {
@@ -755,7 +812,7 @@
   }
   
   .search-input-container {
-    padding: 0.625rem 1rem;
+    padding: 8px 10px;
   }
   
   .search-button {
@@ -766,6 +823,11 @@
   .sidebar-section,
   .feed-section {
     padding: 1.25rem;
+  }
+  
+  .profile-avatar {
+    width: 48px;
+    height: 48px;
   }
   
   .quick-stats {
@@ -832,26 +894,18 @@ input::-webkit-outer-spin-button {
 .welcome-title,
 .profile-name {
   -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-  text-rendering: optimizeLegibility;
-  overflow: hidden;
-  text-overflow: ellipsis;
 }
 
 .main-header {
   display: flex;
   flex-direction: column;
   gap: 1.5rem;
-  align-items: center;
-  text-align: center;
+  margin-bottom: 2rem;
 }
 
 .welcome-title {
-  font-size: 2.5rem;
+  font-size: 32px;
   font-weight: 700;
-  color: #24292f;
+  color: var(--text-heading-color);
   margin: 0;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }

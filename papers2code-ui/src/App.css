@@ -164,48 +164,7 @@ a:hover {
   position: relative; /* For the pseudo-element positioning */
 }
 
-.app-header {
-  background-color: rgba(255, 255, 255, 0.95); /* Slightly transparent */
-  padding: 12px 35px; /* Padding remains inside the max-width */
-  box-shadow: var(--box-shadow-sm);
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  width: 100vw; /* Take full width up to max-width */
-  margin-left: auto; /* Center the header */
-  margin-right: auto; /* Center the header */
-  box-sizing: border-box;
-  border-bottom: 1px solid var(--border-color);
-  backdrop-filter: blur(5px); /* Adds a modern frosted glass effect */
-  -webkit-backdrop-filter: blur(5px); /* For Safari support */
-  position: sticky;
-  top: 0;
-  z-index: 1000;
-  overflow: visible; /* Allow dropdown to extend outside header */
-}
-
-.app-header .logo-link {
-  display: flex;
-  align-items: center;
-  text-decoration: none;
-}
-
-.app-logo {
-  height: 45px;
-  width: auto;
-  display: block;
-}
-
-.app-header nav a {
-  margin-left: 25px;
-  text-decoration: none;
-  color: var(--text-muted-color);
-  font-weight: 500;
-  transition: color 0.2s ease;
-}
-.app-header nav a:hover {
-  color: var(--primary-color);
-}
+/* Header styles moved to GlobalHeader.css */
 
 .app-main {
   flex-grow: 1;

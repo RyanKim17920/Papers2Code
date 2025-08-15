@@ -5,7 +5,6 @@ import LandingPage from './pages/LandingPage';
 import PaperListPage from './pages/PaperListPage';
 import PaperDetailPage from './pages/PaperDetailPage';
 import DashboardPage from './pages/DashboardPage';
-import logo from './assets/images/papers2codelogo.png';
 import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './common/services/auth';
 import type { UserProfile } from './common/types/user';
 import { UserAvatar } from './common/components';
@@ -14,6 +13,7 @@ import { ModalProvider } from './common/context/ModalContext'; // Import ModalPr
 import LoginPromptModal from './common/components/LoginPromptModal'; // Import LoginPromptModal
 import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from './common/components/ErrorBoundary';
 import { AuthenticationError } from './common/services/api'; // Import AuthenticationError
+import GlobalHeader from './components/common/GlobalHeader'; // Import GlobalHeader
 
 import ProfilePage from './pages/ProfilePage'; // Added import for ProfilePage
 import SettingsPage from './pages/SettingsPage'; // Added import for SettingsPage
@@ -82,46 +82,52 @@ function App() {
 
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
   console.log(currentUser);
+  
+  const authSection = (
+    <>
+      <nav className="main-nav">
+        <Link to="/papers" className="nav-link">Papers</Link>
+      </nav>
+      <div className="auth-section">
+        {authLoading ? (
+          <span className="auth-loading">Loading...</span>
+        ) : currentUser ? (
+          <div className="user-info-container" ref={dropdownRef}>
+            <button onClick={toggleDropdown} className="user-avatar-button">
+              <UserAvatar
+                avatarUrl={currentUser.avatarUrl}
+                username={currentUser.username}
+                className="user-avatar"
+              />
+            </button>
+            {isDropdownOpen && (
+              <div className={`user-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
+                <Link to="/dashboard" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Dashboard</Link>
+                <Link to={`/user/${currentUser.username}`} className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
+                <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
+                <Link to="" onClick={handleLogout} className="dropdown-item">
+                  Logout
+                </Link>
+              </div>
+            )}
+          </div>
+        ) : (
+          <button onClick={redirectToGitHubLogin} className="auth-button connect-button">
+            Connect with GitHub
+          </button>
+        )}
+      </div>
+    </>
+  );
+
   return (
     <ModalProvider>
       <AuthInitializer /> {/* Initialize Auth-related hooks here */}
         <div className="app-container">
-          <header className="app-header">
-            <Link to={currentUser ? "/dashboard" : "/"} className="logo-link">
-              <img src={logo} alt="Papers To Code Community Logo" className="app-logo" />
-            </Link>
-            <nav className="main-nav">
-              <Link to="/papers" className="nav-link">Papers</Link>
-            </nav>
-            <div className="auth-section">
-              {authLoading ? (
-                <span className="auth-loading">Loading...</span>
-              ) : currentUser ? (
-                <div className="user-info-container" ref={dropdownRef}>
-                  <button onClick={toggleDropdown} className="user-avatar-button">
-                    <UserAvatar
-                      avatarUrl={currentUser.avatarUrl}
-                      username={currentUser.username}
-                      className="user-avatar"
-                    />
-                  </button>                  {isDropdownOpen && (
-                    <div className={`user-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
-                      <Link to="/dashboard" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Dashboard</Link>
-                      <Link to={`/user/${currentUser.username}`} className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
-                      <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
-                      <Link to="" onClick={handleLogout} className="dropdown-item">
-                        Logout
-                      </Link>
-                    </div>
-                  )}
-                </div>
-              ) : (
-                <button onClick={redirectToGitHubLogin} className="auth-button connect-button">
-                  Connect with GitHub
-                </button>
-              )}
-            </div>
-          </header>
+          <GlobalHeader 
+            currentUser={currentUser}
+            authSection={authSection}
+          />
           <main className="app-main">
             <ErrorBoundary>
               <Routes>
