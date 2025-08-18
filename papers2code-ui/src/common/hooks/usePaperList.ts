@@ -28,7 +28,10 @@ export function usePaperList(authLoading?: boolean) {
   const [error, setError] = useState<string | null>(null);
   const [searchTerm, setSearchTerm] = useState<string>(() => searchParams.get('searchQuery') || '');
   const debouncedSearchTerm = useDebounce(searchTerm, DEBOUNCE_DELAY);
-  const [sortPreference, setSortPreference] = useState<SortPreference>('newest');
+  const [sortPreference, setSortPreference] = useState<SortPreference>(() => {
+    const sortFromUrl = searchParams.get('sort') as SortPreference;
+    return sortFromUrl && ['newest', 'oldest', 'upvotes'].includes(sortFromUrl) ? sortFromUrl : 'newest';
+  });
   const [currentPage, setCurrentPage] = useState<number>(
     () => parseInt(searchParams.get('page') || '1', 10)
   );
@@ -70,18 +73,35 @@ export function usePaperList(authLoading?: boolean) {
     
     if (currentSearchParamsStr !== prevSearchParamsRef.current) {
         const queryFromUrl = searchParams.get('searchQuery') || '';
+        const pageFromUrl = parseInt(searchParams.get('page') || '1', 10);
+        const sortFromUrl = searchParams.get('sort') as SortPreference;
         const mainStatusFromUrl = searchParams.get('mainStatus') || '';
         const implStatusFromUrl = searchParams.get('implStatus') || '';
         
         console.log('📥 Reading from URL:', {
           searchQuery: queryFromUrl,
+          page: pageFromUrl,
+          sort: sortFromUrl,
           mainStatus: mainStatusFromUrl,
           implStatus: implStatusFromUrl
         });
         
+        // Update search term if different
         if (queryFromUrl !== searchTerm) {
             console.log('📝 Setting searchTerm:', queryFromUrl);
             setSearchTerm(queryFromUrl);
+        }
+        
+        // Update page if different
+        if (pageFromUrl !== currentPage) {
+            console.log('📝 Setting currentPage:', pageFromUrl);
+            setCurrentPage(pageFromUrl);
+        }
+        
+        // Update sort if different and valid
+        if (sortFromUrl && ['newest', 'oldest', 'upvotes'].includes(sortFromUrl) && sortFromUrl !== sortPreference) {
+            console.log('📝 Setting sortPreference:', sortFromUrl);
+            setSortPreference(sortFromUrl);
         }
         
         // Auto-apply filters from URL parameters
@@ -96,13 +116,17 @@ export function usePaperList(authLoading?: boolean) {
         
         console.log('🔧 Auto-applying filters from URL:', filtersFromUrl);
         
-        // Update both filter states when URL changes
-        setAdvancedFilters(filtersFromUrl);
-        setAppliedAdvancedFilters(filtersFromUrl);
+        // Only update filters if they're actually different to avoid triggering the reset effect
+        const filtersChanged = JSON.stringify(filtersFromUrl) !== JSON.stringify(appliedAdvancedFilters);
+        if (filtersChanged) {
+          console.log('📝 Filters changed, updating both filter states');
+          setAdvancedFilters(filtersFromUrl);
+          setAppliedAdvancedFilters(filtersFromUrl);
+        }
         
         prevSearchParamsRef.current = currentSearchParamsStr;
     }
-  }, [searchParams]); // Remove searchTerm from dependencies to avoid circular updates
+  }, [searchParams]); // Simplified dependencies - only listen to searchParams changes
 
 
   const isSearchInputActive = !!searchTerm; 
@@ -114,11 +138,12 @@ export function usePaperList(authLoading?: boolean) {
   useEffect(() => {
     const newParams = new URLSearchParams();
     
-    // Always preserve searchQuery if it exists (either from current state or URL)
-    const currentSearchQuery = debouncedSearchTerm || searchParams.get('searchQuery');
-    if (currentSearchQuery) {
-      newParams.set('searchQuery', currentSearchQuery);
+    // Use debouncedSearchTerm as the source of truth for search query
+    // Only add searchQuery to URL if there's actually a search term
+    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
+      newParams.set('searchQuery', debouncedSearchTerm.trim());
     }
+    // If debouncedSearchTerm is empty, we deliberately don't set it, effectively removing it from URL
     
     if (currentPage !== 1) {
       newParams.set('page', currentPage.toString());
@@ -143,9 +168,10 @@ export function usePaperList(authLoading?: boolean) {
   }, [debouncedSearchTerm, currentPage, sortPreference, appliedAdvancedFilters, setSearchParams, isDebouncedSearchActive, searchParams]);
 
 
+  // Reset page to 1 when search or filters change
   useEffect(() => {
     setCurrentPage(1);
-  }, [debouncedSearchTerm, sortPreference, appliedAdvancedFilters]);
+  }, [debouncedSearchTerm, appliedAdvancedFilters]);
   // API Fetching Logic
   useEffect(() => {
     const abortController = new AbortController();
@@ -252,14 +278,16 @@ export function usePaperList(authLoading?: boolean) {
 
   const handlePrev = useCallback(() => {
     if (currentPage > 1) {
-      setCurrentPage(prev => prev - 1);
+      const newPage = currentPage - 1;
+      setCurrentPage(newPage);
       window.scrollTo(0,0);
     }
   }, [currentPage]);
 
   const handleNext = useCallback(() => {
     if (currentPage < totalPages) {
-      setCurrentPage(prev => prev + 1);
+      const newPage = currentPage + 1;
+      setCurrentPage(newPage);
       window.scrollTo(0,0);
     }
   }, [currentPage, totalPages]);

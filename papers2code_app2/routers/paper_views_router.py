@@ -72,13 +72,18 @@ async def list_papers(
     #     if transformed_paper:
     #         transformed_papers.append(transformed_paper)
 
-    # Parallelize the transformation
-    transform_tasks = [
-        transform_paper_async(paper_doc, current_user_id_str) # CORRECTED: removed detail_level
-        for paper_doc in papers_cursor
-    ]
-    transformed_results = await asyncio.gather(*transform_tasks)
-    transformed_papers = [paper for paper in transformed_results if paper is not None]
+    # Parallelize the transformation with batching for better performance
+    batch_size = 6  # Process 6 papers at a time to avoid overwhelming the database
+    transformed_papers = []
+    
+    for i in range(0, len(papers_cursor), batch_size):
+        batch = papers_cursor[i:i + batch_size]
+        transform_tasks = [
+            transform_paper_async(paper_doc, current_user_id_str)
+            for paper_doc in batch
+        ]
+        batch_results = await asyncio.gather(*transform_tasks)
+        transformed_papers.extend([paper for paper in batch_results if paper is not None])
     
     end_time_transform = time.time()
     logger.info(f"PERF: Transforming {len(transformed_papers)} papers took {end_time_transform - start_time_transform:.4f} seconds.")

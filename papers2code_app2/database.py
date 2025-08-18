@@ -1,7 +1,8 @@
 import logging
 from typing import Optional, Any, Tuple
 from pymongo import MongoClient, ASCENDING, DESCENDING # For sync client and indexes
-from pymongo import AsyncMongoClient 
+from pymongo import AsyncMongoClient
+import certifi
 from pymongo.database import Database as SyncDatabase # Alias for clarity
 from pymongo.database import Database as AsyncDatabase # For type hinting with AsyncMongoClient
 from pymongo.collection import Collection as AsyncCollection # For type hinting with AsyncMongoClient
@@ -70,15 +71,12 @@ async def initialize_async_db():
     
     try:
         logger.info(f"Attempting to connect to MongoDB asynchronously using PyMongo. Database: {actual_db_name}")
-        async_client = AsyncMongoClient(actual_mongo_uri) 
-        
+        async_client = AsyncMongoClient(actual_mongo_uri, tlsCAFile=certifi.where())
         # Ping the server to confirm connection
         await async_client.admin.command('ping')
         logger.info("Async MongoDB server ping successful (PyMongo Async). Connection established.")
-        
         async_db = async_client[actual_db_name]
         logger.info(f"Successfully connected to async MongoDB database (PyMongo Async): '{actual_db_name}'.")
-        
         db_papers_async = async_db["papers"]
         db_user_actions_async = async_db["user_actions"]
         db_removed_papers_async = async_db["removed_papers"]
@@ -87,7 +85,6 @@ async def initialize_async_db():
         db_paper_views_async = async_db["paper_views"]
         db_popular_papers_recent_async = async_db["popular_papers_recent"]
         logger.info("Async database collections initialized (PyMongo Async): papers, user_actions, removed_papers, users, implementation_progress, paper_views.")
-
     except Exception as e:
         logger.critical(f"CRITICAL: Failed to connect to MongoDB asynchronously. URI attempted: {actual_mongo_uri}, DB Name attempted: {actual_db_name}. Error: {e}", exc_info=True)
         raise  # Re-raise the exception so the caller knows it failed
@@ -104,19 +101,17 @@ def initialize_sync_db():
     
     try:
         #logger.info(f"Attempting to connect to MongoDB. Database: {actual_db_name}")
-        sync_client = MongoClient(actual_mongo_uri)
-        sync_client.admin.command('ping') 
+        sync_client = MongoClient(actual_mongo_uri, tlsCAFile=certifi.where())
+        sync_client.admin.command('ping')
         #logger.info("MongoDB server ping successful. Connection established.")
         sync_db = sync_client[actual_db_name]
         #logger.info(f"Successfully connected to MongoDB database: '{actual_db_name}'.")
-        
         db_papers_sync = sync_db["papers"]
         db_user_actions_sync = sync_db["user_actions"]
         db_removed_papers_sync = sync_db["removed_papers"]
         db_users_sync = sync_db["users"]
         db_implementation_progress_sync = sync_db["implementation_progress"]
         #logger.info("Sync database collections initialized: papers, user_actions, removed_papers, users, implementation_progress.") : Updated log message
-
     except Exception as e:
         logger.critical(f"CRITICAL: Failed to connect to MongoDB. URI attempted: {globals().get('actual_mongo_uri', 'Not determined')}, DB Name attempted: {globals().get('actual_db_name', 'Not determined')}. Error: {e}", exc_info=True)
 
