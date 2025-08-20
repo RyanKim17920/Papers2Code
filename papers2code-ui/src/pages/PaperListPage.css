@@ -51,9 +51,9 @@
   }
   
   .list-content-area.loading {
-    width: 100vw; /* Force full viewport width */
+    width: 100%;
     max-width: 100%;
-    margin-left: 10px;
+    margin-left: 0;
   }
   /* Optional: Style loading spinner if needed globally */
   /* Moved spinner style to its own CSS, ensure it looks okay */
