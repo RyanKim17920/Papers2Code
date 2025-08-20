@@ -71,6 +71,11 @@ class AppSettings(BaseSettings):    # Core settings
 
     STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB: str = Field(MAIN_STATUS_NOT_IMPLEMENTABLE, env="STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB")
 
+    # Redis Cache Settings
+    REDIS_URL: Optional[str] = Field(None, env="REDIS_URL")
+    CACHE_TTL: int = Field(300, env="CACHE_TTL")  # 5 minutes default
+    ENABLE_CACHE: bool = Field(True, env="ENABLE_CACHE")
+
     # Nested settings groups
     GITHUB: GitHubOAuthSettings = Field(default_factory=GitHubOAuthSettings)
     VOTING: VotingThresholdSettings = Field(default_factory=VotingThresholdSettings)
