@@ -6,7 +6,6 @@ readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
     "arxiv>=2.2.0",
-    "bson>=0.5.10",
     "dateutils>=0.6.12",
     "dotenv>=0.9.9",
     "fastapi>=0.115.12",
@@ -28,7 +27,7 @@ dependencies = [
     "polars>=1.0.0",
     "pydantic-settings>=2.9.1",
     "pydantic[email]>=2.11.4",
-    "pymongo>=4.12.1",
+    "pymongo[srv]>=4.0",
     "python-dotenv>=1.1.0",
     "python-jose[cryptography]>=3.4.0",
     "requests>=2.32.3",

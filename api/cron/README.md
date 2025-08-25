@@ -10,6 +10,7 @@ The cron job system handles periodic maintenance tasks like email status updates
 
 ### Core Scripts
 - **`email-updater.py`** - Updates email statuses for implementation progress records
+- **`arxiv-updater.py`** - Extracts new papers from ArXiv (replaces Papers with Code)
 - **`../scripts/popular-papers.py`** - Calculates and caches popular papers analytics
 - **`test.py`** - Test suite for validating cron job functionality
 
@@ -37,6 +38,40 @@ ENV_TYPE=PROD MONGO_URI_PROD=mongodb://... python email-updater.py
 
 ### Logging
 Logs are written to `/var/log/papers2code/email-updater.log` when run via cron.
+
+## ArXiv Data Updater (`arxiv-updater.py`)
+
+### Purpose
+Extracts new papers from ArXiv and adds them to the database. This replaces the Papers with Code data source which has been sunsetted.
+
+The updater:
+- Fetches papers from relevant ArXiv categories (cs.CV, cs.LG, cs.AI, etc.)
+- Performs incremental updates based on the last successful update timestamp
+- Sets all new papers to "Needs Code" status for community curation
+- Maintains compatibility with existing database schema
+
+### Schedule
+- **Production**: Every 12 hours (`0 */12 * * *`)
+- **Development**: Every 24 hours (`0 0 * * *`)
+- **Test**: Every hour (`0 * * * *`)
+
+### Usage
+```bash
+# Manual execution
+python /path/to/api/cron/arxiv-updater.py
+
+# With environment variables
+ENV_TYPE=PROD MONGO_URI_PROD=mongodb://... python arxiv-updater.py
+```
+
+### Configuration
+The updater can be configured via environment variables:
+- `ARXIV_CATEGORIES` - Comma-separated list of ArXiv categories (optional)
+- `ARXIV_MAX_RESULTS` - Maximum papers to fetch per update (optional)
+- `ARXIV_DAYS_BACK` - Days to look back for first run (default: 30)
+
+### Logging
+Logs are written to `/var/log/papers2code/arxiv-updater.log` when run via cron.
 
 ## Popular Papers Analytics (`../scripts/popular-papers.py`)
 
@@ -124,6 +159,7 @@ python /path/to/api/cron/test.py
    # Add entries (example for production)
    0 */6 * * * cd /path/to/papers2code && python api/cron/email-updater.py >> /var/log/papers2code/email-updater.log 2>&1
    0 */3 * * * cd /path/to/papers2code && python scripts/popular-papers.py >> /var/log/papers2code/popular-papers.log 2>&1
+   0 */12 * * * cd /path/to/papers2code && python api/cron/arxiv-updater.py >> /var/log/papers2code/arxiv-updater.log 2>&1
    ```
 
 ### Environment Variables
@@ -151,6 +187,7 @@ ps aux | grep python | grep -E "(email-updater|popular-papers)"
 # Check recent log entries
 tail -f /var/log/papers2code/email-updater.log
 tail -f /var/log/papers2code/popular-papers.log
+tail -f /var/log/papers2code/arxiv-updater.log
 
 # Test manually
 python api/cron/test.py
@@ -175,4 +212,5 @@ For deployment on Render.com:
 - `papers2code_app2/background_tasks.py` - Core background task implementation
 - `papers2code_app2/routers/background_tasks_router.py` - HTTP endpoints for background tasks
 - `scripts/copy_prod_data_to_test.py` - Enhanced data copying script
-- `scripts/update_pwc_data.py` - Database update script
+- `scripts/update_arxiv_data.py` - ArXiv data extraction script (replaces PWC)
+- `scripts/update_pwc_data.py` - Legacy Papers with Code update script (deprecated)

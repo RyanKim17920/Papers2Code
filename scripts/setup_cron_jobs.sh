@@ -31,14 +31,17 @@ case "$ENVIRONMENT" in
     "production")
         EMAIL_CRON="0 */6 * * *"  # Every 6 hours
         POPULAR_CRON="0 */3 * * *"  # Every 3 hours
+        ARXIV_CRON="0 */12 * * *"  # Every 12 hours
         ;;
     "test")
         EMAIL_CRON="*/30 * * * *"  # Every 30 minutes for testing
         POPULAR_CRON="*/15 * * * *"  # Every 15 minutes for testing
+        ARXIV_CRON="0 * * * *"  # Every hour for testing
         ;;
     *)  # development
         EMAIL_CRON="0 */12 * * *"  # Every 12 hours
         POPULAR_CRON="0 */6 * * *"  # Every 6 hours
+        ARXIV_CRON="0 0 * * *"  # Every 24 hours
         ;;
 esac
 
@@ -49,6 +52,7 @@ echo "Python path: $PYTHON_PATH"
 # Email updater cron job
 EMAIL_SCRIPT="$PROJECT_ROOT/api/cron/email-updater.py"
 POPULAR_SCRIPT="$PROJECT_ROOT/scripts/popular-papers.py"
+ARXIV_SCRIPT="$PROJECT_ROOT/api/cron/arxiv-updater.py"
 
 # Check if scripts exist
 if [[ ! -f "$EMAIL_SCRIPT" ]]; then
@@ -61,9 +65,15 @@ if [[ ! -f "$POPULAR_SCRIPT" ]]; then
     exit 1
 fi
 
+if [[ ! -f "$ARXIV_SCRIPT" ]]; then
+    echo "Error: ArXiv updater script not found at $ARXIV_SCRIPT"
+    exit 1
+fi
+
 # Make scripts executable
 chmod +x "$EMAIL_SCRIPT"
 chmod +x "$POPULAR_SCRIPT"
+chmod +x "$ARXIV_SCRIPT"
 
 # Create temporary cron file
 TEMP_CRON=$(mktemp)
@@ -81,6 +91,9 @@ $EMAIL_CRON cd $PROJECT_ROOT && $PYTHON_PATH $EMAIL_SCRIPT >> $LOG_DIR/email-upd
 # Popular papers analytics - calculates and caches popular papers
 $POPULAR_CRON cd $PROJECT_ROOT && $PYTHON_PATH $POPULAR_SCRIPT >> $LOG_DIR/popular-papers.log 2>&1
 
+# ArXiv data updater - extracts new papers from ArXiv (replaces Papers with Code)
+$ARXIV_CRON cd $PROJECT_ROOT && $PYTHON_PATH $ARXIV_SCRIPT >> $LOG_DIR/arxiv-updater.log 2>&1
+
 EOF
 
 # Install the new crontab
@@ -90,10 +103,12 @@ if crontab "$TEMP_CRON"; then
     echo "Installed jobs:"
     echo "  📧 Email updater: $EMAIL_CRON"
     echo "  📊 Popular papers: $POPULAR_CRON"
+    echo "  🔬 ArXiv data updater: $ARXIV_CRON"
     echo ""
     echo "Logs will be written to:"
     echo "  $LOG_DIR/email-updater.log"
     echo "  $LOG_DIR/popular-papers.log"
+    echo "  $LOG_DIR/arxiv-updater.log"
     echo ""
     echo "To view current cron jobs: crontab -l"
     echo "To edit cron jobs: crontab -e"
@@ -137,3 +152,4 @@ echo "2. Monitor the log files for the first few runs"
 echo "3. Test the jobs manually if needed:"
 echo "   $PYTHON_PATH $EMAIL_SCRIPT"
 echo "   $PYTHON_PATH $POPULAR_SCRIPT"
+echo "   $PYTHON_PATH $ARXIV_SCRIPT"
