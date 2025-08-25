@@ -195,8 +195,10 @@ The application will automatically create indexes on startup. For manual databas
 
 ```bash
 # Run database utilities
-uv run scripts/process_pwc_data.py      # Import Papers With Code data
-uv run scripts/update_pwc_data.py       # Update existing data
+uv run scripts/update_arxiv_data.py       # Extract new papers from ArXiv
+# Legacy PWC scripts (deprecated):
+# uv run scripts/process_pwc_data.py      # Import Papers With Code data (deprecated)
+# uv run scripts/update_pwc_data.py       # Update existing data (deprecated)
 ```
 
 ## 🧪 Testing
@@ -271,7 +273,7 @@ This project is licensed under the MIT License - see the [LICENSE](LICENSE) file
 
 ## 🙏 Acknowledgments
 
-- **Papers With Code** for research paper data
+- **ArXiv** for research paper data (replaced Papers with Code after it was sunsetted)
 - **FastAPI** and **React** communities  
 - **MongoDB Atlas** for search capabilities
 - **Render** for hosting infrastructure

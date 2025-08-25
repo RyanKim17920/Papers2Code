@@ -11,10 +11,10 @@ This list will be used to track the project's progress.
 - [ ] Implement the main dashboard to display popular repositories and the user's repositories. WIP --> need better design, some glitches to finish
 
 ### Backend (`papers2code_app2`) & Scripts
-- [ ] **Database & Scripts:**
-    - [ ] Review and fix the database update scripts (e.g., `scripts/update_pwc_data.py`) to be more up to date and more efficient.
+- [x] **Database & Scripts:**
+    - [x] Review and fix the database update scripts (e.g., `scripts/update_pwc_data.py`) to be more up to date and more efficient. ✅ **COMPLETED** - Migrated from Papers with Code to ArXiv data extraction due to PWC being sunsetted. Created `scripts/arxiv_extractor.py` and `scripts/update_arxiv_data.py` with incremental updates, proper error handling, and cron job integration.
     - [x] Fix copy_prod_data_to_test.py to be also more up-to-date and relevant. ✅ **COMPLETED** - Enhanced script with better error handling, related data copying, database summaries, and configurable options.
-    - [x] Fix recurring cron jobs (e.g., `api/cron/email-updater.py`, popular-papers.py ). These need extensive testing ✅ **COMPLETED** - Created comprehensive cron job system with optimized email-updater, view analytics, popular-papers analytics using sliding window/incremental approaches. Removed redundant user_recent_views collection. All tests passing with cleanup scripts.
+    - [x] Fix recurring cron jobs (e.g., `api/cron/email-updater.py`, popular-papers.py ). These need extensive testing ✅ **COMPLETED** - Created comprehensive cron job system with optimized email-updater, view analytics, popular-papers analytics using sliding window/incremental approaches. Added ArXiv data updater cron job. Removed redundant user_recent_views collection. All tests passing with cleanup scripts.
 - [ ] **Improving Profile:**
     - [ ] Make the profile call for data as necessary, not at the start to reduce loading time significantly (depending on the tab instead of loading it all in at the first reload), and create a navigation similar to the paperlist if upvotes/contributions are large
     - [ ] Show successful contributions and be able to better organize it as necessary
