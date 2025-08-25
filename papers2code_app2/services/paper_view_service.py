@@ -13,6 +13,8 @@ from ..database import (
     get_implementation_progress_collection_async,
 )
 from .exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
+from ..cache import paper_cache
+from ..shared import config_settings
 
 
 logger = logging.getLogger(__name__)
@@ -117,21 +119,54 @@ class PaperViewService:
         service_start_time = time.time()
         self.logger.info(f"get_papers_list called with: skip={skip}, limit={limit}, sort_by='{sort_by}', searchQuery='{search_query}', author='{author}'")
         
+        # Create cache key from search parameters (exclude user_id from public cache)
+        cache_params = {
+            "skip": skip,
+            "limit": limit,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+            "search_query": search_query,
+            "author": author,
+            "start_date": start_date,
+            "end_date": end_date,
+            "main_status": main_status,
+            "impl_status": impl_status,
+            "tags": sorted(tags) if tags else None,  # Sort for consistent caching
+            "has_official_impl": has_official_impl,
+            "venue": venue
+        }
+        
+        # Try to get from cache first
+        cached_result = await paper_cache.get_cached_result(**cache_params)
+        if cached_result:
+            self.logger.info(f"CACHE HIT: Returning cached result in {time.time() - service_start_time:.4f}s")
+            return cached_result["papers"], cached_result["total_count"]
+        
         # Check if Atlas Search will be active
         is_atlas_search_active = bool(search_query or author)
         
         if is_atlas_search_active:
             # TWO-PHASE APPROACH FOR ATLAS SEARCH
-            return await self._get_papers_list_atlas_two_phase(
+            papers, total_count = await self._get_papers_list_atlas_two_phase(
                 skip, limit, sort_by, sort_order, user_id, search_query, author,
                 start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
             )
         else:
             # STANDARD MONGODB QUERY (unchanged)
-            return await self._get_papers_list_standard(
+            papers, total_count = await self._get_papers_list_standard(
                 skip, limit, sort_by, sort_order, user_id, search_query, author,
                 start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
             )
+        
+        # Cache the result for future requests
+        result_to_cache = {
+            "papers": papers,
+            "total_count": total_count
+        }
+        await paper_cache.cache_result(result_to_cache, **cache_params)
+        
+        self.logger.info(f"CACHE MISS: Query completed and cached in {time.time() - service_start_time:.4f}s")
+        return papers, total_count
 
     async def _get_papers_list_atlas_two_phase(
         self,
@@ -396,9 +431,35 @@ class PaperViewService:
             sort_criteria = list(sort_doc.items()) if sort_doc else None
 
             find_call_start_time = time.time()
+            
+            # Add query hints for better index usage
             cursor = papers_collection.find(final_query)
-            if sort_criteria:
+            
+            # Apply index hints based on query and sort criteria (if enabled)
+            if config_settings.ENABLE_QUERY_HINTS and sort_criteria:
+                sort_field = sort_criteria[0][0]
+                sort_direction = sort_criteria[0][1]
+                
+                # Use appropriate index hints for common sort patterns
+                if sort_field == "publicationDate":
+                    if main_status:
+                        cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
+                    else:
+                        cursor = cursor.hint("publicationDate_-1_papers_async")
+                elif sort_field == "upvoteCount":
+                    if main_status:
+                        cursor = cursor.hint("status_1_upvoteCount_-1_papers_async")
+                    else:
+                        cursor = cursor.hint("upvoteCount_-1_papers_async")
+                elif sort_field == "title":
+                    cursor = cursor.hint("title_1_papers_async")
+                
                 cursor = cursor.sort(sort_criteria)
+            else:
+                # Default hint for unsorted queries
+                if config_settings.ENABLE_QUERY_HINTS and main_status:
+                    cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
+            
             cursor = cursor.skip(skip).limit(limit)
             self.logger.info(f"Standard find query construction took: {time.time() - find_call_start_time:.4f}s")
             
@@ -407,12 +468,29 @@ class PaperViewService:
             self.logger.info(f"Standard find cursor.to_list() took: {time.time() - find_fetch_start_time:.4f}s")
             
             count_start_time = time.time()
+            
+            # Optimize count operation based on query complexity
             if not final_query:
+                # No filters - use cached estimated count
                 total_papers = await papers_collection.estimated_document_count()
                 self.logger.info(f"Standard estimated_document_count took: {time.time() - count_start_time:.4f}s")
             else:
-                total_papers = await papers_collection.count_documents(final_query)
-                self.logger.info(f"Standard count_documents took: {time.time() - count_start_time:.4f}s")
+                # For paginated queries where we just need to know "more than current page"
+                # we can optimize by limiting the count when skip is large
+                if config_settings.OPTIMIZE_COUNT_QUERIES and skip > 0 and limit < 100:  # Only for reasonable page sizes
+                    # Use aggregation with limit for better performance on large datasets
+                    count_pipeline = [
+                        {"$match": final_query},
+                        {"$limit": skip + limit + 1000},  # Reasonable upper bound
+                        {"$count": "total"}
+                    ]
+                    count_result = await papers_collection.aggregate(count_pipeline).to_list(length=1)
+                    total_papers = count_result[0]["total"] if count_result else 0
+                    self.logger.info(f"Standard optimized count_aggregation took: {time.time() - count_start_time:.4f}s")
+                else:
+                    # Traditional count for first page or when exact count is needed
+                    total_papers = await papers_collection.count_documents(final_query)
+                    self.logger.info(f"Standard count_documents took: {time.time() - count_start_time:.4f}s")
             
             self.logger.info(f"Standard query total time: {time.time() - service_start_time:.4f}s")
             return papers_list, total_papers
