@@ -1,38 +1,46 @@
 // src/App.tsx
+
+// 1. Import QueryClient and QueryClientProvider
+import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import LandingPage from './pages/LandingPage';
-import PaperListPage from './pages/PaperListPage';
-import PaperDetailPage from './pages/PaperDetailPage';
-import DashboardPage from './pages/DashboardPage';
-import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from './common/services/auth';
-import type { UserProfile } from './common/types/user';
-import { UserAvatar } from './common/components';
-import AuthInitializer from './common/components/AuthInitializer'; // Import AuthInitializer
-import { ModalProvider } from './common/context/ModalContext'; // Import ModalProvider
-import LoginPromptModal from './common/components/LoginPromptModal'; // Import LoginPromptModal
-import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from './common/components/ErrorBoundary';
-import { AuthenticationError } from './common/services/api'; // Import AuthenticationError
-import GlobalHeader from './components/common/GlobalHeader'; // Import GlobalHeader
+import LandingPage from '@/pages/LandingPage';
+import PaperListPage from '@/pages/PaperListPage';
+import PaperDetailPage from '@/pages/PaperDetailPage';
+import DashboardPage from '@/pages/DashboardPage';
+import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from '@/common/services/auth';
+import type { UserProfile } from '@/common/types/user';
+import { UserAvatar } from '@/common/components';
+import AuthInitializer from '@/common/components/AuthInitializer';
+import { ModalProvider } from '@/common/context/ModalContext';
+import LoginPromptModal from '@/common/components/LoginPromptModal';
+import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from '@/common/components/ErrorBoundary';
+import { AuthenticationError } from '@/common/services/api';
+import GlobalHeader from '@/components/common/GlobalHeader';
 
-import ProfilePage from './pages/ProfilePage'; // Added import for ProfilePage
-import SettingsPage from './pages/SettingsPage'; // Added import for SettingsPage
-import NotFoundPage from './pages/NotFoundPage';
-import './App.css';
+import Dashboard from '@/pages/Dashboard'
+import ProfilePage from '@/pages/ProfilePage';
+import SettingsPage from '@/pages/SettingsPage';
+import NotFoundPage from '@/pages/NotFoundPage';
+import '@/App.css';
+
+// 2. Create a new instance of the QueryClient
+// This is done outside the component to prevent it from being recreated on every render.
+const queryClient = new QueryClient();
   
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false); // State for dropdown
-  const dropdownRef = useRef<HTMLDivElement>(null); // Ref for dropdown click outside
+  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
+  const dropdownRef = useRef<HTMLDivElement>(null);
   const location = useLocation();
   const navigate = useNavigate();
 
-  // Check login status and fetch CSRF token when the app loads or location changes
+  // ... (rest of your existing useEffect and handler functions remain the same)
   useEffect(() => {
     const initializeApp = async () => {
       setAuthLoading(true);
-      await fetchAndStoreCsrfToken(); // Fetch and store the token
+      await fetchAndStoreCsrfToken();
       try {
         const user = await checkCurrentUser();
         setCurrentUser(user);
@@ -47,7 +55,7 @@ function App() {
       }
     };
     initializeApp();
-  }, [location.pathname]); // Re-run when the path changes
+  }, [location.pathname]);
 
   useEffect(() => {
     const handleClickOutside = (event: MouseEvent) => {
@@ -61,27 +69,23 @@ function App() {
     };
   }, [dropdownRef]);
 
-  // Prevent any rendering until authLoading is false
   if (authLoading) {
     return null;
   }
 
-  // Redirect to dashboard if logged in and currently on /
   if (currentUser && location.pathname === "/") {
     navigate("/dashboard", { replace: true });
     return null;
   }
 
-  // Handle Logout
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
-    localStorage.removeItem('csrfToken'); // Clear token on logout
-    setIsDropdownOpen(false); // Close dropdown on logout
+    localStorage.removeItem('csrfToken');
+    setIsDropdownOpen(false);
   };
 
   const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
-  console.log(currentUser);
   
   const authSection = (
     <>
@@ -120,49 +124,51 @@ function App() {
     </>
   );
 
+  // 3. Wrap your existing providers and components with QueryClientProvider
   return (
-    <ModalProvider>
-      <AuthInitializer /> {/* Initialize Auth-related hooks here */}
-        <div className="app-container">
-          <GlobalHeader 
-            currentUser={currentUser}
-            authSection={authSection}
-          />
-          <main className="app-main">
-            <ErrorBoundary>
-              <Routes>
-                <Route path="/" element={<LandingPage />} />
-                <Route 
-                  path="/papers" 
-                  element={
-                    <PaperListErrorBoundary>
-                      <PaperListPage authLoading={authLoading} />
-                    </PaperListErrorBoundary>
-                  } 
-                />
-                <Route
-                  path="/paper/:paperId"
-                  element={
-                    <PaperDetailErrorBoundary>
-                      <PaperDetailPage currentUser={currentUser} />
-                    </PaperDetailErrorBoundary>
-                  }
-                />              
-                <Route path="/dashboard" element={<DashboardPage />} /> {/* Added route for DashboardPage */}
-                <Route path="/user/:github_username" element={<ProfilePage />} /> {/* Added route for ProfilePage */}
-                <Route path="/settings" element={<SettingsPage />} /> {/* Added route for SettingsPage */}
-                <Route path="*" element={<NotFoundPage />} />
-              </Routes>
-            </ErrorBoundary>
-          </main>          
-          <LoginPromptModal /> {/* Add LoginPromptModal here so it can be displayed globally */}
+    <QueryClientProvider client={queryClient}>
+      <ModalProvider>
+        <AuthInitializer />
+          <div className="app-container">
+            <GlobalHeader 
+              currentUser={currentUser}
+              authSection={authSection}
+            />
+            <main className="app-main">
+              <ErrorBoundary>
+                <Routes>
+                  <Route path="/" element={<LandingPage />} />
+                  <Route 
+                    path="/papers" 
+                    element={
+                      <PaperListErrorBoundary>
+                        <PaperListPage authLoading={authLoading} />
+                      </PaperListErrorBoundary>
+                    } 
+                  />
+                  <Route
+                    path="/paper/:paperId"
+                    element={
+                      <PaperDetailErrorBoundary>
+                        <PaperDetailPage currentUser={currentUser} />
+                      </PaperDetailErrorBoundary>
+                    }
+                  />              
+                  <Route path="/dashboard" element={<Dashboard />} />
+                  <Route path="/user/:github_username" element={<ProfilePage />} />
+                  <Route path="/settings" element={<SettingsPage />} />
+                  <Route path="*" element={<NotFoundPage />} />
+                </Routes>
+              </ErrorBoundary>
+            </main>          
+            <LoginPromptModal />
 
-          <footer className="app-footer"> 
-          </footer>
-        </div>
-    </ModalProvider>
+            <footer className="app-footer"> 
+            </footer>
+          </div>
+      </ModalProvider>
+    </QueryClientProvider>
   );
 }
-
 
 export default App;
