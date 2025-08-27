@@ -2,7 +2,7 @@ import React from 'react';
 
 export const LoadingDashboard: React.FC = () => {
   return (
-    <div className="min-h-screen bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] p-6">
+    <div className="min-h-screen bg-linear-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] p-6">
       <div className="max-w-7xl mx-auto">
         <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
           {/* Left Column - Profile */}

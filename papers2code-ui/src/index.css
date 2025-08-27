@@ -77,28 +77,10 @@
   }
 }
 
-/*
-  The default border color has changed to `currentcolor` in Tailwind CSS v4,
-  so we've added these compatibility styles to make sure everything still
-  looks the same as it did with Tailwind CSS v3.
-
-  If we ever want to remove these styles, we need to add an explicit border
-  color utility to any element that depends on these defaults.
-*/
-@layer base {
-  *,
-  ::after,
-  ::before,
-  ::backdrop,
-  ::file-selector-button {
-    border-color: var(--color-gray-200, currentcolor);
-  }
-}
-
 @utility research-card {
   /* Enhanced Research Platform Components */
   background: var(--gradient-card);
-  @apply border border-[var(--gradient-border)] rounded-xl shadow-[var(--shadow-medium)] hover:shadow-[var(--shadow-large)] transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm;
+  @apply border border-(--gradient-border) rounded-xl shadow-(--shadow-medium) hover:shadow-(--shadow-large) transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm;
 }
 
 @utility research-card-hover {
@@ -135,6 +117,24 @@
 
 @utility research-tab-inactive {
   @apply bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50;
+}
+
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
+
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
 }
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
