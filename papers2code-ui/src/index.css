@@ -1,84 +1,141 @@
-@tailwind base;
-@tailwind components;
-@tailwind utilities;
+@import 'tailwindcss';
 
-:root {
-  font-family: system-ui, Avenir, Helvetica, Arial, sans-serif;
-  line-height: 1.5;
-  font-weight: 400;
+@plugin 'tailwindcss-animate';
 
-  color-scheme: light dark;
-  color: rgba(255, 255, 255, 0.87);
-  background-color: #242424;
+@custom-variant dark (&:is(.dark *));
 
-  font-synthesis: none;
-  text-rendering: optimizeLegibility;
-  -webkit-font-smoothing: antialiased;
-  -moz-osx-font-smoothing: grayscale;
-}
+@theme {
+  --color-border: hsl(var(--border));
+  --color-input: hsl(var(--input));
+  --color-ring: hsl(var(--ring));
+  --color-background: hsl(var(--background));
+  --color-foreground: hsl(var(--foreground));
 
-a {
-  font-weight: 500;
-  color: #646cff;
-  text-decoration: inherit;
-}
-a:hover {
-  color: #535bf2;
-}
+  --color-primary: hsl(var(--primary));
+  --color-primary-foreground: hsl(var(--primary-foreground));
 
-body {
-  margin: 0;
-  min-width: 320px;
-  min-height: 100vh;
-  width: 100%;
-  display: block;
-}
+  --color-secondary: hsl(var(--secondary));
+  --color-secondary-foreground: hsl(var(--secondary-foreground));
 
-#root {
-  width: 100%;
-  min-height: 100vh;
-  display: block;
-}
+  --color-destructive: hsl(var(--destructive));
+  --color-destructive-foreground: hsl(var(--destructive-foreground));
 
-h1 {
-  font-size: 3.2em;
-  line-height: 1.1;
-}
+  --color-muted: hsl(var(--muted));
+  --color-muted-foreground: hsl(var(--muted-foreground));
 
-button {
-  border-radius: 8px;
-  border: 1px solid transparent;
-  padding: 0.6em 1.2em;
-  font-size: 1em;
-  font-weight: 500;
-  font-family: inherit;
-  background-color: #1a1a1a;
-  cursor: pointer;
-  transition: border-color 0.25s;
-}
-button:hover {
-  border-color: #646cff;
-}
-button:focus,
-button:focus-visible {
-  outline: 4px auto -webkit-focus-ring-color;
-}
+  --color-accent: hsl(var(--accent));
+  --color-accent-foreground: hsl(var(--accent-foreground));
 
-@media (prefers-color-scheme: light) {
-  :root {
-    color: #213547;
-    background-color: #ffffff;
+  --color-popover: hsl(var(--popover));
+  --color-popover-foreground: hsl(var(--popover-foreground));
+
+  --color-card: hsl(var(--card));
+  --color-card-foreground: hsl(var(--card-foreground));
+
+  --color-sidebar: hsl(var(--sidebar-background));
+  --color-sidebar-foreground: hsl(var(--sidebar-foreground));
+  --color-sidebar-primary: hsl(var(--sidebar-primary));
+  --color-sidebar-primary-foreground: hsl(var(--sidebar-primary-foreground));
+  --color-sidebar-accent: hsl(var(--sidebar-accent));
+  --color-sidebar-accent-foreground: hsl(var(--sidebar-accent-foreground));
+  --color-sidebar-border: hsl(var(--sidebar-border));
+  --color-sidebar-ring: hsl(var(--sidebar-ring));
+
+  --radius-lg: var(--radius);
+  --radius-md: calc(var(--radius) - 2px);
+  --radius-sm: calc(var(--radius) - 4px);
+
+  --animate-accordion-down: accordion-down 0.2s ease-out;
+  --animate-accordion-up: accordion-up 0.2s ease-out;
+
+  @keyframes accordion-down {
+    from {
+      height: 0;
+    }
+    to {
+      height: var(--radix-accordion-content-height);
+    }
   }
-  a:hover {
-    color: #747bff;
-  }
-  button {
-    background-color: #f9f9f9;
+  @keyframes accordion-up {
+    from {
+      height: var(--radix-accordion-content-height);
+    }
+    to {
+      height: 0;
+    }
   }
 }
 
+@utility container {
+  margin-inline: auto;
+  padding-inline: 2rem;
+  @media (width >= --theme(--breakpoint-sm)) {
+    max-width: none;
+  }
+  @media (width >= 1400px) {
+    max-width: 1400px;
+  }
+}
 
+/*
+  The default border color has changed to `currentcolor` in Tailwind CSS v4,
+  so we've added these compatibility styles to make sure everything still
+  looks the same as it did with Tailwind CSS v3.
 
+  If we ever want to remove these styles, we need to add an explicit border
+  color utility to any element that depends on these defaults.
+*/
+@layer base {
+  *,
+  ::after,
+  ::before,
+  ::backdrop,
+  ::file-selector-button {
+    border-color: var(--color-gray-200, currentcolor);
+  }
+}
+
+@utility research-card {
+  /* Enhanced Research Platform Components */
+  background: var(--gradient-card);
+  @apply border border-[var(--gradient-border)] rounded-xl shadow-[var(--shadow-medium)] hover:shadow-[var(--shadow-large)] transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm;
+}
+
+@utility research-card-hover {
+  @apply hover:bg-accent/5 hover:border-accent/20;
+}
+
+@utility research-badge {
+  @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
+}
+
+@utility research-badge-success {
+  @apply bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] border border-[hsl(var(--success)/0.2)];
+}
+
+@utility research-badge-warning {
+  @apply bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))] border border-[hsl(var(--warning)/0.2)];
+}
+
+@utility research-badge-info {
+  @apply bg-[hsl(var(--info)/0.1)] text-[hsl(var(--info))] border border-[hsl(var(--info)/0.2)];
+}
+
+@utility research-badge-muted {
+  @apply bg-muted text-muted-foreground border border-border;
+}
+
+@utility research-section {
+  @apply research-card p-6 space-y-4;
+}
+
+@utility research-tab-active {
+  @apply bg-primary text-primary-foreground shadow-xs;
+}
+
+@utility research-tab-inactive {
+  @apply bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50;
+}
 
 /* Definition of the design system. All colors, gradients, fonts, etc should be defined here. 
 All colors MUST be HSL.
@@ -86,6 +143,7 @@ All colors MUST be HSL.
 
 @layer base {
   :root {
+    /* Research Platform Color Scheme */
     --background: 0 0% 99.5%;
     --foreground: 210 12% 16%;
 
@@ -116,6 +174,7 @@ All colors MUST be HSL.
 
     --radius: 0.75rem;
 
+    /* Research Platform Custom Variables */
     --gradient-start: 197 100% 98%;
     --gradient-end: 197 50% 95%;
     --success: 142 76% 36%;
@@ -125,9 +184,44 @@ All colors MUST be HSL.
     --info: 197 87% 35%;
     --info-foreground: 0 0% 98%;
     
+    /* Enhanced Shadows & Depth */
     --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.1), 0 1px 2px -1px rgb(0 0 0 / 0.1);
     --shadow-medium: 0 4px 6px -1px rgb(0 0 0 / 0.1), 0 2px 4px -2px rgb(0 0 0 / 0.1);
     --shadow-large: 0 10px 15px -3px rgb(0 0 0 / 0.1), 0 4px 6px -4px rgb(0 0 0 / 0.1);
+    --shadow-elevated: 0 20px 25px -5px rgb(0 0 0 / 0.1), 0 10px 10px -5px rgb(0 0 0 / 0.04);
+    --shadow-glow: 0 0 20px -5px hsl(var(--primary) / 0.1);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.05);
+    
+    /* Dynamic Gradients */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary) / 0.05), hsl(var(--primary) / 0.02));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--muted) / 0.3));
+    --gradient-hover: linear-gradient(145deg, hsl(var(--accent) / 0.1), hsl(var(--primary) / 0.05));
+    --gradient-border: linear-gradient(145deg, hsl(var(--border)), hsl(var(--primary) / 0.1));
+    
+    /* Glass Effects */
+    --glass-bg: rgba(255, 255, 255, 0.05);
+    --glass-border: rgba(255, 255, 255, 0.1);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.1);
+    
+    /* Animations */
+    --animate-float: float 6s ease-in-out infinite;
+    --animate-pulse-glow: pulse-glow 2s ease-in-out infinite alternate;
+    --animate-slide-in: slide-in 0.5s cubic-bezier(0.4, 0, 0.2, 1);
+    
+    @keyframes float {
+      0%, 100% { transform: translateY(0px); }
+      50% { transform: translateY(-5px); }
+    }
+    
+    @keyframes pulse-glow {
+      0% { box-shadow: 0 0 5px hsl(var(--primary) / 0.2); }
+      100% { box-shadow: 0 0 20px hsl(var(--primary) / 0.4), 0 0 30px hsl(var(--primary) / 0.1); }
+    }
+    
+    @keyframes slide-in {
+      from { opacity: 0; transform: translateY(20px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
 
     --sidebar-background: 0 0% 98%;
 
@@ -187,54 +281,11 @@ All colors MUST be HSL.
 
 @layer base {
   * {
-    @apply ;
+    @apply border-border;
   }
 
   body {
-    @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
+    @apply bg-linear-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
     font-feature-settings: "rlig" 1, "calt" 1;
-  }
-}
-
-@layer components {
-  /* Research Platform Components */
-  .research-card {
-    @apply bg-card border  rounded-lg shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-medium)] transition-all duration-200;
-  }
-  
-  .research-card-hover {
-    @apply hover:bg-accent/5 hover:border-accent/20;
-  }
-  
-  .research-badge {
-    @apply inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium;
-  }
-  
-  .research-badge-success {
-    @apply bg-[hsl(var(--success)/0.1)] text-[hsl(var(--success))] border border-[hsl(var(--success)/0.2)];
-  }
-  
-  .research-badge-warning {
-    @apply bg-[hsl(var(--warning)/0.1)] text-[hsl(var(--warning))] border border-[hsl(var(--warning)/0.2)];
-  }
-  
-  .research-badge-info {
-    @apply bg-[hsl(var(--info)/0.1)] text-[hsl(var(--info))] border border-[hsl(var(--info)/0.2)];
-  }
-  
-  .research-badge-muted {
-    @apply bg-muted text-muted-foreground border ;
-  }
-  
-  .research-section {
-    @apply research-card p-6 space-y-4;
-  }
-  
-  .research-tab-active {
-    @apply bg-primary text-primary-foreground shadow-sm;
-  }
-  
-  .research-tab-inactive {
-    @apply bg-transparent text-muted-foreground hover:text-foreground hover:bg-accent/50;
   }
 }
