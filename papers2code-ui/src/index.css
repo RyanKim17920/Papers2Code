@@ -187,7 +187,7 @@ All colors MUST be HSL.
 
 @layer base {
   * {
-    @apply border-border;
+    @apply ;
   }
 
   body {
@@ -199,7 +199,7 @@ All colors MUST be HSL.
 @layer components {
   /* Research Platform Components */
   .research-card {
-    @apply bg-card border border-border rounded-lg shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-medium)] transition-all duration-200;
+    @apply bg-card border  rounded-lg shadow-[var(--shadow-soft)] hover:shadow-[var(--shadow-medium)] transition-all duration-200;
   }
   
   .research-card-hover {
@@ -223,7 +223,7 @@ All colors MUST be HSL.
   }
   
   .research-badge-muted {
-    @apply bg-muted text-muted-foreground border border-border;
+    @apply bg-muted text-muted-foreground border ;
   }
   
   .research-section {
