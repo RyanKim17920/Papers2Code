@@ -43,9 +43,17 @@ class PaperSearchCache:
             # Try Redis first if available
             import redis
             if config_settings.REDIS_URL:
-                self.redis_client = redis.from_url(config_settings.REDIS_URL)
+                # Optimized Redis connection with connection pooling
+                self.redis_client = redis.from_url(
+                    config_settings.REDIS_URL,
+                    max_connections=config_settings.REDIS_MAX_CONNECTIONS,
+                    socket_keepalive=config_settings.REDIS_SOCKET_KEEPALIVE,
+                    socket_keepalive_options={},
+                    retry_on_timeout=True,
+                    health_check_interval=30
+                )
                 self.redis_client.ping()  # Test connection
-                logger.info("Redis cache initialized successfully")
+                logger.info("Redis cache initialized successfully with optimized connection pooling")
             else:
                 raise ImportError("No Redis URL provided in config")
         except (ImportError, Exception) as e:
@@ -57,7 +65,8 @@ class PaperSearchCache:
         # Sort parameters for consistent keys
         sorted_params = sorted(kwargs.items())
         key_string = json.dumps(sorted_params, sort_keys=True)
-        return f"papers_search:{hashlib.md5(key_string.encode()).hexdigest()}"
+        cache_key = f"{config_settings.CACHE_KEY_PREFIX}:papers_search:{hashlib.md5(key_string.encode()).hexdigest()}"
+        return cache_key
 
     async def get_cached_result(self, **search_params) -> Optional[Dict[str, Any]]:
         """Get cached search result"""
