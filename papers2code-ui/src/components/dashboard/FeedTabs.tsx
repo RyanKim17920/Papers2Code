@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TrendingUp, Clock, Heart, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PaperCard } from './PaperCard';
-import type { Paper } from '@/types/paper';
+import type { Paper } from '@/common/types/paper';
 
 interface FeedTabsProps {
   trendingPapers: Paper[];
@@ -13,7 +13,7 @@ interface FeedTabsProps {
   onPaperClick: (paperId: string | number) => void;
 }
 
-export const FeedTabs: React.FC<FeedTabsProps> = ({
+const FeedTabs: React.FC<FeedTabsProps> = ({
   trendingPapers = [],
   recentPapers = [],
   personalizedPapers = [],
@@ -150,3 +150,5 @@ export const FeedTabs: React.FC<FeedTabsProps> = ({
     </div>
   );
 };
+
+export default FeedTabs;

@@ -142,12 +142,6 @@ const Dashboard: React.FC = () => {
       <div className="flex">
   {/* Left Sidebar - Navigation & Profile */}
   <div className="w-72 min-h-screen column-left border-r border-border/60 flex flex-col">
-          <div className="p-4 border-b border-border/60">
-            <h2 className="text-lg font-semibold text-foreground">Dashboard</h2>
-            <p className="text-sm text-muted-foreground mt-1">
-              Welcome, {currentUser?.displayName || currentUser?.username || 'Researcher'}
-            </p>
-          </div>
           
           <div className="flex-1 p-4">
             <ModernUserProfile

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { fetchLatestUpdates } from '@/services/updatesApi';
-import type { UpdateItem } from '@/types/update';
+import { fetchLatestUpdates } from '@/common/services/updatesApi';
+import type { UpdateItem } from '@/common/types/update';
 
 const Updates: React.FC = () => {
   const [items, setItems] = useState<UpdateItem[]>([]);

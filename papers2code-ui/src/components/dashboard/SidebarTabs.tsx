@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import { TrendingUp, History, Bookmark } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PaperCard } from './PaperCard';
-import type { Paper } from '@/types/paper';
+import type { Paper } from '@/common/types/paper';
 
 interface SidebarTabsProps {
   trendingPapers: Paper[];
@@ -11,8 +11,7 @@ interface SidebarTabsProps {
   isLoading: boolean;
   onPaperClick: (paperId: string | number) => void;
 }
-
-export const SidebarTabs: React.FC<SidebarTabsProps> = ({
+const SidebarTabs: React.FC<SidebarTabsProps> = ({
   trendingPapers = [],
   recentlyViewed = [],
   bookmarkedPapers = [],
@@ -126,3 +125,5 @@ export const SidebarTabs: React.FC<SidebarTabsProps> = ({
     </div>
   );
 };
+
+export default SidebarTabs;

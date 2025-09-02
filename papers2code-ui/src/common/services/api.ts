@@ -13,6 +13,7 @@ export interface UserProfileResponse {
   contributedPapers: Paper[];
 }
 
+//TODO: need to add rest of dashboard data
 // --- Dashboard Types ---
 export interface DashboardData {
   trendingPapers: Paper[];

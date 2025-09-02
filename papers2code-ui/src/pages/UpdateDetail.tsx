@@ -1,7 +1,7 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
-import { fetchLatestUpdates } from '@/services/updatesApi';
-import type { UpdateItem } from '@/types/update';
+import { fetchLatestUpdates } from '@/common/services/updatesApi';
+import type { UpdateItem } from '@/common/types/update';
 
 const UpdateDetail: React.FC = () => {
   const { id } = useParams<{ id: string }>();

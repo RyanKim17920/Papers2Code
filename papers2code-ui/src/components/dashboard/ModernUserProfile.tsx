@@ -4,7 +4,7 @@ import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { UserProfile } from '@/types/user';
+import type { UserProfile } from '@/common/types/user';
 
 interface ModernUserProfileProps {
   user: UserProfile | null;
@@ -36,14 +36,14 @@ export const ModernUserProfile: React.FC<ModernUserProfileProps> = ({
       {/* User Info */}
       <div className="flex items-center space-x-3 p-3 rounded-lg bg-muted/30 border border-border/50">
         <Avatar className="w-10 h-10">
-          <AvatarImage src={user.avatarUrl} alt={user.displayName || user.username} />
+          <AvatarImage src={user.avatarUrl} alt={user.username} />
           <AvatarFallback className="bg-primary text-primary-foreground">
-            {(user.displayName || user.username || 'U').charAt(0).toUpperCase()}
+            {user.username.charAt(0).toUpperCase()}
           </AvatarFallback>
         </Avatar>
         <div className="flex-1 min-w-0">
           <p className="font-medium text-sm text-foreground truncate">
-            {user.displayName || user.username}
+            {user.username}
           </p>
           <p className="text-xs text-muted-foreground">Research Professional</p>
         </div>
@@ -55,14 +55,15 @@ export const ModernUserProfile: React.FC<ModernUserProfileProps> = ({
           <div className="text-sm font-semibold text-foreground">{user.stats?.contributions || 0}</div>
           <div className="text-xs text-muted-foreground">Papers</div>
         </div>
-        <div className="text-center p-2 rounded border border-border/50 bg-card/50">
-          <div className="text-sm font-semibold text-foreground">{user.stats?.citations || 0}</div>
-          <div className="text-xs text-muted-foreground">Citations</div>
-        </div>
+        
         <div className="text-center p-2 rounded border border-border/50 bg-card/50">
           <div className="text-sm font-semibold text-foreground">{user.stats?.followers || 0}</div>
-          <div className="text-xs text-muted-foreground">Follows</div>
-        </div>
+          <div className="text-xs text-muted-foreground">Followers</div>
+        </div>  
+        <div className="text-center p-2 rounded border border-border/50 bg-card/50">
+          <div className="text-sm font-semibold text-foreground">{user.stats?.following || 0}</div>
+          <div className="text-xs text-muted-foreground">Following</div>
+        </div>  
       </div>
 
       {/* Actions */}

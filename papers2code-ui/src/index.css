@@ -80,7 +80,8 @@
 @utility research-card {
   /* Enhanced Research Platform Components */
   background: var(--gradient-card);
-  @apply border border-(--gradient-border) rounded-xl shadow-(--shadow-medium) hover:shadow-(--shadow-large) transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm;
+  /* Use valid Tailwind v4 arbitrary values for custom shadows and a standard border color token */
+  @apply border border-border rounded-xl shadow-[var(--shadow-medium)] hover:shadow-[var(--shadow-large)] transition-all duration-300 hover:scale-[1.02] backdrop-blur-sm;
 }
 
 @utility research-card-hover {
@@ -112,7 +113,8 @@
 }
 
 @utility research-tab-active {
-  @apply bg-primary text-primary-foreground shadow-xs;
+  /* shadow-xs isn't available in core; use shadow-sm for subtle elevation */
+  @apply bg-primary text-primary-foreground shadow-sm;
 }
 
 @utility research-tab-inactive {
@@ -285,7 +287,8 @@ All colors MUST be HSL.
   }
 
   body {
-    @apply bg-linear-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
+  /* Tailwind v4 uses bg-gradient-to-*, not bg-linear-to-* */
+  @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
