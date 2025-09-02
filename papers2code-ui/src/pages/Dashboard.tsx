@@ -2,13 +2,13 @@ import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { AlertCircle } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
-import { UserProfileCard } from '@/components/dashboard-new/UserProfileCard';
-import { FeedTabs } from '@/components/dashboard-new/FeedTabs';
-import { SidebarTabs } from '@/components/dashboard-new/SidebarTabs';
-import { ContributionsList } from '@/components/dashboard-new/ContributionsList';
-import { LoadingDashboard } from '@/components/dashboard-new/LoadingDashboard';
+import { ModernUserProfile } from '@/components/dashboard/ModernUserProfile';
+import { ModernFeedTabs } from '@/components/dashboard/ModernFeedTabs';
+import { ModernContributions } from '@/components/dashboard/ModernContributions';
+import { SiteUpdates } from '@/components/dashboard/SiteUpdates';
+import { LoadingDashboard } from '@/components/dashboard/LoadingDashboard';
 import type { UserProfile } from '@/common/types/user';
-import type { DashboardData } from '@/common/types/paper'; // no dashboard data so will need to implement that, mayb elook over dashboard page? 
+import type { DashboardData } from '@/common/types/paper';
 import { 
   fetchDashboardDataFromApi, 
   AuthenticationError,
@@ -17,7 +17,6 @@ import {
   checkCurrentUser,
   logoutUser,
 } from '@/common/services/auth';
-
 
 const Dashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -56,6 +55,47 @@ const Dashboard: React.FC = () => {
     fetchDashboardData();
   }, [navigate]);
 
+  const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
+    try {
+      // TODO: Implement actual API call for voting
+      console.log(`Voting ${voteType} on paper ${paperId}`);
+      
+      // For now, we'll just update the local state optimistically
+      // In a real app, this would make an API call and then refresh the data
+      if (data) {
+        const updatePaperVote = (papers: any[]) => 
+          papers.map(paper => {
+            if (paper.id === paperId) {
+              const currentVote = paper.currentUserVote;
+              const upvoteChange = voteType === 'up' 
+                ? (currentVote === 'up' ? 0 : 1)
+                : (currentVote === 'up' ? -1 : 0);
+              
+              return {
+                ...paper,
+                currentUserVote: voteType === 'up' ? 'up' : null,
+                upvoteCount: Math.max(0, paper.upvoteCount + upvoteChange)
+              };
+            }
+            return paper;
+          });
+
+        setData({
+          ...data,
+          trendingPapers: updatePaperVote(data.trendingPapers),
+          myContributions: updatePaperVote(data.myContributions),
+          recentlyViewed: updatePaperVote(data.recentlyViewed),
+          personalizedPapers: data.personalizedPapers ? updatePaperVote(data.personalizedPapers) : undefined,
+          followingPapers: data.followingPapers ? updatePaperVote(data.followingPapers) : undefined,
+          bookmarkedPapers: data.bookmarkedPapers ? updatePaperVote(data.bookmarkedPapers) : undefined,
+        });
+      }
+    } catch (error) {
+      console.error('Failed to vote:', error);
+      throw error;
+    }
+  };
+
   const handleNavigateToPaper = (paperId: string | number) => {
     navigate(`/paper/${paperId}`);
   };
@@ -84,7 +124,7 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-linear-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] p-6">
+      <div className="min-h-screen bg-background p-6">
         <div className="max-w-4xl mx-auto pt-20">
           <Alert className="bg-card border-destructive/20">
             <AlertCircle className="h-4 w-4 text-destructive" />
@@ -98,56 +138,60 @@ const Dashboard: React.FC = () => {
   }
 
   return (
-    <div className="min-h-screen bg-linear-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] p-6">
-      <div className="max-w-7xl mx-auto">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Research Dashboard</h1>
-          <p className="text-muted-foreground">
-            Welcome back, {currentUser?.username || 'Researcher'}
-          </p>
-        </div>
-
-        {/* Main Layout */}
-        <div className="grid grid-cols-1 lg:grid-cols-4 gap-6">
-          {/* Left Column - Profile & Contributions */}
-          <div className="lg:col-span-1 space-y-6">
-            <UserProfileCard
+    <div className="min-h-screen bg-background">
+      <div className="flex">
+  {/* Left Sidebar - Navigation & Profile */}
+  <div className="w-72 min-h-screen column-left border-r border-border/60 flex flex-col">
+          <div className="p-4 border-b border-border/60">
+            <h2 className="text-lg font-semibold text-foreground">Dashboard</h2>
+            <p className="text-sm text-muted-foreground mt-1">
+              Welcome, {currentUser?.displayName || currentUser?.username || 'Researcher'}
+            </p>
+          </div>
+          
+          <div className="flex-1 p-4">
+            <ModernUserProfile
               user={currentUser}
               onLogout={handleLogout}
               onNewContribution={handleNewContribution}
             />
             
-            <ContributionsList
-              contributions={data?.myContributions || []}
-              isLoading={false}
-              onPaperClick={handleNavigateToPaper}
-              onViewAll={handleViewAllContributions}
-              onNewContribution={handleNewContribution}
-            />
+            <div className="mt-6">
+              <ModernContributions
+                contributions={data?.myContributions || []}
+                isLoading={false}
+                onPaperClick={handleNavigateToPaper}
+                onViewAll={handleViewAllContributions}
+                onNewContribution={handleNewContribution}
+                onVote={handleVote}
+              />
+            </div>
+          </div>
+        </div>
+
+        {/* Main Content Area */}
+        <div className="flex-1 flex">
+          {/* Center - Feed */}
+      <div className="flex-1 max-w-3xl">
+            <div className="p-6">
+              <ModernFeedTabs
+                trendingPapers={data?.trendingPapers || []}
+                recentPapers={data?.recentlyViewed || []}
+                personalizedPapers={data?.personalizedPapers || data?.trendingPapers || []}
+                followingPapers={data?.followingPapers || []}
+        bookmarkedPapers={data?.bookmarkedPapers || []}
+                isLoading={false}
+                onPaperClick={handleNavigateToPaper}
+                onVote={handleVote}
+              />
+            </div>
           </div>
 
-          {/* Center Column - Feed */}
-          <div className="lg:col-span-2">
-            <FeedTabs
-              trendingPapers={data?.trendingPapers || []}
-              recentPapers={data?.trendingPapers || []} // Using trending as placeholder
-              personalizedPapers={data?.personalizedPapers || data?.trendingPapers || []}
-              followingPapers={data?.followingPapers || []}
-              isLoading={false}
-              onPaperClick={handleNavigateToPaper}
-            />
-          </div>
-
-          {/* Right Column - Discovery Sidebar */}
-          <div className="lg:col-span-1">
-            <SidebarTabs
-              trendingPapers={data?.trendingPapers || []}
-              recentlyViewed={data?.recentlyViewed || []}
-              bookmarkedPapers={[]} // Placeholder until bookmarks implemented
-              isLoading={false}
-              onPaperClick={handleNavigateToPaper}
-            />
+      {/* Right Sidebar - Updates / News */}
+          <div className="w-80 min-h-screen column-right border-l border-border/60">
+            <div className="p-6">
+        <SiteUpdates />
+            </div>
           </div>
         </div>
       </div>

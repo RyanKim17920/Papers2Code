@@ -2,7 +2,7 @@ import React from 'react';
 import { FileText, Plus, ArrowRight } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { PaperCard } from './PaperCard';
-import type { Paper } from '@/common/types/paper';
+import type { Paper } from '@/types/paper';
 
 interface ContributionsListProps {
   contributions: Paper[];

@@ -1,132 +1,128 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
-import { Paper } from '../../common/types/paper';
-import './SidebarTabs.css';
-
-export type SidebarTab = 'trending' | 'recent' | 'bookmarks';
+import { TrendingUp, History, Bookmark } from 'lucide-react';
+import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { PaperCard } from './PaperCard';
+import type { Paper } from '@/types/paper';
 
 interface SidebarTabsProps {
-  trendingPapers?: Paper[];
-  recentlyViewed?: Paper[];
-  bookmarkedPapers?: Paper[];
-  activeTab?: SidebarTab;
-  onTabChange?: (tab: SidebarTab) => void;
-  isLoading?: boolean;
+  trendingPapers: Paper[];
+  recentlyViewed: Paper[];
+  bookmarkedPapers: Paper[];
+  isLoading: boolean;
+  onPaperClick: (paperId: string | number) => void;
 }
 
-const SidebarTabs: React.FC<SidebarTabsProps> = ({
+export const SidebarTabs: React.FC<SidebarTabsProps> = ({
   trendingPapers = [],
   recentlyViewed = [],
   bookmarkedPapers = [],
-  activeTab = 'trending',
-  onTabChange,
-  isLoading = false
+  isLoading,
+  onPaperClick,
 }) => {
-  const [currentTab, setCurrentTab] = useState<SidebarTab>(activeTab);
-
-  const handleTabChange = (tab: SidebarTab) => {
-    setCurrentTab(tab);
-    if (onTabChange) {
-      onTabChange(tab);
-    }
-  };
-
-  const getCurrentPapers = (): Paper[] => {
-    switch (currentTab) {
-      case 'trending':
-        return trendingPapers;
-      case 'recent':
-        return recentlyViewed;
-      case 'bookmarks':
-        return bookmarkedPapers;
-      default:
-        return trendingPapers;
-    }
-  };
-
-  const getTrendingMetric = (paper: Paper): string => {
-    // For trending papers, show upvotes. For others, show appropriate metrics
-    if (currentTab === 'trending' && paper.upvoteCount > 0) {
-      return `▲ ${paper.upvoteCount} this week`;
-    }
-    if (currentTab === 'recent') {
-      return 'Recently viewed';
-    }
-    if (currentTab === 'bookmarks') {
-      return 'Bookmarked';
-    }
-    return '';
-  };
+  const [activeTab, setActiveTab] = useState('trending');
 
   const tabs = [
-    { id: 'trending' as SidebarTab, label: 'Trending' },
-    { id: 'recent' as SidebarTab, label: 'Recent' },
-    { id: 'bookmarks' as SidebarTab, label: 'Saved' },
+    {
+      id: 'trending',
+      label: 'Trending',
+      icon: TrendingUp,
+      papers: trendingPapers.slice(0, 5),
+    },
+    {
+      id: 'recent',
+      label: 'Recent',
+      icon: History,
+      papers: recentlyViewed.slice(0, 5),
+    },
+    {
+      id: 'saved',
+      label: 'Saved',
+      icon: Bookmark,
+      papers: bookmarkedPapers.slice(0, 5),
+    },
   ];
 
-  const currentPapers = getCurrentPapers();
-
-  return (
-    <div className="sidebar-tabs-container">
-      <div className="sidebar-tab-list">
-        {tabs.map((tab) => (
-          <button
-            key={tab.id}
-            className={`sidebar-tab ${currentTab === tab.id ? 'active' : ''}`}
-            onClick={() => handleTabChange(tab.id)}
-          >
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div className="sidebar-content">
-        {isLoading ? (
-          <div className="sidebar-loading">
-            <div className="loading-dots"></div>
-            <span>Loading...</span>
-          </div>
-        ) : currentPapers.length === 0 ? (
-          <div className="sidebar-empty">
-            <p>
-              {currentTab === 'trending' && 'No trending papers this week.'}
-              {currentTab === 'recent' && 'No recently viewed papers.'}
-              {currentTab === 'bookmarks' && 'No saved papers yet.'}
-            </p>
-          </div>
-        ) : (
-          <div className="sidebar-paper-list">
-            {currentPapers.slice(0, 8).map((paper) => (
-              <Link key={paper.id} to={`/paper/${paper.id}`} className="sidebar-paper-item">
-                <div className="paper-info">
-                  <h4 className="sidebar-paper-title">{paper.title}</h4>
-                  <div className="sidebar-paper-authors">
-                    {paper.authors && paper.authors.length > 0
-                      ? `${paper.authors[0]}${paper.authors.length > 1 ? ' et al.' : ''}`
-                      : 'Unknown authors'}
-                  </div>
+  if (isLoading) {
+    return (
+      <div className="research-section">
+        <div className="space-y-4">
+          <div className="h-5 bg-muted rounded w-24 animate-pulse" />
+          <div className="space-y-3">
+            {[...Array(3)].map((_, i) => (
+              <div key={i} className="research-card p-3">
+                <div className="space-y-2">
+                  <div className="h-4 bg-muted rounded w-full animate-pulse" />
+                  <div className="h-3 bg-muted rounded w-2/3 animate-pulse" />
                 </div>
-                <div className="paper-metric">
-                  {getTrendingMetric(paper)}
-                </div>
-              </Link>
+              </div>
             ))}
           </div>
-        )}
-      </div>
-
-      {currentPapers.length > 8 && (
-        <div className="sidebar-footer">
-          <Link 
-            to={`/papers${currentTab === 'trending' ? '?sort=popular' : currentTab === 'recent' ? '?recent=true' : '?bookmarked=true'}`}
-            className="view-more-link"
-          >
-            View all {currentTab} →
-          </Link>
         </div>
-      )}
+      </div>
+    );
+  }
+
+  return (
+    <div className="research-section">
+      <Tabs value={activeTab} onValueChange={setActiveTab} className="space-y-4">
+        <div className="space-y-2">
+          <h3 className="font-semibold text-foreground">Discover</h3>
+          
+          <TabsList className="grid w-full grid-cols-3 bg-muted/50">
+            {tabs.map((tab) => {
+              const Icon = tab.icon;
+              return (
+                <TabsTrigger
+                  key={tab.id}
+                  value={tab.id}
+                  className="flex items-center gap-1 text-xs research-tab-inactive data-[state=active]:research-tab-active"
+                >
+                  <Icon className="w-3 h-3" />
+                  <span className="hidden lg:inline">{tab.label}</span>
+                </TabsTrigger>
+              );
+            })}
+          </TabsList>
+        </div>
+
+        {tabs.map((tab) => (
+          <TabsContent key={tab.id} value={tab.id} className="space-y-3 mt-4">
+            {tab.papers.length === 0 ? (
+              <div className="text-center py-6">
+                <tab.icon className="w-8 h-8 mx-auto text-muted-foreground mb-2" />
+                <p className="text-xs text-muted-foreground">
+                  {tab.id === 'saved' 
+                    ? "Bookmark papers to see them here"
+                    : `No ${tab.label.toLowerCase()} papers`
+                  }
+                </p>
+              </div>
+            ) : (
+              <div className="space-y-2">
+                {tab.papers.map((paper) => (
+                  <div key={paper.id} className="overflow-hidden">
+                    <PaperCard
+                      paper={paper}
+                      onClick={() => onPaperClick(paper.id)}
+                      compact={true}
+                    />
+                  </div>
+                ))}
+                
+                {(tab.id === 'trending' && trendingPapers.length > 5) ||
+                 (tab.id === 'recent' && recentlyViewed.length > 5) ||
+                 (tab.id === 'saved' && bookmarkedPapers.length > 5) ? (
+                  <div className="text-center pt-2">
+                    <button className="text-primary hover:text-primary/80 font-medium text-xs">
+                      View all
+                    </button>
+                  </div>
+                ) : null}
+              </div>
+            )}
+          </TabsContent>
+        ))}
+      </Tabs>
     </div>
   );
 };
-
-export default SidebarTabs;
