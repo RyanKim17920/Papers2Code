@@ -1,7 +1,7 @@
 import React from 'react';
 import { Eye, FileText, Users, Calendar, ExternalLink } from 'lucide-react';
 import { Badge } from '@/components/ui/badge';
-import type { Paper } from '@/types/paper';
+import type { Paper } from '@/common/types/paper';
 
 interface PaperCardProps {
   paper: Paper;

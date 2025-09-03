@@ -2,7 +2,7 @@ import React from 'react';
 import { User, LogOut, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import type { UserProfile } from '@/types/user';
+import type { UserProfile } from '@/common/types/user';
 
 interface UserProfileCardProps {
   user: UserProfile | null;

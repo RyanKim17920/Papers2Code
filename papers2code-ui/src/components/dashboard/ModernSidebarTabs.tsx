@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { Paper } from '@/types/paper';
+import type { Paper } from '@/common/types/paper';
 
 interface ModernSidebarTabsProps {
   trendingPapers: Paper[];
