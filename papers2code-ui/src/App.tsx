@@ -4,10 +4,11 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
-import LandingPage from '@/pages/LandingPage';
-import PaperListPage from '@/pages/PaperListPage';
-import PaperDetailPage from '@/pages/PaperDetailPage';
-import DashboardPage from '@/pages/DashboardPage';
+import React, { Suspense, lazy } from 'react';
+const LandingPage = lazy(() => import('@/pages/LandingPage'));
+const PaperListPage = lazy(() => import('@/pages/PaperListPage'));
+const PaperDetailPage = lazy(() => import('@/pages/PaperDetailPage'));
+const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
 import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from '@/common/services/auth';
 import type { UserProfile } from '@/common/types/user';
 import { UserAvatar } from '@/common/components';
@@ -18,10 +19,10 @@ import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from 
 import { AuthenticationError } from '@/common/services/api';
 import GlobalHeader from '@/components/common/GlobalHeader';
 
-import Dashboard from '@/pages/Dashboard'
-import ProfilePage from '@/pages/ProfilePage';
-import SettingsPage from '@/pages/SettingsPage';
-import NotFoundPage from '@/pages/NotFoundPage';
+const Dashboard = lazy(() => import('@/pages/Dashboard'));
+const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
+const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
+const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
 import '@/App.css';
 
 // 2. Create a new instance of the QueryClient
@@ -136,6 +137,7 @@ function App() {
             />
             <main className="app-main">
               <ErrorBoundary>
+                <Suspense fallback={null}>
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
                   <Route 
@@ -159,6 +161,7 @@ function App() {
                   <Route path="/settings" element={<SettingsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
+                </Suspense>
               </ErrorBoundary>
             </main>          
             <LoginPromptModal />
