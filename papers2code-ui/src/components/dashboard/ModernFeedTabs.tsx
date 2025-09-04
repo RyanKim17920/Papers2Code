@@ -4,7 +4,7 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { Button } from '@/components/ui/button';
-import type { Paper } from '@/types/paper';
+import type { Paper } from '@/common/types/paper';
 
 interface ModernFeedTabsProps {
   trendingPapers: Paper[];
@@ -20,11 +20,12 @@ interface ModernFeedTabsProps {
 const getStatusBadge = (status: string) => {
   const config = {
     'Not Started': { color: 'bg-gray-100 text-gray-600' },
-    'In Progress': { color: 'bg-blue-100 text-blue-600' },
+    'Work in Progress': { color: 'bg-blue-100 text-blue-600' },
+    'Waiting for Review': { color: 'bg-yellow-100 text-yellow-700' },
     'Completed': { color: 'bg-green-100 text-green-600' },
-    'Published': { color: 'bg-purple-100 text-purple-600' },
-  };
-  return config[status as keyof typeof config] || config['Not Started'];
+    'Official Code Posted': { color: 'bg-purple-100 text-purple-700' },
+  } as const;
+  return (config as Record<string, { color: string }>)[status] || config['Not Started'];
 };
 
 const formatAuthors = (authors: string[]) => {

@@ -19,6 +19,10 @@ export interface DashboardData {
   trendingPapers: Paper[];
   myContributions: Paper[];
   recentlyViewed: Paper[];
+  // Optional sections used by the UI when available
+  personalizedPapers?: Paper[];
+  followingPapers?: Paper[];
+  bookmarkedPapers?: Paper[];
 }
 // --- End Dashboard Types ---
 

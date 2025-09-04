@@ -8,7 +8,7 @@ import { ModernContributions } from '@/components/dashboard/ModernContributions'
 import { SiteUpdates } from '@/components/dashboard/SiteUpdates';
 import { LoadingDashboard } from '@/components/dashboard/LoadingDashboard';
 import type { UserProfile } from '@/common/types/user';
-import type { DashboardData } from '@/common/types/paper';
+import type { DashboardData } from '@/common/services/api';
 import { 
   fetchDashboardDataFromApi, 
   AuthenticationError,

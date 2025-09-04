@@ -52,7 +52,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({
           </Avatar>
           <div className="flex-1 min-w-0">
             <h3 className="font-semibold text-foreground truncate">
-              {user.displayName || user.username}
+              {user.name || user.username}
             </h3>
             <p className="text-sm text-muted-foreground truncate">
               @{user.username}
@@ -82,23 +82,7 @@ export const UserProfileCard: React.FC<UserProfileCardProps> = ({
           </Button>
         </div>
 
-        {/* User Stats (Optional - can be populated from user data) */}
-        {user.stats && (
-          <div className="grid grid-cols-2 gap-4 pt-2 border-t border-border">
-            <div className="text-center">
-              <div className="text-lg font-semibold text-foreground">
-                {user.stats.contributions || 0}
-              </div>
-              <div className="text-xs text-muted-foreground">Papers</div>
-            </div>
-            <div className="text-center">
-              <div className="text-lg font-semibold text-foreground">
-                {user.stats.citations || 0}
-              </div>
-              <div className="text-xs text-muted-foreground">Citations</div>
-            </div>
-          </div>
-        )}
+  {/* Stats removed: not part of UserProfile type */}
       </div>
     </div>
   );

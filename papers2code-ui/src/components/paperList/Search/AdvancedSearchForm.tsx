@@ -56,7 +56,7 @@ const datePickerProps = {
   dropdownMode: 'select',
   readOnly: false,
   useShortMonthInDropdown: false,
-} as const;
+};
 
 
 const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
@@ -90,8 +90,7 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
           <label htmlFor="startDate">Published After:</label>
           <DatePicker
             selected={parseDateString(filters.startDate)}
-            onChange={(date) => handleDateChange(date, 'startDate')}
-            selectsStart
+            onChange={(date: Date | null) => handleDateChange(date, 'startDate')}
             startDate={parseDateString(filters.startDate) || undefined}
             endDate={parseDateString(filters.endDate) || undefined}
             maxDate={new Date()}
@@ -103,8 +102,7 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
           <label htmlFor="endDate">Published Before:</label>
           <DatePicker
             selected={parseDateString(filters.endDate)}
-            onChange={(date) => handleDateChange(date, 'endDate')}
-            selectsEnd
+            onChange={(date: Date | null) => handleDateChange(date, 'endDate')}
             startDate={parseDateString(filters.startDate) || undefined}
             endDate={parseDateString(filters.endDate) || undefined}
             minDate={parseDateString(filters.startDate) || undefined}

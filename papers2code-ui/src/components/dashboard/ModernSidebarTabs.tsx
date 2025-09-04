@@ -40,13 +40,9 @@ const CompactPaperCard: React.FC<{ paper: Paper; onClick: () => void }> = ({ pap
         </div>
 
         <div className="flex items-center gap-2">
-          <Badge 
-            className={`text-xs px-1.5 py-0.5 ${
-              paper.status === 'Published' 
-                ? 'bg-green-100 text-green-700 border-green-200' 
-                : 'bg-gray-100 text-gray-600 border-gray-200'
-            }`}
-          >
+          <Badge className={
+            `text-xs px-1.5 py-0.5 bg-muted text-muted-foreground border-border`
+          }>
             {paper.status}
           </Badge>
           

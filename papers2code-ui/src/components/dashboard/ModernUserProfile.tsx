@@ -1,5 +1,5 @@
 import React from 'react';
-import { Star, LogOut, Plus, Award, BookOpen, TrendingUp } from 'lucide-react';
+import { LogOut, Plus } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -49,22 +49,7 @@ export const ModernUserProfile: React.FC<ModernUserProfileProps> = ({
         </div>
       </div>
 
-      {/* Quick Stats */}
-      <div className="grid grid-cols-3 gap-2">
-        <div className="text-center p-2 rounded border border-border/50 bg-card/50">
-          <div className="text-sm font-semibold text-foreground">{user.stats?.contributions || 0}</div>
-          <div className="text-xs text-muted-foreground">Papers</div>
-        </div>
-        
-        <div className="text-center p-2 rounded border border-border/50 bg-card/50">
-          <div className="text-sm font-semibold text-foreground">{user.stats?.followers || 0}</div>
-          <div className="text-xs text-muted-foreground">Followers</div>
-        </div>  
-        <div className="text-center p-2 rounded border border-border/50 bg-card/50">
-          <div className="text-sm font-semibold text-foreground">{user.stats?.following || 0}</div>
-          <div className="text-xs text-muted-foreground">Following</div>
-        </div>  
-      </div>
+  {/* Quick Stats (not available in UserProfile type) */}
 
       {/* Actions */}
       <div className="space-y-2">
