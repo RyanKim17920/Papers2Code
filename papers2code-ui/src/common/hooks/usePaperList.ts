@@ -36,6 +36,7 @@ export function usePaperList(authLoading?: boolean) {
     () => parseInt(searchParams.get('page') || '1', 10)
   );
   const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState<number>(0);
   const { showLoginPrompt } = useModal();
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(() => ({
     startDate: searchParams.get('startDate') || '',
@@ -201,12 +202,14 @@ export function usePaperList(authLoading?: boolean) {
 
         console.log('✅ API response received:', {
           totalPapers: response.papers.length,
-          totalPages: response.totalPages
+          totalPages: response.totalPages,
+          totalCount: response.totalCount
         });
 
         if (!abortController.signal.aborted) {
           setPapers(response.papers);
           setTotalPages(response.totalPages);
+          setTotalCount(response.totalCount);
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== 'AbortError' && !abortController.signal.aborted) {
@@ -220,6 +223,7 @@ export function usePaperList(authLoading?: boolean) {
           }
           setPapers([]);
           setTotalPages(1);
+          setTotalCount(0);
         }
       } finally {
         if (!abortController.signal.aborted) {
@@ -348,6 +352,7 @@ export function usePaperList(authLoading?: boolean) {
     actualSortPreference: sortPreference, // Actual sort for non-search
     currentPage,
     totalPages,
+  totalCount,
     showAdvancedSearch,
     advancedFilters,
     appliedAdvancedFilters,

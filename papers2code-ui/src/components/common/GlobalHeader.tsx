@@ -1,8 +1,10 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
+import { Search, Command } from 'lucide-react';
 import logo from '../../assets/images/papers2codelogo.png';
 import type { UserProfile } from '../../common/types/user';
-import './GlobalHeader.css';
+import { Button } from '../ui/button';
+import { Input } from '../ui/input';
 
 interface GlobalHeaderProps {
   showSearch?: boolean;
@@ -42,45 +44,56 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   }, []);
 
   return (
-    <header className="global-header">
-      <div className="header-content">
-        <div className="header-left">
-          <Link to={currentUser ? "/dashboard" : "/"} className="logo-link">
-            <img src={logo} alt="Papers2Code" className="header-logo" />
+    <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+      <div className="container mx-auto px-4">
+        <div className="flex h-16 items-center justify-between">
+          {/* Logo */}
+          <Link 
+            to={currentUser ? "/dashboard" : "/"} 
+            className="flex items-center space-x-2"
+          >
+            <img 
+              src={logo} 
+              alt="Papers2Code" 
+              className="h-8 w-auto" 
+            />
           </Link>
-        </div>
-        
-        {showSearch && (
-          <div className="header-center">
-            <form onSubmit={handleSearchSubmit} className="global-search-form">
-              <div className="global-search-container">
-                <div className="search-icon">
-                  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                    <circle cx="11" cy="11" r="8"/>
-                    <path d="m21 21-4.35-4.35"/>
-                  </svg>
+          
+          {/* Search Bar */}
+          {showSearch && (
+            <div className="flex-1 max-w-2xl mx-8">
+              <form onSubmit={handleSearchSubmit} className="relative">
+                <div className="relative flex items-center">
+                  <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    ref={searchInputRef}
+                    type="search"
+                    placeholder="Search papers, authors, conferences..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-24 h-10 bg-muted/50 border-0 focus:bg-background transition-colors"
+                  />
+                  <div className="absolute right-2 flex items-center gap-1">
+                    <kbd className="pointer-events-none inline-flex h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground opacity-100">
+                      <Command className="h-3 w-3" />K
+                    </kbd>
+                  </div>
                 </div>
-                <input
-                  ref={searchInputRef}
-                  type="search"
-                  placeholder="Search papers, authors, conferences..."
-                  value={searchQuery}
-                  onChange={(e) => setSearchQuery(e.target.value)}
-                  className="global-search-input"
-                />
-                <div className="search-shortcut">
-                  <kbd>⌘K</kbd>
-                </div>
-                <button type="submit" className="global-search-button">
+                <Button 
+                  type="submit" 
+                  className="sr-only"
+                  tabIndex={-1}
+                >
                   Search
-                </button>
-              </div>
-            </form>
+                </Button>
+              </form>
+            </div>
+          )}
+          
+          {/* Auth Section */}
+          <div className="flex items-center space-x-4">
+            {authSection}
           </div>
-        )}
-        
-        <div className="header-right">
-          {authSection}
         </div>
       </div>
     </header>

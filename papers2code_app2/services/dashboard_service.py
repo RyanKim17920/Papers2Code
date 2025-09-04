@@ -51,21 +51,41 @@ class DashboardService:
             paper_ids = list(paper_upvotes_map.keys())
             logger.info(f"Found {len(paper_ids)} trending paper IDs based on upvotes.")
 
-            # Fetch summary fields for the trending papers
+            # Prepare projection and convert IDs to ObjectId when needed
             summary_projection = {
                 "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
             }
-            cursor = await views_coll.aggregate(recent_views_pipeline)
-            recent_views = await cursor.to_list(length=10)
-            logger.info(f"Fetched {len(recent_views)} recent view details.")
+            # Convert string ids to ObjectId if possible, otherwise keep as-is
+            paper_object_ids = []
+            for pid in paper_ids:
+                if isinstance(pid, ObjectId):
+                    paper_object_ids.append(pid)
+                elif isinstance(pid, str) and ObjectId.is_valid(pid):
+                    paper_object_ids.append(ObjectId(pid))
+                else:
+                    # Skip invalid ids
+                    logger.warning(f"Skipping invalid paper id in trending results: {pid}")
 
-            # Add recent upvote count and sort
+            if not paper_object_ids:
+                logger.warning("No valid paper IDs to fetch for trending papers.")
+                return []
+
+            # Fetch paper summaries
+            papers_cursor = papers_coll.find({"_id": {"$in": paper_object_ids}}, summary_projection)
+            papers_list = await papers_cursor.to_list(length=len(paper_object_ids))
+
+            # Map counts by stringified id to handle type differences
+            upvotes_by_str_id = {str(k): v for k, v in paper_upvotes_map.items()}
+
+            # Attach recent upvote count
             for paper in papers_list:
-                paper["recent_upvote_count"] = paper_upvotes_map.get(paper["_id"], 0)
-            
-            papers_list.sort(key=lambda p: p["recent_upvote_count"], reverse=True)
-            
-            response = []
+                paper["recent_upvote_count"] = upvotes_by_str_id.get(str(paper["_id"]), 0)
+
+            # Sort by recent upvotes desc
+            papers_list.sort(key=lambda p: p.get("recent_upvote_count", 0), reverse=True)
+
+            # Transform for response
+            response: List[PaperResponse] = []
             for paper_doc in papers_list:
                 transformed_paper = await transform_paper_async(paper_doc, None, detail_level="summary")
                 response.append(PaperResponse(**transformed_paper))

@@ -76,7 +76,7 @@ export const fetchPapersFromApi = async (
   sort?: 'newest' | 'oldest' | 'upvotes',
   advancedFilters?: AdvancedPaperFilters,
   signal?: AbortSignal // <-- NEW: Add AbortSignal parameter
-): Promise<{ papers: Paper[]; totalPages: number; page: number; pageSize: number; hasMore: boolean }> => {
+): Promise<{ papers: Paper[]; totalPages: number; totalCount: number; page: number; pageSize: number; hasMore: boolean }> => {
   const params = new URLSearchParams();
   params.append('limit', String(limit));
   params.append('page', String(page));
@@ -127,7 +127,7 @@ export const fetchPapersFromApi = async (
   }
   const totalPages = Math.ceil(data.totalCount / limit);
   // MODIFIED: Access camelCase properties from data, matching the backend's PaginatedPaperResponse schema (which uses alias_generator=to_camel)
-  return { papers: data.papers, totalPages: totalPages, page: data.page, pageSize: data.pageSize, hasMore: data.hasMore };
+  return { papers: data.papers, totalPages: totalPages, totalCount: data.totalCount, page: data.page, pageSize: data.pageSize, hasMore: data.hasMore };
 };
 
 // --- fetchPaperByIdFromApi ---
