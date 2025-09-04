@@ -66,6 +66,7 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
   onClear,
   onClose,
 }) => {
+  const AnyDatePicker = DatePicker as unknown as React.ComponentType<any>;
   // Handler for regular text inputs
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const { name, value } = e.target;
@@ -88,7 +89,7 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
         {/* Date Range */}
         <div className="form-group">
           <label htmlFor="startDate">Published After:</label>
-          <DatePicker
+          <AnyDatePicker
             selected={parseDateString(filters.startDate)}
             onChange={(date: Date | null) => handleDateChange(date, 'startDate')}
             startDate={parseDateString(filters.startDate) || undefined}
@@ -100,7 +101,7 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
         </div>
         <div className="form-group">
           <label htmlFor="endDate">Published Before:</label>
-          <DatePicker
+          <AnyDatePicker
             selected={parseDateString(filters.endDate)}
             onChange={(date: Date | null) => handleDateChange(date, 'endDate')}
             startDate={parseDateString(filters.startDate) || undefined}
