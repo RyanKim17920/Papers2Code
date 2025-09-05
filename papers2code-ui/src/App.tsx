@@ -3,15 +3,14 @@
 // 1. Import QueryClient and QueryClientProvider
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
-import { Routes, Route, Link, useLocation, useNavigate } from 'react-router-dom';
+import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import React, { Suspense, lazy } from 'react';
 const LandingPage = lazy(() => import('@/pages/LandingPage'));
 const PaperListPage = lazy(() => import('@/pages/PaperListPage'));
 const PaperDetailPage = lazy(() => import('@/pages/PaperDetailPage'));
 const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-import { checkCurrentUser, redirectToGitHubLogin, logoutUser, fetchAndStoreCsrfToken } from '@/common/services/auth';
+import { checkCurrentUser, logoutUser, fetchAndStoreCsrfToken } from '@/common/services/auth';
 import type { UserProfile } from '@/common/types/user';
-import { UserAvatar } from '@/common/components';
 import AuthInitializer from '@/common/components/AuthInitializer';
 import { ModalProvider } from '@/common/context/ModalContext';
 import LoginPromptModal from '@/common/components/LoginPromptModal';
@@ -32,8 +31,7 @@ const queryClient = new QueryClient();
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
-  const [isDropdownOpen, setIsDropdownOpen] = useState<boolean>(false);
-  const dropdownRef = useRef<HTMLDivElement>(null);
+  // Removed local auth dropdown UI; header handles signed-out UI
   const location = useLocation();
   const navigate = useNavigate();
 
@@ -58,17 +56,7 @@ function App() {
     initializeApp();
   }, [location.pathname]);
 
-  useEffect(() => {
-    const handleClickOutside = (event: MouseEvent) => {
-      if (dropdownRef.current && !dropdownRef.current.contains(event.target as Node)) {
-        setIsDropdownOpen(false);
-      }
-    };
-    document.addEventListener('mousedown', handleClickOutside);
-    return () => {
-      document.removeEventListener('mousedown', handleClickOutside);
-    };
-  }, [dropdownRef]);
+  // No dropdown in App; handled in GlobalHeader
 
   if (authLoading) {
     return null;
@@ -83,47 +71,7 @@ function App() {
     await logoutUser();
     setCurrentUser(null);
     localStorage.removeItem('csrfToken');
-    setIsDropdownOpen(false);
   };
-
-  const toggleDropdown = () => setIsDropdownOpen(!isDropdownOpen);
-  
-  const authSection = (
-    <>
-      <nav className="main-nav">
-        <Link to="/papers" className="nav-link">Papers</Link>
-      </nav>
-      <div className="auth-section">
-        {authLoading ? (
-          <span className="auth-loading">Loading...</span>
-        ) : currentUser ? (
-          <div className="user-info-container" ref={dropdownRef}>
-            <button onClick={toggleDropdown} className="user-avatar-button">
-              <UserAvatar
-                avatarUrl={currentUser.avatarUrl}
-                username={currentUser.username}
-                className="user-avatar"
-              />
-            </button>
-            {isDropdownOpen && (
-              <div className={`user-dropdown-menu ${isDropdownOpen ? 'open' : ''}`}>
-                <Link to="/dashboard" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Dashboard</Link>
-                <Link to={`/user/${currentUser.username}`} className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Profile</Link>
-                <Link to="/settings" className="dropdown-item" onClick={() => setIsDropdownOpen(false)}>Settings</Link>
-                <Link to="" onClick={handleLogout} className="dropdown-item">
-                  Logout
-                </Link>
-              </div>
-            )}
-          </div>
-        ) : (
-          <button onClick={redirectToGitHubLogin} className="auth-button connect-button">
-            Connect with GitHub
-          </button>
-        )}
-      </div>
-    </>
-  );
 
   // 3. Wrap your existing providers and components with QueryClientProvider
   return (
@@ -131,10 +79,7 @@ function App() {
       <ModalProvider>
         <AuthInitializer />
           <div className="app-container">
-            <GlobalHeader 
-              currentUser={currentUser}
-              authSection={authSection}
-            />
+            <GlobalHeader currentUser={currentUser} handleLogout={handleLogout} />
             <main className="app-main">
               <ErrorBoundary>
                 <Suspense fallback={null}>

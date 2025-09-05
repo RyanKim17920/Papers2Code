@@ -197,7 +197,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
               </div>
             ) : papers.length > 0 ? (
               <>
-                <div className="space-y-4">
+                <div className="space-y-2">
                   {papers.map((paper) => (
                     <ModernPaperCard
                       key={paper.id}

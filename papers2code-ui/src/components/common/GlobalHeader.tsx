@@ -1,21 +1,33 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Command } from 'lucide-react';
+import { Search, Command, User, Settings, LogOut, ChevronDown, Github } from 'lucide-react';
 import logo from '../../assets/images/papers2codelogo.png';
 import type { UserProfile } from '../../common/types/user';
 import { Button } from '../ui/button';
 import { Input } from '../ui/input';
+import { Avatar, AvatarFallback } from '../ui/avatar';
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuItem,
+  DropdownMenuSeparator,
+  DropdownMenuTrigger,
+} from '../ui/dropdown-menu';
+import { UserAvatar } from '@/common/components';
+import { redirectToGitHubLogin } from '@/common/services/auth';
 
 interface GlobalHeaderProps {
   showSearch?: boolean;
   currentUser?: UserProfile | null;
   authSection?: React.ReactNode;
+  handleLogout?: () => void;
 }
 
 const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   showSearch = true,
   currentUser,
-  authSection
+  authSection,
+  handleLogout
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
   const navigate = useNavigate();
@@ -29,6 +41,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
       navigate('/papers');
     }
   };
+
 
   // Add keyboard shortcut for search (Cmd+K / Ctrl+K)
   useEffect(() => {
@@ -92,7 +105,74 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
           
           {/* Auth Section */}
           <div className="flex items-center space-x-4">
-            {authSection}
+            {currentUser ? (
+              <div className="flex items-center gap-3">
+                <Link to="/papers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                  Papers
+                </Link>
+                <DropdownMenu>
+                  <DropdownMenuTrigger asChild>
+                    <Button variant="ghost" className="flex items-center gap-2 h-9 px-3">
+                      <Avatar className="h-6 w-6">
+                        <UserAvatar
+                          avatarUrl={currentUser.avatarUrl}
+                          username={currentUser.username}
+                          className="user-avatar"
+                        />
+                        <AvatarFallback className="text-xs bg-muted text-muted-foreground flex items-center justify-center h-full w-full">
+                          {currentUser.avatarUrl
+                            ? null
+                            : (currentUser.username?.charAt(0).toUpperCase() || 'U')}
+                        </AvatarFallback></Avatar>
+                      <span className="text-sm font-medium">{currentUser.username}</span>
+                      <ChevronDown className="h-3 w-3 text-muted-foreground" />
+                    </Button>
+                  </DropdownMenuTrigger>
+                  <DropdownMenuContent align="end" className="w-56">
+                    <DropdownMenuItem asChild>
+                      <Link to={`/user/${currentUser.username}`} className="flex items-center gap-2">
+                        <User className="h-4 w-4" />
+                        Profile
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem asChild>
+                      <Link to="/settings" className="flex items-center gap-2">
+                        <Settings className="h-4 w-4" />
+                        Settings
+                      </Link>
+                    </DropdownMenuItem>
+                    <DropdownMenuSeparator />
+                    <DropdownMenuItem
+                      onSelect={(e) => {
+                        e.preventDefault();
+                        handleLogout?.();
+                      }}
+                      className="flex items-center gap-2 text-destructive focus:text-destructive"
+                    >
+                      <LogOut className="h-4 w-4" />
+                      Sign out
+                    </DropdownMenuItem>
+                  </DropdownMenuContent>
+                </DropdownMenu>
+              </div>
+            ) : (
+              // If a custom authSection is provided by parent, render it.
+              authSection ?? (
+                <div className="flex items-center gap-3">
+                  <Link to="/papers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
+                    Papers
+                  </Link>
+                  <Button
+                    onClick={redirectToGitHubLogin}
+                    variant="default"
+                    className="h-9 px-3 gap-2"
+                  >
+                    <Github className="h-4 w-4" />
+                    <span className="text-sm">Sign in with GitHub</span>
+                  </Button>
+                </div>
+              )
+            )}
           </div>
         </div>
       </div>
