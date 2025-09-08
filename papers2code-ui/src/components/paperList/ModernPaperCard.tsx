@@ -103,16 +103,16 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
     <Link to={`/paper/${paper.id}`} className="block">
       <Card className="hover:shadow-md transition-shadow cursor-pointer">
         <CardContent className="p-4">
-          <div className="space-y-2">
+          <div className="space-y-3">
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-1 line-clamp-2">
+                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-2">
                   {paper.title}
                 </h3>
                 
                 {/* Authors */}
-                <div className="text-sm text-muted-foreground/80 mb-1">
+                <div className="text-sm text-muted-foreground/80 mb-2">
                   {authors}
                   {hasMoreAuthors && <span className="ml-1">+{paper.authors!.length - 3} others</span>}
                 </div>
@@ -140,31 +140,31 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
 
             {/* Footer - Single Row with Tags, Date, and Status */}
             <div className="flex items-center justify-between pt-2">
-              <div className="flex items-center gap-2 flex-wrap">
-                {/* Domain Tags */}
+              {/* Left group: Category tags */}
+              <div className="flex items-center gap-2">
                 {domainTags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs px-2 py-0.5 h-5">
+                  <Badge key={index} className="text-xs px-2 py-0.5 h-5 bg-primary text-primary-foreground">
                     {tag}
                   </Badge>
                 ))}
-                
-                {/* Publication Date */}
+              </div>
+
+              {/* Right group: Date, proceeding, and status */}
+              <div className="flex items-center gap-2 ml-4">
                 <span className="text-xs text-muted-foreground/60">
                   {formatDate(paper.publicationDate)}
                 </span>
                 
-                {/* Proceeding */}
                 {paper.proceeding && (
                   <span className="text-xs text-muted-foreground/60 font-medium">
                     {paper.proceeding}
                   </span>
                 )}
+                
+                <Badge className="text-xs px-2 py-0.5 h-5 bg-muted-foreground text-background">
+                  {displayStatus}
+                </Badge>
               </div>
-
-              {/* Status Badge */}
-              <Badge variant="outline" className={`text-xs px-2 py-0.5 h-5 ${getStatusColor(displayStatus)}`}>
-                {displayStatus}
-              </Badge>
             </div>
 
             {/* Vote Error */}
