@@ -6,6 +6,7 @@ import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import type { Paper } from '@/common/types/paper';
+import { getPaperDescription } from '@/common/utils/descriptionUtils';
 
 interface ModernFeedTabsProps {
   trendingPapers: Paper[];
@@ -98,11 +99,9 @@ const PaperCard: React.FC<{ paper: Paper; onClick: () => void }> = ({ paper, onC
           </div>
 
           {/* Abstract Preview */}
-          {paper.abstract && (
-            <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
-              {paper.abstract}
-            </p>
-          )}
+          <p className="text-xs text-muted-foreground line-clamp-2 leading-relaxed">
+            {getPaperDescription(paper, 160)}
+          </p>
 
           {/* Footer */}
           <div className="flex items-center justify-between pt-2 border-t border-border/30">
@@ -241,7 +240,7 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
                   </div>
                   
                   <p className="text-xs text-muted-foreground mb-2 line-clamp-2 leading-relaxed">
-                    {paper.abstract}
+                    {getPaperDescription(paper, 160)}
                   </p>
 
                   {domainTags.length > 0 && (

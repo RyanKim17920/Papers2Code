@@ -7,6 +7,7 @@ import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
 import { getStatusClass } from '../../common/utils/statusUtils';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { getPaperDescription } from '@/common/utils/descriptionUtils';
 
 interface ModernPaperCardProps {
   paper: Paper;
@@ -50,10 +51,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
     }
   };
 
-  const truncateAbstract = (abstract: string, maxLength: number = 200): string => {
-    if (!abstract || abstract.length <= maxLength) return abstract || '';
-    return abstract.substring(0, maxLength).trim() + '...';
-  };
+  // Replaced local truncate with shared getPaperDescription utility.
 
   // Removed local color mapping in favor of unified StatusBadge component.
 
@@ -120,11 +118,9 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
             </div>
 
             {/* Abstract */}
-            {paper.abstract && (
-              <p className="text-sm text-muted-foreground/70 line-clamp-2 leading-relaxed">
-                {truncateAbstract(paper.abstract, 150)}
-              </p>
-            )}
+            <p className="text-sm text-muted-foreground/70 line-clamp-2 leading-relaxed">
+              {getPaperDescription(paper, 150)}
+            </p>
 
             {/* Footer - Single Row with Tags, Date, and Status */}
             <div className="flex items-center justify-between pt-2">
