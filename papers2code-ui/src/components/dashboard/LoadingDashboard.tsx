@@ -60,7 +60,7 @@ export const LoadingDashboard: React.FC = () => {
         <div className="flex-1 flex">
           {/* Center - Feed */}
           <div className="flex-1 max-w-3xl">
-            <div className="p-6">
+            <div className="pt-3 pb-6 px-4">
               {/* ModernFeedTabs Skeleton with real text */}
               <div>
                 <div className="mb-2">
@@ -130,7 +130,7 @@ export const LoadingDashboard: React.FC = () => {
 
           {/* Right Sidebar - Updates / News */}
           <div className="w-80 min-h-screen column-right border-l border-border/60">
-            <div className="p-6">
+            <div className="pt-3 pb-6 px-4">
               {/* SiteUpdates Skeleton with real text */}
               <div className="space-y-3">
                 <div className="flex items-center justify-between mb-2">

@@ -60,14 +60,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="container mx-auto px-4 py-6">
-        {/* Header */}
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-foreground mb-2">Research Papers</h1>
-          <p className="text-muted-foreground">
-            Explore the latest research papers and their implementations
-          </p>
-        </div>
+  <div className="container mx-auto px-4 pt-3 pb-6">
 
         <div className="grid grid-cols-[auto_1fr] gap-6">
           {/* Left Sidebar - Collapsible Filters */}

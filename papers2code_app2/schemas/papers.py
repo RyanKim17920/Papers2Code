@@ -16,12 +16,12 @@ from .user_activity import LoggedActionTypes
 
 # --- Type Definitions for Literal Strings ---
 ImplementabilityStatusType = Literal[
-    LoggedActionTypes.VOTING.value,
-    LoggedActionTypes.COMMUNITY_NOT_IMPLEMENTABLE.value,
-    LoggedActionTypes.COMMUNITY_IMPLEMENTABLE.value,
-    LoggedActionTypes.ADMIN_NOT_IMPLEMENTABLE.value,
-    LoggedActionTypes.ADMIN_IMPLEMENTABLE.value,
-    "Waiting for Author Response"
+    "Voting",
+    "Community Not Implementable",
+    "Community Implementable",
+    "Admin Not Implementable",
+    "Admin Implementable",
+    "Waiting for Author Response",
 ]
 
 ImplementationStatusType = Literal[
@@ -45,9 +45,11 @@ class BasePaper(BaseModel):
     authors: Optional[List[str]] = None
     url_abs: Optional[HttpUrl] = Field(None, alias="urlAbs")
     url_pdf: Optional[HttpUrl] = Field(None, alias="urlPdf")
+    url_github: Optional[HttpUrl] = Field(None, alias="urlGithub")
     publication_date: Optional[datetime] = Field(None, alias="publicationDate")
     venue: Optional[str] = Field(None, alias="proceeding")
     tags: Optional[List[str]] = Field([], alias="tasks")
+    has_code: bool = Field(False, alias="hasCode")
  
     # --- Implementability Fields ---
     upvote_count: int = Field(0, alias="upvoteCount")

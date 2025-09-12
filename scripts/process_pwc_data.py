@@ -5,6 +5,9 @@ import polars as pl
 import logging
 import io
 import os
+import glob
+import subprocess
+import shutil
 from typing import List, Dict, Any, Optional
 from pymongo import MongoClient
 from pymongo.operations import ReplaceOne
@@ -12,9 +15,11 @@ from pymongo.errors import BulkWriteError
 from dotenv import load_dotenv
 import time # For timing operations
 from tqdm import tqdm
+import certifi  # Use certifi CA bundle for TLS
 # --- Configuration ---
 LINKS_URL = "https://production-media.paperswithcode.com/about/links-between-papers-and-code.json.gz"
 ABSTRACTS_URL = "https://production-media.paperswithcode.com/about/papers-with-abstracts.json.gz"
+PARQUET_ARCHIVE_DIR = os.path.join(os.path.dirname(__file__), "PwC-archive-old_data")  # Local fallback / primary source
 
 # MongoDB Config
 DB_NAME = "papers2code"
@@ -28,7 +33,7 @@ POLARS_STREAMING_BATCH_SIZE = 10000
 
 # Load environment variables
 load_dotenv()
-MONGO_CONNECTION_STRING = os.environ.get("MONGO_URI")
+MONGO_CONNECTION_STRING = os.environ.get("MONGO_URI_PROD")
 
 # Configure logging
 logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(message)s')
@@ -36,23 +41,75 @@ logging.basicConfig(level=logging.INFO, format='%(asctime)s - %(levelname)s - %(
 # --- Helper Functions ---
 
 def download_and_extract_json(url: str) -> Optional[List[Dict[str, Any]]]:
-    """Downloads, decompresses, and parses JSON data from a gzipped URL.
-    Streamlined by opening the gzip file in text mode and reducing nested error handling.
-    """
+    """Download, decompress, and parse JSON data from a gzipped URL with TLS-hardened fallbacks."""
     logging.info("Downloading data from %s", url)
+    headers = {"User-Agent": "papers2code/1.0 (+https://papers2code.app)"}
+
+    # Check for local file first (manual download fallback)
+    filename = url.split('/')[-1]
+    local_path = os.path.join(os.path.dirname(__file__), filename)
+    if os.path.exists(local_path):
+        logging.info("Using local file: %s", local_path)
+        try:
+            with gzip.open(local_path, mode="rt") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                logging.warning("Data from local %s is not a list", local_path)
+                return None
+            return data
+        except Exception as e:
+            logging.warning("Failed to read local file %s: %s", local_path, e)
+
+    # Attempt 1: default requests (already uses certifi in most envs)
     try:
-        response = requests.get(url, timeout=300)
-        response.raise_for_status()
-        # Open in text mode ('rt') to read the JSON directly without extra buffering.
-        with gzip.open(io.BytesIO(response.content), mode='rt') as f:
+        resp = requests.get(url, timeout=60, headers=headers)
+        resp.raise_for_status()
+        with gzip.open(io.BytesIO(resp.content), mode="rt") as f:
+            data = json.load(f)
+        if not isinstance(data, list):
+            logging.warning("Data from %s is not a list", url)
+            return None
+        return data
+    except requests.exceptions.SSLError as e:
+        logging.warning("SSL error on first attempt: %s", e)
+    except Exception as e:
+        logging.warning("Primary download attempt failed: %s", e)
+
+    # Attempt 2: requests with explicit certifi CA bundle
+    try:
+        resp = requests.get(url, timeout=60, headers=headers, verify=certifi.where())
+        resp.raise_for_status()
+        with gzip.open(io.BytesIO(resp.content), mode="rt") as f:
             data = json.load(f)
         if not isinstance(data, list):
             logging.warning("Data from %s is not a list", url)
             return None
         return data
     except Exception as e:
-        logging.error("Error processing %s: %s", url, e)
-        return None
+        logging.warning("Second attempt with explicit CA failed: %s", e)
+
+    # Attempt 3: curl fallback if available
+    try:
+        if shutil.which("curl"):
+            res = subprocess.run(["curl", "-fsSL", url], capture_output=True, check=True)
+            with gzip.open(io.BytesIO(res.stdout), mode="rt") as f:
+                data = json.load(f)
+            if not isinstance(data, list):
+                logging.warning("Data from %s is not a list (curl)", url)
+                return None
+            return data
+        else:
+            logging.error("curl not available for fallback download")
+    except Exception as e:
+        logging.error("curl fallback failed for %s: %s", url, e)
+
+    # If all else fails, provide helpful instructions
+    logging.error("Error processing %s after multiple attempts", url)
+    logging.error("Manual download instructions:")
+    logging.error("  1. Download %s manually (try a different browser/network)", url)
+    logging.error("  2. Save as %s", local_path)
+    logging.error("  3. Re-run this script")
+    return None
 
 
 def get_mongo_client(connection_string: Optional[str]) -> Optional[MongoClient]:
@@ -61,7 +118,13 @@ def get_mongo_client(connection_string: Optional[str]) -> Optional[MongoClient]:
         logging.error("MongoDB URI not found in environment variables.")
         return None
     try:
-        client = MongoClient(connection_string, serverSelectionTimeoutMS=15000)
+        # Explicitly provide CA bundle to avoid macOS trust-store issues
+        client = MongoClient(
+            connection_string,
+            serverSelectionTimeoutMS=15000,
+            tls=True,
+            tlsCAFile=certifi.where(),
+        )
         client.admin.command("ping")
         logging.info("Connected to MongoDB.")
         return client
@@ -227,11 +290,20 @@ def find_papers_without_code_polars_lazy(
     if not papers_with_abstracts_data:
         logging.warning("No abstracts data provided. Returning an empty LazyFrame.")
         schema = {
-            "pwc_url": pl.Utf8, "title": pl.Utf8, "abstract": pl.Utf8,
-            "authors": pl.List(pl.Utf8), "url_abs": pl.Utf8, "url_pdf": pl.Utf8,
-            "arxiv_id": pl.Utf8, "publication_date": pl.Datetime,
-            "venue": pl.Utf8, "tasks": pl.List(pl.Utf8), "status": pl.Utf8,
-            "is_implementable": pl.Boolean
+            # Keep pwc_url for now (deprecated but still used as unique key in DB)
+            "pwc_url": pl.Utf8,
+            "title": pl.Utf8,
+            "abstract": pl.Utf8,
+            "authors": pl.List(pl.Utf8),
+            "url_abs": pl.Utf8,
+            # Deprecated fields removed: url_pdf, venue
+            "arxiv_id": pl.Utf8,
+            "publication_date": pl.Datetime,
+            "tasks": pl.List(pl.Utf8),
+            "status": pl.Utf8,
+            "is_implementable": pl.Boolean,
+            # New optional GitHub URL field (store snake_case; backend exposes as camelCase via schema)
+            "url_github": pl.Utf8,
         }
         return pl.DataFrame(schema=schema).lazy()
 
@@ -246,32 +318,148 @@ def find_papers_without_code_polars_lazy(
             pl.col("abstract").fill_null("").cast(pl.Utf8),
             pl.col("authors").cast(pl.List(pl.Utf8), strict=False).fill_null([]),
             pl.col("url_abs").fill_null("").cast(pl.Utf8),
-            pl.col("url_pdf").fill_null("").cast(pl.Utf8),
             pl.col("arxiv_id").fill_null("").cast(pl.Utf8),
             pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d", strict=False, exact=True).alias("publication_date"),
-            pl.col("proceeding").alias("venue").fill_null("").cast(pl.Utf8),
             pl.col("tasks").cast(pl.List(pl.Utf8), strict=False).fill_null([])
         ])
         .filter(pl.col("publication_date").is_not_null())
     )
 
+    # Build links LazyFrame to attach a single GitHub URL per paper (top 1 by first occurrence)
+    # Some papers have multiple implementations; per request, take the first one for simplicity.
     if links_data:
-        links_lf = pl.LazyFrame(links_data).select("paper_url").unique()
-        papers_without_code_lf = abstracts_lf.join(links_lf, on="paper_url", how="anti")
+        mapped_links = []
+        for rec in links_data:
+            try:
+                paper_url = rec.get("paper_url")
+                repo_url = rec.get("repo_url") or rec.get("url") or rec.get("repo")
+                if paper_url and repo_url:
+                    mapped_links.append({"paper_url": paper_url, "repo_url": repo_url})
+            except Exception:
+                continue
+        if mapped_links:
+            links_lf = (
+                pl.LazyFrame(mapped_links)
+                .filter(pl.col("paper_url").is_not_null() & pl.col("repo_url").is_not_null())
+                .group_by("paper_url")
+                .agg(pl.col("repo_url").first().alias("url_github"))
+            )
+            papers_lf = abstracts_lf.join(links_lf, on="paper_url", how="left")
+        else:
+            papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("url_github")])
     else:
-        papers_without_code_lf = abstracts_lf
+        papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("url_github")])
 
     return (
-        papers_without_code_lf
+        papers_lf
         .with_columns([
             pl.lit("Needs Code").alias("status"),
-            pl.lit(True).alias("is_implementable")
+            pl.lit(True).alias("is_implementable"),
+            pl.when(pl.col("url_github").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("has_code")
         ])
         .drop("paper_url")
     )
 
 # --- Main Execution ---
 
+def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
+    """Unified lazy concat of all abstract parquet shards + optional links join.
+
+    Keeps all papers (with or without code). Adds:
+      - url_github (first repo if exists)
+      - has_code (bool)
+      - status, is_implementable
+    """
+    if not os.path.isdir(archive_dir):
+        logging.error("Parquet archive directory not found: %s", archive_dir)
+        return None
+
+    links_file = os.path.join(archive_dir, "papers_with_code.parquet")
+    abstract_files = [
+        f for f in glob.glob(os.path.join(archive_dir, "papers*.parquet")) if not f.endswith("papers_with_code.parquet")
+    ]
+    if not abstract_files:
+        logging.error("No abstract shards found in %s", archive_dir)
+        return None
+
+    # Build list of scans; allow missing columns (diagonal concat fills nulls)
+    scans: List[pl.LazyFrame] = []
+    for path in abstract_files:
+        try:
+            scans.append(pl.scan_parquet(path))
+        except Exception as e:
+            logging.warning("Skipping shard %s due to error: %s", path, e)
+    if not scans:
+        logging.error("All shard scans failed.")
+        return None
+
+    abstracts_lf = pl.concat(scans, how="diagonal_relaxed")
+
+    # Transform
+    abstracts_lf = (
+        abstracts_lf
+        .filter(pl.col("title").is_not_null() & (pl.col("title") != ""))
+        .with_columns([
+            pl.col("abstract").fill_null("").cast(pl.Utf8),
+            pl.when(pl.col("authors").is_not_null()).then(
+                pl.col("authors").cast(pl.List(pl.Utf8), strict=False)
+            ).otherwise(pl.lit([])).alias("authors"),
+            pl.col("url_abs").fill_null("").cast(pl.Utf8),
+            pl.col("arxiv_id").fill_null("").cast(pl.Utf8),
+            pl.col("date").cast(pl.Datetime, strict=False).alias("publication_date"),
+            pl.when(pl.col("tasks").is_not_null()).then(
+                pl.col("tasks").cast(pl.List(pl.Utf8), strict=False)
+            ).otherwise(pl.lit([])).alias("tasks"),
+        ])
+        .filter(pl.col("publication_date").is_not_null())
+        .select([
+            pl.col("paper_url"),
+            pl.col("paper_url").alias("pwc_url"),
+            pl.col("title"),
+            pl.col("abstract"),
+            pl.col("authors"),
+            pl.col("url_abs"),
+            pl.col("arxiv_id"),
+            pl.col("publication_date"),
+            pl.col("tasks"),
+        ])
+    )
+
+    # Links join lazily
+    if os.path.isfile(links_file):
+        try:
+            links_scan = pl.scan_parquet(links_file)
+            link_cols = links_scan.columns
+            repo_col = next((c for c in ["repo_url", "repository_url", "url", "repo"] if c in link_cols), None)
+            if repo_col and "paper_url" in link_cols:
+                links_clean = (
+                    links_scan
+                    .select([pl.col("paper_url"), pl.col(repo_col).alias("repo_url")])
+                    .filter(pl.col("repo_url").is_not_null())
+                    .group_by("paper_url")
+                    .agg(pl.col("repo_url").first().alias("url_github"))
+                )
+                abstracts_lf = abstracts_lf.join(links_clean, on="paper_url", how="left")
+            else:
+                abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("url_github"))
+        except Exception as e:
+            logging.warning("Links join failed: %s", e)
+            abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("url_github"))
+    else:
+        abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("url_github"))
+
+    final = (
+        abstracts_lf
+        .with_columns([
+            pl.lit("Needs Code").alias("status"),
+            pl.lit(True).alias("is_implementable"),
+            pl.when(pl.col("url_github").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("has_code"),
+        ])
+        .drop("paper_url")
+    )
+    return final
+
+## Removed per-shard processing in favor of unified lazy approach
 def main():
     """
     Main execution: download data, define the LazyFrame computation,
@@ -289,22 +477,28 @@ def main():
 
     # Download data.
     t1 = time.time()
-    links_data = download_and_extract_json(LINKS_URL)
-    t2 = time.time()
-    abstracts_data = download_and_extract_json(ABSTRACTS_URL)
-    if links_data is None or abstracts_data is None:
-        logging.error("Failed to retrieve one or both data files. Exiting.")
-        mongo_client.close()
-        return
-    logging.info("Downloads complete in %.2fs (links) and %.2fs (abstracts)", t2 - t1, time.time() - t2)
-
-    # Define the LazyFrame computation.
-    lazy_result_df = find_papers_without_code_polars_lazy(abstracts_data, links_data)
-    if lazy_result_df is None:
-        logging.error("Failed to define LazyFrame for papers without code. Exiting.")
-        mongo_client.close()
-        return
-    logging.info("LazyFrame plan defined successfully.")
+    # Prefer unified parquet lazy path if local archive exists; else fallback to remote JSON
+    if os.path.isdir(PARQUET_ARCHIVE_DIR):
+        logging.info("Local Parquet archive detected at %s. Building unified lazy frame.", PARQUET_ARCHIVE_DIR)
+        lazy_result_df = build_unified_lazy_from_parquet(PARQUET_ARCHIVE_DIR)
+        if lazy_result_df is None:
+            logging.error("Failed to build unified parquet LazyFrame.")
+            mongo_client.close()
+            return
+    else:
+        logging.info("Parquet archive not found. Falling back to remote JSON download (slower).")
+        links_data = download_and_extract_json(LINKS_URL)
+        abstracts_data = download_and_extract_json(ABSTRACTS_URL)
+        if links_data is None or abstracts_data is None:
+            logging.error("Failed to retrieve one or both data files. Exiting.")
+            mongo_client.close()
+            return
+        lazy_result_df = find_papers_without_code_polars_lazy(abstracts_data, links_data)
+        if lazy_result_df is None:
+            logging.error("Failed to define LazyFrame from downloaded JSON.")
+            mongo_client.close()
+            return
+    logging.info("Unified LazyFrame constructed. Beginning batched write.")
 
     # Stream results and save batched to MongoDB.
     save_lazyframe_to_mongodb_batched(

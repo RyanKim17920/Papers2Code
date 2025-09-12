@@ -166,8 +166,8 @@ const Dashboard: React.FC = () => {
         {/* Main Content Area */}
         <div className="flex-1 flex">
           {/* Center - Feed */}
-      <div className="flex-1 max-w-3xl">
-            <div className="p-6">
+  <div className="flex-1 max-w-3xl">
+    <div className="pt-3 pb-6 px-4">
               <ModernFeedTabs
                 trendingPapers={data?.trendingPapers || []}
                 recentPapers={data?.recentlyViewed || []}
@@ -183,7 +183,7 @@ const Dashboard: React.FC = () => {
 
       {/* Right Sidebar - Updates / News */}
           <div className="w-80 min-h-screen column-right border-l border-border/60">
-            <div className="p-6">
+            <div className="pt-3 pb-6 px-4">
         <SiteUpdates />
             </div>
           </div>
