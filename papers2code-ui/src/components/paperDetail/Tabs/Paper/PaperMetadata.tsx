@@ -1,7 +1,8 @@
 import React from 'react';
 import { Paper } from '../../../../common/types/paper'; // Import Status
 import './PaperMetadata.css';
-import { getStatusClass, getStatusSymbol } from '../../../../common/utils/statusUtils';
+import { getStatusClass } from '../../../../common/utils/statusUtils';
+import { StatusBadge } from '@/components/common/StatusBadge';
 interface PaperMetadataProps {
     paper: Paper;
 }
@@ -12,11 +13,7 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
     if (paper.status === 'Not Started' && paper.nonImplementableVotes > 0 && paper.implementabilityStatus === 'Voting') {
         displayStatus = 'Disputed'; // Or 'Community Concern'
     }
-    let statusClass = 'status-default'; 
-    let statusSymbol = '⏳'; 
-
-    statusClass = getStatusClass(paper); // Pass the whole paper object
-    statusSymbol = getStatusSymbol(paper); // Pass the whole paper object
+    let statusClass = getStatusClass(paper); // Pass the whole paper object
     
 
     return (
@@ -37,10 +34,7 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
             {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}
             <p>
                 <strong>Status:</strong>
-                <span className={`status ${statusClass}`}>
-                    <span className="status-symbol">{statusSymbol}</span>
-                    {displayStatus}
-                </span>
+                <StatusBadge paper={paper} />
             </p>
             <p>
                 <strong>Upvotes:</strong> {paper.upvoteCount}

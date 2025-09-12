@@ -39,31 +39,4 @@ export const getStatusClass = (paper: Paper | undefined | null): string => {
  * @param paper - The paper object.
  * @returns A string containing an emoji symbol for the status.
  */
-export const getStatusSymbol = (paper: Paper | undefined | null): string => {
-    if (!paper || !paper.status) return '❗'; // Default to warning if no status
-
-    if (paper.status === 'Not Started' && paper.nonImplementableVotes > 0 && paper.implementabilityStatus === 'Voting') {
-        return '🚩'; // Warning symbol for disputed not started
-    }
-
-    switch (paper.status) {
-        case 'Not Implementable':
-            return '🚫';
-        case 'Not Started':
-            return '⏳';
-        case 'Started':
-            return '🚀';
-        case 'Waiting for Author Response':
-            return '✉️';
-        case 'Work in Progress':
-            return '🚧';
-        case 'Waiting for Review':
-            return '👀';
-        case 'Completed':
-            return '✅';
-        case 'Official Code Posted':
-            return '📦';
-        default:
-            return '❗'; // Default for unknown status
-    }
-};
+// getStatusSymbol removed in favor of clean text-only badge styling.

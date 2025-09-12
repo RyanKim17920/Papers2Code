@@ -1,9 +1,10 @@
 import React from 'react';
-import { Clock, ArrowRight, FileText, TrendingUp, ThumbsUp, ExternalLink } from 'lucide-react';
-import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
-import { Badge } from '@/components/ui/badge';
+import { FileText, ThumbsUp, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Paper } from '@/common/types/paper';
+import { getStatusClass } from '@/common/utils/statusUtils';
+import '@/components/paperList/PaperCard.css'; // ensures status-* classes are available
+import { StatusBadge } from '@/components/common/StatusBadge';
 
 interface ModernContributionsProps {
   contributions: Paper[];
@@ -14,24 +15,7 @@ interface ModernContributionsProps {
   onVote?: (paperId: string, voteType: 'up' | 'none') => Promise<void>;
 }
 
-const getStatusBadge = (status: string) => {
-  const statusConfig = {
-    'Not Started': { color: 'bg-gray-100 text-gray-700 border-gray-200' },
-    'In Progress': { color: 'bg-blue-100 text-blue-700 border-blue-200' },
-    'Completed': { color: 'bg-green-100 text-green-700 border-green-200' },
-    'Published': { color: 'bg-purple-100 text-purple-700 border-purple-200' },
-  };
-  return statusConfig[status as keyof typeof statusConfig] || statusConfig['Not Started'];
-};
-
-const getImplementabilityBadge = (status: string) => {
-  const config = {
-    'Voting': { color: 'bg-amber-100 text-amber-700 border-amber-200', icon: '🗳️' },
-    'Implementable': { color: 'bg-green-100 text-green-700 border-green-200', icon: '✅' },
-    'Not Implementable': { color: 'bg-red-100 text-red-700 border-red-200', icon: '❌' },
-  };
-  return config[status as keyof typeof config] || config['Voting'];
-};
+// NOTE: Removed local Tailwind status color mapping to ensure consistency with global status classes.
 
 export const ModernContributions: React.FC<ModernContributionsProps> = ({
   contributions,
@@ -89,8 +73,7 @@ export const ModernContributions: React.FC<ModernContributionsProps> = ({
       ) : (
         <div className="space-y-1">
           {contributions.slice(0, 5).map((paper) => {
-            const statusBadge = getStatusBadge(paper.status);
-            
+            const statusClass = getStatusClass(paper); // retained for potential conditional logic
             return (
               <div
                 key={paper.id}
@@ -102,12 +85,10 @@ export const ModernContributions: React.FC<ModernContributionsProps> = ({
                   </p>
                   <div className="flex items-center justify-between mt-1">
                     <span className="text-xs text-muted-foreground">
-                      {new Date(paper.publicationDate).toLocaleDateString()}
+                      {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : ''}
                     </span>
                     <div className="flex items-center gap-1">
-                      <span className={`text-xs px-1.5 py-0.5 rounded ${statusBadge.color}`}>
-                        {paper.status}
-                      </span>
+                      <StatusBadge paper={paper} className="text-[10px] leading-none px-1.5 py-0.5" />
                       {onVote && paper.upvoteCount > 0 && (
                         <span className="text-xs bg-muted/50 px-1.5 py-0.5 rounded flex items-center">
                           <ThumbsUp className="w-3 h-3 mr-1" />

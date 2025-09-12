@@ -5,7 +5,8 @@ import { Paper } from '../../common/types/paper';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
 import { Button } from '../ui/button';
-import { getStatusClass, getStatusSymbol } from '../../common/utils/statusUtils';
+import { getStatusClass } from '../../common/utils/statusUtils';
+import { StatusBadge } from '@/components/common/StatusBadge';
 
 interface ModernPaperCardProps {
   paper: Paper;
@@ -54,20 +55,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
     return abstract.substring(0, maxLength).trim() + '...';
   };
 
-  const getStatusColor = (status: string) => {
-    switch (status) {
-      case 'Completed':
-      case 'Official Code Posted':
-        return 'bg-green-100 text-green-800 dark:bg-green-900/30 dark:text-green-300';
-      case 'Work in Progress':
-        return 'bg-yellow-100 text-yellow-800 dark:bg-yellow-900/30 dark:text-yellow-300';
-      case 'Started':
-        return 'bg-blue-100 text-blue-800 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'Not Started':
-      default:
-        return 'bg-gray-100 text-gray-800 dark:bg-gray-900/30 dark:text-gray-300';
-    }
-  };
+  // Removed local color mapping in favor of unified StatusBadge component.
 
   // Generate domain tags based on title/abstract keywords
   const getDomainTags = (paper: Paper): string[] => {
@@ -161,9 +149,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
                   </span>
                 )}
                 
-                <Badge className="text-xs px-2 py-0.5 h-5 bg-muted-foreground text-background">
-                  {displayStatus}
-                </Badge>
+                <StatusBadge paper={paper} className="text-xs px-2 py-0.5 h-5" />
               </div>
             </div>
 

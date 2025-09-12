@@ -39,6 +39,7 @@
   height: 4.2em;
   display: -webkit-box;
   -webkit-line-clamp: 3;
+  line-clamp: 3; /* Standard property for compatibility */
   -webkit-box-orient: vertical;
 }
 
@@ -118,8 +119,7 @@
   font-size: 0.8em;
   font-weight: 500;
   /* line-height: 1.2; /* Remove specific line-height, rely on flex alignment */
-  text-transform: uppercase;
-  letter-spacing: 0.5px;
+  /* Removed text-transform uppercase for natural casing */
   margin-left: 10px;
   border: 1px solid transparent; /* Base border */
   white-space: nowrap; /* Prevent text wrapping which might cause overflow */

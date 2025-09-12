@@ -3,6 +3,7 @@ import { TrendingUp, Clock, Heart, Users, ChevronDown, Sparkles, ThumbsUp, Messa
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
+import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '@/components/ui/button';
 import type { Paper } from '@/common/types/paper';
 
@@ -17,16 +18,7 @@ interface ModernFeedTabsProps {
   onVote?: (paperId: string, voteType: 'up' | 'none') => Promise<void>;
 }
 
-const getStatusBadge = (status: string) => {
-  const config = {
-    'Not Started': { color: 'bg-gray-100 text-gray-600' },
-    'Work in Progress': { color: 'bg-blue-100 text-blue-600' },
-    'Waiting for Review': { color: 'bg-yellow-100 text-yellow-700' },
-    'Completed': { color: 'bg-green-100 text-green-600' },
-    'Official Code Posted': { color: 'bg-purple-100 text-purple-700' },
-  } as const;
-  return (config as Record<string, { color: string }>)[status] || config['Not Started'];
-};
+// Removed local status badge color mapping in favor of unified StatusBadge.
 
 const formatAuthors = (authors: string[]) => {
   if (authors.length <= 2) {
@@ -73,7 +65,7 @@ const getDomainTags = (paper: Paper): string[] => {
 };
 
 const PaperCard: React.FC<{ paper: Paper; onClick: () => void }> = ({ paper, onClick }) => {
-  const statusBadge = getStatusBadge(paper.status);
+  // StatusBadge now handles styling
   
   return (
     <Card 
@@ -95,9 +87,7 @@ const PaperCard: React.FC<{ paper: Paper; onClick: () => void }> = ({ paper, onC
               </div>
             </div>
             <div className="flex flex-col items-end gap-1">
-              <Badge className={`text-xs px-1.5 py-0.5 ${statusBadge.color} border-0`}>
-                {paper.status}
-              </Badge>
+              <StatusBadge paper={paper} className="text-[10px] px-1.5 py-0.5" />
               {paper.upvoteCount > 0 && (
                 <div className="flex items-center gap-1 text-xs text-muted-foreground">
                   <TrendingUp className="w-3 h-3" />
@@ -232,7 +222,6 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
           </div>
         ) : (
           (activeTabData?.papers || []).map((paper) => {
-            const statusBadge = getStatusBadge(paper.status);
             const domainTags = getDomainTags(paper);
             
             return (
@@ -248,9 +237,7 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
                     <h3 className="font-medium text-sm text-foreground line-clamp-2 leading-relaxed flex-1 mr-2">
                       {paper.title}
                     </h3>
-                    <span className={`text-xs px-2 py-0.5 rounded ${statusBadge.color} whitespace-nowrap`}>
-                      {paper.status}
-                    </span>
+                    <StatusBadge paper={paper} className="text-[10px] px-2 py-0.5" />
                   </div>
                   
                   <p className="text-xs text-muted-foreground mb-2 line-clamp-2 leading-relaxed">

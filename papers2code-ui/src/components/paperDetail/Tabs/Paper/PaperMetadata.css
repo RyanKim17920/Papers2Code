@@ -34,11 +34,12 @@
 }
 
 .status {
-    padding: 3px 8px;
-    border-radius: var(--border-radius-sm);
-    font-weight: 500;
-    font-size: 0.9em;
-    margin-left: 8px;
+  padding: 3px 8px;
+  border-radius: var(--border-radius-sm);
+  font-weight: 500;
+  font-size: 0.9em;
+  margin-left: 8px;
+  /* Ensure natural casing */
 }
 
 .status-not-started {
