@@ -12,9 +12,10 @@ import { getPaperDescription } from '@/common/utils/descriptionUtils';
 interface ModernPaperCardProps {
   paper: Paper;
   onVote: (paperId: string, voteType: 'up' | 'none') => Promise<void>;
+  className?: string; // allow external styling overrides
 }
 
-const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
+const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, className = '' }) => {
   const [isVoting, setIsVoting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
 
@@ -87,7 +88,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote }) => {
 
   return (
     <Link to={`/paper/${paper.id}`} className="block">
-      <Card className="hover:shadow-md transition-shadow cursor-pointer">
+      <Card className={`hover:shadow-md transition-shadow cursor-pointer ${className}`.trim()}>
         <CardContent className="p-4">
           <div className="space-y-3">
             {/* Header */}
