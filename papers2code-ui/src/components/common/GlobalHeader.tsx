@@ -36,7 +36,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   const handleSearchSubmit = (e: React.FormEvent) => {
     e.preventDefault();
     if (searchQuery.trim()) {
-      navigate(`/papers?search=${encodeURIComponent(searchQuery.trim())}`);
+      navigate(`/papers?searchQuery=${encodeURIComponent(searchQuery.trim())}`);
     } else {
       navigate('/papers');
     }
