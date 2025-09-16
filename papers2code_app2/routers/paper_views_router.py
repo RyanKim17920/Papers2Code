@@ -10,6 +10,7 @@ from ..services.exceptions import DatabaseOperationException
 from ..error_handlers import handle_service_errors
 from ..auth import get_current_user_optional # Changed from get_current_user
 from ..utils import transform_paper_async
+from ..shared import config_settings
 import logging
 import time # Add time import for performance logging
 
@@ -72,8 +73,8 @@ async def list_papers(
     #     if transformed_paper:
     #         transformed_papers.append(transformed_paper)
 
-    # Parallelize the transformation with batching for better performance
-    batch_size = 6  # Process 6 papers at a time to avoid overwhelming the database
+    # Parallelize the transformation with configurable batching for better performance
+    batch_size = config_settings.PAPER_TRANSFORM_BATCH_SIZE  # Configurable batch size
     transformed_papers = []
     
     for i in range(0, len(papers_cursor), batch_size):

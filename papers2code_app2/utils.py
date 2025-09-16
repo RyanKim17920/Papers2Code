@@ -14,6 +14,7 @@ from .shared import (
     IMPL_STATUS_ADMIN_IMPLEMENTABLE,
     IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE
 )
+from .cache import paper_cache
 
 logger = logging.getLogger(__name__)
 
