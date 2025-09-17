@@ -1,5 +1,5 @@
 import React from 'react';
-import { FaThumbsUp, FaThumbsDown } from 'react-icons/fa';
+import { ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Paper } from '../../../../common/types/paper';
 import './ImplementabilityNotice.css';
 
@@ -36,8 +36,8 @@ const ImplementabilityNotice: React.FC<ImplementabilityNoticeProps> = ({ paper }
             <div className="not-implementable-notice flagged">
                 <p><strong>Flagged as Potentially Not-Implementable</strong></p>
                 <p>
-                    {paper.nonImplementableVotes} user(s) voted it as Not Implementable <FaThumbsDown title="Not Implementable Votes" />.
-                    {' '}{paper.isImplementableVotes} user(s) voted it as Implementable <FaThumbsUp title="Is Implementable Votes" />.
+                    {paper.nonImplementableVotes} user(s) voted it as Not Implementable <span title="Not Implementable Votes"><ThumbsDown className="h-4 w-4 inline" /></span>.
+                    {' '}{paper.isImplementableVotes} user(s) voted it as Implementable <span title="Is Implementable Votes"><ThumbsUp className="h-4 w-4 inline" /></span>.
                 </p>
             </div>
         );

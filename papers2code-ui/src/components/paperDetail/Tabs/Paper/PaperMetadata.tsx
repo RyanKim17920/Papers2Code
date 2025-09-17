@@ -1,44 +1,163 @@
-import React from 'react';
-import { Paper } from '../../../../common/types/paper'; // Import Status
-import './PaperMetadata.css';
-import { getStatusClass } from '../../../../common/utils/statusUtils';
+import React, { useState } from 'react';
+import { Paper } from '../../../../common/types/paper';
 import { StatusBadge } from '@/components/common/StatusBadge';
+import { Button } from '../../../ui/button';
+import { Badge } from '../../../ui/badge';
+import { Heart, Github, ExternalLink, Calendar, Users, FileText, Tag } from 'lucide-react';
+import { UpvotersModal } from '../../UpvotersModal';
+import type { PaperActionUsers } from '../../../../common/services/api';
+import type { UserProfile } from '../../../../common/types/user';
 interface PaperMetadataProps {
     paper: Paper;
+    currentUser: UserProfile | null;
+    handleUpvote: (voteType: 'up' | 'none') => void;
+    isVoting: boolean;
+    actionUsers: PaperActionUsers | null;
+    isLoadingActionUsers: boolean;
+    actionUsersError: string | null;
 }
 
-const PaperMetadata: React.FC<PaperMetadataProps> = ({ paper }) => {
-    // --- Determine Display Status, Class, and Symbol based on paper object ---
-    let displayStatus: string = paper.status;
-    if (paper.status === 'Not Started' && paper.nonImplementableVotes > 0 && paper.implementabilityStatus === 'Voting') {
-        displayStatus = 'Disputed'; // Or 'Community Concern'
-    }
-    let statusClass = getStatusClass(paper); // Pass the whole paper object
-    
+const PaperMetadata: React.FC<PaperMetadataProps> = ({ 
+    paper, 
+    currentUser, 
+    handleUpvote, 
+    isVoting, 
+    actionUsers, 
+    isLoadingActionUsers, 
+    actionUsersError 
+}) => {
+    const [showUpvotersModal, setShowUpvotersModal] = useState(false);
 
     return (
-        <div className="paper-meta">
-            <p>
-                <strong>Authors:</strong> {paper.authors?.join(', ') || 'N/A'}
-            </p>
-            <p>
-                <strong>Date:</strong> {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}
-                {paper.proceeding && <span> | <strong>Proceeding:</strong> {paper.proceeding}</span>}
-            </p>
-            {paper.arxivId && <p><strong>ArXiv ID:</strong> {paper.arxivId}</p>}
-            <p>
-                {paper.urlAbs && <a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">Abstract Link</a>}
-                {paper.urlPdf && <> | <a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">PDF Link</a></>}
-                {paper.pwcUrl && <> | <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">PapersWithCode</a></>}
-            </p>
-            {paper.tasks && paper.tasks.length > 0 && (<p><strong>Tasks:</strong> {paper.tasks.join(', ')}</p>)}
-            <p>
-                <strong>Status:</strong>
-                <StatusBadge paper={paper} />
-            </p>
-            <p>
-                <strong>Upvotes:</strong> {paper.upvoteCount}
-            </p>
+        <div className="space-y-6">
+            {/* Header Section with Upvotes */}
+            <div className="flex items-start justify-between">
+                <div className="flex-1">
+                    <div className="flex items-center gap-2 mb-2">
+                        <StatusBadge paper={paper} />
+                        {paper.tasks && paper.tasks.length > 0 && (
+                            <div className="flex gap-1">
+                                {paper.tasks.slice(0, 3).map((task, index) => (
+                                    <Badge key={index} variant="outline" className="text-xs">
+                                        <Tag className="h-3 w-3 mr-1" />
+                                        {task}
+                                    </Badge>
+                                ))}
+                                {paper.tasks.length > 3 && (
+                                    <Badge variant="outline" className="text-xs">
+                                        +{paper.tasks.length - 3} more
+                                    </Badge>
+                                )}
+                            </div>
+                        )}
+                    </div>
+                </div>
+                
+                {/* Upvote Section */}
+                <div className="flex items-center gap-2">
+                    {currentUser ? (
+                        <Button
+                            variant={paper.currentUserVote === 'up' ? "default" : "outline"}
+                            size="sm"
+                            onClick={() => handleUpvote(paper.currentUserVote === 'up' ? 'none' : 'up')}
+                            disabled={isVoting}
+                            className="gap-2"
+                        >
+                            <Heart className={`h-4 w-4 ${paper.currentUserVote === 'up' ? 'fill-current' : ''}`} />
+                            {paper.upvoteCount}
+                        </Button>
+                    ) : (
+                        <Badge variant="secondary" className="gap-2">
+                            <Heart className="h-4 w-4" />
+                            {paper.upvoteCount}
+                        </Badge>
+                    )}
+                    
+                    {paper.upvoteCount > 0 && (
+                        <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => setShowUpvotersModal(true)}
+                            className="text-muted-foreground hover:text-foreground"
+                        >
+                            <Users className="h-4 w-4 mr-1" />
+                            View
+                        </Button>
+                    )}
+                </div>
+            </div>
+
+            {/* Authors Section */}
+            <div className="space-y-3">
+                <div className="flex items-start gap-3">
+                    <Users className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <div>
+                        <div className="text-sm font-medium text-muted-foreground">Authors</div>
+                        <div className="text-sm">{paper.authors?.join(', ') || 'N/A'}</div>
+                    </div>
+                </div>
+
+                <div className="flex items-start gap-3">
+                    <Calendar className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                    <div>
+                        <div className="text-sm font-medium text-muted-foreground">Publication</div>
+                        <div className="text-sm">
+                            {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}
+                            {paper.proceeding && <span className="text-muted-foreground ml-2">• {paper.proceeding}</span>}
+                        </div>
+                    </div>
+                </div>
+
+                {paper.arxivId && (
+                    <div className="flex items-start gap-3">
+                        <FileText className="h-5 w-5 mt-0.5 text-muted-foreground" />
+                        <div>
+                            <div className="text-sm font-medium text-muted-foreground">ArXiv ID</div>
+                            <div className="text-sm">{paper.arxivId}</div>
+                        </div>
+                    </div>
+                )}
+            </div>
+
+            {/* Links Section */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
+                {paper.urlAbs && (
+                    <Button variant="outline" size="sm" asChild className="justify-start gap-2">
+                        <a href={paper.urlAbs} target="_blank" rel="noopener noreferrer">
+                            <ExternalLink className="h-4 w-4" />
+                            Abstract
+                        </a>
+                    </Button>
+                )}
+                
+                {paper.urlPdf && (
+                    <Button variant="outline" size="sm" asChild className="justify-start gap-2">
+                        <a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">
+                            <FileText className="h-4 w-4" />
+                            PDF
+                        </a>
+                    </Button>
+                )}
+                
+                {paper.pwcUrl && (
+                    <Button variant="outline" size="sm" asChild className="justify-start gap-2">
+                        <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">
+                            <Github className="h-4 w-4" />
+                            PapersWithCode
+                        </a>
+                    </Button>
+                )}
+            </div>
+
+            {/* Upvoters Modal */}
+            <UpvotersModal
+                isOpen={showUpvotersModal}
+                onClose={() => setShowUpvotersModal(false)}
+                actionUsers={actionUsers}
+                isLoading={isLoadingActionUsers}
+                error={actionUsersError}
+                upvoteCount={paper.upvoteCount}
+            />
         </div>
     );
 };

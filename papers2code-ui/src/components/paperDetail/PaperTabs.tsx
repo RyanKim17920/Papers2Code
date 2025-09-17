@@ -45,21 +45,6 @@ const PaperTabs: React.FC<PaperTabsProps> = ({
                         Implementation Progress
                     </button>
                 )}
-                <button
-                    className={cn(
-                        "px-4 py-3 text-sm font-medium whitespace-nowrap border-b-2 transition-all duration-200",
-                        "hover:text-foreground hover:bg-accent/50 flex items-center gap-2",
-                        activeTab === 'upvotes'
-                            ? "text-primary border-primary bg-primary/5"
-                            : "text-muted-foreground border-transparent"
-                    )}
-                    onClick={() => onSelectTab('upvotes')}
-                >
-                    Upvotes 
-                    <span className="px-2 py-1 text-xs rounded-full bg-muted text-muted-foreground">
-                        {paper.upvoteCount ?? 0}
-                    </span>
-                </button>
                 {!paper.implementationProgress && (
                     <button
                         className={cn(

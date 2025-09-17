@@ -18,7 +18,7 @@ import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
 import PaperAbstract from '../components/paperDetail/Tabs/Paper/PaperAbstract';
 import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
 import PaperTabs from '../components/paperDetail/PaperTabs';
-import { UpvotesTab } from '../components/paperDetail/Tabs/Upvote/UpvotesTab';
+
 import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
 import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
 import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
@@ -162,12 +162,13 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     )}
 
                     {/* Paper Header */}
-                    <div className="space-y-4">
-                        <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
-                            {paper.title}
-                        </h1>
-                        
-                        <ImplementabilityNotice paper={paper} />
+                    <div className="space-y-6">
+                        <div>
+                            <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-3">
+                                {paper.title}
+                            </h1>
+                            <ImplementabilityNotice paper={paper} />
+                        </div>
                     </div>
 
                     {/* Community Implementation Effort Section */}
@@ -281,22 +282,18 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     <Card className="bg-card/70 backdrop-blur border border-border/60">
                         <CardContent className="p-0">
                             {activeTab === 'paperInfo' && (
-                                <div className="p-6 space-y-6">
-                                    <PaperMetadata paper={paper} />
+                                <div className="p-6 space-y-8">
+                                    <PaperMetadata 
+                                        paper={paper}
+                                        currentUser={currentUser}
+                                        handleUpvote={handleUpvote}
+                                        isVoting={isVoting}
+                                        actionUsers={actionUsers}
+                                        isLoadingActionUsers={isLoadingActionUsers}
+                                        actionUsersError={actionUsersError}
+                                    />
                                     <PaperAbstract abstract={paper.abstract} />
                                 </div>
-                            )}
-
-                            {activeTab === 'upvotes' && (
-                                <UpvotesTab
-                                    paper={paper}
-                                    currentUser={currentUser}
-                                    isVoting={isVoting}
-                                    handleUpvote={handleUpvote}
-                                    actionUsers={actionUsers}
-                                    isLoadingActionUsers={isLoadingActionUsers}
-                                    actionUsersError={actionUsersError}
-                                />
                             )}
 
                             {activeTab === 'implementability' && (
