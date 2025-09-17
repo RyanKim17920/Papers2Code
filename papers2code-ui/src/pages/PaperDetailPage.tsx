@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
+import { ArrowLeft, Rocket, Users, ExternalLink } from 'lucide-react';
 
 import { usePaperDetail } from '../common/hooks/usePaperDetail';
 import { useActivityTracking } from '../common/hooks/useActivityTracking';
@@ -9,6 +10,9 @@ import type { ImplementationProgress } from '../common/types/implementation';
 
 import { LoadingSpinner } from '../common/components';
 import ConfirmationModal from '../common/components/ConfirmationModal';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 
 import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
 import PaperAbstract from '../components/paperDetail/Tabs/Paper/PaperAbstract';
@@ -18,7 +22,6 @@ import { UpvotesTab } from '../components/paperDetail/Tabs/Upvote/UpvotesTab';
 import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
 import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
 import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
-import './PaperDetailPage.css';
 
 interface PaperDetailPageProps {
     currentUser: UserProfile | null;
@@ -132,58 +135,120 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     );
 
     return (
-        <div className="paper-detail-page">
-            <Link to="/papers" className="back-link">Back to List</Link>
-
-            {updateError && <div className="update-error">{updateError}</div>}
-            <h1>{paper.title}</h1>
-
-            <ImplementabilityNotice paper={paper} />
-
-            {/* --- Community Implementation Effort Section --- */}
-            {currentUser && paper && (
-                <div className="implementation-effort-section">
-                    <h4>Community Implementation Progress</h4>
-                    {paper.implementationProgress ? (
-                        // Effort exists
-                        isCurrentUserContributor ? (
-                            <p>You are contributing to this paper&apos;s implementation. <Link to="#" onClick={(e) => { e.preventDefault(); setActiveTab('implementationProgress'); }}>View Progress</Link></p>
-                        ) : (
-                            <>
-                                <p>A community effort to implement this paper is active or has been initiated.</p>
-                                <button 
-                                    onClick={handleInitiateImplementationEffort} 
-                                    className="button-secondary" 
-                                    disabled={isProcessingEffortAction} 
-                                >
-                                    View or Join Effort
-                                </button>
-                            </>
-                        )
-                    ) : (
-                        // No effort exists yet
-                        <>
-                            <p>Be the first to lead or join a community effort to implement this paper!</p>
-                            <button 
-                                onClick={handleInitiateImplementationEffort}
-                                className="button-secondary" 
-                                disabled={isProcessingEffortAction} 
-                            >
-                                Start Implementation Effort
-                            </button>
-                        </>
-                    )}
-                    {effortActionError && <div className="error-message">{effortActionError}</div>}
-                    {updateError && !effortActionError && <div className="error-message">{updateError}</div>} 
+        <div className="min-h-screen bg-background">
+            {/* Header */}
+            <div className="bg-card/40 backdrop-blur border-b border-border/60 sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-6 py-4">
+                    <Link 
+                        to="/papers" 
+                        className="inline-flex items-center gap-2 text-muted-foreground hover:text-foreground transition-colors"
+                    >
+                        <ArrowLeft size={16} />
+                        Back to Papers
+                    </Link>
                 </div>
-            )}
+            </div>
 
-            <PaperTabs
-                activeTab={activeTab}
-                onSelectTab={handleSetActiveTab}
-                paper={paper}
-                isAdminView={isAdminView}
-            />
+            {/* Main Content */}
+            <div className="max-w-7xl mx-auto px-6 py-8">
+                <div className="space-y-8">
+                    {/* Error Message */}
+                    {updateError && (
+                        <Card className="border-destructive/20 bg-destructive/5">
+                            <CardContent className="p-4">
+                                <p className="text-destructive text-sm">{updateError}</p>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Paper Header */}
+                    <div className="space-y-4">
+                        <h1 className="text-3xl md:text-4xl font-bold text-foreground leading-tight">
+                            {paper.title}
+                        </h1>
+                        
+                        <ImplementabilityNotice paper={paper} />
+                    </div>
+
+                    {/* Community Implementation Effort Section */}
+                    {currentUser && paper && (
+                        <Card className="bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20">
+                            <CardContent className="p-6">
+                                <div className="flex items-start gap-4">
+                                    <div className="p-2 rounded-lg bg-primary/10">
+                                        {paper.implementationProgress ? <Users className="h-5 w-5 text-primary" /> : <Rocket className="h-5 w-5 text-primary" />}
+                                    </div>
+                                    <div className="flex-1 space-y-3">
+                                        <h3 className="font-semibold text-lg">Community Implementation Progress</h3>
+                                        
+                                        {paper.implementationProgress ? (
+                                            // Effort exists
+                                            isCurrentUserContributor ? (
+                                                <div className="space-y-3">
+                                                    <p className="text-muted-foreground">
+                                                        You are contributing to this paper's implementation.
+                                                    </p>
+                                                    <Button 
+                                                        variant="outline" 
+                                                        size="sm"
+                                                        onClick={() => setActiveTab('implementationProgress')}
+                                                        className="gap-2"
+                                                    >
+                                                        <ExternalLink size={14} />
+                                                        View Progress
+                                                    </Button>
+                                                </div>
+                                            ) : (
+                                                <div className="space-y-3">
+                                                    <p className="text-muted-foreground">
+                                                        A community effort to implement this paper is active or has been initiated.
+                                                    </p>
+                                                    <Button 
+                                                        variant="secondary"
+                                                        onClick={handleInitiateImplementationEffort} 
+                                                        disabled={isProcessingEffortAction}
+                                                        className="gap-2"
+                                                    >
+                                                        <Users size={14} />
+                                                        View or Join Effort
+                                                    </Button>
+                                                </div>
+                                            )
+                                        ) : (
+                                            // No effort exists yet
+                                            <div className="space-y-3">
+                                                <p className="text-muted-foreground">
+                                                    Be the first to lead or join a community effort to implement this paper!
+                                                </p>
+                                                <Button 
+                                                    onClick={handleInitiateImplementationEffort}
+                                                    disabled={isProcessingEffortAction}
+                                                    className="gap-2"
+                                                >
+                                                    <Rocket size={14} />
+                                                    Start Implementation Effort
+                                                </Button>
+                                            </div>
+                                        )}
+                                        
+                                        {effortActionError && (
+                                            <div className="text-destructive text-sm bg-destructive/5 p-2 rounded border border-destructive/20">
+                                                {effortActionError}
+                                            </div>
+                                        )}
+                                    </div>
+                                </div>
+                            </CardContent>
+                        </Card>
+                    )}
+
+                    {/* Tabs */}
+                    <PaperTabs
+                        activeTab={activeTab}
+                        onSelectTab={handleSetActiveTab}
+                        paper={paper}
+                        isAdminView={isAdminView}
+                    />
 
             {showConfirmRemoveModal && (
                 <ConfirmationModal // Standardized to ConfirmationModal
@@ -212,60 +277,67 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 </ConfirmationModal>
             )}
 
-            <div className="tab-content">
-                {activeTab === 'paperInfo' && (
-                    <div className="tab-pane-container">
-                        <PaperMetadata paper={paper} />
-                        <PaperAbstract abstract={paper.abstract} />
-                    </div>
-                )}
+                    {/* Tab Content */}
+                    <Card className="bg-card/70 backdrop-blur border border-border/60">
+                        <CardContent className="p-0">
+                            {activeTab === 'paperInfo' && (
+                                <div className="p-6 space-y-6">
+                                    <PaperMetadata paper={paper} />
+                                    <PaperAbstract abstract={paper.abstract} />
+                                </div>
+                            )}
 
-                {activeTab === 'upvotes' && (
-                    <UpvotesTab
-                        paper={paper}
-                        currentUser={currentUser}
-                        isVoting={isVoting}
-                        handleUpvote={handleUpvote}
-                        actionUsers={actionUsers}
-                        isLoadingActionUsers={isLoadingActionUsers}
-                        actionUsersError={actionUsersError}
-                    />
-                )}
+                            {activeTab === 'upvotes' && (
+                                <UpvotesTab
+                                    paper={paper}
+                                    currentUser={currentUser}
+                                    isVoting={isVoting}
+                                    handleUpvote={handleUpvote}
+                                    actionUsers={actionUsers}
+                                    isLoadingActionUsers={isLoadingActionUsers}
+                                    actionUsersError={actionUsersError}
+                                />
+                            )}
 
-                {activeTab === 'implementability' && (
-                    <ImplementabilityVotingTab
-                        paper={paper}
-                        currentUser={currentUser}
-                        isVoting={isVoting}
-                        handleImplementabilityVote={handleImplementabilityVote}
-                        actionUsers={actionUsers}
-                        isLoadingActionUsers={isLoadingActionUsers}
-                        actionUsersError={actionUsersError}
-                    />
-                )}
+                            {activeTab === 'implementability' && (
+                                <ImplementabilityVotingTab
+                                    paper={paper}
+                                    currentUser={currentUser}
+                                    isVoting={isVoting}
+                                    handleImplementabilityVote={handleImplementabilityVote}
+                                    actionUsers={actionUsers}
+                                    isLoadingActionUsers={isLoadingActionUsers}
+                                    actionUsersError={actionUsersError}
+                                />
+                            )}
 
-                {activeTab === 'admin' && isAdminView && ( // Use isAdminView here
-                    <div className="tab-pane-container">
-                        <OwnerActions
-                            paper={paper}
-                            currentUser={currentUser}
-                            onPaperUpdate={loadPaperAndActions}
-                            openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
-                            onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)} // Pass handler for new prop
-                            isUpdatingStatus={isUpdatingStatus}
-                            isRemoving={isRemoving}
-                        />
-                    </div>
-                )}                {activeTab === 'implementationProgress' && paper.implementationProgress && (
-                    <div className="tab-pane-container">
-                        <ImplementationProgressTab 
-                            progress={paper.implementationProgress} 
-                            paperId={paper.id} 
-                            currentUser={currentUser}
-                            onImplementationProgressChange={handleImplementationProgressChange}
-                        />
-                    </div>
-                )}
+                            {activeTab === 'admin' && isAdminView && (
+                                <div className="p-6">
+                                    <OwnerActions
+                                        paper={paper}
+                                        currentUser={currentUser}
+                                        onPaperUpdate={loadPaperAndActions}
+                                        openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
+                                        onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)}
+                                        isUpdatingStatus={isUpdatingStatus}
+                                        isRemoving={isRemoving}
+                                    />
+                                </div>
+                            )}
+
+                            {activeTab === 'implementationProgress' && paper.implementationProgress && (
+                                <div className="p-6">
+                                    <ImplementationProgressTab 
+                                        progress={paper.implementationProgress} 
+                                        paperId={paper.id} 
+                                        currentUser={currentUser}
+                                        onImplementationProgressChange={handleImplementationProgressChange}
+                                    />
+                                </div>
+                            )}
+                        </CardContent>
+                    </Card>
+                </div>
             </div>
  
             {/* New Confirmation Modal for Starting/Joining Effort */}
