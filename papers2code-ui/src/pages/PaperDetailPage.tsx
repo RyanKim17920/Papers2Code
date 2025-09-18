@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Rocket, Users, ExternalLink } from 'lucide-react';
+import { ArrowLeft, Rocket, Users, ExternalLink, FileText, Code, Vote, Settings } from 'lucide-react';
 
 import { usePaperDetail } from '../common/hooks/usePaperDetail';
 import { useActivityTracking } from '../common/hooks/useActivityTracking';
@@ -15,9 +15,9 @@ import { Button } from '../components/ui/button';
 import { Badge } from '../components/ui/badge';
 
 import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
-import PaperAbstract from '../components/paperDetail/Tabs/Paper/PaperAbstract';
-import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
+
 import PaperTabs from '../components/paperDetail/PaperTabs';
+import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
 
 import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
 import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
@@ -243,97 +243,98 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         </Card>
                     )}
 
-                    {/* Tabs */}
-                    <PaperTabs
-                        activeTab={activeTab}
-                        onSelectTab={handleSetActiveTab}
-                        paper={paper}
-                        isAdminView={isAdminView}
-                    />
+                    {/* Main Content - Information Dense Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                        {/* Left Column - Main Paper Info */}
+                        <div className="lg:col-span-2 space-y-6">
+                            {/* Paper Metadata & Abstract */}
+                            <Card className="bg-card/70 backdrop-blur border border-border/60">
+                                <CardContent className="p-6">
+                                    <div className="space-y-6">
+                                        <PaperMetadata 
+                                            paper={paper}
+                                            currentUser={currentUser}
+                                            handleUpvote={handleUpvote}
+                                            isVoting={isVoting}
+                                            actionUsers={actionUsers}
+                                            isLoadingActionUsers={isLoadingActionUsers}
+                                            actionUsersError={actionUsersError}
+                                        />
+                                        <div className="border-t border-border/60 pt-6">
+                                            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
+                                                <FileText className="w-5 h-5 text-primary" />
+                                                Abstract
+                                            </h3>
+                                            <p className="text-muted-foreground leading-relaxed">
+                                                {paper.abstract || 'Abstract not available.'}
+                                            </p>
+                                        </div>
+                                    </div>
+                                </CardContent>
+                            </Card>
 
-            {showConfirmRemoveModal && (
-                <ConfirmationModal // Standardized to ConfirmationModal
-                    isOpen={showConfirmRemoveModal}
-                    onClose={() => setShowConfirmRemoveModal(false)}
-                    onConfirm={handleRemovePaper}
-                    title="Confirm Removal"
-                    confirmText="Remove"
-                    confirmButtonClass="button-danger"
-                    isConfirming={isRemoving}
-                >
-                    <p>Are you sure you want to remove this paper? This action cannot be undone.</p>
-                </ConfirmationModal>
-            )}
+                            {/* Implementation Progress Tab Content (if exists) */}
+                            {paper.implementationProgress && (
+                                <Card className="bg-card/70 backdrop-blur border border-border/60">
+                                    <CardContent className="p-6">
+                                        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                                            <Code className="w-5 h-5 text-primary" />
+                                            Implementation Progress
+                                        </h3>
+                                        <ImplementationProgressTab 
+                                            progress={paper.implementationProgress} 
+                                            paperId={paper.id} 
+                                            currentUser={currentUser}
+                                            onImplementationProgressChange={handleImplementationProgressChange}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )}
+                        </div>
 
-            {showConfirmStatusModal.show && showConfirmStatusModal.status && (
-                <ConfirmationModal // Standardized to ConfirmationModal
-                    isOpen={showConfirmStatusModal.show}
-                    onClose={() => setShowConfirmStatusModal({ show: false, status: null })}
-                    onConfirm={() => handleSetImplementabilityStatus(showConfirmStatusModal.status!)}
-                    title="Confirm Status Change"
-                    confirmText="Confirm Status"
-                    isConfirming={isUpdatingStatus}
-                >
-                    <p>{`Are you sure you want to set the status to "${showConfirmStatusModal.status}"?`}</p>
-                </ConfirmationModal>
-            )}
-
-                    {/* Tab Content */}
-                    <Card className="bg-card/70 backdrop-blur border border-border/60">
-                        <CardContent className="p-0">
-                            {activeTab === 'paperInfo' && (
-                                <div className="p-6 space-y-8">
-                                    <PaperMetadata 
+                        {/* Right Column - Implementability Voting & Admin */}
+                        <div className="space-y-6">
+                            {/* Implementability Voting */}
+                            <Card className="bg-card/70 backdrop-blur border border-border/60">
+                                <CardContent className="p-6">
+                                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                                        <Vote className="w-5 h-5 text-primary" />
+                                        Implementability
+                                    </h3>
+                                    <ImplementabilityVotingTab
                                         paper={paper}
                                         currentUser={currentUser}
-                                        handleUpvote={handleUpvote}
                                         isVoting={isVoting}
+                                        handleImplementabilityVote={handleImplementabilityVote}
                                         actionUsers={actionUsers}
                                         isLoadingActionUsers={isLoadingActionUsers}
                                         actionUsersError={actionUsersError}
                                     />
-                                    <PaperAbstract abstract={paper.abstract} />
-                                </div>
-                            )}
+                                </CardContent>
+                            </Card>
 
-                            {activeTab === 'implementability' && (
-                                <ImplementabilityVotingTab
-                                    paper={paper}
-                                    currentUser={currentUser}
-                                    isVoting={isVoting}
-                                    handleImplementabilityVote={handleImplementabilityVote}
-                                    actionUsers={actionUsers}
-                                    isLoadingActionUsers={isLoadingActionUsers}
-                                    actionUsersError={actionUsersError}
-                                />
+                            {/* Admin Actions */}
+                            {isAdminView && (
+                                <Card className="bg-card/70 backdrop-blur border border-border/60">
+                                    <CardContent className="p-6">
+                                        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
+                                            <Settings className="w-5 h-5 text-primary" />
+                                            Admin Actions
+                                        </h3>
+                                        <OwnerActions
+                                            paper={paper}
+                                            currentUser={currentUser}
+                                            onPaperUpdate={loadPaperAndActions}
+                                            openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
+                                            onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)}
+                                            isUpdatingStatus={isUpdatingStatus}
+                                            isRemoving={isRemoving}
+                                        />
+                                    </CardContent>
+                                </Card>
                             )}
-
-                            {activeTab === 'admin' && isAdminView && (
-                                <div className="p-6">
-                                    <OwnerActions
-                                        paper={paper}
-                                        currentUser={currentUser}
-                                        onPaperUpdate={loadPaperAndActions}
-                                        openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
-                                        onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)}
-                                        isUpdatingStatus={isUpdatingStatus}
-                                        isRemoving={isRemoving}
-                                    />
-                                </div>
-                            )}
-
-                            {activeTab === 'implementationProgress' && paper.implementationProgress && (
-                                <div className="p-6">
-                                    <ImplementationProgressTab 
-                                        progress={paper.implementationProgress} 
-                                        paperId={paper.id} 
-                                        currentUser={currentUser}
-                                        onImplementationProgressChange={handleImplementationProgressChange}
-                                    />
-                                </div>
-                            )}
-                        </CardContent>
-                    </Card>
+                        </div>
+                    </div>
                 </div>
             </div>
  

@@ -77,31 +77,32 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
     const commonButtonDisabled = isVoting || isAdminSetStatus;
 
     return (
-        <div className="tab-pane-container implementability-tab">
-            <h3>Implementability Status</h3>
-
+        <div className="space-y-4">
             {statusMessage && (
-                <div className={`status-message message-${statusMessageType} implementability-status-message`}>
-                    <p>{statusMessage}</p>
+                <div className={`p-3 rounded-lg border text-sm ${
+                    statusMessageType === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
+                    statusMessageType === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
+                    statusMessageType === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-700' :
+                    'bg-blue-50 border-blue-200 text-blue-700'
+                }`}>
+                    {statusMessage}
                 </div>
             )}
 
             {showVotingControls ? (
-                <>
-                    <div className="implementability-explanation">
-                        {!isAdminSetStatus && paper.implementabilityStatus === 'Voting' && (
-                            <>
-                                <p>
-                                    Use <FaThumbsUp /> if you believe this paper <strong>can</strong> be reasonably implemented (assumptions about missing information, lack of training data, etc. are fine).
-                                </p>
-                                <p>
-                                    Use <FaThumbsDown /> if you believe this paper <strong>cannot</strong> be reasonably implemented in any way (not code-related at all like surveys).
-                                </p>
-                            </>
-                        )}
-                         <p>Your vote contributes to the community consensus. Admins may also set a final status.</p>
-                    </div>
-                    <div className="tab-action-area">
+                <div className="space-y-4">
+                    {!isAdminSetStatus && paper.implementabilityStatus === 'Voting' && (
+                        <div className="text-sm text-muted-foreground space-y-2 p-3 bg-muted/30 rounded-lg">
+                            <p>
+                                Use <FaThumbsUp /> if this paper <strong>can</strong> be implemented.
+                            </p>
+                            <p>
+                                Use <FaThumbsDown /> if this paper <strong>cannot</strong> be implemented.
+                            </p>
+                        </div>
+                    )}
+                    
+                    <div className="space-y-3">
                         {currentUser ? (
                             <>
                                 <VoteButton
@@ -110,9 +111,9 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
                                     voted={currentUserVotedIsImplementable}
                                     count={paper.isImplementableVotes}
                                     icon={<FaThumbsUp />}
-                                    text="Is Implementable"
-                                    className="thumbs-up"
-                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedIsImplementable ? "Retract 'Is Implementable' vote" : "Vote 'Is Implementable'")}
+                                    text="Implementable"
+                                    className="thumbs-up w-full"
+                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedIsImplementable ? "Retract vote" : "Vote implementable")}
                                 />
                                 <VoteButton
                                     onClick={handleNotImplementableClick}
@@ -121,45 +122,41 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
                                     count={paper.nonImplementableVotes}
                                     icon={<FaThumbsDown />}
                                     text="Not Implementable"
-                                    className="thumbs-down"
-                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedNotImplementable ? "Retract 'Not Implementable' vote" : "Vote 'Not Implementable'")}
+                                    className="thumbs-down w-full"
+                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedNotImplementable ? "Retract vote" : "Vote not implementable")}
                                 />
                                 {showRetractButton && (
                                     <RetractVoteButton 
                                         onClick={() => handleImplementabilityVote('retract')} 
                                         disabled={commonButtonDisabled} 
-                                        title={isAdminSetStatus ? "Voting disabled by admin" : "Retract your current vote"}
+                                        title="Retract your current vote"
+                                        className="w-full"
                                     />
                                 )}
                             </>
                         ) : (
-                            <p>Please log in to vote on implementability.</p>
+                            <p className="text-sm text-muted-foreground text-center">Please log in to vote</p>
                         )}
                     </div>
-                    <div className="user-lists-grid">
+                    
+                    <div className="space-y-3 text-sm">
                         <UserDisplayList
-                            title="Voted Is Implementable By:"
+                            title="Implementable"
                             users={actionUsers?.votedIsImplementable}
                             isLoading={isLoadingActionUsers}
                             error={actionUsersError}
-                            emptyMessage="No votes for 'Is Implementable' yet."
+                            emptyMessage="No votes yet"
                         />
                         <UserDisplayList
-                            title="Voted Not Implementable By:"
+                            title="Not Implementable"
                             users={actionUsers?.votedNotImplementable}
                             isLoading={isLoadingActionUsers}
                             error={actionUsersError}
-                            emptyMessage="No votes for 'Not Implementable' yet."
+                            emptyMessage="No votes yet"
                         />
                     </div>
-                </>
-            ) : (
-                // This block is effectively covered by the statusMessage when isAdminSetStatus is true
-                // If showVotingControls is false due to admin action, the statusMessage already explains it.
-                // Consider removing this else block if redundant with the message above.
-                // For now, let's keep it simple: if voting controls aren't shown, the message above should suffice.
-                null 
-            )}
+                </div>
+            ) : null}
         </div>
     );
 };
