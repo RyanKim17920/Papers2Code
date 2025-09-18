@@ -5,7 +5,8 @@ import asyncio # Add asyncio import
 from ..schemas.papers import PaperResponse, PaginatedPaperResponse
 from ..schemas.minimal import UserSchema as User  # Using UserSchema as User for type hinting
 from ..services.paper_view_service import PaperViewService
-from ..dependencies import get_paper_view_service
+from ..services.activity_tracking_service import ActivityTrackingService
+from ..dependencies import get_paper_view_service, get_activity_tracking_service
 from ..services.exceptions import DatabaseOperationException
 from ..error_handlers import handle_service_errors
 from ..auth import get_current_user_optional # Changed from get_current_user
@@ -109,6 +110,7 @@ async def get_paper(
     # Then parameters with default values (Path also acts as a default here for DI)
     paper_id: str = Path(..., description="The ID of the paper to retrieve"),
     service: PaperViewService = Depends(get_paper_view_service),
+    activity_service: ActivityTrackingService = Depends(get_activity_tracking_service),
     current_user: Optional[User] = Depends(get_current_user_optional)  
 ):
     #logger.info(f"Router: Getting paper with ID: {paper_id}")
@@ -117,7 +119,15 @@ async def get_paper(
     try:
         paper_doc = await service.get_paper_by_id(paper_id, user_id_str)
         paper_response = await transform_paper_async(paper_doc, user_id_str)
-        # Assuming record_paper_view exists or will be handled separately.
+        
+        # Track paper view using background task for better performance
+        background_tasks.add_task(
+            activity_service.track_paper_view,
+            user_id=user_id_str,
+            paper_id=paper_id,
+            metadata={"came_from": "paper_detail"}
+        )
+        
     except Exception as e:
         logger.error(f"Router: Unexpected error getting paper (ID: {paper_id}): {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred while fetching the paper.")
