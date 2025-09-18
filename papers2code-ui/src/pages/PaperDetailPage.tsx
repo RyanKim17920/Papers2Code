@@ -22,6 +22,7 @@ import ImplementabilityNotice from '../components/paperDetail/Tabs/Implementatio
 import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
 import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
 import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
+import ImplementationProgressCard from '../components/paperDetail/ImplementationProgressCard';
 
 interface PaperDetailPageProps {
     currentUser: UserProfile | null;
@@ -272,46 +273,38 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                     </div>
                                 </CardContent>
                             </Card>
+                        </div>
 
-                            {/* Implementation Progress Tab Content (if exists) */}
-                            {paper.implementationProgress && (
+                        {/* Right Column - Implementation Progress or Voting */}
+                        <div className="space-y-6">
+                            {paper.implementationProgress ? (
+                                /* Implementation Progress Summary */
+                                <ImplementationProgressCard 
+                                    progress={paper.implementationProgress}
+                                    paperId={paper.id}
+                                    currentUser={currentUser}
+                                    onImplementationProgressChange={handleImplementationProgressChange}
+                                />
+                            ) : (
+                                /* Implementability Voting */
                                 <Card className="bg-card/70 backdrop-blur border border-border/60">
                                     <CardContent className="p-6">
                                         <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                                            <Code className="w-5 h-5 text-primary" />
-                                            Implementation Progress
+                                            <Vote className="w-5 h-5 text-primary" />
+                                            Implementability
                                         </h3>
-                                        <ImplementationProgressTab 
-                                            progress={paper.implementationProgress} 
-                                            paperId={paper.id} 
+                                        <ImplementabilityVotingTab
+                                            paper={paper}
                                             currentUser={currentUser}
-                                            onImplementationProgressChange={handleImplementationProgressChange}
+                                            isVoting={isVoting}
+                                            handleImplementabilityVote={handleImplementabilityVote}
+                                            actionUsers={actionUsers}
+                                            isLoadingActionUsers={isLoadingActionUsers}
+                                            actionUsersError={actionUsersError}
                                         />
                                     </CardContent>
                                 </Card>
                             )}
-                        </div>
-
-                        {/* Right Column - Implementability Voting & Admin */}
-                        <div className="space-y-6">
-                            {/* Implementability Voting */}
-                            <Card className="bg-card/70 backdrop-blur border border-border/60">
-                                <CardContent className="p-6">
-                                    <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                                        <Vote className="w-5 h-5 text-primary" />
-                                        Implementability
-                                    </h3>
-                                    <ImplementabilityVotingTab
-                                        paper={paper}
-                                        currentUser={currentUser}
-                                        isVoting={isVoting}
-                                        handleImplementabilityVote={handleImplementabilityVote}
-                                        actionUsers={actionUsers}
-                                        isLoadingActionUsers={isLoadingActionUsers}
-                                        actionUsersError={actionUsersError}
-                                    />
-                                </CardContent>
-                            </Card>
 
                             {/* Admin Actions */}
                             {isAdminView && (

@@ -3,7 +3,6 @@ import { Paper, ImplementabilityAction } from '../../../../common/types/paper';
 import type { UserProfile } from '../../../../common/types/user';
 import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
-import './ImplementabilityVotingTab.css';
 import type { PaperActionUsers } from '../../../../common/services/api'; // Add this line
 
 
