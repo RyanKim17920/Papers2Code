@@ -36,30 +36,30 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
 
     return (
         <Card className="bg-card/70 backdrop-blur border border-border/60">
-            <CardContent className="p-6">
-                <div className="space-y-4">
+            <CardContent className="p-5">
+                <div className="space-y-3">
                     {/* Header */}
                     <div className="flex items-center justify-between">
-                        <h3 className="text-lg font-semibold text-foreground flex items-center gap-2">
-                            <Code className="w-5 h-5 text-primary" />
+                        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
+                            <Code className="w-4 h-4 text-primary" />
                             Implementation Progress
                         </h3>
                         <Button
                             variant="ghost"
                             size="sm"
                             onClick={() => setIsExpanded(!isExpanded)}
-                            className="p-1 h-auto"
+                            className="p-1 h-6"
                         >
-                            {isExpanded ? <ChevronUp size={16} /> : <ChevronDown size={16} />}
+                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
                         </Button>
                     </div>
 
                     {/* Compact Summary */}
-                    <div className="space-y-3">
+                    <div className="space-y-2">
                         <div className="flex items-center justify-between">
                             <div className="flex items-center gap-2">
-                                <Users size={14} className="text-muted-foreground" />
-                                <span className="text-sm text-muted-foreground">
+                                <Users size={12} className="text-muted-foreground" />
+                                <span className="text-xs text-muted-foreground">
                                     {progress.contributors?.length || 0} contributors
                                 </span>
                             </div>
@@ -73,21 +73,21 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
 
                         {progress.githubRepoId && (
                             <div className="flex items-center gap-2">
-                                <GitBranch size={14} className="text-muted-foreground" />
-                                <span className="text-sm text-primary truncate max-w-[200px]">
+                                <GitBranch size={12} className="text-muted-foreground" />
+                                <span className="text-xs text-primary truncate max-w-[180px]">
                                     Repository Connected
                                 </span>
                             </div>
                         )}
 
-                        <div className="text-sm text-muted-foreground">
+                        <div className="text-xs text-muted-foreground">
                             Started {new Date(progress.createdAt).toLocaleDateString()}
                         </div>
                     </div>
 
                     {/* Expanded Content */}
                     {isExpanded && (
-                        <div className="border-t border-border/60 pt-4 mt-4">
+                        <div className="border-t border-border/60 pt-3">
                             <ImplementationProgressTab 
                                 progress={progress}
                                 paperId={paperId}

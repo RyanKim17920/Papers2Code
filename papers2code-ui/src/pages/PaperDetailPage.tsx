@@ -151,84 +151,84 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             </div>
 
             {/* Main Content */}
-            <div className="max-w-7xl mx-auto px-6 py-8">
-                <div className="space-y-8">
+            <div className="max-w-7xl mx-auto px-6 py-6">
+                <div className="space-y-6">
                     {/* Error Message */}
                     {updateError && (
                         <Card className="border-destructive/20 bg-destructive/5">
-                            <CardContent className="p-4">
+                            <CardContent className="p-3">
                                 <p className="text-destructive text-sm">{updateError}</p>
                             </CardContent>
                         </Card>
                     )}
 
-                    {/* Paper Header */}
-                    <div className="space-y-6">
-                        <div>
-                            <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-3">
-                                {paper.title}
-                            </h1>
-                            <ImplementabilityNotice paper={paper} />
-                        </div>
+                    {/* Paper Header - Compact */}
+                    <div>
+                        <h1 className="text-2xl md:text-3xl font-bold text-foreground leading-tight mb-2">
+                            {paper.title}
+                        </h1>
+                        <ImplementabilityNotice paper={paper} />
                     </div>
 
-                    {/* Community Implementation Effort Section */}
+                    {/* Community Implementation Effort Section - More Compact */}
                     {currentUser && paper && (
                         <Card className="bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20">
-                            <CardContent className="p-6">
-                                <div className="flex items-start gap-4">
-                                    <div className="p-2 rounded-lg bg-primary/10">
-                                        {paper.implementationProgress ? <Users className="h-5 w-5 text-primary" /> : <Rocket className="h-5 w-5 text-primary" />}
+                            <CardContent className="p-4">
+                                <div className="flex items-start gap-3">
+                                    <div className="p-2 rounded-lg bg-primary/10 shrink-0">
+                                        {paper.implementationProgress ? <Users className="h-4 w-4 text-primary" /> : <Rocket className="h-4 w-4 text-primary" />}
                                     </div>
-                                    <div className="flex-1 space-y-3">
-                                        <h3 className="font-semibold text-lg">Community Implementation Progress</h3>
+                                    <div className="flex-1 space-y-2">
+                                        <h3 className="font-semibold text-base">Community Implementation</h3>
                                         
                                         {paper.implementationProgress ? (
                                             // Effort exists
                                             isCurrentUserContributor ? (
-                                                <div className="space-y-3">
-                                                    <p className="text-muted-foreground">
-                                                        You are contributing to this paper's implementation.
+                                                <div className="space-y-2">
+                                                    <p className="text-muted-foreground text-sm">
+                                                        You are contributing to this implementation.
                                                     </p>
                                                     <Button 
                                                         variant="outline" 
                                                         size="sm"
                                                         onClick={() => setActiveTab('implementationProgress')}
-                                                        className="gap-2"
+                                                        className="gap-2 h-8"
                                                     >
-                                                        <ExternalLink size={14} />
+                                                        <ExternalLink size={12} />
                                                         View Progress
                                                     </Button>
                                                 </div>
                                             ) : (
-                                                <div className="space-y-3">
-                                                    <p className="text-muted-foreground">
-                                                        A community effort to implement this paper is active or has been initiated.
+                                                <div className="space-y-2">
+                                                    <p className="text-muted-foreground text-sm">
+                                                        Implementation effort is active.
                                                     </p>
                                                     <Button 
                                                         variant="secondary"
+                                                        size="sm"
                                                         onClick={handleInitiateImplementationEffort} 
                                                         disabled={isProcessingEffortAction}
-                                                        className="gap-2"
+                                                        className="gap-2 h-8"
                                                     >
-                                                        <Users size={14} />
-                                                        View or Join Effort
+                                                        <Users size={12} />
+                                                        View or Join
                                                     </Button>
                                                 </div>
                                             )
                                         ) : (
                                             // No effort exists yet
-                                            <div className="space-y-3">
-                                                <p className="text-muted-foreground">
-                                                    Be the first to lead or join a community effort to implement this paper!
+                                            <div className="space-y-2">
+                                                <p className="text-muted-foreground text-sm">
+                                                    Be the first to implement this paper!
                                                 </p>
                                                 <Button 
                                                     onClick={handleInitiateImplementationEffort}
                                                     disabled={isProcessingEffortAction}
-                                                    className="gap-2"
+                                                    size="sm"
+                                                    className="gap-2 h-8"
                                                 >
-                                                    <Rocket size={14} />
-                                                    Start Implementation Effort
+                                                    <Rocket size={12} />
+                                                    Start Implementation
                                                 </Button>
                                             </div>
                                         )}
@@ -244,14 +244,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         </Card>
                     )}
 
-                    {/* Main Content - Information Dense Layout */}
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+                    {/* Main Content - Maximally Dense Layout */}
+                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
                         {/* Left Column - Main Paper Info */}
-                        <div className="lg:col-span-2 space-y-6">
+                        <div className="lg:col-span-2 space-y-4">
                             {/* Paper Metadata & Abstract */}
                             <Card className="bg-card/70 backdrop-blur border border-border/60">
-                                <CardContent className="p-6">
-                                    <div className="space-y-6">
+                                <CardContent className="p-5">
+                                    <div className="space-y-4">
                                         <PaperMetadata 
                                             paper={paper}
                                             currentUser={currentUser}
@@ -261,12 +261,12 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                             isLoadingActionUsers={isLoadingActionUsers}
                                             actionUsersError={actionUsersError}
                                         />
-                                        <div className="border-t border-border/60 pt-6">
-                                            <h3 className="text-lg font-semibold text-foreground mb-3 flex items-center gap-2">
-                                                <FileText className="w-5 h-5 text-primary" />
+                                        <div className="border-t border-border/60 pt-4">
+                                            <h3 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
+                                                <FileText className="w-4 h-4 text-primary" />
                                                 Abstract
                                             </h3>
-                                            <p className="text-muted-foreground leading-relaxed">
+                                            <p className="text-muted-foreground leading-relaxed text-sm">
                                                 {paper.abstract || 'Abstract not available.'}
                                             </p>
                                         </div>
@@ -276,7 +276,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                         </div>
 
                         {/* Right Column - Implementation Progress or Voting */}
-                        <div className="space-y-6">
+                        <div className="space-y-4">
                             {paper.implementationProgress ? (
                                 /* Implementation Progress Summary */
                                 <ImplementationProgressCard 
@@ -288,9 +288,9 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             ) : (
                                 /* Implementability Voting */
                                 <Card className="bg-card/70 backdrop-blur border border-border/60">
-                                    <CardContent className="p-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                                            <Vote className="w-5 h-5 text-primary" />
+                                    <CardContent className="p-5">
+                                        <h3 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+                                            <Vote className="w-4 h-4 text-primary" />
                                             Implementability
                                         </h3>
                                         <ImplementabilityVotingTab
@@ -309,9 +309,9 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             {/* Admin Actions */}
                             {isAdminView && (
                                 <Card className="bg-card/70 backdrop-blur border border-border/60">
-                                    <CardContent className="p-6">
-                                        <h3 className="text-lg font-semibold text-foreground mb-4 flex items-center gap-2">
-                                            <Settings className="w-5 h-5 text-primary" />
+                                    <CardContent className="p-5">
+                                        <h3 className="text-base font-semibold text-foreground mb-3 flex items-center gap-2">
+                                            <Settings className="w-4 h-4 text-primary" />
                                             Admin Actions
                                         </h3>
                                         <OwnerActions

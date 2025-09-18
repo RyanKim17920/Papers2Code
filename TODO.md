@@ -9,7 +9,8 @@
 * [ ] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter)
 * [ ] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
 * [ ] Make updates page collapsable or just smaller
-    * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on)
+    * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on from the admin side)
+* [ ] Increase information density of paper pages further
 
 2. BASIC BACKEND FIXES:
 * [ ] logging out (sign out) goes directly to the papers if logged out from dashboard (in either case), otherwise just go to the page
