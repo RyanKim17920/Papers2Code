@@ -36,67 +36,62 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
 
     return (
         <Card className="bg-card/70 backdrop-blur border border-border/60">
-            <CardContent className="p-5">
-                <div className="space-y-3">
-                    {/* Header */}
-                    <div className="flex items-center justify-between">
-                        <h3 className="text-base font-semibold text-foreground flex items-center gap-2">
-                            <Code className="w-4 h-4 text-primary" />
-                            Implementation Progress
-                        </h3>
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setIsExpanded(!isExpanded)}
-                            className="p-1 h-6"
+            <CardContent className="p-2 space-y-2">
+                <div className="flex items-center justify-between">
+                    <h3 className="text-sm font-semibold text-foreground flex items-center gap-1">
+                        <Code className="w-3 h-3 text-primary" />
+                        Progress
+                    </h3>
+                    <Button
+                        variant="ghost"
+                        size="sm"
+                        onClick={() => setIsExpanded(!isExpanded)}
+                        className="h-5 w-5 p-0"
+                    >
+                        {isExpanded ? <ChevronUp className="h-2 w-2" /> : <ChevronDown className="h-2 w-2" />}
+                    </Button>
+                </div>
+
+                {/* Always show basic info */}
+                <div className="space-y-1">
+                    <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Status</span>
+                        <Badge 
+                            variant="outline" 
+                            className={`text-xs h-4 px-1 ${getStatusColor(progress.emailStatus)}`}
                         >
-                            {isExpanded ? <ChevronUp size={14} /> : <ChevronDown size={14} />}
-                        </Button>
+                            {progress.emailStatus || 'Not Sent'}
+                        </Badge>
+                    </div>
+                    
+                    <div className="flex items-center justify-between text-xs">
+                        <span className="text-muted-foreground">Contributors</span>
+                        <span className="font-medium">{progress.contributors?.length || 0}</span>
                     </div>
 
-                    {/* Compact Summary */}
-                    <div className="space-y-2">
-                        <div className="flex items-center justify-between">
-                            <div className="flex items-center gap-2">
-                                <Users size={12} className="text-muted-foreground" />
-                                <span className="text-xs text-muted-foreground">
-                                    {progress.contributors?.length || 0} contributors
-                                </span>
-                            </div>
-                            <Badge 
-                                variant="outline" 
-                                className={`text-xs ${getStatusColor(progress.emailStatus)}`}
-                            >
-                                {progress.emailStatus || 'Not Sent'}
-                            </Badge>
-                        </div>
-
-                        {progress.githubRepoId && (
-                            <div className="flex items-center gap-2">
-                                <GitBranch size={12} className="text-muted-foreground" />
-                                <span className="text-xs text-primary truncate max-w-[180px]">
-                                    Repository Connected
-                                </span>
-                            </div>
-                        )}
-
-                        <div className="text-xs text-muted-foreground">
-                            Started {new Date(progress.createdAt).toLocaleDateString()}
-                        </div>
-                    </div>
-
-                    {/* Expanded Content */}
-                    {isExpanded && (
-                        <div className="border-t border-border/60 pt-3">
-                            <ImplementationProgressTab 
-                                progress={progress}
-                                paperId={paperId}
-                                currentUser={currentUser}
-                                onImplementationProgressChange={onImplementationProgressChange}
-                            />
+                    {progress.githubRepoId && (
+                        <div className="flex items-center justify-between text-xs">
+                            <span className="text-muted-foreground">Repository</span>
+                            <GitBranch size={10} className="text-primary" />
                         </div>
                     )}
+
+                    <div className="text-xs text-muted-foreground">
+                        Started {new Date(progress.createdAt).toLocaleDateString()}
+                    </div>
                 </div>
+
+                {/* Expanded Content */}
+                {isExpanded && (
+                    <div className="border-t border-border/60 pt-2">
+                        <ImplementationProgressTab 
+                            progress={progress}
+                            paperId={paperId}
+                            currentUser={currentUser}
+                            onImplementationProgressChange={onImplementationProgressChange}
+                        />
+                    </div>
+                )}
             </CardContent>
         </Card>
     );
