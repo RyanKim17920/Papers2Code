@@ -8,9 +8,10 @@ interface PaperListDisplayProps {
   debouncedSearchTerm: string;
   onVote: (paperId: string, voteType: 'up' | 'none') => Promise<void>; // Add vote handler prop
   isLoading?: boolean; // Add optional loading state prop
+  showAdvancedSearch?: boolean; // Add filter state prop for animations
 }
 
-const PaperListDisplay: React.FC<PaperListDisplayProps> = ({ papers, debouncedSearchTerm, onVote, isLoading = false }) => {
+const PaperListDisplay: React.FC<PaperListDisplayProps> = ({ papers, debouncedSearchTerm, onVote, isLoading = false, showAdvancedSearch = false }) => {
   // Add a defensive check to ensure onVote is a function before mapping
   if (typeof onVote !== 'function') {
     console.error("PaperListDisplay: onVote prop is not a function!", onVote);
@@ -26,7 +27,7 @@ const PaperListDisplay: React.FC<PaperListDisplayProps> = ({ papers, debouncedSe
   // If we have papers, render them
   if (papers.length > 0) {
     return (
-      <div className="paper-list">
+      <div className={`paper-list ${!showAdvancedSearch ? 'filters-collapsed' : ''}`}>
         {papers.map((paper) => (
           <PaperCard
             key={paper.id}

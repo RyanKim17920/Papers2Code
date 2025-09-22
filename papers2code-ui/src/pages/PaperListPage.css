@@ -27,6 +27,19 @@
     flex-wrap: wrap;
     gap: 30px; /* Slightly larger gap for visual separation */
     justify-content: flex-start; /* Keep items aligned left within the container */
+    transition: gap 0.3s cubic-bezier(0.4, 0, 0.2, 1), margin-top 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* Expanded cards when filters are hidden */
+.paper-list.filters-collapsed {
+  gap: 35px; /* Slightly larger gap when expanded */
+  margin-top: 35px; /* More top margin when filters are hidden */
+}
+
+/* Animation class for expanded cards */
+.paper-list.filters-collapsed .paper-card {
+  flex-basis: calc(50% - 17.5px); /* 2 columns instead of 3 when filters are hidden */
+  min-width: 350px; /* Slightly larger min-width */
 }
   
   /* Styling for when no papers are found */
@@ -75,6 +88,38 @@
     color: var(--text-heading-color);
     border-bottom: 1px solid var(--border-color);
     padding-bottom: 15px;
+  }
+  
+  /* New search section styling */
+  .search-section {
+    margin-bottom: 30px;
+  }
+  
+  .search-section h2 {
+    font-size: 1.5em;
+    font-weight: 600;
+    color: var(--text-heading-color);
+    margin-bottom: 20px;
+    padding-bottom: 10px;
+    border-bottom: 2px solid var(--primary-color);
+    display: inline-block;
+  }
+  
+  .filter-section {
+    margin-top: 25px;
+    margin-bottom: 30px;
+  }
+  
+  .filter-section h3 {
+    font-size: 1.2em;
+    font-weight: 600;
+    color: var(--primary-color);
+    margin-bottom: 15px;
+    padding: 10px 15px;
+    background: var(--primary-light-color);
+    border-radius: var(--border-radius-sm);
+    border-left: 4px solid var(--primary-color);
+    display: inline-block;
   }
   
   .list-controls-wrapper {

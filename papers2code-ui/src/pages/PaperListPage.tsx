@@ -42,26 +42,30 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
         <h1>Explore Research Papers</h1>
       </header>
       <div className="list-header">
-        <ListControls
-          searchTerm={searchTerm}
-          onSearchChange={handleSearchChange}
-          activeSortDisplay={activeSortDisplay as SortPreference | 'relevance'} // This was activeSortDisplay, ensure it's what you want from the hook
-          onSortChange={handleSortChange}
-          isSearchInputActive={isSearchActive} // Corrected to use isSearchActive from the hook
-          onToggleAdvancedSearch={toggleAdvancedSearch} // <-- Pass handler
-          showAdvancedSearch={showAdvancedSearch}     // <-- Pass state
-        />
-        {/* --- NEW: Conditionally render Advanced Search Form --- */}
-        {showAdvancedSearch && (
-          <AdvancedSearchForm
-            filters={advancedFilters}
-            onChange={handleAdvancedFilterChange}
-            onApply={handleApplyAdvancedFilters} // Corrected to use handleApplyAdvancedFilters
-            onClear={handleClearAdvancedFilters} // Corrected to use handleClearAdvancedFilters
-            onClose={toggleAdvancedSearch} // Use toggle to close
+        <div className="search-section">
+          <h2>Search Papers</h2>
+          <ListControls
+            searchTerm={searchTerm}
+            onSearchChange={handleSearchChange}
+            activeSortDisplay={activeSortDisplay as SortPreference | 'relevance'} // This was activeSortDisplay, ensure it's what you want from the hook
+            onSortChange={handleSortChange}
+            isSearchInputActive={isSearchActive} // Corrected to use isSearchActive from the hook
+            onToggleAdvancedSearch={toggleAdvancedSearch} // <-- Pass handler
+            showAdvancedSearch={showAdvancedSearch}     // <-- Pass state
           />
-        )}
-        {/* --- End NEW --- */}
+        </div>
+        {showAdvancedSearch && (
+          <div className="filter-section">
+            <h3>Advanced Filters</h3>
+            <AdvancedSearchForm
+              filters={advancedFilters}
+              onChange={handleAdvancedFilterChange}
+              onApply={handleApplyAdvancedFilters} // Corrected to use handleApplyAdvancedFilters
+              onClear={handleClearAdvancedFilters} // Corrected to use handleClearAdvancedFilters
+              onClose={toggleAdvancedSearch} // Use toggle to close
+            />
+          </div>
+        )}}
       </div>     
        <div className="list-content-area">
         {isLoading ? (
@@ -75,6 +79,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
               debouncedSearchTerm={debouncedSearchTerm}
               onVote={handleVote}
               isLoading={isLoading}
+              showAdvancedSearch={showAdvancedSearch}
             />
             <PaginationControls
               currentPage={currentPage}

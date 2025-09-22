@@ -13,16 +13,17 @@
     font-family: inherit; /* Use the body font */
     color: var(--text-color);
     background-color: var(--card-background-color);
-    border: 2px solid var(--border-color);
+    border: 2px solid var(--primary-color); /* More prominent border with primary color */
     border-radius: var(--border-radius-md); /* Consistent border radius */
     box-sizing: border-box; /* Include padding/border in width */
     transition: border-color 0.2s ease, box-shadow 0.2s ease;
+    box-shadow: 0 2px 4px rgba(var(--primary-rgb, 25, 124, 154), 0.1); /* Add subtle shadow */
   }
   
   .search-input:focus {
     outline: none;
-    border-color: var(--primary-color);
-    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 25, 124, 154), 0.2); /* Focus ring - Adjust RGB if primary changes drastically */
+    border-color: var(--primary-dark-color); /* Use darker primary for focus */
+    box-shadow: 0 0 0 3px rgba(var(--primary-rgb, 25, 124, 154), 0.3), 0 4px 8px rgba(var(--primary-rgb, 25, 124, 154), 0.15); /* Enhanced focus ring with stronger shadow */
   }
   
   /* Basic styling for the clear button (X) added by type="search" in some browsers */

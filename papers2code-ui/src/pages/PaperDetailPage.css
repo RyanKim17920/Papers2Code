@@ -1,7 +1,7 @@
 .paper-detail-page {
   width: 90%;          /* Make container fill full width */
   min-height: 100vh;      /* Optional: fill vertical space */
-  padding: 35px 45px;     /* You can adjust these as needed */
+  padding: 45px 50px;     /* Increased padding for better spacing */
   background-color: var(--card-background-color);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--box-shadow-md);
@@ -16,16 +16,19 @@
 
  .back-link {
    display: inline-block;
-   margin-bottom: 30px; /* More space below */
+   margin-bottom: 35px; /* More space below */
    color: var(--primary-color);
    text-decoration: none;
    font-weight: 500;
+   padding: 8px 0; /* Add some padding for better click target */
+   transition: color 0.2s ease;
  }
  .back-link:hover {
    color: var(--primary-hover-color);
  }
  .back-link::before { /* Add arrow visually */
      content: '← ';
+     margin-right: 4px;
  }
 
  .paper-detail-page h1 {
@@ -112,8 +115,9 @@ small {
 
 /* Implementation Notes specific to PaperDetailPage */
 .implementation-notes {
-    margin-top: 20px;
-    padding: 15px;
+    margin-top: 30px; /* More space above */
+    margin-bottom: 30px; /* Add space below */
+    padding: 20px; /* More padding */
     background-color: var(--background-alt-color); /* Subtle background */
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-color-light);
@@ -121,22 +125,28 @@ small {
 
 .implementation-notes h4 {
     margin-top: 0;
-    margin-bottom: 10px;
+    margin-bottom: 15px; /* More space below heading */
     color: var(--text-heading-color);
     font-size: 1.2em;
+    padding-bottom: 8px; /* Add padding below heading */
+    border-bottom: 1px solid var(--border-color-light); /* Add subtle separator */
 }
 
 .implementation-notes p {
-    margin: 0;
-    line-height: 1.6;
+    margin: 0 0 15px 0; /* Add bottom margin between paragraphs */
+    line-height: 1.7; /* Better line height */
     color: var(--text-color);
+}
+
+.implementation-notes p:last-child {
+    margin-bottom: 0; /* Remove bottom margin from last paragraph */
 }
 
 /* --- New Styles for Implementation Effort Section --- */
 .implementation-effort-section {
-    margin-top: 25px;
-    margin-bottom: 25px;
-    padding: 20px;
+    margin-top: 35px; /* Increased spacing above */
+    margin-bottom: 35px; /* Increased spacing below */
+    padding: 25px; /* More padding */
     background-color: var(--background-alt-color);
     border-radius: var(--border-radius-sm); 
     border: 1px solid var(--border-color-light);
@@ -144,15 +154,15 @@ small {
 
 .implementation-effort-section h4 {
     margin-top: 0;
-    margin-bottom: 15px;
+    margin-bottom: 20px; /* More space below heading */
     color: var(--text-heading-color);
     font-size: 1.3em;
     border-bottom: 1px solid var(--border-color-light);
-    padding-bottom: 10px;
+    padding-bottom: 12px; /* More padding below heading */
 }
 
 .implementation-effort-section p {
-    margin-bottom: 15px;
-    line-height: 1.6;
+    margin-bottom: 18px; /* More space between paragraphs */
+    line-height: 1.7; /* Better line height */
     color: var(--text-color);
 }

@@ -73,15 +73,16 @@
   display: flex;
   align-items: center;
   background: #ffffff;
-  border: 1px solid #D0D7DE;
+  border: 2px solid var(--primary-color);
   border-radius: 6px;
   padding: 10px 12px;
   transition: all 0.2s ease;
+  box-shadow: 0 2px 4px rgba(var(--primary-rgb), 0.1);
 }
 
 .search-input-container:focus-within {
-  border-color: #0969da;
-  box-shadow: 0 0 0 3px rgba(9, 105, 218, 0.12);
+  border-color: var(--primary-dark-color);
+  box-shadow: 0 0 0 3px rgba(var(--primary-rgb), 0.2), 0 4px 8px rgba(var(--primary-rgb), 0.15);
 }
 
 .search-input {

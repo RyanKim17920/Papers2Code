@@ -3,11 +3,16 @@
     border: 1px solid var(--border-color);
     border-radius: var(--border-radius-md);
     padding: 20px;
-    margin-top: 15px; /* Space below list controls */
-    margin-bottom: 25px;
+    margin-top: 10px; /* Reduced since it's now in its own section */
+    margin-bottom: 15px; /* Reduced since it's now in its own section */
     box-shadow: 0 2px 5px rgba(0, 0, 0, 0.05);
-    overflow: visible;
+    overflow: hidden; /* Changed from visible to hidden for animation */
     color: var(--text-color, #212529); /* Ensure text is dark */
+    /* Add smooth animation for showing/hiding */
+    max-height: 500px;
+    opacity: 1;
+    transform: translateY(0);
+    transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   } 
     
   .advanced-search-form h4 {

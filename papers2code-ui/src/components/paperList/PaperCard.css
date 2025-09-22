@@ -1,18 +1,18 @@
 .paper-card {
   border: 1px solid var(--border-color);
   border-radius: var(--border-radius-lg);
-  padding: 20px 25px;
+  padding: 25px 30px; /* Increased padding for better spacing */
   background: linear-gradient(
     to bottom right,
     rgb(0, 72, 90, .01) 0%,
     rgba(0, 72, 90, 0.15) 100%
   );
   box-shadow: var(--box-shadow-sm);
-  transition: box-shadow 0.25s ease-in-out, transform 0.25s ease-in-out;
+  transition: box-shadow 0.25s ease-in-out, transform 0.25s ease-in-out, flex-basis 0.3s cubic-bezier(0.4, 0, 0.2, 1), min-width 0.3s cubic-bezier(0.4, 0, 0.2, 1);
   display: flex;
   flex-direction: column;
   /* Adjust height slightly if needed, or keep fixed */
-  height: 300px; /* Increased height slightly for actions */
+  height: 320px; /* Increased height for better spacing */
   flex-basis: calc(33.333% - 20px);
   flex-grow: 0;
   flex-shrink: 0;
@@ -30,7 +30,7 @@
 
 /* Title area with fixed height */
 .paper-card h3 {
-  margin: 0 0 15px 0;
+  margin: 0 0 20px 0; /* Increased bottom margin */
   font-size: 1.15em;
   font-weight: 600;
   line-height: 1.4;
@@ -45,6 +45,7 @@
 .paper-card h3 a {
   text-decoration: none;
   color: inherit;
+  transition: color 0.2s ease;
 }
 
 .paper-card h3 a:hover {
@@ -57,16 +58,17 @@
   flex-direction: column;
   flex-grow: 1; /* Allows this section to push actions down */
   justify-content: flex-start; /* Align items top */
+  gap: 12px; /* Add consistent spacing between elements */
 }
 
 /* Top meta section - contains authors */
 .card-meta-top {
-  margin-bottom: 10px;
+  margin-bottom: 12px; /* Slightly increased */
 }
 
 /* Bottom meta section - contains date and status */
 .card-meta-bottom {
-  margin-bottom: 15px;
+  margin-bottom: 18px; /* Increased spacing */
 }
 
 .paper-card .authors,
