@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { Heart, ExternalLink, Users, Calendar } from 'lucide-react';
+import { ThumbsUp, ExternalLink, Users, Calendar } from 'lucide-react';
 import { Paper } from '../../common/types/paper';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -111,8 +111,8 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                 disabled={isVoting}
                 className="flex items-center gap-1 p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
               >
-                <Heart 
-                  className={`w-4 h-4 ${paper.currentUserVote === 'up' ? 'fill-current text-red-500' : ''}`} 
+                <ThumbsUp 
+                  className={`w-4 h-4 ${paper.currentUserVote === 'up' ? 'fill-current text-primary' : ''}`} 
                 />
                 <span className="text-xs">{paper.upvoteCount || 0}</span>
               </button>

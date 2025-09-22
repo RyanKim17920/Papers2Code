@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, Clock, Heart, Users } from 'lucide-react';
+import { TrendingUp, Clock, ThumbsUp, Users } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { PaperCard } from './PaperCard';
 import type { Paper } from '@/common/types/paper';
