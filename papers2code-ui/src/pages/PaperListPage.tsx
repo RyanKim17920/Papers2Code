@@ -12,6 +12,7 @@ import ModernPaperCard from '../components/paperList/ModernPaperCard';
 import ModernPaginationControls from '../components/paperList/ModernPaginationControls';
 import PaperListSkeleton from '../components/paperList/PaperListSkeleton';
 import PaginationSkeleton from '../components/paperList/PaginationSkeleton';
+import './PaperListPage.css';
 
 interface PaperListPageProps {
   authLoading: boolean;
@@ -62,12 +63,20 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
     <div className="min-h-screen bg-background">
   <div className="container mx-auto px-4 pt-3 pb-6">
 
-        <div className="grid grid-cols-[auto_1fr] gap-6">
+        <div className={`paper-list-layout ${showFilters ? 'with-filters' : 'no-filters'}`}>
           {/* Left Sidebar - Collapsible Filters */}
-          {showFilters && (
-            <div className="w-80 flex-shrink-0">
-              <Card className="sticky top-6">
-                <CardContent className="p-6 space-y-6">
+          <div className={`filter-sidebar ${showFilters ? 'visible' : 'hidden'}`}>
+            <Card className="sticky top-6 filter-card">
+              <CardContent className="p-0">
+                {/* Filter Header */}
+                <div className="filter-header">
+                  <div className="flex items-center gap-2">
+                    <Filter className="w-5 h-5" />
+                    <span className="font-semibold">Filters</span>
+                  </div>
+                </div>
+                
+                <div className="filter-content">
                   {/* Search Section */}
                   <div className="space-y-4">
                     <div className="flex items-center gap-2">
@@ -168,13 +177,13 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                       Clear All
                     </Button>
                   </div>
-                </CardContent>
-              </Card>
-            </div>
-          )}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
 
           {/* Main Content */}
-          <div className="flex-1 min-w-0 w-full">
+          <div className="main-content">
             {/* Results Header */}
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">

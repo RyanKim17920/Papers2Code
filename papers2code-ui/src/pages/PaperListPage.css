@@ -1,3 +1,90 @@
+/* Filter sidebar styling */
+.filter-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-color);
+}
+
+.filter-header {
+  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark-color) 100%);
+  color: white;
+  padding: 1rem 1.5rem;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  margin: 0;
+}
+
+.filter-header span {
+  color: white;
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+.filter-content {
+  padding: 1.5rem;
+  space: 1.5rem;
+}
+
+.filter-content > * + * {
+  margin-top: 1.5rem;
+}
+
+/* Enhanced spacing for main content */
+.main-content {
+  padding-top: 0.5rem;
+}
+
+.main-content .space-y-3 > * + * {
+  margin-top: 1rem !important;
+}
+
+/* Animation styles for filter toggle */
+.paper-list-layout {
+  display: flex;
+  gap: 1.5rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.paper-list-layout.with-filters {
+  grid-template-columns: 320px 1fr;
+}
+
+.paper-list-layout.no-filters {
+  grid-template-columns: 0 1fr;
+}
+
+.filter-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.filter-sidebar.visible {
+  width: 320px;
+  opacity: 1;
+}
+
+.filter-sidebar.hidden {
+  width: 0;
+  opacity: 0;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Enhanced card expansion when filters are hidden */
+.paper-list-layout.no-filters .main-content {
+  max-width: 100%;
+}
+
+.paper-list-layout.with-filters .main-content {
+  max-width: calc(100% - 320px - 1.5rem);
+}
+
 .paper-list-page {
     margin: 0 auto;
     padding: 0;

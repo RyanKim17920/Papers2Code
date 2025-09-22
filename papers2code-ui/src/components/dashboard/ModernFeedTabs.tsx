@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, Clock, Heart, Users, ChevronDown, Sparkles, ThumbsUp, MessageCircle, ExternalLink } from 'lucide-react';
+import { TrendingUp, Clock, ThumbsUp, Users, ChevronDown, Sparkles, MessageCircle, ExternalLink } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -161,7 +161,7 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
     { id: 'trending', label: 'Trending', papers: trendingPapers, icon: TrendingUp },
     { id: 'recent', label: 'Recent', papers: recentPapers, icon: Clock },
     { id: 'personalized', label: 'For You', papers: personalizedPapers, icon: Sparkles },
-    { id: 'saved', label: 'Saved', papers: bookmarkedPapers, icon: Heart },
+    { id: 'saved', label: 'Upvoted', papers: bookmarkedPapers, icon: ThumbsUp },
   ];
 
   const activeTabData = tabs.find(tab => tab.id === activeTab);
