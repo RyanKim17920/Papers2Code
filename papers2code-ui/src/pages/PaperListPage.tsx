@@ -1,5 +1,5 @@
-import React, { useState } from 'react';
-import { Search, SlidersHorizontal, Calendar, User, Filter, X } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Search, SlidersHorizontal, Calendar, User, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePaperList, SortPreference } from '../common/hooks/usePaperList';
 import { LoadingSpinner } from '../common/components';
 import { Button } from '../components/ui/button';
@@ -19,7 +19,23 @@ interface PaperListPageProps {
 }
 
 const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
-  const [showFilters, setShowFilters] = useState(true);
+  const [showFilters, setShowFilters] = useState<boolean>(() => {
+    try {
+      const saved = localStorage.getItem('paperListShowFilters');
+      return saved ? saved === 'true' : true;
+    } catch {
+      return true;
+    }
+  });
+
+  // Persist filter sidebar state
+  useEffect(() => {
+    try {
+      localStorage.setItem('paperListShowFilters', String(showFilters));
+    } catch {
+      // ignore storage errors
+    }
+  }, [showFilters]);
   
   const {
     papers,
@@ -66,12 +82,14 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
         <div className={`paper-list-layout ${showFilters ? 'with-filters' : 'no-filters'}`}>
           {/* Left Sidebar - Collapsible Filters */}
           <div className={`filter-sidebar ${showFilters ? 'visible' : 'hidden'}`}>
-            <Card className="sticky top-6 filter-card">
+            <Card className="sticky top-6 filter-card relative">
               <CardContent className="p-0">
                 {/* Filter Header */}
                 <div className="filter-header">
                   <div className="flex items-center gap-2">
-                    <Filter className="w-5 h-5" />
+                    <span className="icon-badge">
+                      <Filter className="w-4 h-4" />
+                    </span>
                     <span className="font-semibold">Filters</span>
                   </div>
                 </div>
@@ -179,6 +197,17 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                   </div>
                 </div>
               </CardContent>
+              {/* Side collapse handle (desktop only) */}
+              {showFilters && (
+                <button
+                  type="button"
+                  aria-label="Hide filters"
+                  className="filter-toggle-handle hidden lg:inline-flex"
+                  onClick={() => setShowFilters(false)}
+                >
+                  <ChevronLeft className="w-4 h-4" />
+                </button>
+              )}
             </Card>
           </div>
 
@@ -188,15 +217,27 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
             <div className="flex items-center justify-between mb-8">
               <div className="flex items-center gap-3">
                 {/* Filter Toggle Button */}
+                {/* Mobile: always show the toggle */}
                 <Button
                   variant="outline"
                   size="sm"
                   onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2"
+                  className="flex items-center gap-2 lg:hidden"
                 >
                   <Filter className="w-4 h-4" />
                   Filters
                 </Button>
+                {/* Desktop: reveal handle pinned to main content edge when filters are hidden */}
+                {!showFilters && (
+                  <button
+                    type="button"
+                    aria-label="Show filters"
+                    className="filter-reveal-handle hidden lg:inline-flex"
+                    onClick={() => setShowFilters(true)}
+                  >
+                    <ChevronRight className="w-4 h-4" />
+                  </button>
+                )}
                 
                 <div className="flex items-center gap-3">
                   <h2 className="text-lg font-semibold">

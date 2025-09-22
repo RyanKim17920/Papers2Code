@@ -4,24 +4,114 @@
   border: 1px solid var(--border-color);
 }
 
+/* Header area for filter card: keep neutral background and add subtle divider */
 .filter-header {
-  background: linear-gradient(135deg, var(--primary-color) 0%, var(--primary-dark-color) 100%);
-  color: white;
+  background: transparent;
+  color: var(--text-color);
   padding: 1rem 1.5rem;
   border-top-left-radius: 8px;
   border-top-right-radius: 8px;
   margin: 0;
+  border-bottom: 1px solid var(--border-color);
 }
 
 .filter-header span {
-  color: white;
+  color: var(--text-color);
   font-size: 1rem;
   font-weight: 600;
 }
 
+/* Circular accent behind the Filter icon (similar visual language to other toggles) */
+.filter-header .icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: var(--primary-light-color, #e8f7fa);
+  color: var(--primary-color, #197c9a);
+  border: 1px solid var(--border-color, #e9ecef);
+}
+
 .filter-content {
   padding: 1.5rem;
-  space: 1.5rem;
+  overflow: hidden; /* prevent content from spilling during slide animation */
+}
+
+/* Fade/slide animation for content when revealing sidebar */
+.filter-sidebar.visible .filter-content {
+  animation: sidebarContentSlideIn 0.4s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.filter-sidebar.hidden .filter-content {
+  animation: sidebarContentSlideOut 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes sidebarContentSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes sidebarContentSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-20px);
+  }
+}
+
+/* Animation for handle when sidebar is closing */
+.filter-sidebar.hidden .filter-toggle-handle {
+  animation: toggleHandleSlideOut 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+@keyframes toggleHandleSlideOut {
+  from {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.9);
+  }
+}
+
+/* Staggered animation for filter sections */
+.filter-sidebar.visible .filter-content > div:nth-child(1) {
+  animation: filterSectionSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.1s both;
+}
+
+.filter-sidebar.visible .filter-content > div:nth-child(2) {
+  animation: filterSectionSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.15s both;
+}
+
+.filter-sidebar.visible .filter-content > div:nth-child(3) {
+  animation: filterSectionSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.filter-sidebar.visible .filter-content > div:nth-child(4) {
+  animation: filterSectionSlideIn 0.5s cubic-bezier(0.4, 0, 0.2, 1) 0.25s both;
+}
+
+@keyframes filterSectionSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px) scale(0.98);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
 }
 
 .filter-content > * + * {
@@ -41,7 +131,7 @@
 .paper-list-layout {
   display: flex;
   gap: 1.5rem;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 .paper-list-layout.with-filters {
@@ -55,25 +145,29 @@
 .filter-sidebar {
   width: 320px;
   flex-shrink: 0;
-  overflow: hidden;
-  transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out;
+  overflow: visible; /* allow handle to show outside bounds */
+  position: relative; /* anchor for absolute handle */
+  z-index: 1; /* stay above adjacent content borders */
+  transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
 }
 
 .filter-sidebar.visible {
-  width: 320px;
   opacity: 1;
+  transform: translateX(0);
 }
 
 .filter-sidebar.hidden {
-  width: 0;
   opacity: 0;
+  transform: translateX(-100%);
+  pointer-events: none; /* prevent interaction when hidden */
+  width: 0; /* ensure it takes no space when hidden */
 }
 
 .main-content {
   flex: 1;
   min-width: 0;
   width: 100%;
-  transition: all 0.3s ease-in-out;
+  transition: all 0.4s cubic-bezier(0.4, 0, 0.2, 1);
 }
 
 /* Enhanced card expansion when filters are hidden */
@@ -85,14 +179,82 @@
   max-width: calc(100% - 320px - 1.5rem);
 }
 
-.paper-list-page {
-    margin: 0 auto;
-    padding: 0;
-    width: 100%; /* Ensure full width */
-    max-width: 1400px;
-    overflow: visible; /* Allow paper cards to overflow if needed for animations */
+/* Side handles for collapsing/revealing the filter sidebar (desktop) */
+.filter-toggle-handle {
+  position: absolute;
+  top: 16px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: var(--card-background-color, #ffffff);
+  color: var(--text-color, #212529);
+  border: 1px solid var(--border-color, #e9ecef);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  z-index: 2;
+  animation: toggleHandleSlideIn 0.3s cubic-bezier(0.4, 0, 0.2, 1) 0.2s both;
+}
+
+.filter-toggle-handle:hover {
+  background-color: var(--primary-light-color, #e8f7fa);
+  border-color: var(--primary-color, #197c9a);
+  color: var(--primary-color, #197c9a);
+  transform: scale(1.05) translateX(-2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-reveal-handle {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: var(--card-background-color, #ffffff);
+  color: var(--text-color, #212529);
+  border: 1px solid var(--border-color, #e9ecef);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1);
+  animation: revealHandleBounceIn 0.4s cubic-bezier(0.4, 0, 0.2, 1) 0.1s both;
+}
+
+.filter-reveal-handle:hover {
+  background-color: var(--primary-light-color, #e8f7fa);
+  border-color: var(--primary-color, #197c9a);
+  color: var(--primary-color, #197c9a);
+  transform: scale(1.05) translateX(2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+@keyframes toggleHandleSlideIn {
+  from {
+    opacity: 0;
+    transform: translateX(10px) scale(0.8);
   }
-  
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
+
+@keyframes revealHandleBounceIn {
+  from {
+    opacity: 0;
+    transform: translateX(-10px) scale(0.8);
+  }
+  60% {
+    opacity: 1;
+    transform: translateX(2px) scale(1.05);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0) scale(1);
+  }
+}
   .paper-list-page h1 {
       text-align: center;
       font-size: 2em; /* Larger heading */
@@ -114,9 +276,8 @@
     flex-wrap: wrap;
     gap: 30px; /* Slightly larger gap for visual separation */
     justify-content: flex-start; /* Keep items aligned left within the container */
-}
-  
-  /* Styling for when no papers are found */
+    transition: transform 0.4s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease;
+  }  /* Styling for when no papers are found */
   .paper-list > p { /* Target direct p child */
       width: 100%;
       text-align: center;

@@ -4,7 +4,7 @@
 # TODO: check boxes that are done
 
 1. Basic UI FIXES:
-* [ ] Add border to search bar on top 
+* [X] Add border to search bar on top 
 * [ ] Add animation when hiding filters in papers --> extend the cards to fill the full width 
 * [ ] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter)
 * [ ] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
@@ -35,3 +35,5 @@
 * [ ] Condense all the various careds into some similar method instead of having so many different ones of the same hting
 * [ ] If user has too many contributed to or upvoted have a pagination but vertical on the right side in the white space of the area.
 * [ ] integrate settings into profile as a tab or something, at least improve that UI significantly
+* [ ] implementaiton tracking becomes a timeline not just random information texted 
+* [ ] works for MOBILE

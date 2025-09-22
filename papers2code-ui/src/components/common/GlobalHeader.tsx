@@ -84,7 +84,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                     placeholder="Search papers, authors, conferences..."
                     value={searchQuery}
                     onChange={(e) => setSearchQuery(e.target.value)}
-                    className="w-full pl-10 pr-24 h-10 bg-muted/50 border-0 focus:bg-background transition-colors"
+                    className="w-full pl-10 pr-24 h-10 bg-muted/50 border focus:bg-background transition-colors"
                   />
                   <div className="absolute right-2 flex items-center gap-1">
                     <kbd className="pointer-events-none inline-flex h-6 select-none items-center gap-1 rounded border bg-muted px-1.5 font-mono text-xs font-medium text-muted-foreground opacity-100">
