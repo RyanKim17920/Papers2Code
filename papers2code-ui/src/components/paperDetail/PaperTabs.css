@@ -2,20 +2,20 @@
 /* --- Tab Styles --- */
 .paper-tabs {
     display: flex;
-    gap: 5px; /* Small gap between tabs */
+    gap: 3px; /* Smaller gap between tabs */
     /* margin-top: 30px; */ /* Removed margin-top */
-    margin-bottom: 30px; /* Standardized space below tabs */
+    margin-bottom: 20px; /* Reduced space below tabs */
     border-bottom: 2px solid var(--border-color); /* Line below tabs */
     overflow-y:hidden;
 }
 
 .tab-button {
-    padding: 0.8rem 1.5rem;
+    padding: 0.6rem 1.2rem; /* Reduced padding for compactness */
     cursor: pointer;
     border: none;
     background-color: transparent;
     color: var(--text-muted-color);
-    font-size: 1em;
+    font-size: 0.9em; /* Slightly smaller font */
     font-weight: 500;
     border-bottom: 3px solid transparent; /* Thicker transparent border for spacing */
     margin-bottom: -2px; /* Overlap container border */

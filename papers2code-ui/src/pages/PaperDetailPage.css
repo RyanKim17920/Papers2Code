@@ -1,7 +1,7 @@
 .paper-detail-page {
-  width: 90%;          /* Make container fill full width */
+  width: 95%;          /* Increased width usage */
   min-height: 100vh;      /* Optional: fill vertical space */
-  padding: 45px 50px;     /* Increased padding for better spacing */
+  padding: 35px 40px;     /* Reduced padding for higher density */
   background-color: var(--card-background-color);
   border-radius: var(--border-radius-lg);
   box-shadow: var(--box-shadow-md);
@@ -9,18 +9,18 @@
   margin: 0;             /* Remove auto margins to prevent centering */
   text-align: justify;
   text-justify: inter-word;
-  max-width: 1400px;
-  margin-left:5%;
-  margin-right:5%;
+  max-width: 1500px; /* Increased max-width */
+  margin-left:2.5%; /* Reduced margins */
+  margin-right:2.5%;
 }
 
  .back-link {
    display: inline-block;
-   margin-bottom: 35px; /* More space below */
+   margin-bottom: 25px; /* Reduced space below */
    color: var(--primary-color);
    text-decoration: none;
    font-weight: 500;
-   padding: 8px 0; /* Add some padding for better click target */
+   padding: 6px 0; /* Reduced padding */
    transition: color 0.2s ease;
  }
  .back-link:hover {
@@ -115,9 +115,9 @@ small {
 
 /* Implementation Notes specific to PaperDetailPage */
 .implementation-notes {
-    margin-top: 30px; /* More space above */
-    margin-bottom: 30px; /* Add space below */
-    padding: 20px; /* More padding */
+    margin-top: 20px; /* Reduced space above */
+    margin-bottom: 20px; /* Reduced space below */
+    padding: 15px; /* Reduced padding */
     background-color: var(--background-alt-color); /* Subtle background */
     border-radius: var(--border-radius-sm);
     border: 1px solid var(--border-color-light);
@@ -125,17 +125,18 @@ small {
 
 .implementation-notes h4 {
     margin-top: 0;
-    margin-bottom: 15px; /* More space below heading */
+    margin-bottom: 12px; /* Reduced space below heading */
     color: var(--text-heading-color);
-    font-size: 1.2em;
-    padding-bottom: 8px; /* Add padding below heading */
+    font-size: 1.15em; /* Slightly smaller font */
+    padding-bottom: 6px; /* Reduced padding below heading */
     border-bottom: 1px solid var(--border-color-light); /* Add subtle separator */
 }
 
 .implementation-notes p {
-    margin: 0 0 15px 0; /* Add bottom margin between paragraphs */
-    line-height: 1.7; /* Better line height */
+    margin: 0 0 12px 0; /* Reduced bottom margin between paragraphs */
+    line-height: 1.6; /* Slightly tighter line height */
     color: var(--text-color);
+    font-size: 0.95em; /* Slightly smaller text for density */
 }
 
 .implementation-notes p:last-child {
@@ -144,9 +145,9 @@ small {
 
 /* --- New Styles for Implementation Effort Section --- */
 .implementation-effort-section {
-    margin-top: 35px; /* Increased spacing above */
-    margin-bottom: 35px; /* Increased spacing below */
-    padding: 25px; /* More padding */
+    margin-top: 25px; /* Reduced spacing above */
+    margin-bottom: 25px; /* Reduced spacing below */
+    padding: 18px; /* Slightly reduced padding */
     background-color: var(--background-alt-color);
     border-radius: var(--border-radius-sm); 
     border: 1px solid var(--border-color-light);
@@ -154,15 +155,16 @@ small {
 
 .implementation-effort-section h4 {
     margin-top: 0;
-    margin-bottom: 20px; /* More space below heading */
+    margin-bottom: 15px; /* Reduced space below heading */
     color: var(--text-heading-color);
-    font-size: 1.3em;
+    font-size: 1.25em; /* Slightly smaller */
     border-bottom: 1px solid var(--border-color-light);
-    padding-bottom: 12px; /* More padding below heading */
+    padding-bottom: 8px; /* Reduced padding below heading */
 }
 
 .implementation-effort-section p {
-    margin-bottom: 18px; /* More space between paragraphs */
-    line-height: 1.7; /* Better line height */
+    margin-bottom: 14px; /* Reduced space between paragraphs */
+    line-height: 1.6; /* Slightly tighter line height */
     color: var(--text-color);
+    font-size: 0.95em; /* Slightly smaller font for density */
 }

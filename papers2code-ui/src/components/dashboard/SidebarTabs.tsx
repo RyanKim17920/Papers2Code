@@ -53,7 +53,7 @@ const SidebarTabs: React.FC<SidebarTabsProps> = ({
       return 'Recently viewed';
     }
     if (currentTab === 'bookmarks') {
-      return 'Bookmarked';
+      return 'Upvoted';
     }
     return '';
   };
@@ -61,7 +61,7 @@ const SidebarTabs: React.FC<SidebarTabsProps> = ({
   const tabs = [
     { id: 'trending' as SidebarTab, label: 'Trending' },
     { id: 'recent' as SidebarTab, label: 'Recent' },
-    { id: 'bookmarks' as SidebarTab, label: 'Saved' },
+    { id: 'bookmarks' as SidebarTab, label: 'Upvoted' },
   ];
 
   const currentPapers = getCurrentPapers();
@@ -91,7 +91,7 @@ const SidebarTabs: React.FC<SidebarTabsProps> = ({
             <p>
               {currentTab === 'trending' && 'No trending papers this week.'}
               {currentTab === 'recent' && 'No recently viewed papers.'}
-              {currentTab === 'bookmarks' && 'No saved papers yet.'}
+              {currentTab === 'bookmarks' && 'No upvoted papers yet.'}
             </p>
           </div>
         ) : (

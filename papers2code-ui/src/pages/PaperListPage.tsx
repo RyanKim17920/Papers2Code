@@ -65,8 +65,8 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => { // De
               onClose={toggleAdvancedSearch} // Use toggle to close
             />
           </div>
-        )}}
-      </div>     
+        )}
+      </div>
        <div className="list-content-area">
         {isLoading ? (
           <LoadingSpinner />
