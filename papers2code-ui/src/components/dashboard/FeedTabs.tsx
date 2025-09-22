@@ -42,7 +42,7 @@ const FeedTabs: React.FC<FeedTabsProps> = ({
     {
       id: 'personalized',
       label: 'For You',
-      icon: Heart,
+      icon: ThumbsUp,
       papers: personalizedPapers,
       description: 'Personalized recommendations',
     },
