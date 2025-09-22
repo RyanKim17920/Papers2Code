@@ -1,3 +1,51 @@
+/* Animation styles for filter toggle */
+.paper-list-layout {
+  display: flex;
+  gap: 1.5rem;
+  transition: all 0.3s ease-in-out;
+}
+
+.paper-list-layout.with-filters {
+  grid-template-columns: 320px 1fr;
+}
+
+.paper-list-layout.no-filters {
+  grid-template-columns: 0 1fr;
+}
+
+.filter-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  overflow: hidden;
+  transition: width 0.3s ease-in-out, opacity 0.3s ease-in-out;
+}
+
+.filter-sidebar.visible {
+  width: 320px;
+  opacity: 1;
+}
+
+.filter-sidebar.hidden {
+  width: 0;
+  opacity: 0;
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  transition: all 0.3s ease-in-out;
+}
+
+/* Enhanced card expansion when filters are hidden */
+.paper-list-layout.no-filters .main-content {
+  max-width: 100%;
+}
+
+.paper-list-layout.with-filters .main-content {
+  max-width: calc(100% - 320px - 1.5rem);
+}
+
 .paper-list-page {
     margin: 0 auto;
     padding: 0;
