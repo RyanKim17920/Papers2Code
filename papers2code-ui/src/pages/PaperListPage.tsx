@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Calendar, User, Filter, X, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw } from 'lucide-react';
 import { usePaperList, SortPreference } from '../common/hooks/usePaperList';
 import { LoadingSpinner } from '../common/components';
 import { Button } from '../components/ui/button';
@@ -8,6 +8,7 @@ import { Label } from '../components/ui/label';
 import { Card, CardContent } from '../components/ui/card';
 import { Separator } from '../components/ui/separator';
 import { Badge } from '../components/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
 import ModernPaperCard from '../components/paperList/ModernPaperCard';
 import ModernPaginationControls from '../components/paperList/ModernPaginationControls';
 import PaperListSkeleton from '../components/paperList/PaperListSkeleton';
@@ -19,23 +20,23 @@ interface PaperListPageProps {
 }
 
 const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
-  const [showFilters, setShowFilters] = useState<boolean>(() => {
+  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('paperListShowFilters');
-      return saved ? saved === 'true' : true;
+      const saved = localStorage.getItem('paperListShowAdvancedFilters');
+      return saved ? saved === 'true' : false;
     } catch {
-      return true;
+      return false;
     }
   });
 
-  // Persist filter sidebar state
+  // Persist advanced filters state
   useEffect(() => {
     try {
-      localStorage.setItem('paperListShowFilters', String(showFilters));
+      localStorage.setItem('paperListShowAdvancedFilters', String(showAdvancedFilters));
     } catch {
       // ignore storage errors
     }
-  }, [showFilters]);
+  }, [showAdvancedFilters]);
   
   const {
     papers,
@@ -77,250 +78,213 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
 
   return (
     <div className="min-h-screen bg-background">
-  <div className="container mx-auto px-4 pt-3 pb-6">
-
-        <div className={`paper-list-layout ${showFilters ? 'with-filters' : 'no-filters'}`}>
-          {/* Left Sidebar - Collapsible Filters */}
-          <div className={`filter-sidebar ${showFilters ? 'visible' : 'hidden'}`}>
-            <Card className="sticky top-6 filter-card relative">
-              <CardContent className="p-0">
-                {/* Filter Header */}
-                <div className="filter-header">
-                  <div className="flex items-center gap-2">
-                    <span className="icon-badge">
-                      <Filter className="w-4 h-4" />
-                    </span>
-                    <span className="font-semibold">Filters</span>
-                  </div>
-                </div>
-                
-                <div className="filter-content">
-                  {/* Search Section */}
-                  <div className="space-y-4">
-                    <div className="flex items-center gap-2">
-                      <Search className="w-4 h-4 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Search Papers</Label>
-                    </div>
-                    <Input
-                      placeholder="Search by title, abstract..."
-                      value={searchTerm}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-
-                  <Separator />
-
-                  {/* Sort Section */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <SlidersHorizontal className="w-4 h-4 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Sort By</Label>
-                    </div>
-                    <select
-                      value={activeSortDisplay}
-                      onChange={handleSortChange}
-                      disabled={isSearchActive}
-                      className="w-full p-2 border border-input bg-background rounded-md text-sm focus:outline-none focus:ring-2 focus:ring-ring"
-                    >
-                      {isSearchActive && <option value="relevance">Relevance</option>}
-                      {!isSearchActive && (
-                        <>
-                          <option value="newest">Newest First</option>
-                          <option value="oldest">Oldest First</option>
-                          <option value="upvotes">Most Upvoted</option>
-                        </>
-                      )}
-                    </select>
-                  </div>
-
-                  <Separator />
-
-                  {/* Date Filters */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <Calendar className="w-4 h-4 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Publication Date</Label>
-                    </div>
-                    <div className="space-y-2">
-                      <div>
-                        <Label htmlFor="start-date" className="text-xs text-muted-foreground">From</Label>
-                        <Input
-                          id="start-date"
-                          type="date"
-                          value={formatDateForInput(advancedFilters.startDate)}
-                          onChange={(e) => handleDateChange('startDate', e.target.value)}
-                          className="w-full mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label htmlFor="end-date" className="text-xs text-muted-foreground">To</Label>
-                        <Input
-                          id="end-date"
-                          type="date"
-                          value={formatDateForInput(advancedFilters.endDate)}
-                          onChange={(e) => handleDateChange('endDate', e.target.value)}
-                          className="w-full mt-1"
-                        />
-                      </div>
-                    </div>
-                  </div>
-
-                  <Separator />
-
-                  {/* Author Filter */}
-                  <div className="space-y-3">
-                    <div className="flex items-center gap-2">
-                      <User className="w-4 h-4 text-muted-foreground" />
-                      <Label className="text-sm font-medium">Authors</Label>
-                    </div>
-                    <Input
-                      placeholder="e.g., Hinton, LeCun"
-                      value={advancedFilters.searchAuthors || ''}
-                      onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
-                      className="w-full"
-                    />
-                  </div>
-
-                  {/* Filter Actions */}
-                  <div className="flex flex-col gap-2 pt-2">
-                    <Button onClick={handleApplyAdvancedFilters} className="w-full">
-                      Apply Filters
-                    </Button>
-                    <Button 
-                      variant="outline" 
-                      onClick={handleClearAdvancedFilters}
-                      className="w-full"
-                    >
-                      Clear All
-                    </Button>
-                  </div>
-                </div>
-              </CardContent>
-              {/* Side collapse handle (desktop only) */}
-              {showFilters && (
-                <button
-                  type="button"
-                  aria-label="Hide filters"
-                  className="filter-toggle-handle hidden lg:inline-flex"
-                  onClick={() => setShowFilters(false)}
-                >
-                  <ChevronLeft className="w-4 h-4" />
-                </button>
-              )}
-            </Card>
-          </div>
-
-          {/* Main Content */}
-          <div className="main-content">
-            {/* Results Header */}
-            <div className="flex items-center justify-between mb-8">
-              <div className="flex items-center gap-3">
-                {/* Filter Toggle Button */}
-                {/* Mobile: always show the toggle */}
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowFilters(!showFilters)}
-                  className="flex items-center gap-2 lg:hidden"
-                >
-                  <Filter className="w-4 h-4" />
-                  Filters
-                </Button>
-                {/* Desktop: reveal handle pinned to main content edge when filters are hidden */}
-                {!showFilters && (
-                  <button
-                    type="button"
-                    aria-label="Show filters"
-                    className="filter-reveal-handle hidden lg:inline-flex"
-                    onClick={() => setShowFilters(true)}
-                  >
-                    <ChevronRight className="w-4 h-4" />
-                  </button>
-                )}
-                
-                <div className="flex items-center gap-3">
-                  <h2 className="text-lg font-semibold">
-                    {debouncedSearchTerm 
-                      ? `Showing ${totalCount} results for '${debouncedSearchTerm}'`
-                      : `${totalCount} papers found`
-                    }
-                  </h2>
-                  {debouncedSearchTerm && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearSearchTerm}
-                      className="flex items-center gap-1 px-2 py-1 h-6 bg-secondary text-secondary-foreground hover:bg-secondary/80"
-                    >
-                      <span className="text-xs">{debouncedSearchTerm}</span>
-                      <X className="w-3 h-3" />
-                    </Button>
-                  )}
-                </div>
-              </div>
+      <div className="flex max-w-7xl mx-auto">
+        {/* Left Sidebar - Filters */}
+        <div className="w-80 p-6 border-r border-border bg-card/30">
+          <div className="sticky top-6 space-y-6">
+            {/* Header */}
+            <div>
+              <h1 className="text-xl font-semibold mb-1">Research Papers</h1>
+              <p className="text-sm text-muted-foreground">
+                {totalCount} {totalCount === 1 ? 'paper' : 'papers'} found
+              </p>
             </div>
 
-            {/* Content Area */}
-            {isLoading ? (
-              <>
-                <div className="space-y-3">
-                  {/* Invisible Sizing Card to prevent horizontal layout shift */}
-                  <div style={{ height: 0, overflow: 'hidden', visibility: 'hidden' }}>
-                    <div className="p-4">
-                      <h3 className="text-lg font-semibold">
-                        This is a very long sample title to correctly size the container width based on multi-line text wrapping behavior.
-                      </h3>
-                      <p className="text-sm text-muted-foreground/70 leading-relaxed">
-                        This is a sample abstract that is also quite long, designed to simulate the content of a real paper card. The purpose of this text is purely for layout calculation. It will force the parent container to expand to its full width, preventing any horizontal layout shift when the actual paper data is loaded and rendered. Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                      </p>
-                    </div>
-                  </div>
-
-                  <PaperListSkeleton count={12} />
-                </div>
-                <div className="mt-8">
-                  <PaginationSkeleton />
-                </div>
-              </>
-            ) : error ? (
-              <div className="text-center py-12">
-                <p className="text-destructive text-sm">{error}</p>
-              </div>
-            ) : papers.length > 0 ? (
-              <>
-                <div className="space-y-3">
-                  {papers.map((paper) => (
-                    <ModernPaperCard
-                      key={paper.id}
-                      paper={paper}
-                      onVote={handleVote}
-                    />
-                  ))}
-                </div>
-                
-                {totalPages > 1 && (
-                  <div className="mt-8">
-                    <ModernPaginationControls
-                      currentPage={currentPage}
-                      totalPages={totalPages}
-                      onPageChange={handlePageChange}
-                      onPrev={handlePrev}
-                      onNext={handleNext}
-                    />
-                  </div>
+            {/* Search */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Search</Label>
+              <div className="relative">
+                <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
+                <Input
+                  placeholder="Title, abstract, keywords..."
+                  value={searchTerm}
+                  onChange={(e) => handleSearchChange(e.target.value)}
+                  className="pl-10"
+                />
+                {searchTerm && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={clearSearchTerm}
+                    className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                  >
+                    <X className="w-3 h-3" />
+                  </Button>
                 )}
-              </>
-            ) : (
-              <div className="text-center py-12">
+              </div>
+              {debouncedSearchTerm && (
+                <div className="flex items-center gap-2 mt-2">
+                  <Badge variant="outline" className="text-xs">
+                    Searching: "{debouncedSearchTerm}"
+                  </Badge>
+                </div>
+              )}
+            </div>
+
+            <Separator />
+
+            {/* Sort */}
+            <div className="space-y-2">
+              <Label className="text-sm font-medium">Sort by</Label>
+              <Select 
+                value={activeSortDisplay} 
+                onValueChange={(value) => handleSortChange({ target: { value } } as any)} 
+                disabled={isSearchActive}
+              >
+                <SelectTrigger>
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {isSearchActive && (
+                    <SelectItem value="relevance">Relevance</SelectItem>
+                  )}
+                  {!isSearchActive && (
+                    <>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                      <SelectItem value="oldest">Oldest First</SelectItem>
+                      <SelectItem value="upvotes">Most Upvoted</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
+
+            <Separator />
+
+            {/* Advanced Filters */}
+            <div className="space-y-4">
+              <div className="flex items-center justify-between">
+                <Label className="text-sm font-medium">Advanced Filters</Label>
+                {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors) && (
+                  <Badge variant="secondary" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">
+                    !
+                  </Badge>
+                )}
+              </div>
+
+              {/* Date Range */}
+              <div className="space-y-3">
+                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                  <Calendar className="w-3 h-3" />
+                  Publication Date
+                </Label>
+                <div className="space-y-2">
+                  <div>
+                    <Label className="text-xs text-muted-foreground">From</Label>
+                    <Input
+                      type="date"
+                      value={formatDateForInput(advancedFilters.startDate)}
+                      onChange={(e) => handleDateChange('startDate', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                  <div>
+                    <Label className="text-xs text-muted-foreground">To</Label>
+                    <Input
+                      type="date"
+                      value={formatDateForInput(advancedFilters.endDate)}
+                      onChange={(e) => handleDateChange('endDate', e.target.value)}
+                      className="mt-1"
+                    />
+                  </div>
+                </div>
+              </div>
+
+              {/* Authors */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                  <User className="w-3 h-3" />
+                  Authors
+                </Label>
+                <Input
+                  placeholder="e.g., Hinton, LeCun"
+                  value={advancedFilters.searchAuthors || ''}
+                  onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
+                />
+              </div>
+
+              {/* Filter Actions */}
+              <div className="flex gap-2 pt-2">
+                <Button onClick={handleApplyAdvancedFilters} size="sm" className="flex-1">
+                  Apply
+                </Button>
+                <Button 
+                  variant="outline" 
+                  size="sm"
+                  onClick={handleClearAdvancedFilters}
+                  className="flex items-center gap-1"
+                >
+                  <RotateCcw className="w-3 h-3" />
+                </Button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        {/* Right Content Area */}
+        <div className="flex-1 p-6">
+          {isLoading ? (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                <PaperListSkeleton count={8} />
+              </div>
+              <div className="mt-8">
+                <PaginationSkeleton />
+              </div>
+            </>
+          ) : error ? (
+            <div className="text-center py-16">
+              <p className="text-destructive text-lg font-medium">{error}</p>
+            </div>
+          ) : papers.length > 0 ? (
+            <>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+                {papers.map((paper) => (
+                  <ModernPaperCard
+                    key={paper.id}
+                    paper={paper}
+                    onVote={handleVote}
+                    className="h-full"
+                  />
+                ))}
+              </div>
+              
+              {totalPages > 1 && (
+                <div className="mt-8">
+                  <ModernPaginationControls
+                    currentPage={currentPage}
+                    totalPages={totalPages}
+                    onPageChange={handlePageChange}
+                    onPrev={handlePrev}
+                    onNext={handleNext}
+                  />
+                </div>
+              )}
+            </>
+          ) : (
+            <div className="text-center py-16">
+              <div className="max-w-md mx-auto">
+                <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
+                <h3 className="text-lg font-semibold mb-2">
+                  {debouncedSearchTerm ? 'No papers found' : 'No papers available'}
+                </h3>
                 <p className="text-muted-foreground">
                   {debouncedSearchTerm 
-                    ? `No papers found matching "${debouncedSearchTerm}"`
-                    : 'No papers available'}
+                    ? `Try adjusting your search terms or filters.`
+                    : 'Check back later for new research papers.'}
                 </p>
+                {debouncedSearchTerm && (
+                  <Button
+                    variant="outline"
+                    onClick={clearSearchTerm}
+                    className="mt-4"
+                  >
+                    Clear search
+                  </Button>
+                )}
               </div>
-            )}
-          </div>
+            </div>
+          )}
         </div>
       </div>
     </div>
