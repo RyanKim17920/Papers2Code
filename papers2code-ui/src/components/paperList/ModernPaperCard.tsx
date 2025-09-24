@@ -62,13 +62,13 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
     const text = `${paper.title} ${paper.abstract || ''}`.toLowerCase();
     
     if (text.includes('vision') || text.includes('image') || text.includes('visual')) {
-      tags.push('Computer Vision');
+      tags.push('CV');
     }
     if (text.includes('nlp') || text.includes('language') || text.includes('text')) {
       tags.push('NLP');
     }
     if (text.includes('learning') || text.includes('neural') || text.includes('network')) {
-      tags.push('Machine Learning');
+      tags.push('ML');
     }
     if (text.includes('transformer') || text.includes('attention')) {
       tags.push('Transformers');
@@ -94,14 +94,14 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-2">
+                <h3 className="text-base font-bold text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-2 leading-tight">
                   {paper.title}
                 </h3>
                 
                 {/* Authors */}
-                <div className="text-sm text-muted-foreground/80 mb-2">
+                <div className="text-sm font-medium text-muted-foreground mb-2">
                   {authors}
-                  {hasMoreAuthors && <span className="ml-1">+{paper.authors!.length - 3} others</span>}
+                  {hasMoreAuthors && <span className="ml-1 font-normal">+{paper.authors!.length - 3} others</span>}
                 </div>
               </div>
 
@@ -119,7 +119,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
             </div>
 
             {/* Abstract */}
-            <p className="text-sm text-muted-foreground/70 line-clamp-2 leading-relaxed">
+            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
               {getPaperDescription(paper, 150)}
             </p>
 
@@ -135,18 +135,18 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
               </div>
 
               {/* Right group: Date, proceeding, and status */}
-              <div className="flex items-center gap-2 ml-4">
-                <span className="text-xs text-muted-foreground/60">
+              <div className="flex items-center gap-1.5 ml-4 shrink-0">
+                <span className="text-xs font-medium text-muted-foreground">
                   {formatDate(paper.publicationDate)}
                 </span>
                 
                 {paper.proceeding && (
-                  <span className="text-xs text-muted-foreground/60 font-medium">
+                  <span className="text-xs font-semibold text-muted-foreground">
                     {paper.proceeding}
                   </span>
                 )}
                 
-                <StatusBadge paper={paper} className="text-xs px-2 py-0.5 h-5" />
+                <StatusBadge paper={paper} className="text-xs px-2 py-0.5 h-5 font-medium" />
               </div>
             </div>
 

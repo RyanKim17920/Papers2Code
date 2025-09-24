@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw } from 'lucide-react';
+import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
 import { usePaperList, SortPreference } from '../common/hooks/usePaperList';
 import { LoadingSpinner } from '../common/components';
 import { Button } from '../components/ui/button';
@@ -20,23 +20,23 @@ interface PaperListPageProps {
 }
 
 const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
-  const [showAdvancedFilters, setShowAdvancedFilters] = useState<boolean>(() => {
+  const [showSidebar, setShowSidebar] = useState<boolean>(() => {
     try {
-      const saved = localStorage.getItem('paperListShowAdvancedFilters');
-      return saved ? saved === 'true' : false;
+      const saved = localStorage.getItem('paperListShowSidebar');
+      return saved ? saved === 'true' : true;
     } catch {
-      return false;
+      return true;
     }
   });
 
-  // Persist advanced filters state
+  // Persist sidebar state
   useEffect(() => {
     try {
-      localStorage.setItem('paperListShowAdvancedFilters', String(showAdvancedFilters));
+      localStorage.setItem('paperListShowSidebar', String(showSidebar));
     } catch {
       // ignore storage errors
     }
-  }, [showAdvancedFilters]);
+  }, [showSidebar]);
   
   const {
     papers,
@@ -79,15 +79,40 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
   return (
     <div className="min-h-screen bg-background">
       <div className="flex max-w-7xl mx-auto">
+        {/* Sidebar Toggle Button */}
+        {!showSidebar && (
+          <div className="fixed left-4 top-20 z-10">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() => setShowSidebar(true)}
+              className="shadow-md"
+            >
+              <ChevronRight className="w-4 h-4" />
+            </Button>
+          </div>
+        )}
+
         {/* Left Sidebar - Filters */}
-        <div className="w-80 p-6 border-r border-border bg-card/30">
+        {showSidebar && (
+          <div className="w-80 p-6 border-r border-border bg-card/30 transition-all duration-300 ease-in-out">
           <div className="sticky top-6 space-y-6">
             {/* Header */}
-            <div>
-              <h1 className="text-xl font-semibold mb-1">Research Papers</h1>
-              <p className="text-sm text-muted-foreground">
-                {totalCount} {totalCount === 1 ? 'paper' : 'papers'} found
-              </p>
+            <div className="flex items-center justify-between">
+              <div>
+                <h1 className="text-xl font-semibold mb-1">Research Papers</h1>
+                <p className="text-sm text-muted-foreground">
+                  {totalCount} {totalCount === 1 ? 'paper' : 'papers'} found
+                </p>
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => setShowSidebar(false)}
+                className="p-1"
+              >
+                <ChevronLeft className="w-4 h-4" />
+              </Button>
             </div>
 
             {/* Search */}
@@ -220,13 +245,14 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
             </div>
           </div>
         </div>
+        )}
 
         {/* Right Content Area */}
-        <div className="flex-1 p-6">
+        <div className={`flex-1 p-6 transition-all duration-300 ease-in-out ${showSidebar ? '' : 'ml-0'}`}>
           {isLoading ? (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
-                <PaperListSkeleton count={8} />
+              <div className={`grid gap-4 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
+                <PaperListSkeleton count={showSidebar ? 8 : 12} />
               </div>
               <div className="mt-8">
                 <PaginationSkeleton />
@@ -238,7 +264,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
             </div>
           ) : papers.length > 0 ? (
             <>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
+              <div className={`grid gap-4 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 lg:grid-cols-2 xl:grid-cols-3'}`}>
                 {papers.map((paper) => (
                   <ModernPaperCard
                     key={paper.id}
