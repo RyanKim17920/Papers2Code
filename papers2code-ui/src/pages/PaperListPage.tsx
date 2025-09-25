@@ -188,7 +188,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
             </div>
 
             {/* Advanced Filters - Sticky */}
-            <div className="sticky top-0 bg-card/30 p-6 pt-0 space-y-4">
+            <div className="sticky top-16 z-10 bg-card/30 p-6 pt-0 space-y-4">
               <div className="flex items-center justify-between">
                 <Label className="text-sm font-medium">Advanced Filters</Label>
                 {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors) && (
