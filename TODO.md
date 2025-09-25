@@ -6,7 +6,8 @@
 1. Basic UI FIXES:
 * [X] Add border to search bar on top 
 * [ ] Add animation when hiding filters in papers --> extend the cards to fill the full width 
-* [ ] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter)
+* [X] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter) 
+* [X] Cards should always have the text aligned/same height (papers that have two lines of authors are have the tags, date, etc. lower than other cards which makes spacing uneven)
 * [ ] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
 * [ ] Make updates page collapsable or just smaller
     * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on from the admin side)

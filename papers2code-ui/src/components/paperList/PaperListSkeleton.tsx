@@ -14,8 +14,8 @@ const PaperListSkeleton: React.FC<PaperListSkeletonProps> = ({ count = 12, measu
     <>
       {[...Array(count)].map((_, i) => (
         <div key={i} className="block" style={cardStyle}>
-          <Card className="w-full h-full">
-            <CardContent className="p-4 h-full flex flex-col justify-between">
+            <Card className="w-full h-full">
+            <CardContent className="pt-5 pb-4 px-5 h-full flex flex-col justify-between">
               <div>
                 {/* Header */}
                 <div className="flex items-start justify-between gap-4">

@@ -87,10 +87,10 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
   }
 
   return (
-    <Link to={`/paper/${paper.id}`} className="block">
-      <Card className={`hover:shadow-md transition-shadow cursor-pointer ${className}`.trim()}>
-        <CardContent className="p-4">
-          <div className="space-y-3">
+    <Link to={`/paper/${paper.id}`} className="block h-full">
+      <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col ${className}`.trim()}>
+        <CardContent className="pt-5 pb-4 px-5 flex flex-col flex-1">
+          <div className="space-y-3 flex-1">
             {/* Header */}
             <div className="flex items-start justify-between gap-4">
               <div className="flex-1 min-w-0">
@@ -99,7 +99,10 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                 </h3>
                 
                 {/* Authors */}
-                <div className="text-sm font-medium text-muted-foreground mb-2">
+                <div
+                  className="text-sm font-medium text-muted-foreground mb-2 line-clamp-1"
+                  title={paper.authors?.join(', ')}
+                >
                   {authors}
                   {hasMoreAuthors && <span className="ml-1 font-normal">+{paper.authors!.length - 3} others</span>}
                 </div>
@@ -119,12 +122,12 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
             </div>
 
             {/* Abstract */}
-            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2">
+            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 min-h-[2.75rem]">
               {getPaperDescription(paper, 150)}
             </p>
 
             {/* Footer - Single Row with Tags, Date, and Status */}
-            <div className="flex items-center justify-between pt-2">
+            <div className="flex items-center justify-between pt-2 mt-auto">
               {/* Left group: Category tags */}
               <div className="flex items-center gap-2">
                 {domainTags.map((tag, index) => (
