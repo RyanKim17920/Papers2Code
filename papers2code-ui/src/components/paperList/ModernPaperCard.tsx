@@ -133,7 +133,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                 {/* Left: Domain tags */}
                 <div className="flex items-center gap-2 min-w-0">
                   {domainTags.map((tag, index) => (
-                    <Badge key={index} variant="secondary" className="text-[10px] px-1.5 py-0 h-5">
+                    <Badge key={index} variant="default" className="text-[10px] px-1.5 py-0 h-5">
                       {tag}
                     </Badge>
                   ))}

@@ -8,14 +8,14 @@
 * [ ] Add animation when hiding filters in papers --> extend the cards to fill the full width 
 * [X] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter) 
 * [X] Cards should always have the text aligned/same height (papers that have two lines of authors are have the tags, date, etc. lower than other cards which makes spacing uneven)
-* [ ] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
+* [X] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
 * [ ] Make updates page collapsable or just smaller
     * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on from the admin side)
 * [ ] Increase information density of paper pages further
 * [ ] Improve the 404 Page not found to be styled exquisitely
 * [ ] Fix the view Likes popup of everyone that di so that it doesn't come from top left (should pop out from same location)
 * [ ] Remove all links to papersWithCode to it
-* [ ] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
+* [X] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
 * [ ] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
 
 2. BASIC BACKEND FIXES:

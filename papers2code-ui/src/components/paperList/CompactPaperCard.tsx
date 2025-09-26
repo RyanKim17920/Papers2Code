@@ -116,7 +116,7 @@ const CompactPaperCard: React.FC<CompactPaperCardProps> = ({ paper, onVote, clas
             {domainTags.length > 0 && (
               <div className="flex flex-wrap gap-1">
                 {domainTags.map((tag, index) => (
-                  <Badge key={index} variant="secondary" className="text-xs px-2 py-0.5 h-5">
+                  <Badge key={index} variant="default" className="text-xs px-2 py-0.5 h-5">
                     {tag}
                   </Badge>
                 ))}

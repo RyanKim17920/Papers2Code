@@ -246,9 +246,9 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
                   {domainTags.length > 0 && (
                     <div className="flex gap-1 mb-2">
                       {domainTags.map((tag, index) => (
-                        <span key={index} className="text-xs bg-muted/50 px-1.5 py-0.5 rounded text-muted-foreground">
+                        <Badge key={index} variant="default" className="text-xs px-1.5 py-0.5 h-5">
                           {tag}
-                        </span>
+                        </Badge>
                       ))}
                     </div>
                   )}
