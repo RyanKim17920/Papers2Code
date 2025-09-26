@@ -85,7 +85,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
       tags.push('Generative AI');
     }
     
-    return tags.slice(0, 3);
+    return tags.slice(0, 2);
   };
 
   const domainTags = getDomainTags(paper);
@@ -95,13 +95,13 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
     <Link to={`/paper/${paper.id}`} className="block h-full group">
       <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col ${className}`.trim()}>
         <CardContent className="pt-4 pb-4 px-4 h-full flex flex-col">
-          {/* Title - Fixed height */}
-          <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight min-h-[2.5rem] mb-2">
+          {/* Title - Responsive height */}
+          <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-2" style={{ minHeight: 'calc(1.2em * 2.2)' }}>
             {paper.title}
           </h3>
           
           {/* Authors • Venue • Date */}
-          <div className="text-xs mb-2">
+          <div className="text-xs mb-2 flex-shrink-0">
             <span className="font-semibold text-foreground">{formattedAuthors}</span>
             {paper.proceeding && (
               <>
@@ -113,8 +113,8 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
             <span className="text-muted-foreground font-normal">{formatDate(paper.publicationDate)}</span>
           </div>
 
-          {/* Abstract - Fixed height */}
-          <div className="text-sm text-foreground/75 leading-relaxed line-clamp-2 min-h-[2.75rem] mb-4 flex-1 font-normal">
+          {/* Abstract - Responsive height */}
+          <div className="text-sm text-foreground/75 leading-relaxed line-clamp-2 mb-4 flex-1 font-normal" style={{ minHeight: 'calc(1.4em * 2.2)' }}>
             {getPaperDescription(paper, 140)}
           </div>
 
