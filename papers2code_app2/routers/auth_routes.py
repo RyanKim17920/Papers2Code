@@ -166,6 +166,33 @@ async def refresh_access_token_route(request: Request, response: Response): # re
 @router.post("/logout")
 async def logout_user_route(request: Request, response: Response): # response needed to clear cookies
     try:
+        # Get the referrer to determine where the user is logging out from
+        referrer = request.headers.get("referer", "")
+        
+        # Parse the body to see if current_page is provided by frontend
+        try:
+            body = await request.body()
+            if body:
+                import json
+                body_data = json.loads(body)
+                current_page = body_data.get("currentPage", "")
+            else:
+                current_page = ""
+        except:
+            current_page = ""
+        
+        # Determine redirect path based on current location
+        # If logged out from dashboard, go to papers page
+        # Otherwise, stay on current page (if it doesn't require auth) or go to papers
+        if "/dashboard" in referrer or "/dashboard" in current_page:
+            redirect_to = "/papers"
+        else:
+            # For pages that don't require authentication, user can stay
+            # For pages that require authentication, should go to papers
+            protected_pages = ["/settings", "/user/"]
+            needs_redirect = any(page in (referrer + current_page) for page in protected_pages)
+            redirect_to = "/papers" if needs_redirect else None
+        
         # This call to auth_service.logout_user internally calls auth_service.clear_auth_cookies(response),
         # which will add headers to the 'response' object to delete the old cookies, including the old CSRF cookie.
         await auth_service.logout_user(request, response) 
@@ -185,9 +212,13 @@ async def logout_user_route(request: Request, response: Response): # response ne
             max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 # Or a suitable duration for a 'logged-out' token
         )
         
-        # Return the new CSRF token in the response body so the frontend can store it.
-        # Using camelCase "csrfToken" for consistency with frontend expectations.
-        return {"message": "Logout successful", "csrfToken": new_csrf_token_value}
+        # Return the new CSRF token and redirect information in the response body
+        # Using camelCase for consistency with frontend expectations.
+        return {
+            "message": "Logout successful", 
+            "csrfToken": new_csrf_token_value,
+            "redirectTo": redirect_to
+        }
 
     except Exception as e:
         logger.error(f"Error during logout process: {e}", exc_info=True)

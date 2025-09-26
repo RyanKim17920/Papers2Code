@@ -23,7 +23,8 @@ class ActivityTrackingService:
         metadata: Optional[Dict[str, Any]] = None
     ) -> bool:
         """
-        Track a paper view event.
+        Track a paper view event. For logged-in users, this will update existing view records
+        for the same user+paper combination instead of creating duplicates.
         
         Args:
             user_id: The ID of the user (optional for anonymous views)
@@ -35,20 +36,49 @@ class ActivityTrackingService:
         """
         try:
             await self._init_collection()
+            current_time = datetime.utcnow()
             
-            activity_data = {
-                "paperId": paper_id,
-                "timestamp": datetime.utcnow(),
-                "metadata": metadata or {}
-            }
-            
-            # Include user_id if provided (for logged-in users)
             if user_id:
-                activity_data["userId"] = user_id
-            
-            # Insert into paper_views collection
-            result = await self.paper_views_collection.insert_one(activity_data)
-            return result.inserted_id is not None
+                # For logged-in users: upsert to avoid duplicates by same user+paper
+                filter_criteria = {
+                    "paperId": paper_id,
+                    "userId": user_id
+                }
+                
+                update_data = {
+                    "$set": {
+                        "lastViewed": current_time,
+                        "metadata": metadata or {}
+                    },
+                    "$setOnInsert": {
+                        "paperId": paper_id,
+                        "userId": user_id,
+                        "firstViewed": current_time,
+                        "viewCount": 1
+                    },
+                    "$inc": {
+                        "viewCount": 1
+                    }
+                }
+                
+                # Use upsert to update existing or create new record
+                result = await self.paper_views_collection.update_one(
+                    filter_criteria,
+                    update_data,
+                    upsert=True
+                )
+                return result.upserted_id is not None or result.modified_count > 0
+                
+            else:
+                # For anonymous users: insert new record each time
+                activity_data = {
+                    "paperId": paper_id,
+                    "timestamp": current_time,
+                    "metadata": metadata or {}
+                }
+                
+                result = await self.paper_views_collection.insert_one(activity_data)
+                return result.inserted_id is not None
             
         except Exception as e:
             print(f"Error tracking paper view: {e}")
