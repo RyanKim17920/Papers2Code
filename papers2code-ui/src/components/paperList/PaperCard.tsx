@@ -4,7 +4,7 @@ import { Paper } from '../../common/types/paper'; // Ensure Status is imported
 import './PaperCard.css';
 import { getStatusClass, getStatusSymbol } from '../../common/utils/statusUtils';
 import UserListPopup from '../common/UserListPopup';
-import { fetchPaperActionUsersFromApi } from '../../common/services/api';
+import { fetchPaperActionUsers } from '../../common/services/api';
 import type { UserProfile } from '../../common/types/user';
 
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => (
@@ -55,7 +55,7 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
     setShowUpvotesPopup(true);
 
     try {
-      const actionUsers = await fetchPaperActionUsersFromApi(paper.id);
+      const actionUsers = await fetchPaperActionUsers(paper.id);
       setUpvoteUsers(actionUsers.upvotes);
     } catch (error) {
       console.error("Error loading upvote users:", error);
@@ -81,59 +81,60 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   // --- End Determine Status and Class ---
 
   return (
-    <div className="paper-card">
-      <h3>
-        <Link to={`/paper/${paper.id}`}>{paper.title}</Link>
-      </h3>
-      <div className="card-meta-content">
-        <div className="card-meta-top">
-          <p className="authors">Authors: {authors}</p>
+    <>
+      <div className="paper-card">
+        <h3>
+          <Link to={`/paper/${paper.id}`}>{paper.title}</Link>
+        </h3>
+        <div className="card-meta-content">
+          <div className="card-meta-top">
+            <p className="authors">Authors: {authors}</p>
+          </div>
+          <div className="card-meta-bottom">
+            <p className="date">Date: {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}</p>
+            <p className={`status ${statusClass}`}>
+              <span className="status-symbol">{statusSymbol}</span>
+              <span className="status-text">{displayStatus}</span>
+            </p>
+          </div>
         </div>
-        <div className="card-meta-bottom">
-          <p className="date">Date: {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}</p>
-          <p className={`status ${statusClass}`}>
-            <span className="status-symbol">{statusSymbol}</span>
-            <span className="status-text">{displayStatus}</span>
-          </p>
+        <div className="card-actions">
+          <div className="vote-section">
+             <button
+               className={`vote-button ${paper.currentUserVote === 'up' ? 'active' : ''}`}
+               onClick={handleVoteClick}
+               disabled={isVoting}
+               title={paper.currentUserVote === 'up' ? 'Remove vote' : 'Upvote'}
+             >
+               <ThumbsUpIcon filled={paper.currentUserVote === 'up'} />
+             </button>
+             <span 
+               ref={voteCountRef}
+               className={`upvote-count ${paper.upvoteCount > 0 ? 'clickable' : ''}`}
+               onClick={handleUpvoteCountClick}
+               title={paper.upvoteCount > 0 ? 'View who upvoted this paper' : undefined}
+             >
+               {paper.upvoteCount}
+             </span>
+             {voteError && <span className="vote-error-tooltip">{voteError}</span>}
+          </div>
+          <Link to={`/paper/${paper.id}`} className="details-link">
+            View Details
+          </Link>
         </div>
       </div>
-      <div className="card-actions">
-        <div className="vote-section">
-           <button
-             className={`vote-button ${paper.currentUserVote === 'up' ? 'active' : ''}`}
-             onClick={handleVoteClick}
-             disabled={isVoting}
-             title={paper.currentUserVote === 'up' ? 'Remove vote' : 'Upvote'}
-           >
-             <ThumbsUpIcon filled={paper.currentUserVote === 'up'} />
-           </button>
-           <span 
-             ref={voteCountRef}
-             className={`upvote-count ${paper.upvoteCount > 0 ? 'clickable' : ''}`}
-             onClick={handleUpvoteCountClick}
-             title={paper.upvoteCount > 0 ? 'View who upvoted this paper' : undefined}
-           >
-             {paper.upvoteCount}
-           </span>
-           {voteError && <span className="vote-error-tooltip">{voteError}</span>}
-        </div>
-        <Link to={`/paper/${paper.id}`} className="details-link">
-          View Details
-        </Link>
-      </div>
-    </div>
 
-    <UserListPopup
-      isOpen={showUpvotesPopup}
-      onClose={() => setShowUpvotesPopup(false)}
-      users={upvoteUsers}
-      title="Upvoted By"
-      isLoading={isLoadingUsers}
-      error={usersError}
-      emptyMessage="No upvotes yet."
-      anchorElement={voteCountRef.current}
-    />
-  </div>
+      <UserListPopup
+        isOpen={showUpvotesPopup}
+        onClose={() => setShowUpvotesPopup(false)}
+        users={upvoteUsers}
+        title="Upvoted By"
+        isLoading={isLoadingUsers}
+        error={usersError}
+        emptyMessage="No upvotes yet."
+        anchorElement={voteCountRef.current}
+      />
+    </>
   );
 };
 
