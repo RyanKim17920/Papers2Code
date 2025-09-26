@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
-import { ThumbsUp, ExternalLink, Users, Calendar } from 'lucide-react';
+import { ThumbsUp, ExternalLink, FileDown, Code } from 'lucide-react';
 import { Paper } from '../../common/types/paper';
 import { Card, CardContent } from '../ui/card';
 import { Badge } from '../ui/badge';
@@ -56,112 +56,122 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
 
   // Removed local color mapping in favor of unified StatusBadge component.
 
-  // Generate domain tags based on title/abstract keywords
+  // Format authors for compact display
+  const formatAuthors = (authors: string[] | undefined): string => {
+    if (!authors || authors.length === 0) return 'Unknown authors';
+    if (authors.length === 1) return authors[0];
+    if (authors.length <= 3) return authors.join(', ');
+    return `${authors[0]}, et al.`;
+  };
+
+    // Generate more descriptive domain tags
   const getDomainTags = (paper: Paper): string[] => {
     const tags: string[] = [];
     const text = `${paper.title} ${paper.abstract || ''}`.toLowerCase();
     
-    if (text.includes('vision') || text.includes('image') || text.includes('visual')) {
+    if (text.includes('vision') || text.includes('image') || text.includes('visual') || text.includes('computer vision')) {
       tags.push('CV');
     }
-    if (text.includes('nlp') || text.includes('language') || text.includes('text')) {
+    if (text.includes('nlp') || text.includes('language') || text.includes('text') || text.includes('natural language')) {
       tags.push('NLP');
     }
-    if (text.includes('learning') || text.includes('neural') || text.includes('network')) {
+    if (text.includes('learning') || text.includes('neural') || text.includes('network') || text.includes('machine learning')) {
       tags.push('ML');
     }
     if (text.includes('transformer') || text.includes('attention')) {
       tags.push('Transformers');
     }
+    if (text.includes('generative') || text.includes('diffusion') || text.includes('gan')) {
+      tags.push('Generative AI');
+    }
     
-    return tags.slice(0, 2);
+    return tags.slice(0, 3);
   };
 
   const domainTags = getDomainTags(paper);
-  const authors = paper.authors?.slice(0, 3).join(', ') || 'Unknown authors';
-  const hasMoreAuthors = paper.authors && paper.authors.length > 3;
-
-  let displayStatus: string = paper.status;
-  if (paper.status === 'Not Started' && paper.nonImplementableVotes > 0 && paper.implementabilityStatus === 'Voting') {
-    displayStatus = 'Disputed';
-  }
+  const formattedAuthors = formatAuthors(paper.authors);
 
   return (
     <Link to={`/paper/${paper.id}`} className="block h-full group">
       <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col ${className}`.trim()}>
-        <CardContent className="pt-5 pb-4 px-5 flex flex-col flex-1">
-          <div className="space-y-3 flex-1">
-            {/* Header */}
-            <div className="flex items-start justify-between gap-4">
-              <div className="flex-1 min-w-0">
-                <h3 className="text-lg font-semibold text-foreground group-hover:text-primary transition-colors mb-2 line-clamp-2 leading-snug">
-                  {paper.title}
-                </h3>
-                
-                {/* Authors */}
-                <div
-                  className="text-sm font-medium text-muted-foreground mb-2 line-clamp-1"
-                  title={paper.authors?.join(', ')}
-                >
-                  {authors}
-                  {hasMoreAuthors && <span className="ml-1 font-normal">+{paper.authors!.length - 3} others</span>}
-                </div>
-              </div>
+        <CardContent className="pt-4 pb-4 px-4 h-full flex flex-col">
+          {/* Title - Fixed height */}
+          <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight min-h-[2.5rem] mb-2">
+            {paper.title}
+          </h3>
+          
+          {/* Authors • Venue • Date */}
+          <div className="text-xs mb-2">
+            <span className="font-semibold text-foreground">{formattedAuthors}</span>
+            {paper.proceeding && (
+              <>
+                <span className="mx-1 text-muted-foreground/60">·</span>
+                <span className="font-medium text-primary/80">{paper.proceeding}</span>
+              </>
+            )}
+            <span className="mx-1 text-muted-foreground/60">·</span>
+            <span className="text-muted-foreground font-normal">{formatDate(paper.publicationDate)}</span>
+          </div>
 
-              {/* Vote Button */}
+          {/* Abstract - Fixed height */}
+          <div className="text-sm text-foreground/75 leading-relaxed line-clamp-2 min-h-[2.75rem] mb-4 flex-1 font-normal">
+            {getPaperDescription(paper, 140)}
+          </div>
+
+          {/* Footer: Domain Tags + Status + Actions - Fixed at bottom */}
+          <div className="flex items-center justify-between mt-auto">
+            <div className="flex items-center gap-2">
+              {/* Domain Tags */}
+              {domainTags.map((tag, index) => (
+                <Badge key={index} variant="default" className="text-xs px-2 py-0.5 h-5 font-medium">
+                  {tag}
+                </Badge>
+              ))}
+              
+              {/* Status Badge */}
+              <StatusBadge paper={paper} className="text-xs px-2 py-1 h-6" />
+            </div>
+            
+            <div className="flex items-center gap-1">
+              {/* Code Button */}
+              <button
+                onClick={(e) => e.preventDefault()}
+                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="View Code"
+              >
+                <Code className="w-4 h-4" />
+              </button>
+              
+              {/* PDF Button */}
+              <button
+                onClick={(e) => e.preventDefault()}
+                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Download PDF"
+              >
+                <FileDown className="w-4 h-4" />
+              </button>
+              
+              {/* Like Button */}
               <button
                 onClick={handleVoteClick}
                 disabled={isVoting}
-                className="flex items-center gap-1 p-1 rounded-md hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-1 p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Save to Library"
               >
                 <ThumbsUp 
                   className={`w-4 h-4 ${paper.currentUserVote === 'up' ? 'fill-current text-primary' : ''}`} 
                 />
-                <span className="text-xs">{paper.upvoteCount || 0}</span>
+                <span className="text-xs font-medium">{paper.upvoteCount || 0}</span>
               </button>
             </div>
-
-            {/* Abstract */}
-            <p className="text-sm text-muted-foreground leading-relaxed line-clamp-2 min-h-[2.75rem]">
-              {getPaperDescription(paper, 150)}
-            </p>
-
-            {/* Meta & Footer */}
-            <div className="mt-auto pt-3">
-              <div className="h-px bg-border/60 mb-3" />
-              <div className="flex items-center justify-between gap-3">
-                {/* Left: Domain tags */}
-                <div className="flex items-center gap-2 min-w-0">
-                  {domainTags.map((tag, index) => (
-                    <Badge key={index} variant="default" className="text-[10px] px-1.5 py-0 h-5">
-                      {tag}
-                    </Badge>
-                  ))}
-                </div>
-
-                {/* Right: Proceeding • Date • Status */}
-                <div className="flex items-center gap-2 shrink-0 text-xs">
-                  {paper.proceeding && (
-                    <Badge variant="outline" className="h-5 px-2 font-medium">
-                      {paper.proceeding}
-                    </Badge>
-                  )}
-                  <span className="text-muted-foreground flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    {formatDate(paper.publicationDate)}
-                  </span>
-                  <StatusBadge paper={paper} className="text-xs px-2 py-0.5 h-5 font-medium" />
-                </div>
-              </div>
-            </div>
-
-            {/* Vote Error */}
-            {voteError && (
-              <div className="text-xs text-destructive bg-destructive/10 p-2 rounded">
-                {voteError}
-              </div>
-            )}
           </div>
+
+          {/* Vote Error */}
+          {voteError && (
+            <div className="text-xs text-destructive bg-destructive/10 p-2 rounded mt-2">
+              {voteError}
+            </div>
+          )}
         </CardContent>
       </Card>
     </Link>

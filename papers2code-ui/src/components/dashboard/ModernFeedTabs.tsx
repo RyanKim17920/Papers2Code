@@ -50,13 +50,13 @@ const getDomainTags = (paper: Paper): string[] => {
   const text = `${paper.title} ${paper.abstract || ''}`.toLowerCase();
   
   if (text.includes('vision') || text.includes('image') || text.includes('visual')) {
-    tags.push('Computer Vision');
+    tags.push('CV');
   }
   if (text.includes('nlp') || text.includes('language') || text.includes('text')) {
     tags.push('NLP');
   }
   if (text.includes('learning') || text.includes('neural') || text.includes('network')) {
-    tags.push('Machine Learning');
+    tags.push('ML');
   }
   if (text.includes('transformer') || text.includes('attention')) {
     tags.push('Transformers');
