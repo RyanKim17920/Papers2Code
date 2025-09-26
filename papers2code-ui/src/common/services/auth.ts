@@ -29,10 +29,19 @@ export const checkCurrentUser = async (): Promise<UserProfile | null> => {
 
 
 // Function to log out
-export const logoutUser = async (): Promise<void> => {
+export const logoutUser = async (currentPage?: string): Promise<string | null> => {
     try {
-        // CSRF token is now handled by the Axios interceptor in api.ts
-        await api.post<{ message: string, csrfToken: string }>(`${AUTH_API_PREFIX}/logout`);
+        // Send current page information to backend for redirect logic
+        const requestBody = currentPage ? { currentPage } : {};
+        
+        const response = await api.post<{ 
+            message: string, 
+            csrfToken: string,
+            redirectTo?: string 
+        }>(`${AUTH_API_PREFIX}/logout`, requestBody);
+        
+        // Return the redirect path suggested by backend, or null if no redirect needed
+        return response.data.redirectTo || null;
     } catch (error) {
         console.error("Logout failed:", error);
         throw error; // Re-throw the error

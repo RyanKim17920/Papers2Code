@@ -25,11 +25,20 @@ const CompactUserProfile: React.FC<CompactUserProfileProps> = ({ user, onLogout 
 
   const handleLogout = async () => {
     try {
-      await logoutUser();
+      // Get the current page path for logout redirect logic
+      const currentPath = window.location.pathname;
+      const redirectTo = await logoutUser(currentPath);
+      
       if (onLogout) {
         onLogout();
       }
-      navigate('/');
+      
+      // Navigate based on backend recommendation
+      if (redirectTo) {
+        navigate(redirectTo);
+      }
+      // If no redirect suggested by backend, stay on current page
+      // (assuming it's a public page that doesn't require authentication)
     } catch (error) {
       console.error('Logout failed:', error);
     }
