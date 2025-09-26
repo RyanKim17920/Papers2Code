@@ -22,7 +22,13 @@ interface ActionButtonProps {
     children?: React.ReactNode; // Allow children for text or other elements
 }
 
-export const VoteButton: React.FC<ActionButtonProps & { voted?: boolean; count?: number; icon?: React.ReactElement; text?: string }> = ({
+export const VoteButton: React.FC<ActionButtonProps & { 
+  voted?: boolean; 
+  count?: number; 
+  icon?: React.ReactElement; 
+  text?: string;
+  onCountClick?: () => void;
+}> = ({
     onClick,
     disabled,
     voted,
@@ -31,6 +37,7 @@ export const VoteButton: React.FC<ActionButtonProps & { voted?: boolean; count?:
     text,
     className,
     title,
+    onCountClick,
 }) => (
     <button
         onClick={onClick}
@@ -40,7 +47,18 @@ export const VoteButton: React.FC<ActionButtonProps & { voted?: boolean; count?:
     >
         {icon}
         {text && <span className="button-text">{text}</span>}
-        {typeof count === 'number' && <span className="vote-count">{count}</span>}
+        {typeof count === 'number' && (
+          <span 
+            className={`vote-count ${onCountClick && count > 0 ? 'clickable' : ''}`}
+            onClick={onCountClick && count > 0 ? (e) => {
+              e.stopPropagation();
+              onCountClick();
+            } : undefined}
+            title={onCountClick && count > 0 ? 'View who voted' : undefined}
+          >
+            {count}
+          </span>
+        )}
     </button>
 );
 

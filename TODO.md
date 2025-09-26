@@ -32,4 +32,24 @@ This list will be used to track the project's progress.
 ## Post-Production Steps
 - [ ] **UI Improvements**
     - [ ] Dark Mode
-    - [ ] Add your own ideas! 
+    - [ ] Add your own ideas!
+- [ ] **Updates/News System**
+    - [ ] Create collapsible/compact updates page showing recent platform changes
+    - [ ] Backend: Design simple blog-like CMS system for admins
+        - [ ] Create `updates` table with columns: id, title, content, author_id, created_at, updated_at, is_published, priority (for ordering)
+        - [ ] Add CRUD API endpoints for admin users to create/edit/delete updates
+        - [ ] Implement markdown support for rich content formatting
+    - [ ] Frontend: Updates display component
+        - [ ] Main updates page with collapsible cards/accordions for each update
+        - [ ] Small banner/notification system for important updates
+        - [ ] RSS feed generation for update subscriptions
+        - [ ] Real-time notifications for new updates using WebSocket or Server-Sent Events
+    - [ ] Admin Interface:
+        - [ ] Add "Manage Updates" section to admin dashboard
+        - [ ] WYSIWYG editor with markdown preview
+        - [ ] Scheduling system for future updates
+        - [ ] Update categorization (feature, bugfix, announcement, maintenance)
+    - [ ] Integration:
+        - [ ] Show update notifications in header/navigation
+        - [ ] Link from main navigation to updates page
+        - [ ] Optional email notifications for subscribed users 

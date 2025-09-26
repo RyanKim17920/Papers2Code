@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState, useRef } from 'react';
 import { Paper } from '../../../../common/types/paper';
 import type { UserProfile } from '../../../../common/types/user';
 import { VoteButton, RetractVoteButton, FaArrowUp } from '../../VotingButtons';
-import { UserDisplayList } from '../../UserDisplayList'; // Named import
-import type { PaperActionUsers } from '../../../../common/services/api'; // Add this line
+import UserListPopup from '../../../common/UserListPopup';
+import type { PaperActionUsers } from '../../../../common/services/api';
 
 interface UpvotesTabProps {
     paper: Paper;
@@ -25,6 +25,14 @@ export const UpvotesTab: React.FC<UpvotesTabProps> = ({
     isLoadingActionUsers,
     actionUsersError,
 }) => {
+    const [showUpvotesPopup, setShowUpvotesPopup] = useState(false);
+    const voteButtonRef = useRef<HTMLButtonElement>(null);
+    const handleShowUpvotesPopup = () => {
+        if (paper.upvoteCount > 0) {
+            setShowUpvotesPopup(true);
+        }
+    };
+
     // ... (rest of the component code is the same)
     return (
         <div className="tab-pane-container">
@@ -39,7 +47,8 @@ export const UpvotesTab: React.FC<UpvotesTabProps> = ({
                             count={paper.upvoteCount}
                             icon={<FaArrowUp />}
                             text={paper.currentUserVote === 'up' ? 'Upvoted' : 'Upvote'}
-                            className="upvote-tab" 
+                            className="upvote-tab"
+                            onCountClick={handleShowUpvotesPopup}
                         />
                         {paper.currentUserVote === 'up' && (
                             <RetractVoteButton onClick={() => handleUpvote('none')} disabled={isVoting} />
@@ -49,12 +58,30 @@ export const UpvotesTab: React.FC<UpvotesTabProps> = ({
                     <p>Please log in to upvote.</p>
                 )}
             </div>
-            <UserDisplayList
+            
+            <div className="upvotes-summary">
+                <p>
+                    <strong>{paper.upvoteCount}</strong> {paper.upvoteCount === 1 ? 'person has' : 'people have'} upvoted this paper.
+                    {paper.upvoteCount > 0 && (
+                        <span> <button 
+                            className="link-button"
+                            onClick={handleShowUpvotesPopup}
+                        >
+                            View all
+                        </button></span>
+                    )}
+                </p>
+            </div>
+
+            <UserListPopup
+                isOpen={showUpvotesPopup}
+                onClose={() => setShowUpvotesPopup(false)}
+                users={actionUsers?.upvotes}
                 title="Upvoted By"
-                users={actionUsers?.upvotes} 
                 isLoading={isLoadingActionUsers}
                 error={actionUsersError}
                 emptyMessage="No upvotes yet."
+                anchorElement={voteButtonRef.current}
             />
         </div>
     );

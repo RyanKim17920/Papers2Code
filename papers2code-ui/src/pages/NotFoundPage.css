@@ -1,0 +1,190 @@
+/* NotFoundPage.css */
+.not-found-container {
+    min-height: 100vh;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    background: linear-gradient(135deg, 
+        var(--gradient-start), 
+        var(--gradient-middle), 
+        var(--gradient-end));
+    padding: 2rem;
+    position: relative;
+    overflow: hidden;
+}
+
+.not-found-container::before {
+    content: '';
+    position: absolute;
+    top: -50%;
+    left: -50%;
+    width: 200%;
+    height: 200%;
+    background: radial-gradient(circle at 30% 40%, 
+        rgba(var(--primary-rgb), 0.05) 0%, 
+        transparent 50%),
+        radial-gradient(circle at 80% 70%, 
+        rgba(var(--primary-rgb), 0.03) 0%, 
+        transparent 50%);
+    animation: float 20s ease-in-out infinite;
+    pointer-events: none;
+}
+
+.not-found-content {
+    text-align: center;
+    max-width: 600px;
+    padding: 3rem;
+    background: var(--card-background-color);
+    border-radius: var(--border-radius-lg);
+    box-shadow: var(--box-shadow-md);
+    position: relative;
+    z-index: 1;
+    border: 1px solid var(--border-color);
+}
+
+.not-found-animation {
+    position: relative;
+    margin-bottom: 2rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.error-code {
+    font-size: clamp(5rem, 15vw, 8rem);
+    font-weight: 700;
+    color: var(--primary-color);
+    line-height: 1;
+    text-shadow: 0 4px 8px rgba(var(--primary-rgb), 0.2);
+    animation: pulse 2s ease-in-out infinite;
+}
+
+.error-icon {
+    font-size: 4rem;
+    opacity: 0.8;
+    animation: float 3s ease-in-out infinite;
+}
+
+.not-found-text h1 {
+    font-size: 2.5rem;
+    font-weight: 600;
+    color: var(--text-heading-color);
+    margin: 0 0 1rem 0;
+    line-height: 1.2;
+}
+
+.not-found-text p {
+    font-size: 1.2rem;
+    color: var(--text-color);
+    margin: 0 0 1rem 0;
+    line-height: 1.6;
+}
+
+.not-found-text .sub-text {
+    font-size: 1rem;
+    color: var(--text-muted-color);
+    font-style: italic;
+    margin-bottom: 2rem;
+}
+
+.not-found-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
+    margin-top: 2rem;
+}
+
+.home-button, .papers-button {
+    padding: 0.75rem 1.5rem;
+    border-radius: var(--border-radius-md);
+    font-weight: 500;
+    text-decoration: none;
+    transition: all 0.3s ease;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 1rem;
+    border: 2px solid transparent;
+}
+
+.home-button {
+    background: var(--primary-color);
+    color: var(--text-on-primary);
+    border-color: var(--primary-color);
+}
+
+.home-button:hover {
+    background: var(--primary-hover-color);
+    border-color: var(--primary-hover-color);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.3);
+}
+
+.papers-button {
+    background: transparent;
+    color: var(--primary-color);
+    border-color: var(--primary-color);
+}
+
+.papers-button:hover {
+    background: var(--primary-color);
+    color: var(--text-on-primary);
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(var(--primary-rgb), 0.2);
+}
+
+@keyframes pulse {
+    0%, 100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+    50% {
+        transform: scale(1.05);
+        opacity: 0.8;
+    }
+}
+
+@keyframes float {
+    0%, 100% {
+        transform: translateY(0px) rotate(0deg);
+    }
+    33% {
+        transform: translateY(-10px) rotate(2deg);
+    }
+    66% {
+        transform: translateY(5px) rotate(-1deg);
+    }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .not-found-container {
+        padding: 1rem;
+    }
+    
+    .not-found-content {
+        padding: 2rem 1.5rem;
+    }
+    
+    .not-found-text h1 {
+        font-size: 2rem;
+    }
+    
+    .not-found-text p {
+        font-size: 1.1rem;
+    }
+    
+    .not-found-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .home-button, .papers-button {
+        width: 100%;
+        max-width: 250px;
+        justify-content: center;
+    }
+}

@@ -1,8 +1,11 @@
-import React, { useState } from 'react';
+import React, { useState, useRef } from 'react';
 import { Link } from 'react-router-dom';
 import { Paper } from '../../common/types/paper'; // Ensure Status is imported
 import './PaperCard.css';
 import { getStatusClass, getStatusSymbol } from '../../common/utils/statusUtils';
+import UserListPopup from '../common/UserListPopup';
+import { fetchPaperActionUsersFromApi } from '../../common/services/api';
+import type { UserProfile } from '../../common/types/user';
 
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -18,6 +21,11 @@ interface PaperCardProps {
 const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   const [isVoting, setIsVoting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
+  const [showUpvotesPopup, setShowUpvotesPopup] = useState(false);
+  const [upvoteUsers, setUpvoteUsers] = useState<UserProfile[] | undefined>(undefined);
+  const [isLoadingUsers, setIsLoadingUsers] = useState(false);
+  const [usersError, setUsersError] = useState<string | null>(null);
+  const voteCountRef = useRef<HTMLSpanElement>(null);
   const authors = paper.authors?.join(', ');
   const handleVoteClick = async () => {
     if (isVoting) return; // Prevent multiple clicks
@@ -36,6 +44,24 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
       setTimeout(() => setVoteError(null), 3000);
     } finally {
       setIsVoting(false);
+    }
+  };
+
+  const handleUpvoteCountClick = async () => {
+    if (paper.upvoteCount === 0) return;
+    
+    setIsLoadingUsers(true);
+    setUsersError(null);
+    setShowUpvotesPopup(true);
+
+    try {
+      const actionUsers = await fetchPaperActionUsersFromApi(paper.id);
+      setUpvoteUsers(actionUsers.upvotes);
+    } catch (error) {
+      console.error("Error loading upvote users:", error);
+      setUsersError(error instanceof Error ? error.message : "Failed to load users");
+    } finally {
+      setIsLoadingUsers(false);
     }
   };
 
@@ -81,7 +107,14 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
            >
              <ThumbsUpIcon filled={paper.currentUserVote === 'up'} />
            </button>
-           <span className="upvote-count">{paper.upvoteCount}</span>
+           <span 
+             ref={voteCountRef}
+             className={`upvote-count ${paper.upvoteCount > 0 ? 'clickable' : ''}`}
+             onClick={handleUpvoteCountClick}
+             title={paper.upvoteCount > 0 ? 'View who upvoted this paper' : undefined}
+           >
+             {paper.upvoteCount}
+           </span>
            {voteError && <span className="vote-error-tooltip">{voteError}</span>}
         </div>
         <Link to={`/paper/${paper.id}`} className="details-link">
@@ -89,6 +122,18 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
         </Link>
       </div>
     </div>
+
+    <UserListPopup
+      isOpen={showUpvotesPopup}
+      onClose={() => setShowUpvotesPopup(false)}
+      users={upvoteUsers}
+      title="Upvoted By"
+      isLoading={isLoadingUsers}
+      error={usersError}
+      emptyMessage="No upvotes yet."
+      anchorElement={voteCountRef.current}
+    />
+  </div>
   );
 };
 
