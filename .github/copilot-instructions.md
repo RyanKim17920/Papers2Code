@@ -19,7 +19,7 @@ Update: As you work, continuously add new information (files, functions, relatio
 
 Project Facts:
 
-Backend (papers2code_app2): Python, FastAPI, Pydantic, SQLAlchemy. Manage with uv.
+Backend (papers2code_app2): Python, FastAPI, Pydantic, SQLAlchemy. ALWAYS manage and run with uv.
 
 Frontend (papers2code-ui): TypeScript, React, Vite, Material-UI. Manage with npm.
 

@@ -71,6 +71,23 @@ class AppSettings(BaseSettings):    # Core settings
 
     STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB: str = Field(MAIN_STATUS_NOT_IMPLEMENTABLE, env="STATUS_CONFIRMED_NOT_IMPLEMENTABLE_DB")
 
+    # Redis Cache Settings
+    REDIS_URL: Optional[str] = Field(None, env="REDIS_URL")
+    CACHE_TTL: int = Field(300, env="CACHE_TTL")  # 5 minutes default
+    ENABLE_CACHE: bool = Field(True, env="ENABLE_CACHE")
+    CACHE_KEY_PREFIX: str = Field("papers2code", env="CACHE_KEY_PREFIX")
+    REDIS_MAX_CONNECTIONS: int = Field(20, env="REDIS_MAX_CONNECTIONS")
+    REDIS_SOCKET_KEEPALIVE: bool = Field(True, env="REDIS_SOCKET_KEEPALIVE")
+    
+    # Database Performance Settings
+    MONGO_MAX_POOL_SIZE: int = Field(50, env="MONGO_MAX_POOL_SIZE")
+    MONGO_MIN_POOL_SIZE: int = Field(5, env="MONGO_MIN_POOL_SIZE")
+    ENABLE_QUERY_HINTS: bool = Field(True, env="ENABLE_QUERY_HINTS")
+    OPTIMIZE_COUNT_QUERIES: bool = Field(True, env="OPTIMIZE_COUNT_QUERIES")
+    
+    # Performance Settings for transformation
+    PAPER_TRANSFORM_BATCH_SIZE: int = Field(20, env="PAPER_TRANSFORM_BATCH_SIZE")
+
     # Nested settings groups
     GITHUB: GitHubOAuthSettings = Field(default_factory=GitHubOAuthSettings)
     VOTING: VotingThresholdSettings = Field(default_factory=VotingThresholdSettings)

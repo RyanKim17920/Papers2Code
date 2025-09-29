@@ -1,17 +1,14 @@
 import React, { useState } from 'react';
-import { FontAwesomeIcon } from '@fortawesome/react-fontawesome';
-import { faThumbsUp as faSolidThumbsUp, faFlag, faCheckCircle, faTimesCircle, faArrowUp } from '@fortawesome/free-solid-svg-icons';
-import { faThumbsUp as faRegularThumbsUp, faThumbsDown as faRegularThumbsDown } from '@fortawesome/free-regular-svg-icons';
+import { ThumbsUp, ThumbsDown, Flag, CheckCircle, XCircle, ArrowUp } from 'lucide-react';
 import { Paper, ImplementabilityAction, AdminSettableImplementabilityStatus, Status } from '../../common/types/paper';
 import { voteOnPaperInApi, flagImplementabilityInApi, setImplementabilityInApi, CsrfError, AuthenticationError } from '../../common/services/api';
 import type { UserProfile } from '../../common/types/user';
 import ConfirmationModal from '../../common/components/ConfirmationModal';
-import './VotingButtons.css';
 import { useModal } from '../../common/context/ModalContext';
 
-export const FaArrowUp = () => <FontAwesomeIcon icon={faArrowUp} />;
-export const FaThumbsUp = () => <FontAwesomeIcon icon={faRegularThumbsUp} />;
-export const FaThumbsDown = () => <FontAwesomeIcon icon={faRegularThumbsDown} />;
+export const FaArrowUp = () => <ArrowUp className="h-4 w-4" />;
+export const FaThumbsUp = () => <ThumbsUp className="h-4 w-4" />;
+export const FaThumbsDown = () => <ThumbsDown className="h-4 w-4" />;
 
 // NEW: Define and export VoteButton and RetractVoteButton components
 interface ActionButtonProps {
@@ -35,12 +32,16 @@ export const VoteButton: React.FC<ActionButtonProps & { voted?: boolean; count?:
     <button
         onClick={onClick}
         disabled={disabled}
-        className={`vote-button ${voted ? 'voted' : ''} ${className || ''}`}
+        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg transition-colors ${
+            voted 
+                ? 'bg-primary text-primary-foreground' 
+                : 'bg-secondary text-secondary-foreground hover:bg-secondary/80'
+        } ${className || ''}`}
         title={title}
     >
         {icon}
-        {text && <span className="button-text">{text}</span>}
-        {typeof count === 'number' && <span className="vote-count">{count}</span>}
+        {text && <span>{text}</span>}
+        {typeof count === 'number' && <span className="font-semibold">{count}</span>}
     </button>
 );
 
@@ -48,10 +49,10 @@ export const RetractVoteButton: React.FC<ActionButtonProps> = ({ onClick, disabl
     <button
         onClick={onClick}
         disabled={disabled}
-        className={`flag-button retract-vote ${className || ''}`}
+        className={`inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-destructive/10 text-destructive hover:bg-destructive/20 transition-colors ${className || ''}`}
         title={title || "Retract your vote"}
     >
-        <FontAwesomeIcon icon={faFlag} /> Retract Vote
+        <Flag className="h-4 w-4" /> Retract Vote
     </button>
 );
 // END NEW
@@ -192,14 +193,14 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
     const ownerSetNonImplementableStatus: Status = "Not Implementable";
 
     return (
-        <div className="voting-buttons-container">
+        <div className="flex flex-wrap gap-3">
             {/* MODIFIED: Use the exported VoteButton component */}
             <VoteButton
                 onClick={() => handleVote(userVote === 'up' ? 'none' : 'up')}
                 voted={userVote === 'up'}
                 disabled={isProcessing}
                 title={userVote === 'up' ? 'Remove Vote' : (currentUser ? 'Vote Up' : 'Connect to Vote')}
-                icon={<FontAwesomeIcon icon={userVote === 'up' ? faSolidThumbsUp : faRegularThumbsUp} />}
+                icon={<ThumbsUp className={`h-4 w-4 ${userVote === 'up' ? 'fill-current' : ''}`} />}
                 count={voteCount}
             />
 
@@ -210,19 +211,19 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
                         <>
                             <button 
                                 onClick={() => handleFlagClick('confirm')} 
-                                className="flag-button confirm-implementable"
+                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors"
                                 disabled={isProcessing}
                                 title="Vote: Implementable"
                             >
-                                <FontAwesomeIcon icon={faRegularThumbsUp} /> Vote Implementable
+                                <ThumbsUp className="h-4 w-4" /> Vote Implementable
                             </button>
                             <button 
                                 onClick={() => handleFlagClick('dispute')} 
-                                className="flag-button dispute-implementable"
+                                className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors"
                                 disabled={isProcessing}
                                 title="Vote: Not Implementable"
                             >
-                                <FontAwesomeIcon icon={faRegularThumbsDown} /> Vote Not Implementable
+                                <ThumbsDown className="h-4 w-4" /> Vote Not Implementable
                             </button>
                         </>
                     )}
@@ -243,33 +244,33 @@ const VotingButtons: React.FC<VotingButtonsProps> = ({ paper, onPaperUpdate, onV
                     {paper.status !== ownerSetImplementableStatus && paper.status !== 'Official Code Posted' && (
                          <button 
                             onClick={() => handleSetImplementabilityClick('Admin Implementable')} 
-                            className="set-status-button implementable"
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-green-50 text-green-700 hover:bg-green-100 border border-green-200 transition-colors"
                             disabled={isProcessing}
                             title="Owner: Set as Implementable (overrides votes)"
                         >
-                            <FontAwesomeIcon icon={faCheckCircle} /> Owner: Set Implementable
+                            <CheckCircle className="h-4 w-4" /> Owner: Set Implementable
                         </button>
                     )}
                     {/* Button to set as Not Implementable by Owner */}
                     {paper.status !== ownerSetNonImplementableStatus && (
                         <button 
                             onClick={() => handleSetImplementabilityClick('Admin Not Implementable')} 
-                            className="set-status-button not-implementable-owner"
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-red-50 text-red-700 hover:bg-red-100 border border-red-200 transition-colors"
                             disabled={isProcessing}
                             title="Owner: Set as Not Implementable (overrides votes)"
                         >
-                            <FontAwesomeIcon icon={faTimesCircle} /> Owner: Set Not Implementable
+                            <XCircle className="h-4 w-4" /> Owner: Set Not Implementable
                         </button>
                     )}
                     {/* Button to revert to community voting */}
                     {(paper.status === ownerSetImplementableStatus || paper.status === ownerSetNonImplementableStatus) && (
                          <button 
                             onClick={() => handleSetImplementabilityClick('Voting')} 
-                            className="set-status-button revert-to-voting-owner"
+                            className="inline-flex items-center gap-2 px-3 py-2 text-sm font-medium rounded-lg bg-secondary text-secondary-foreground hover:bg-secondary/80 transition-colors"
                             disabled={isProcessing}
                             title="Owner: Revert to community voting (current status will be reset)"
                         >
-                            <FontAwesomeIcon icon={faFlag} /> Owner: Revert to Voting
+                            <Flag className="h-4 w-4" /> Owner: Revert to Voting
                         </button>
                     )}
                 </>

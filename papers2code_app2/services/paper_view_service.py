@@ -13,6 +13,8 @@ from ..database import (
     get_implementation_progress_collection_async,
 )
 from .exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
+from ..cache import paper_cache
+from ..shared import config_settings
 
 
 logger = logging.getLogger(__name__)
@@ -115,153 +117,172 @@ class PaperViewService:
         venue: Optional[str] = None
     ) -> Tuple[List[Dict[str, Any]], int]:
         service_start_time = time.time()
-        self.logger.info(f"get_papers_list called with: skip={skip}, limit={limit}, sort_by=\'{sort_by}\', searchQuery=\'{search_query}\', author=\'{author}\'")
+        self.logger.info(f"get_papers_list called with: skip={skip}, limit={limit}, sort_by='{sort_by}', searchQuery='{search_query}', author='{author}'")
         
-        pipeline: List[Dict[str, Any]] = []
-        mongo_filter_conditions: List[Dict[str, Any]] = [] # For $match stage after $search or for find()
+        # Create cache key from search parameters (exclude user_id from public cache)
+        cache_params = {
+            "skip": skip,
+            "limit": limit,
+            "sort_by": sort_by,
+            "sort_order": sort_order,
+            "search_query": search_query,
+            "author": author,
+            "start_date": start_date,
+            "end_date": end_date,
+            "main_status": main_status,
+            "impl_status": impl_status,
+            "tags": sorted(tags) if tags else None,  # Sort for consistent caching
+            "has_official_impl": has_official_impl,
+            "venue": venue
+        }
         
-        atlas_search_index_name = "default" 
-        atlas_overall_limit = 2400 
+        # Try to get from cache first
+        cached_result = await paper_cache.get_cached_result(**cache_params)
+        if cached_result:
+            self.logger.info(f"CACHE HIT: Returning cached result in {time.time() - service_start_time:.4f}s")
+            return cached_result["papers"], cached_result["total_count"]
+        
+        # Check if Atlas Search will be active
+        is_atlas_search_active = bool(search_query or author)
+        
+        if is_atlas_search_active:
+            # TWO-PHASE APPROACH FOR ATLAS SEARCH
+            papers, total_count = await self._get_papers_list_atlas_two_phase(
+                skip, limit, sort_by, sort_order, user_id, search_query, author,
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+            )
+        else:
+            # STANDARD MONGODB QUERY (unchanged)
+            papers, total_count = await self._get_papers_list_standard(
+                skip, limit, sort_by, sort_order, user_id, search_query, author,
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+            )
+        
+        # Cache the result for future requests
+        result_to_cache = {
+            "papers": papers,
+            "total_count": total_count
+        }
+        await paper_cache.cache_result(result_to_cache, **cache_params)
+        
+        self.logger.info(f"CACHE MISS: Query completed and cached in {time.time() - service_start_time:.4f}s")
+        return papers, total_count
 
+    async def _get_papers_list_atlas_two_phase(
+        self,
+        skip: int, limit: int, sort_by: str, sort_order: str, user_id: Optional[str],
+        search_query: Optional[str], author: Optional[str], start_date: Optional[str],
+        end_date: Optional[str], main_status: Optional[str], impl_status: Optional[str],
+        tags: Optional[List[str]], has_official_impl: Optional[bool], venue: Optional[str]
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """Two-phase Atlas Search: Get IDs first, then fetch full documents only for displayed items"""
+        
+        atlas_search_index_name = "default"
+        papers_collection = await get_papers_collection_async()
+        
+        # PHASE 1: Get just IDs and scores (minimal data transfer)
+        phase1_pipeline = []
         atlas_compound_must: List[Dict[str, Any]] = []
         atlas_compound_should: List[Dict[str, Any]] = []
-        atlas_compound_filter: List[Dict[str, Any]] = [] # Filters for $search stage's 'filter' clause
+        atlas_compound_filter: List[Dict[str, Any]] = []
 
-        # Determine if Atlas Search will be active.
-        # Atlas Search is active if a text search_query or author filter is provided.
-        is_atlas_search_active = bool(search_query or author)
-
-        # Populate mongo_filter_conditions (for the non-Atlas search path)
-        # AND populate atlas_compound_filter (if Atlas Search is active)
-
-        if main_status:
-            mongo_filter_conditions.append({"status": main_status})
-            if is_atlas_search_active:
-                atlas_compound_filter.append({"term": {"query": main_status, "path": "status"}})
-        
-        if impl_status:
-            mongo_filter_conditions.append({"implementabilityStatus": impl_status})
-            if is_atlas_search_active:
-                atlas_compound_filter.append({"term": {"query": impl_status, "path": "implementabilityStatus"}})
-        
-        if tags:
-            mongo_filter_conditions.append({"tasks": {"$in": tags}})
-            if is_atlas_search_active:
-                # Assuming 'tasks' is an array of strings and indexed appropriately for 'terms' query
-                atlas_compound_filter.append({"terms": {"query": tags, "path": "tasks"}})
-        
-        if venue:
-            mongo_filter_conditions.append({"proceeding": {"$regex": venue, "$options": "i"}})
-            if is_atlas_search_active:
-                # Atlas 'regex' is case-sensitive by default.
-                # For case-insensitivity, ensure the index analyzer handles it, or adjust the regex pattern.
-                # allowAnalyzedField: True can be used if the field is analyzed in a way that supports the regex.
-                atlas_compound_filter.append({"regex": {"query": venue, "path": "proceeding", "allowAnalyzedField": True}})
-
-        date_filter_parts_mongo = {}
-        date_filter_parts_atlas_range = {} # For Atlas 'range' query
-        try:
-            if start_date:
-                dt_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
-                date_filter_parts_mongo["$gte"] = dt_start
-                if is_atlas_search_active:
-                    date_filter_parts_atlas_range["gte"] = dt_start
-            
-            if end_date:
-                dt_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
-                if dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0:
-                    dt_end = dt_end.replace(hour=23, minute=59, second=59, microsecond=999999)
-                date_filter_parts_mongo["$lte"] = dt_end
-                if is_atlas_search_active:
-                    date_filter_parts_atlas_range["lte"] = dt_end
-            
-            if date_filter_parts_mongo:
-                mongo_filter_conditions.append({"publicationDate": date_filter_parts_mongo})
-            if is_atlas_search_active and date_filter_parts_atlas_range:
-                # Ensure 'publicationDate' is indexed as a date type in Atlas Search
-                atlas_compound_filter.append({"range": {"path": "publicationDate", **date_filter_parts_atlas_range}})
-        except ValueError as e:
-            self.logger.warning(f"Invalid date format for start_date/end_date: {e}. Date filter will be ignored.")
-
-        if has_official_impl is not None:
-            if has_official_impl:
-                mongo_filter_conditions.append({"pwc_url": {"$exists": True, "$nin": ["", None]}})
-                if is_atlas_search_active:
-                    atlas_compound_filter.append({
-                        "compound": {
-                            "must": [{"exists": {"path": "pwc_url"}}],
-                            "mustNot": [{"term": {"query": "", "path": "pwc_url"}}] 
-                        }
-                    })
-            else: # has_official_impl is False
-                mongo_filter_conditions.append({
-                    "$or": [{"pwc_url": {"$exists": False}}, {"pwc_url": ""}, {"pwc_url": None}]
-                })
-                if is_atlas_search_active:
-                    atlas_compound_filter.append({
-                        "compound": {
-                            "should": [
-                                {"bool": {"mustNot": [{"exists": {"path": "pwc_url"}}]}}, 
-                                {"term": {"query": "", "path": "pwc_url"}}
-                            ],
-                            "minimumShouldMatch": 1 
-                        }
-                    })
-
-        # Build Atlas $search stage components
+        # Build search conditions
         if search_query:
             try:
                 search_terms = shlex.split(search_query)
             except ValueError:
                 search_terms = search_query.split()
-                self.logger.warning(f"shlex split failed for search_query \'{search_query}\', using simple split.")
+                self.logger.warning(f"shlex split failed for search_query '{search_query}', using simple split.")
             
             for term in search_terms:
                 atlas_compound_must.append({"text": {"query": term, "path": ["title", "abstract"]}})
             atlas_compound_should.append({"text": {"query": search_query, "path": "title", "score": {"boost": {"value": 5}}}})
 
         if author:
-            # Author queries are added to the 'filter' part of the compound $search operator
-            atlas_compound_filter.append({"text": {"query": author, "path": "authors"}}) 
+            atlas_compound_filter.append({"text": {"query": author, "path": "authors"}})
+
+        # Add other filters to Atlas compound
+        if main_status:
+            atlas_compound_filter.append({"term": {"query": main_status, "path": "status"}})
+        if impl_status:
+            atlas_compound_filter.append({"term": {"query": impl_status, "path": "implementabilityStatus"}})
+        if tags:
+            atlas_compound_filter.append({"terms": {"query": tags, "path": "tasks"}})
+        if venue:
+            atlas_compound_filter.append({"regex": {"query": venue, "path": "proceeding", "allowAnalyzedField": True}})
         
-        if is_atlas_search_active:
-            search_stage_compound: Dict[str, Any] = {}
-            if atlas_compound_must:
-                search_stage_compound["must"] = atlas_compound_must
-            if atlas_compound_should:
-                search_stage_compound["should"] = atlas_compound_should
-            if atlas_compound_filter:
-                search_stage_compound["filter"] = atlas_compound_filter  # Now includes all filters
-            
-            # If compound is empty (e.g. empty search_query/author and no other Atlas filters triggered),
-            # then $search stage is not meaningful. Fallback to non-search.
-            if not search_stage_compound:
-                self.logger.warning("Atlas search compound operator is empty. Falling back to standard find.")
-                is_atlas_search_active = False 
-            
-            if is_atlas_search_active: # Re-check after potential fallback
-                search_stage: Dict[str, Any] = {
-                    "$search": {"index": atlas_search_index_name, "compound": search_stage_compound}
-                }
-                if search_query: # Add highlight only if main text search was done
-                    search_stage["$search"]["highlight"] = {"path": ["title", "abstract"]}
-                pipeline.append(search_stage)
+        # Date filters
+        try:
+            date_filter_parts_atlas_range = {}
+            if start_date:
+                dt_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                date_filter_parts_atlas_range["gte"] = dt_start
+            if end_date:
+                dt_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+                if dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0:
+                    dt_end = dt_end.replace(hour=23, minute=59, second=59, microsecond=999999)
+                date_filter_parts_atlas_range["lte"] = dt_end
+            if date_filter_parts_atlas_range:
+                atlas_compound_filter.append({"range": {"path": "publicationDate", **date_filter_parts_atlas_range}})
+        except ValueError as e:
+            self.logger.warning(f"Invalid date format: {e}. Date filter ignored.")
 
-        # REMOVED: The $match stage for mongo_filter_conditions when is_atlas_search_active is true.
-        # These filters are now part of the $search stage's 'filter' clause.
+        # Official implementation filter
+        if has_official_impl is not None:
+            if has_official_impl:
+                atlas_compound_filter.append({
+                    "compound": {
+                        "must": [{"exists": {"path": "pwc_url"}}],
+                        "mustNot": [{"term": {"query": "", "path": "pwc_url"}}]
+                    }
+                })
+            else:
+                atlas_compound_filter.append({
+                    "compound": {
+                        "should": [
+                            {"bool": {"mustNot": [{"exists": {"path": "pwc_url"}}]}},
+                            {"term": {"query": "", "path": "pwc_url"}}
+                        ],
+                        "minimumShouldMatch": 1
+                    }
+                })
 
-        # Add score field and filter by score threshold if Atlas search with search_query
-        if is_atlas_search_active and search_query: # Score is relevant if there was a text search query
-            pipeline.append({"$addFields": {"score": {"$meta": "searchScore"}}})
-            score_threshold = 3.0 
-            pipeline.append({"$match": {"score": {"$gt": score_threshold}}})
+        # Build Atlas search stage
+        search_stage_compound: Dict[str, Any] = {}
+        if atlas_compound_must:
+            search_stage_compound["must"] = atlas_compound_must
+        if atlas_compound_should:
+            search_stage_compound["should"] = atlas_compound_should
+        if atlas_compound_filter:
+            search_stage_compound["filter"] = atlas_compound_filter
 
+        if not search_stage_compound:
+            self.logger.warning("Atlas search compound is empty, falling back to standard query")
+            return await self._get_papers_list_standard(
+                skip, limit, sort_by, sort_order, user_id, search_query, author,
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+            )
+
+        # Phase 1 pipeline: Get IDs only
+        search_stage = {"$search": {"index": atlas_search_index_name, "compound": search_stage_compound}}
+        if search_query:
+            search_stage["$search"]["highlight"] = {"path": ["title", "abstract"]}
+        
+        phase1_pipeline.append(search_stage)
+        
+        # Add score field and filter if needed
+        if search_query:
+            phase1_pipeline.append({"$addFields": {"score": {"$meta": "searchScore"}}})
+            phase1_pipeline.append({"$match": {"score": {"$gt": 3.0}}})
+
+        # Minimal projection - just _id and score for sorting
+        phase1_pipeline.append({"$project": {"_id": 1, "score": 1, "publicationDate": 1, "upvoteCount": 1, "title": 1}})
+        
         # Sorting
         sort_doc: Dict[str, Any] = {}
         parsed_sort_order_val = DESCENDING if sort_order == "desc" else ASCENDING
-
-        # If Atlas search was active due to search_query, and sort is relevance/newest, prefer score.
-        if is_atlas_search_active and search_query and (sort_by == "relevance" or sort_by == "newest"):
+        
+        if search_query and (sort_by == "relevance" or sort_by == "newest"):
             sort_doc = {"score": DESCENDING}
         elif sort_by == "newest":
             sort_doc = {"publicationDate": DESCENDING}
@@ -274,86 +295,211 @@ class PaperViewService:
         elif sort_by == "title":
             sort_doc = {"title": parsed_sort_order_val}
         else:
-            self.logger.warning(f"Unsupported sort_by value: \'{sort_by}\'. Defaulting.")
-            if is_atlas_search_active and search_query:
-                 sort_doc = {"score": DESCENDING} 
-            else:
-                 sort_doc = {"publicationDate": DESCENDING}
+            sort_doc = {"score": DESCENDING} if search_query else {"publicationDate": DESCENDING}
         
+        if sort_doc:
+            phase1_pipeline.append({"$sort": sort_doc})
+
+        # Get total count and paginated IDs
+        phase1_pipeline.append({
+            "$facet": {
+                "paginatedResults": [{"$skip": skip}, {"$limit": limit}],
+                "totalCount": [{"$count": "count"}]
+            }
+        })
+
+        phase1_start = time.time()
+        self.logger.info("PHASE 1: Getting IDs only from Atlas Search")
+        
+        try:
+            agg_results_cursor = await papers_collection.aggregate(phase1_pipeline)
+            agg_results = await agg_results_cursor.to_list(length=None)
+            
+            self.logger.info(f"PHASE 1 completed in {time.time() - phase1_start:.4f}s")
+            
+            if not agg_results or not agg_results[0]:
+                return [], 0
+                
+            paginated_results = agg_results[0].get('paginatedResults', [])
+            total_count_list = agg_results[0].get('totalCount', [])
+            total_papers = total_count_list[0].get('count', 0) if total_count_list else 0
+            
+            if not paginated_results:
+                return [], total_papers
+            
+            # PHASE 2: Get full documents for displayed items only
+            phase2_start = time.time()
+            self.logger.info(f"PHASE 2: Fetching full documents for {len(paginated_results)} items")
+            
+            # Extract IDs in the correct order
+            paper_ids = [result["_id"] for result in paginated_results]
+            
+            # Fetch full documents maintaining order
+            full_papers = await papers_collection.find(
+                {"_id": {"$in": paper_ids}}
+            ).to_list(length=None)
+            
+            # Create a mapping for quick lookup
+            papers_map = {str(paper["_id"]): paper for paper in full_papers}
+            
+            # Maintain the original order from phase 1
+            ordered_papers = []
+            for paper_id in paper_ids:
+                if str(paper_id) in papers_map:
+                    ordered_papers.append(papers_map[str(paper_id)])
+            
+            self.logger.info(f"PHASE 2 completed in {time.time() - phase2_start:.4f}s")
+            self.logger.info(f"Total two-phase Atlas Search took: {time.time() - phase1_start:.4f}s")
+            
+            return ordered_papers, total_papers
+            
+        except PyMongoError as e:
+            self.logger.error(f"Atlas Search two-phase error: {e}", exc_info=True)
+            raise DatabaseOperationException(f"Error in Atlas Search: {e}")
+
+    async def _get_papers_list_standard(
+        self,
+        skip: int, limit: int, sort_by: str, sort_order: str, user_id: Optional[str],
+        search_query: Optional[str], author: Optional[str], start_date: Optional[str],
+        end_date: Optional[str], main_status: Optional[str], impl_status: Optional[str],
+        tags: Optional[List[str]], has_official_impl: Optional[bool], venue: Optional[str]
+    ) -> Tuple[List[Dict[str, Any]], int]:
+        """Standard MongoDB find query (no Atlas Search)"""
+        
+        service_start_time = time.time()
         papers_collection = await get_papers_collection_async()
-        papers_list: List[Dict[str, Any]] = []
-        total_papers: int = 0
+        mongo_filter_conditions: List[Dict[str, Any]] = []
+
+        # Build filter conditions
+        if main_status:
+            mongo_filter_conditions.append({"status": main_status})
+        if impl_status:
+            mongo_filter_conditions.append({"implementabilityStatus": impl_status})
+        if tags:
+            mongo_filter_conditions.append({"tasks": {"$in": tags}})
+        if venue:
+            mongo_filter_conditions.append({"proceeding": {"$regex": venue, "$options": "i"}})
+
+        # Date filters
+        date_filter_parts_mongo = {}
+        try:
+            if start_date:
+                dt_start = datetime.fromisoformat(start_date.replace("Z", "+00:00"))
+                date_filter_parts_mongo["$gte"] = dt_start
+            if end_date:
+                dt_end = datetime.fromisoformat(end_date.replace("Z", "+00:00"))
+                if dt_end.hour == 0 and dt_end.minute == 0 and dt_end.second == 0:
+                    dt_end = dt_end.replace(hour=23, minute=59, second=59, microsecond=999999)
+                date_filter_parts_mongo["$lte"] = dt_end
+            if date_filter_parts_mongo:
+                mongo_filter_conditions.append({"publicationDate": date_filter_parts_mongo})
+        except ValueError as e:
+            self.logger.warning(f"Invalid date format: {e}. Date filter ignored.")
+
+        # Official implementation filter
+        if has_official_impl is not None:
+            if has_official_impl:
+                mongo_filter_conditions.append({"pwc_url": {"$exists": True, "$nin": ["", None]}})
+            else:
+                mongo_filter_conditions.append({
+                    "$or": [{"pwc_url": {"$exists": False}}, {"pwc_url": ""}, {"pwc_url": None}]
+                })
+
+        # Build final query
+        final_query = {"$and": mongo_filter_conditions} if mongo_filter_conditions else {}
+        
+        # Sorting
+        sort_doc: Dict[str, Any] = {}
+        parsed_sort_order_val = DESCENDING if sort_order == "desc" else ASCENDING
+        
+        if sort_by == "newest":
+            sort_doc = {"publicationDate": DESCENDING}
+        elif sort_by == "oldest":
+            sort_doc = {"publicationDate": ASCENDING}
+        elif sort_by == "upvotes":
+            sort_doc = {"upvoteCount": parsed_sort_order_val}
+        elif sort_by == "publication_date":
+            sort_doc = {"publicationDate": parsed_sort_order_val}
+        elif sort_by == "title":
+            sort_doc = {"title": parsed_sort_order_val}
+        else:
+            sort_doc = {"publicationDate": DESCENDING}
 
         db_call_overall_start_time = time.time()
         try:
-            if is_atlas_search_active:
-                if sort_doc: 
-                    pipeline.append({"$sort": sort_doc})
-                
-                pipeline.append({"$limit": atlas_overall_limit}) 
-                
-                facet_stage = {"$facet": {
-                    "paginatedResults": [{"$skip": skip}, {"$limit": limit}],
-                    "totalCount": [{"$count": "count"}]
-                }}
-                pipeline.append(facet_stage)
-                
-                self.logger.info(f"Executing Atlas Search aggregation pipeline (first 3 stages if long, else full): {pipeline[:3] if len(pipeline) > 3 else pipeline}")
-                
-                agg_pipeline_start_time = time.time()
-                agg_results_cursor = await papers_collection.aggregate(pipeline)
-                self.logger.info(f"Atlas Search papers_collection.aggregate call took: {time.time() - agg_pipeline_start_time:.4f}s")
+            self.logger.info(f"Executing standard find query: {final_query} with sort: {sort_doc}, skip: {skip}, limit: {limit}")
+            sort_criteria = list(sort_doc.items()) if sort_doc else None
 
-                agg_fetch_start_time = time.time()
-                agg_results = await agg_results_cursor.to_list(length=None) 
-                self.logger.info(f"Atlas Search agg_results_cursor.to_list() took: {time.time() - agg_fetch_start_time:.4f}s")
-                
-                if agg_results and agg_results[0]:
-                    papers_list = agg_results[0].get('paginatedResults', [])
-                    total_papers_list = agg_results[0].get('totalCount', [])
-                    if total_papers_list:
-                        total_papers = total_papers_list[0].get('count', 0)
-                    else: 
-                        total_papers = 0 
-                else: 
-                    papers_list = []
-                    total_papers = 0
-
-            else: # Standard find query (not Atlas Search)
-                # mongo_filter_conditions are used here
-                final_query = {"$and": mongo_filter_conditions} if mongo_filter_conditions else {}
-                
-                self.logger.info(f"Executing standard find query: {final_query} with sort: {sort_doc}, skip: {skip}, limit: {limit}")
-                sort_criteria = list(sort_doc.items()) if sort_doc else None
-
-                find_call_start_time = time.time()
-                cursor = papers_collection.find(final_query)
-                if sort_criteria:
-                    cursor = cursor.sort(sort_criteria)
-                cursor = cursor.skip(skip).limit(limit)
-                self.logger.info(f"Standard find query construction (before to_list) took: {time.time() - find_call_start_time:.4f}s")
-                
-                find_fetch_start_time = time.time()
-                papers_list = await cursor.to_list(length=limit)
-                self.logger.info(f"Standard find cursor.to_list() took: {time.time() - find_fetch_start_time:.4f}s")
-                
-                count_start_time = time.time()
-                if not final_query: # No filters applied, use estimated count
-                    total_papers = await papers_collection.estimated_document_count()
-                    self.logger.info(f"Standard papers_collection.estimated_document_count() took: {time.time() - count_start_time:.4f}s")
-                else: # Filters are present, need an accurate count for the filtered set
-                    total_papers = await papers_collection.count_documents(final_query)
-                    self.logger.info(f"Standard papers_collection.count_documents({final_query}) took: {time.time() - count_start_time:.4f}s")
+            find_call_start_time = time.time()
             
-            self.logger.info(f"DB interaction block (querying and fetching) took: {time.time() - db_call_overall_start_time:.4f}s")
-            self.logger.info(f"Total time for get_papers_list (before return): {time.time() - service_start_time:.4f}s")
+            # Add query hints for better index usage
+            cursor = papers_collection.find(final_query)
+            
+            # Apply index hints based on query and sort criteria (if enabled)
+            if config_settings.ENABLE_QUERY_HINTS and sort_criteria:
+                sort_field = sort_criteria[0][0]
+                sort_direction = sort_criteria[0][1]
+                
+                # Use appropriate index hints for common sort patterns
+                if sort_field == "publicationDate":
+                    if main_status:
+                        cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
+                    else:
+                        cursor = cursor.hint("publicationDate_-1_papers_async")
+                elif sort_field == "upvoteCount":
+                    if main_status:
+                        cursor = cursor.hint("status_1_upvoteCount_-1_papers_async")
+                    else:
+                        cursor = cursor.hint("upvoteCount_-1_papers_async")
+                elif sort_field == "title":
+                    cursor = cursor.hint("title_1_papers_async")
+                
+                cursor = cursor.sort(sort_criteria)
+            else:
+                # Default hint for unsorted queries
+                if config_settings.ENABLE_QUERY_HINTS and main_status:
+                    cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
+            
+            cursor = cursor.skip(skip).limit(limit)
+            self.logger.info(f"Standard find query construction took: {time.time() - find_call_start_time:.4f}s")
+            
+            find_fetch_start_time = time.time()
+            papers_list = await cursor.to_list(length=limit)
+            self.logger.info(f"Standard find cursor.to_list() took: {time.time() - find_fetch_start_time:.4f}s")
+            
+            count_start_time = time.time()
+            
+            # Optimize count operation based on query complexity
+            if not final_query:
+                # No filters - use cached estimated count
+                total_papers = await papers_collection.estimated_document_count()
+                self.logger.info(f"Standard estimated_document_count took: {time.time() - count_start_time:.4f}s")
+            else:
+                # For paginated queries where we just need to know "more than current page"
+                # we can optimize by limiting the count when skip is large
+                if config_settings.OPTIMIZE_COUNT_QUERIES and skip > 0 and limit < 100:  # Only for reasonable page sizes
+                    # Use aggregation with limit for better performance on large datasets
+                    count_pipeline = [
+                        {"$match": final_query},
+                        {"$limit": skip + limit + 1000},  # Reasonable upper bound
+                        {"$count": "total"}
+                    ]
+                    count_result = await papers_collection.aggregate(count_pipeline).to_list(length=1)
+                    total_papers = count_result[0]["total"] if count_result else 0
+                    self.logger.info(f"Standard optimized count_aggregation took: {time.time() - count_start_time:.4f}s")
+                else:
+                    # Traditional count for first page or when exact count is needed
+                    total_papers = await papers_collection.count_documents(final_query)
+                    self.logger.info(f"Standard count_documents took: {time.time() - count_start_time:.4f}s")
+            
+            self.logger.info(f"Standard query total time: {time.time() - service_start_time:.4f}s")
             return papers_list, total_papers
-
+            
         except PyMongoError as e:
-            self.logger.error(f"Service: Database error while fetching papers list: {e}", exc_info=True)
+            self.logger.error(f"Database error in standard query: {e}", exc_info=True)
             raise DatabaseOperationException(f"Error fetching papers list: {e}")
         except Exception as e:
-            self.logger.error(f"Service: Unexpected error during paper list retrieval: {e}", exc_info=True)
+            self.logger.error(f"Unexpected error in standard query: {e}", exc_info=True)
             raise ServiceException(f"An unexpected error occurred: {e}")
 
     # ... any other methods ...

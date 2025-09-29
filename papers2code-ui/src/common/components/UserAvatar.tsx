@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { FaUserCircle } from 'react-icons/fa';
+import { User } from 'lucide-react';
 import './UserAvatar.css'; // We'll create this for specific styles
 
 interface UserAvatarProps {
@@ -30,7 +30,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ avatarUrl, username, className,
             />
         );
     }
-    return <FaUserCircle className={`${className} ${iconClassName || 'default-avatar-icon'}`} />;
+    return <User className={`${className} ${iconClassName || 'default-avatar-icon'}`} />;
 };
 
 export default UserAvatar;

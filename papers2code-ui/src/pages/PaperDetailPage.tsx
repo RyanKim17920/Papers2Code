@@ -1,5 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
+import { ArrowLeft, Rocket, Users, ExternalLink, FileText, Code, Vote, Settings } from 'lucide-react';
 
 import { usePaperDetail } from '../common/hooks/usePaperDetail';
 import { useActivityTracking } from '../common/hooks/useActivityTracking';
@@ -9,16 +10,19 @@ import type { ImplementationProgress } from '../common/types/implementation';
 
 import { LoadingSpinner } from '../common/components';
 import ConfirmationModal from '../common/components/ConfirmationModal';
+import { Card, CardContent } from '../components/ui/card';
+import { Button } from '../components/ui/button';
+import { Badge } from '../components/ui/badge';
 
 import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
-import PaperAbstract from '../components/paperDetail/Tabs/Paper/PaperAbstract';
-import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
+
 import PaperTabs from '../components/paperDetail/PaperTabs';
-import { UpvotesTab } from '../components/paperDetail/Tabs/Upvote/UpvotesTab';
+import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
+
 import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
 import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
 import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
-import './PaperDetailPage.css';
+import ImplementationProgressCard from '../components/paperDetail/ImplementationProgressCard';
 
 interface PaperDetailPageProps {
     currentUser: UserProfile | null;
@@ -27,7 +31,7 @@ interface PaperDetailPageProps {
 const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const { paperId } = useParams<{ paperId: string }>();
     const location = useLocation();
-    const [showStartEffortConfirmModal, setShowStartEffortConfirmModal] = useState<boolean>(false); // New state for the modal
+    const [showStartEffortConfirmModal, setShowStartEffortConfirmModal] = useState<boolean>(false);
 
     // Activity tracking
     const { trackPaperView } = useActivityTracking();
@@ -58,15 +62,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         handleInitiateJoinImplementationEffort, 
         isProcessingEffortAction,          
         effortActionError,
-        updateImplementationProgress // Added from usePaperDetail hook (will be implemented next)
+        updateImplementationProgress
     } = usePaperDetail(paperId, currentUser);
-    // Debug log removed for production
+
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
 
     // Track paper view when component mounts or paper changes
     useEffect(() => {
         if (paperId && paper) {
-            // Track paper view
             trackPaperView({ 
                 paperId, 
                 cameFrom: location.state?.from || 'direct' 
@@ -78,41 +81,33 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         setActiveTab(tab as ActiveTabType);
     };
 
-    // Modified to show confirmation modal first
     const handleInitiateImplementationEffort = () => {
         if (!paperId || !currentUser) {
             console.warn("Paper ID or user not available for initiating implementation effort.");
-            // Consider using a more integrated notification system if available
             alert("You must be logged in to perform this action.");
             return;
         }
-        setShowStartEffortConfirmModal(true); // Show the confirmation modal
+        setShowStartEffortConfirmModal(true);
     };
 
-    const confirmAndStartEffort = async () => { // Make async
-        if (!paperId || !currentUser) { // Add guard clause
+    const confirmAndStartEffort = async () => {
+        if (!paperId || !currentUser) {
             console.warn("Paper ID or user not available for initiating implementation effort.");
             alert("You must be logged in to perform this action.");
-            setShowStartEffortConfirmModal(false); // Close modal on error too
+            setShowStartEffortConfirmModal(false);
             return;
         }
         try {
-            await handleInitiateJoinImplementationEffort(); // Call the function from the hook
-            // No need to manually set isCurrentUserContributor, it will be derived from refreshed paper data
+            await handleInitiateJoinImplementationEffort();
         } finally {
-            setShowStartEffortConfirmModal(false);    // Close modal regardless of success or failure of the call
-            await loadPaperAndActions(); // Re-fetch paper data to update UI
+            setShowStartEffortConfirmModal(false);
+            await loadPaperAndActions();
         }
     };
 
-    // New handler for implementation progress changes
     const handleImplementationProgressChange = async (updatedProgress: ImplementationProgress) => {
         if (!paperId) return;
-        // Call the function from the hook to update local state and make API call
-        // This function will be added to usePaperDetail hook
         await updateImplementationProgress(updatedProgress);
-        // Optionally, refetch paper data or rely on optimistic update
-        // loadPaperAndActions(); // Or a more specific refresh if available
     };
  
     if (isLoading) {
@@ -132,140 +127,172 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     );
 
     return (
-        <div className="paper-detail-page">
-            <Link to="/papers" className="back-link">Back to List</Link>
-
-            {updateError && <div className="update-error">{updateError}</div>}
-            <h1>{paper.title}</h1>
-
-            <ImplementabilityNotice paper={paper} />
-
-            {/* --- Community Implementation Effort Section --- */}
-            {currentUser && paper && (
-                <div className="implementation-effort-section">
-                    <h4>Community Implementation Progress</h4>
-                    {paper.implementationProgress ? (
-                        // Effort exists
-                        isCurrentUserContributor ? (
-                            <p>You are contributing to this paper&apos;s implementation. <Link to="#" onClick={(e) => { e.preventDefault(); setActiveTab('implementationProgress'); }}>View Progress</Link></p>
-                        ) : (
-                            <>
-                                <p>A community effort to implement this paper is active or has been initiated.</p>
-                                <button 
-                                    onClick={handleInitiateImplementationEffort} 
-                                    className="button-secondary" 
-                                    disabled={isProcessingEffortAction} 
-                                >
-                                    View or Join Effort
-                                </button>
-                            </>
-                        )
-                    ) : (
-                        // No effort exists yet
-                        <>
-                            <p>Be the first to lead or join a community effort to implement this paper!</p>
-                            <button 
-                                onClick={handleInitiateImplementationEffort}
-                                className="button-secondary" 
-                                disabled={isProcessingEffortAction} 
-                            >
-                                Start Implementation Effort
-                            </button>
-                        </>
-                    )}
-                    {effortActionError && <div className="error-message">{effortActionError}</div>}
-                    {updateError && !effortActionError && <div className="error-message">{updateError}</div>} 
+        <div className="min-h-screen bg-background">
+            {/* Compact Header */}
+            <div className="bg-card/40 backdrop-blur border-b border-border/60 sticky top-0 z-40">
+                <div className="max-w-7xl mx-auto px-6 py-2">
+                    <Link 
+                        to="/papers" 
+                        className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm"
+                    >
+                        <ArrowLeft size={14} />
+                        Back to Papers
+                    </Link>
                 </div>
-            )}
+            </div>
 
-            <PaperTabs
-                activeTab={activeTab}
-                onSelectTab={handleSetActiveTab}
-                paper={paper}
-                isAdminView={isAdminView}
-            />
+            {/* Ultra Dense Main Content */}
+            <div className="max-w-7xl mx-auto px-6 py-2">
+                {/* Error Message */}
+                {updateError && (
+                    <Card className="border-destructive/20 bg-destructive/5 mb-2">
+                        <CardContent className="p-2">
+                            <p className="text-destructive text-xs">{updateError}</p>
+                        </CardContent>
+                    </Card>
+                )}
 
-            {showConfirmRemoveModal && (
-                <ConfirmationModal // Standardized to ConfirmationModal
-                    isOpen={showConfirmRemoveModal}
-                    onClose={() => setShowConfirmRemoveModal(false)}
-                    onConfirm={handleRemovePaper}
-                    title="Confirm Removal"
-                    confirmText="Remove"
-                    confirmButtonClass="button-danger"
-                    isConfirming={isRemoving}
-                >
-                    <p>Are you sure you want to remove this paper? This action cannot be undone.</p>
-                </ConfirmationModal>
-            )}
+                {/* Ultra Compact Grid Layout */}
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-2">
+                    {/* Main Paper Content - 8 columns */}
+                    <div className="lg:col-span-8">
+                        <Card className="bg-card/70 backdrop-blur border border-border/60">
+                            <CardContent className="p-3">
+                                {/* Title & Metadata in Horizontal Layout */}
+                                <div className="flex flex-col gap-2">
+                                    <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight">
+                                        {paper.title}
+                                    </h1>
+                                    
+                                    {/* Horizontal Metadata Layout */}
+                                    <div className="flex flex-wrap items-center justify-between gap-2">
+                                        <PaperMetadata 
+                                            paper={paper}
+                                            currentUser={currentUser}
+                                            handleUpvote={handleUpvote}
+                                            isVoting={isVoting}
+                                            actionUsers={actionUsers}
+                                            isLoadingActionUsers={isLoadingActionUsers}
+                                            actionUsersError={actionUsersError}
+                                        />
+                                        <ImplementabilityNotice paper={paper} />
+                                    </div>
+                                </div>
+                                
+                                {/* Compact Community Implementation Bar */}
+                                {currentUser && paper && (
+                                    <div className="bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded p-2 mt-2">
+                                        <div className="flex items-center justify-between gap-2">
+                                            <div className="flex items-center gap-2">
+                                                <div className="p-1 rounded bg-primary/10 shrink-0">
+                                                    {paper.implementationProgress ? <Users className="h-3 w-3 text-primary" /> : <Rocket className="h-3 w-3 text-primary" />}
+                                                </div>
+                                                <div>
+                                                    <span className="font-medium text-xs">Community Implementation:</span>
+                                                    <span className="text-muted-foreground text-xs ml-1">
+                                                        {paper.implementationProgress ? (
+                                                            isCurrentUserContributor ? "You're contributing" : "Active effort"
+                                                        ) : "Be the first!"}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                            
+                                            <div className="flex gap-1">
+                                                {paper.implementationProgress ? (
+                                                    isCurrentUserContributor ? (
+                                                        <Button variant="outline" size="sm" onClick={() => setActiveTab('implementationProgress')} className="gap-1 h-6 text-xs px-2">
+                                                            <ExternalLink size={10} />
+                                                            Progress
+                                                        </Button>
+                                                    ) : (
+                                                        <Button variant="secondary" size="sm" onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} className="gap-1 h-6 text-xs px-2">
+                                                            <Users size={10} />
+                                                            Join
+                                                        </Button>
+                                                    )
+                                                ) : (
+                                                    <Button onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} size="sm" className="gap-1 h-6 text-xs px-2">
+                                                        <Rocket size={10} />
+                                                        Start
+                                                    </Button>
+                                                )}
+                                            </div>
+                                        </div>
+                                        
+                                        {effortActionError && (
+                                            <div className="text-destructive text-xs bg-destructive/5 p-1 rounded border border-destructive/20 mt-1">
+                                                {effortActionError}
+                                            </div>
+                                        )}
+                                    </div>
+                                )}
 
-            {showConfirmStatusModal.show && showConfirmStatusModal.status && (
-                <ConfirmationModal // Standardized to ConfirmationModal
-                    isOpen={showConfirmStatusModal.show}
-                    onClose={() => setShowConfirmStatusModal({ show: false, status: null })}
-                    onConfirm={() => handleSetImplementabilityStatus(showConfirmStatusModal.status!)}
-                    title="Confirm Status Change"
-                    confirmText="Confirm Status"
-                    isConfirming={isUpdatingStatus}
-                >
-                    <p>{`Are you sure you want to set the status to "${showConfirmStatusModal.status}"?`}</p>
-                </ConfirmationModal>
-            )}
-
-            <div className="tab-content">
-                {activeTab === 'paperInfo' && (
-                    <div className="tab-pane-container">
-                        <PaperMetadata paper={paper} />
-                        <PaperAbstract abstract={paper.abstract} />
+                                {/* Abstract Section */}
+                                <div className="border-t border-border/60 pt-2 mt-2">
+                                    <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-1">
+                                        <FileText className="w-3 h-3 text-primary" />
+                                        Abstract
+                                    </h3>
+                                    <p className="text-muted-foreground leading-relaxed text-xs">
+                                        {paper.abstract || 'Abstract not available.'}
+                                    </p>
+                                </div>
+                            </CardContent>
+                        </Card>
                     </div>
-                )}
 
-                {activeTab === 'upvotes' && (
-                    <UpvotesTab
-                        paper={paper}
-                        currentUser={currentUser}
-                        isVoting={isVoting}
-                        handleUpvote={handleUpvote}
-                        actionUsers={actionUsers}
-                        isLoadingActionUsers={isLoadingActionUsers}
-                        actionUsersError={actionUsersError}
-                    />
-                )}
+                    {/* Right Sidebar - 4 columns */}
+                    <div className="lg:col-span-4 flex flex-col gap-2">
+                        {/* Implementation Progress or Voting */}
+                        {paper.implementationProgress ? (
+                            <ImplementationProgressCard 
+                                progress={paper.implementationProgress}
+                                paperId={paper.id}
+                                currentUser={currentUser}
+                                onImplementationProgressChange={handleImplementationProgressChange}
+                            />
+                        ) : (
+                            <Card className="bg-card/70 backdrop-blur border border-border/60">
+                                <CardContent className="p-3">
+                                    <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
+                                        <Vote className="w-3 h-3 text-primary" />
+                                        Implementability
+                                    </h3>
+                                    <ImplementabilityVotingTab
+                                        paper={paper}
+                                        currentUser={currentUser}
+                                        isVoting={isVoting}
+                                        handleImplementabilityVote={handleImplementabilityVote}
+                                        actionUsers={actionUsers}
+                                        isLoadingActionUsers={isLoadingActionUsers}
+                                        actionUsersError={actionUsersError}
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
 
-                {activeTab === 'implementability' && (
-                    <ImplementabilityVotingTab
-                        paper={paper}
-                        currentUser={currentUser}
-                        isVoting={isVoting}
-                        handleImplementabilityVote={handleImplementabilityVote}
-                        actionUsers={actionUsers}
-                        isLoadingActionUsers={isLoadingActionUsers}
-                        actionUsersError={actionUsersError}
-                    />
-                )}
-
-                {activeTab === 'admin' && isAdminView && ( // Use isAdminView here
-                    <div className="tab-pane-container">
-                        <OwnerActions
-                            paper={paper}
-                            currentUser={currentUser}
-                            onPaperUpdate={loadPaperAndActions}
-                            openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
-                            onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)} // Pass handler for new prop
-                            isUpdatingStatus={isUpdatingStatus}
-                            isRemoving={isRemoving}
-                        />
+                        {/* Admin Actions */}
+                        {isAdminView && (
+                            <Card className="bg-card/70 backdrop-blur border border-border/60">
+                                <CardContent className="p-3">
+                                    <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
+                                        <Settings className="w-3 h-3 text-primary" />
+                                        Admin
+                                    </h3>
+                                    <OwnerActions
+                                        paper={paper}
+                                        currentUser={currentUser}
+                                        onPaperUpdate={loadPaperAndActions}
+                                        openConfirmStatusModal={openConfirmStatusModal as (status: AdminSettableImplementabilityStatus) => void}
+                                        onRequestRemoveConfirmation={() => setShowConfirmRemoveModal(true)}
+                                        isUpdatingStatus={isUpdatingStatus}
+                                        isRemoving={isRemoving}
+                                    />
+                                </CardContent>
+                            </Card>
+                        )}
                     </div>
-                )}                {activeTab === 'implementationProgress' && paper.implementationProgress && (
-                    <div className="tab-pane-container">
-                        <ImplementationProgressTab 
-                            progress={paper.implementationProgress} 
-                            paperId={paper.id} 
-                            currentUser={currentUser}
-                            onImplementationProgressChange={handleImplementationProgressChange}
-                        />
-                    </div>
-                )}
+                </div>
             </div>
  
             {/* New Confirmation Modal for Starting/Joining Effort */}
@@ -273,7 +300,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 <ConfirmationModal
                     isOpen={showStartEffortConfirmModal}
                     onClose={() => setShowStartEffortConfirmModal(false)}
-                    onConfirm={confirmAndStartEffort} // Use the new wrapper function
+                    onConfirm={confirmAndStartEffort}
                     title="Confirm Start Implementation Effort"
                     confirmText="Yes, Start Effort"
                     isConfirming={isProcessingEffortAction} 

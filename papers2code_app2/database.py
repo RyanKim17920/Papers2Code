@@ -71,7 +71,22 @@ async def initialize_async_db():
     
     try:
         logger.info(f"Attempting to connect to MongoDB asynchronously using PyMongo. Database: {actual_db_name}")
-        async_client = AsyncMongoClient(actual_mongo_uri, tlsCAFile=certifi.where())
+        
+        # Optimized connection parameters for better performance
+        async_client = AsyncMongoClient(
+            actual_mongo_uri, 
+            tlsCAFile=certifi.where(),
+            maxPoolSize=config_settings.MONGO_MAX_POOL_SIZE,  # Configurable pool size
+            minPoolSize=config_settings.MONGO_MIN_POOL_SIZE,   # Configurable minimum connections
+            maxIdleTimeMS=30000,  # 30 seconds idle timeout
+            waitQueueTimeoutMS=5000,  # 5 seconds wait timeout
+            serverSelectionTimeoutMS=5000,  # 5 seconds server selection timeout
+            connectTimeoutMS=10000,  # 10 seconds connection timeout
+            socketTimeoutMS=20000,   # 20 seconds socket timeout
+            retryWrites=True,
+            retryReads=True
+        )
+        
         # Ping the server to confirm connection
         await async_client.admin.command('ping')
         logger.info("Async MongoDB server ping successful (PyMongo Async). Connection established.")
@@ -252,6 +267,13 @@ async def ensure_db_indexes_async():
                 ([("status", ASCENDING), ("upvoteCount", DESCENDING)], {"name": "status_1_upvoteCount_-1_papers_async", "sparse": True}),
                 ([("title", ASCENDING)], {"name": "title_1_papers_async", "collation": {"locale": "en", "strength": 5}, "sparse": True}), # strength:5 for case-insensitivity
                 ([("implementabilityStatus", ASCENDING)], {"name": "implementabilityStatus_1_papers_async"}),
+                # Performance-optimized compound indexes for common query patterns
+                ([("status", ASCENDING), ("implementabilityStatus", ASCENDING), ("publicationDate", DESCENDING)], {"name": "status_1_impl_1_pubDate_-1_papers_async"}),
+                ([("implementabilityStatus", ASCENDING), ("publicationDate", DESCENDING)], {"name": "impl_1_pubDate_-1_papers_async"}),
+                ([("publicationDate", DESCENDING), ("upvoteCount", DESCENDING)], {"name": "pubDate_-1_upvotes_-1_papers_async"}),
+                ([("proceeding", ASCENDING), ("publicationDate", DESCENDING)], {"name": "proceeding_1_pubDate_-1_papers_async"}),
+                ([("tasks", ASCENDING), ("publicationDate", DESCENDING)], {"name": "tasks_1_pubDate_-1_papers_async"}),
+                ([("status", ASCENDING), ("tasks", ASCENDING), ("publicationDate", DESCENDING)], {"name": "status_1_tasks_1_pubDate_-1_papers_async"}),
             ]),
             (collections_to_check["users"], [
                 ([("githubId", ASCENDING)], {"name": "githubId_1_users_async", "unique": True, "sparse": True}),

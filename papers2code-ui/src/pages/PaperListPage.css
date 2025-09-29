@@ -1,11 +1,215 @@
-.paper-list-page {
-    margin: 0 auto;
-    padding: 0;
-    width: 100%; /* Ensure full width */
-    max-width: 1400px;
-    overflow: visible; /* Allow paper cards to overflow if needed for animations */
-  }
-  
+/* Filter sidebar styling */
+.filter-card {
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+  border: 1px solid var(--border-color);
+}
+
+/* Header area for filter card: keep neutral background and add subtle divider */
+.filter-header {
+  background: transparent;
+  color: var(--text-color);
+  padding: 1rem 1.5rem;
+  border-top-left-radius: 8px;
+  border-top-right-radius: 8px;
+  margin: 0;
+  border-bottom: 1px solid var(--border-color);
+}
+
+.filter-header span {
+  color: var(--text-color);
+  font-size: 1rem;
+  font-weight: 600;
+}
+
+/* Circular accent behind the Filter icon (similar visual language to other toggles) */
+.filter-header .icon-badge {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: var(--primary-light-color, #e8f7fa);
+  color: var(--primary-color, #197c9a);
+  border: 1px solid var(--border-color, #e9ecef);
+}
+
+.filter-content {
+  padding: 1.5rem;
+  overflow: hidden; /* prevent content from spilling during slide animation */
+}
+
+/* Removed all sidebar content animations (no animation declarations retained) */
+
+/* Removed toggle handle closing animation (no style needed) */
+
+/* Removed staggered section animations (no animation properties retained) */
+
+.filter-content > * + * {
+  margin-top: 1.5rem;
+}
+
+/* Enhanced spacing for main content */
+.main-content {
+  padding-top: 0.5rem;
+}
+
+.main-content .space-y-3 > * + * {
+  margin-top: 1rem !important;
+}
+
+/* Animation styles for filter toggle */
+.paper-list-layout {
+  display: flex;
+  gap: 1.5rem;
+  /* Removed layout transition */
+}
+
+.paper-list-layout {
+  display: flex;
+  gap: 1.5rem;
+}
+.paper-list-layout.with-filters {
+  grid-template-columns: 320px 1fr;
+}
+
+.paper-list-layout.no-filters {
+  grid-template-columns: 0 1fr;
+}
+
+.filter-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  overflow: visible; /* allow handle to show outside bounds */
+  position: relative; /* anchor for absolute handle */
+  z-index: 1; /* stay above adjacent content borders */
+  /* Removed sidebar transform/opacity transition */
+}
+
+.filter-sidebar {
+  width: 320px;
+  flex-shrink: 0;
+  overflow: visible; /* allow handle to show outside bounds */
+  position: relative; /* anchor for absolute handle */
+  z-index: 1; /* stay above adjacent content borders */
+}
+.filter-sidebar.visible {
+  opacity: 1;
+  transform: translateX(0);
+}
+
+.filter-sidebar.hidden {
+  opacity: 0;
+  transform: translateX(-100%);
+  pointer-events: none; /* prevent interaction when hidden */
+  width: 0; /* ensure it takes no space when hidden */
+}
+
+.filter-sidebar.visible { opacity: 1; }
+.filter-sidebar.hidden { opacity: 0; width: 0; pointer-events: none; }
+.main-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+  /* Removed main-content layout transition */
+}
+
+.main-content {
+  flex: 1;
+  min-width: 0;
+  width: 100%;
+}
+/* Enhanced card expansion when filters are hidden */
+.paper-list-layout.no-filters .main-content {
+  max-width: 100%;
+}
+
+.paper-list-layout.with-filters .main-content {
+  max-width: calc(100% - 320px - 1.5rem);
+}
+
+/* Side handles for collapsing/revealing the filter sidebar (desktop) */
+.filter-toggle-handle {
+  position: absolute;
+  top: 16px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: var(--card-background-color, #ffffff);
+  color: var(--text-color, #212529);
+  border: 1px solid var(--border-color, #e9ecef);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Removed handle transition */
+  z-index: 2;
+  /* Removed toggle handle entrance animation */
+}
+
+.filter-toggle-handle {
+  position: absolute;
+  top: 16px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  border-radius: 9999px;
+  background-color: var(--card-background-color, #ffffff);
+  color: var(--text-color, #212529);
+  border: 1px solid var(--border-color, #e9ecef);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 2;
+}
+.filter-toggle-handle:hover {
+  background-color: var(--primary-light-color, #e8f7fa);
+  border-color: var(--primary-color, #197c9a);
+  color: var(--primary-color, #197c9a);
+  transform: scale(1.05) translateX(-2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-toggle-handle:hover { background-color: var(--primary-light-color, #e8f7fa); border-color: var(--primary-color, #197c9a); color: var(--primary-color, #197c9a); }
+.filter-reveal-handle {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: var(--card-background-color, #ffffff);
+  color: var(--text-color, #212529);
+  border: 1px solid var(--border-color, #e9ecef);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Removed reveal handle transition */
+  /* Removed reveal handle bounce animation */
+}
+
+.filter-reveal-handle {
+  width: 32px;
+  height: 32px;
+  border-radius: 9999px;
+  background-color: var(--card-background-color, #ffffff);
+  color: var(--text-color, #212529);
+  border: 1px solid var(--border-color, #e9ecef);
+  box-shadow: 0 1px 2px rgba(0,0,0,0.05);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+.filter-reveal-handle:hover {
+  background-color: var(--primary-light-color, #e8f7fa);
+  border-color: var(--primary-color, #197c9a);
+  color: var(--primary-color, #197c9a);
+  transform: scale(1.05) translateX(2px);
+  box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.filter-reveal-handle:hover { background-color: var(--primary-light-color, #e8f7fa); border-color: var(--primary-color, #197c9a); color: var(--primary-color, #197c9a); }
+/* Removed keyframe definitions */
   .paper-list-page h1 {
       text-align: center;
       font-size: 2em; /* Larger heading */
@@ -27,9 +231,8 @@
     flex-wrap: wrap;
     gap: 30px; /* Slightly larger gap for visual separation */
     justify-content: flex-start; /* Keep items aligned left within the container */
-}
-  
-  /* Styling for when no papers are found */
+  /* Removed paper list transform/opacity transition */
+  }  /* Styling for when no papers are found */
   .paper-list > p { /* Target direct p child */
       width: 100%;
       text-align: center;

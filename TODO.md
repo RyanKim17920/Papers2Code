@@ -1,35 +1,40 @@
-# To-Do List
 
-This list will be used to track the project's progress.
 
-## Pre-Production Steps
 
- - [ ] Fix paper_views to actually increment when a user views a paper. This is crucial for analytics and user engagement tracking.
+# TODO: check boxes that are done
 
-### Frontend (`papers2code-ui`)
-- [x] Fix active contributions not showing up on the user's profile page. ✅ **COMPLETED** - Fixed backend user service to properly identify contributed papers from both implementation progress records AND user actions (Project Started/Project Joined).
-- [ ] Implement the main dashboard to display popular repositories and the user's repositories. WIP --> need better design, some glitches to finish
+1. Basic UI FIXES:
+* [X] Add border to search bar on top 
+* [ ] Add animation when hiding filters in papers --> extend the cards to fill the full width 
+* [X] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter) 
+* [X] Cards should always have the text aligned/same height (papers that have two lines of authors are have the tags, date, etc. lower than other cards which makes spacing uneven)
+* [X] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
+* [ ] Make updates page collapsable or just smaller
+    * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on from the admin side)
+* [ ] Increase information density of paper pages further
+* [ ] Improve the 404 Page not found to be styled exquisitely
+* [ ] Fix the view Likes popup of everyone that di so that it doesn't come from top left (should pop out from same location)
+* [ ] Remove all links to papersWithCode to it
+* [X] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
+* [ ] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
 
-### Backend (`papers2code_app2`) & Scripts
-- [ ] **Database & Scripts:**
-    - [ ] Review and fix the database update scripts (e.g., `scripts/update_pwc_data.py`) to be more up to date and more efficient.
-    - [x] Fix copy_prod_data_to_test.py to be also more up-to-date and relevant. ✅ **COMPLETED** - Enhanced script with better error handling, related data copying, database summaries, and configurable options.
-    - [x] Fix recurring cron jobs (e.g., `api/cron/email-updater.py`, popular-papers.py ). These need extensive testing ✅ **COMPLETED** - Created comprehensive cron job system with optimized email-updater, view analytics, popular-papers analytics using sliding window/incremental approaches. Removed redundant user_recent_views collection. All tests passing with cleanup scripts.
-- [ ] **Improving Profile:**
-    - [ ] Make the profile call for data as necessary, not at the start to reduce loading time significantly (depending on the tab instead of loading it all in at the first reload), and create a navigation similar to the paperlist if upvotes/contributions are large
-    - [ ] Show successful contributions and be able to better organize it as necessary
-- [ ] **ML & Data Filtering:**
-    - [ ] Train a BERT model on the output of `scripts/LLM_annotator.py` to filter irrelevant papers.
-    - [ ] Integrate the trained model to filter new incoming papers.
-    - [ ] Define and implement the logic for handling unofficial paper implementations.
-- [ ] **Code Organization:**
-    - [ ] Review and improve the overall file and code structure across the repository.
-- [ ] **Deployment:**
-    - [ ] Ensure all code is functional and ready for deployment.
-    - [ ] Configure the project for deployment on Render (`render.yaml`).
-    - [ ] Deploy the application.
-
-## Post-Production Steps
-- [ ] **UI Improvements**
-    - [ ] Dark Mode
-    - [ ] Add your own ideas! 
+2. BASIC BACKEND FIXES:
+* [ ] logging out (sign out) goes directly to the papers if logged out from dashboard (in either case), otherwise just go to the page
+* [ ] Make the "joined" date in the user profile accurate
+* [ ] Make the "last seen" date in the user profile accurate
+* [ ] Modify paper views to override any old views by the same userID to the same paper in order to not just spam data (no repeated paperId and userID essentially s)
+* [ ] Thumbs up/loving papers in dashboard does not change backend, connect it properly
+* [ ] Saved/Thumbs/Loved doesn't display any papers in dashboard (works in profile though, UNIFY if it's upvoted or saved, let's stick with upvoted first) but it does work in user profile
+* [ ] In user profile, upvoted papers should already be highlighted for the thumbs up instead of being not fille
+3. FUTURE CHANGES (mixed) [DO NOT IMPLEMENT RIGHT NOW]:
+ * [ ] Search works for all cases
+ * [ ] Improve tagging and tags
+ * [ ] Improve search in general 
+ * [ ] more papers in the dashboard for implementation 
+ * [ ] for both profile's Updated/Contrbuting and the dashboard cards should be identical, and have ability to go directly to paper link, or github link, along with showing the abstract rather than repeating the title twice
+* [ ] Date of publishing for papers in dashbaord not like 6 months ago or somethhing
+* [ ] Condense all the various careds into some similar method instead of having so many different ones of the same hting
+* [ ] If user has too many contributed to or upvoted have a pagination but vertical on the right side in the white space of the area.
+* [ ] integrate settings into profile as a tab or something, at least improve that UI significantly
+* [ ] implementaiton tracking becomes a timeline not just random information texted 
+* [ ] works for MOBILE

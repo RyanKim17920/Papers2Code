@@ -1,12 +1,10 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { FaGlobe, FaTwitter, FaLinkedin } from 'react-icons/fa';
-import { SiBluesky, SiHuggingface } from 'react-icons/si';
+import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink } from 'lucide-react';
 import { UserAvatar, LoadingSpinner } from '../common/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi } from '../common/services/api';
 import { Paper } from '../common/types/paper';
-import PaperCard from '../components/paperList/PaperCard'; // Import the actual PaperCard component
-import './ProfilePage.css';
+import ModernPaperCard from '../components/paperList/ModernPaperCard';
 
 type TabType = 'overview' | 'upvoted' | 'contributing';
 
@@ -78,10 +76,10 @@ const ProfilePage: React.FC = () => {
 
   if (isLoading) {
     return (
-      <div className="profile-container">
-        <div className="profile-page-loading">
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4">
           <LoadingSpinner />
-          <p>Loading profile...</p>
+          <p className="text-muted-foreground">Loading profile...</p>
         </div>
       </div>
     );
@@ -89,11 +87,16 @@ const ProfilePage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="profile-container">
-        <div className="profile-page-error">
-          <h1>Profile Not Found</h1>
-          <p>{error}</p>
-          <Link to="/papers" className="back-link">← Back to Papers</Link>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 p-8 bg-card border border-border rounded-lg shadow-sm max-w-md">
+          <h1 className="text-2xl font-bold text-foreground">Profile Not Found</h1>
+          <p className="text-muted-foreground">{error}</p>
+          <Link 
+            to="/papers" 
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            ← Back to Papers
+          </Link>
         </div>
       </div>
     );
@@ -101,11 +104,16 @@ const ProfilePage: React.FC = () => {
 
   if (!profileData) {
     return (
-      <div className="profile-container">
-        <div className="profile-page-error">
-          <h1>Profile Not Found</h1>
-          <p>The user profile you're looking for doesn't exist.</p>
-          <Link to="/papers" className="back-link">← Back to Papers</Link>
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 p-8 bg-card border border-border rounded-lg shadow-sm max-w-md">
+          <h1 className="text-2xl font-bold text-foreground">Profile Not Found</h1>
+          <p className="text-muted-foreground">The user profile you're looking for doesn't exist.</p>
+          <Link 
+            to="/papers" 
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            ← Back to Papers
+          </Link>
         </div>
       </div>
     );
@@ -117,46 +125,77 @@ const ProfilePage: React.FC = () => {
     switch (activeTab) {
       case 'overview':
         return (
-          <div className="overview-content">
-            <div className="recent-activity">
-              <h3>Bio</h3>
-              <div className="profile-bio">
-                  {userDetails.bio ? (
-                    <p>{userDetails.bio}</p>
-                  ) : (
-                    <p className="no-bio">This user hasn't added a bio yet.</p>
-                  )}
-                </div>
-              <h3>Recent Activity</h3>
-              <div className="activity-grid">
-                <div className="activity-section">
-                  <h4>Recent Upvotes</h4>
-                  {upvotedPapers.slice(0, 3).map(paper => (
-                    <div key={paper.id} className="mini-paper-item">
-                      <Link to={`/paper/${paper.id}`} className="paper-title">{paper.title}</Link>
-                      <span className={`mini-status status-${paper.status.toLowerCase().replace(' ', '-')}`}>
-                        {paper.status}
-                      </span>
-                    </div>
-                  ))}
-                  {upvotedPapers.length === 0 && (
-                    <p className="no-activity">No papers upvoted yet</p>
-                  )}
+          <div className="space-y-8">
+            {/* Bio Section */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-4 flex items-center gap-2">
+                <Users size={20} />
+                Bio
+              </h3>
+              <div className="text-sm text-muted-foreground">
+                {userDetails.bio ? (
+                  <p className="leading-relaxed">{userDetails.bio}</p>
+                ) : (
+                  <p className="italic">This user hasn't added a bio yet.</p>
+                )}
+              </div>
+            </div>
+
+            {/* Recent Activity */}
+            <div className="bg-card border border-border rounded-lg p-6">
+              <h3 className="text-lg font-semibold mb-6 flex items-center gap-2">
+                <Award size={20} />
+                Recent Activity
+              </h3>
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+                <div>
+                  <h4 className="font-medium mb-4 flex items-center gap-2 text-sm">
+                    <ThumbsUp size={16} />
+                    Recent Upvotes
+                  </h4>
+                  <div className="space-y-3">
+                    {upvotedPapers.slice(0, 3).map(paper => (
+                      <div key={paper.id} className="flex items-center justify-between p-3 bg-background rounded-md border border-border/50 hover:border-border transition-colors">
+                        <Link 
+                          to={`/paper/${paper.id}`} 
+                          className="text-sm font-medium text-primary hover:underline flex-1 truncate mr-3"
+                        >
+                          {paper.title}
+                        </Link>
+                        <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full font-medium whitespace-nowrap">
+                          {paper.status}
+                        </span>
+                      </div>
+                    ))}
+                    {upvotedPapers.length === 0 && (
+                      <p className="text-muted-foreground text-sm italic text-center py-4">No papers upvoted yet</p>
+                    )}
+                  </div>
                 </div>
                 
-                <div className="activity-section">
-                  <h4>Active Contributions</h4>
-                  {contributedPapers.slice(0, 3).map(paper => (
-                    <div key={paper.id} className="mini-paper-item">
-                      <Link to={`/paper/${paper.id}`} className="paper-title">{paper.title}</Link>
-                      <span className={`mini-status status-${paper.status.toLowerCase().replace(' ', '-')}`}>
-                        {paper.status}
-                      </span>
-                    </div>
-                  ))}
-                  {contributedPapers.length === 0 && (
-                    <p className="no-activity">No active contributions yet</p>
-                  )}
+                <div>
+                  <h4 className="font-medium mb-4 flex items-center gap-2 text-sm">
+                    <Rocket size={16} />
+                    Active Contributions
+                  </h4>
+                  <div className="space-y-3">
+                    {contributedPapers.slice(0, 3).map(paper => (
+                      <div key={paper.id} className="flex items-center justify-between p-3 bg-background rounded-md border border-border/50 hover:border-border transition-colors">
+                        <Link 
+                          to={`/paper/${paper.id}`} 
+                          className="text-sm font-medium text-primary hover:underline flex-1 truncate mr-3"
+                        >
+                          {paper.title}
+                        </Link>
+                        <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full font-medium whitespace-nowrap">
+                          {paper.status}
+                        </span>
+                      </div>
+                    ))}
+                    {contributedPapers.length === 0 && (
+                      <p className="text-muted-foreground text-sm italic text-center py-4">No active contributions yet</p>
+                    )}
+                  </div>
                 </div>
               </div>
             </div>
@@ -165,58 +204,72 @@ const ProfilePage: React.FC = () => {
         
       case 'upvoted':
         return (
-          <div className="tab-content">
-            <div className="content-header">
-              <h2>Upvoted Papers ({upvotedPapers.length})</h2>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <ThumbsUp size={20} />
+              <h2 className="text-xl font-semibold">Upvoted Papers ({upvotedPapers.length})</h2>
             </div>
             {upvotedPapers.length > 0 ? (
-              <div className="papers-grid">
+              <div className="space-y-4">
                 {upvotedPapers.map(paper => (
-                  <PaperCard
-                    key={paper.id} // Ensure key is present
+                  <ModernPaperCard
+                    key={paper.id}
                     paper={paper}
                     onVote={handleVote}
+                    className="bg-card/70 backdrop-blur border border-border/60 hover:border-border/80 focus-within:ring-2 focus-within:ring-primary/30"
                   />
                 ))}
               </div>
             ) : (
-              <div className="empty-state">
-                <div className="empty-icon">📄</div>
-                <h3>No papers upvoted yet</h3>
-                <p>Upvoted papers will appear here</p>
-                <Link to="/papers" className="cta-button">Browse Papers</Link>
+              <div className="flex flex-col items-center justify-center py-16 bg-card border border-border rounded-lg">
+                <div className="text-4xl mb-4">📄</div>
+                <h3 className="text-lg font-medium mb-2">No papers upvoted yet</h3>
+                <p className="text-muted-foreground mb-4">Upvoted papers will appear here</p>
+                <Link
+                  to="/papers"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border/60 bg-card/60 hover:bg-card/80 text-foreground transition-colors shadow-sm"
+                >
+                  <ExternalLink size={16} className="text-muted-foreground" />
+                  <span className="font-medium">Browse Papers</span>
+                </Link>
               </div>
             )}
           </div>
         );
-        
+
       case 'contributing':
         return (
-          <div className="tab-content">
-            <div className="content-header">
-              <h2>Contributing To ({contributedPapers.length})</h2>
+          <div className="space-y-6">
+            <div className="flex items-center gap-3">
+              <Rocket size={20} />
+              <h2 className="text-xl font-semibold">Contributing To ({contributedPapers.length})</h2>
             </div>
             {contributedPapers.length > 0 ? (
-              <div className="papers-grid">
+              <div className="space-y-4">
                 {contributedPapers.map(paper => (
-                  <PaperCard
-                    key={paper.id} // Ensure key is present
+                  <ModernPaperCard
+                    key={paper.id}
                     paper={paper}
                     onVote={handleVote}
                   />
                 ))}
               </div>
             ) : (
-              <div className="empty-state">
-                <div className="empty-icon">🚀</div>
-                <h3>No active contributions</h3>
-                <p>Projects you're contributing to will appear here</p>
-                <Link to="/papers" className="cta-button">Find Projects</Link>
+              <div className="flex flex-col items-center justify-center py-16 bg-card border border-border rounded-lg">
+                <div className="text-4xl mb-4">🚀</div>
+                <h3 className="text-lg font-medium mb-2">No active contributions</h3>
+                <p className="text-muted-foreground mb-4">Projects you're contributing to will appear here</p>
+                <Link
+                  to="/papers"
+                  className="inline-flex items-center gap-2 px-4 py-2 rounded-md border border-border/60 bg-card/60 hover:bg-card/80 text-foreground transition-colors shadow-sm"
+                >
+                  <ExternalLink size={16} className="text-muted-foreground" />
+                  <span className="font-medium">Browse Papers</span>
+                </Link>
               </div>
             )}
           </div>
         );
-        
       default:
         return null;
     }
@@ -224,40 +277,64 @@ const ProfilePage: React.FC = () => {
 
   console.log('Profile data:', profileData);
   return (
-    <div className="profile-container">
-      <div className="profile-page">
-        <div className="profile-layout">
-          <aside className="profile-sidebar">
-            <div className="profile-info">
+    <div className="min-h-screen bg-background">
+      {/* Header Section with Avatar and Basic Info */}
+      <div className="bg-gradient-to-br from-card via-card to-background border-b border-border">
+        <div className="container mx-auto px-6 py-16">
+          <div className="flex flex-col md:flex-row items-center gap-8">
+            {/* Avatar with Glow Effect */}
+            <div className="relative">
+              <div className="absolute inset-0 bg-primary/20 rounded-full blur-md scale-110"></div>
               <UserAvatar 
                 avatarUrl={userDetails.avatarUrl}
                 username={userDetails.username}
-                className="profile-avatar"
+                className="relative w-32 h-32 border-4 border-primary/30 shadow-2xl"
               />
-              <div className="profile-details">
-                <h1 className="profile-name">{userDetails.name || userDetails.username}</h1>
-                <p className="profile-username">@{userDetails.username}</p>
-                
-                <div className="profile-badges">
-                  {userDetails.isOwner && (
-                    <span className="badge owner-badge">Owner</span>
-                  )}
-                  {userDetails.isAdmin && (
-                    <span className="badge admin-badge">Admin</span>
-                  )}
+            </div>
+            
+            {/* User Info */}
+            <div className="text-center md:text-left space-y-4">
+              <div>
+                <p className="text-muted-foreground text-sm mb-1">@{userDetails.username}</p>
+                <h1 className="text-4xl font-bold text-foreground mb-2">
+                  {userDetails.name || userDetails.username}
+                </h1>
+                <div className="flex items-center gap-4 text-sm text-muted-foreground justify-center md:justify-start">
+                  <div className="flex items-center gap-1">
+                    <Calendar size={14} />
+                    <span>Joined 2 years ago</span>
+                  </div>
+                  <span>•</span>
+                  <span>last seen in the past day</span>
                 </div>
-                
-                {/* Social Links Section */}
-                <div className="social-links">
+              </div>
+              
+              {/* Badges */}
+              <div className="flex gap-2 justify-center md:justify-start">
+                {userDetails.isOwner && (
+                  <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full font-medium">
+                    OWNER
+                  </span>
+                )}
+                {userDetails.isAdmin && (
+                  <span className="px-2 py-1 bg-red-500 text-white text-xs rounded-full font-medium">
+                    ADMIN
+                  </span>
+                )}
+              </div>
+              
+              {/* Social Links */}
+              {(userDetails.websiteUrl || userDetails.twitterProfileUrl || userDetails.linkedinProfileUrl || userDetails.blueskyUsername || userDetails.huggingfaceUsername) && (
+                <div className="flex gap-3 justify-center md:justify-start">
                   {userDetails.websiteUrl && (
                     <a 
                       href={userDetails.websiteUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="social-link website-link"
+                      className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
                       title="Website"
                     >
-                      <FaGlobe />
+                      <Globe size={16} />
                     </a>
                   )}
                   {userDetails.twitterProfileUrl && (
@@ -265,10 +342,10 @@ const ProfilePage: React.FC = () => {
                       href={userDetails.twitterProfileUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="social-link twitter-link"
+                      className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
                       title="Twitter/X"
                     >
-                      <FaTwitter />
+                      <Twitter size={16} />
                     </a>
                   )}
                   {userDetails.linkedinProfileUrl && (
@@ -276,81 +353,79 @@ const ProfilePage: React.FC = () => {
                       href={userDetails.linkedinProfileUrl} 
                       target="_blank" 
                       rel="noopener noreferrer"
-                      className="social-link linkedin-link"
+                      className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
                       title="LinkedIn"
                     >
-                      <FaLinkedin />
-                    </a>
-                  )}
-                  {userDetails.blueskyUsername && (
-                    <a 
-                      href={`https://bsky.app/profile/${userDetails.blueskyUsername}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="social-link bluesky-link"
-                      title="Bluesky"
-                    >
-                      <SiBluesky />
-                    </a>
-                  )}
-                  {userDetails.huggingfaceUsername && (
-                    <a 
-                      href={`https://huggingface.co/${userDetails.huggingfaceUsername}`} 
-                      target="_blank" 
-                      rel="noopener noreferrer"
-                      className="social-link huggingface-link"
-                      title="Hugging Face"
-                    >
-                      <SiHuggingface />
+                      <Linkedin size={16} />
                     </a>
                   )}
                 </div>
-                
-                <div className="profile-stats">
-                  <div className="stat-item">
-                    <strong>{upvotedPapers.length}</strong>
-                    <span>Upvotes</span>
-                  </div>
-                  <div className="stat-item">
-                    <strong>{contributedPapers.length}</strong>
-                    <span>Contributions</span>
-                  </div>
-                </div>
+              )}
+            </div>
+
+            {/* Stats */}
+            <div className="ml-auto flex gap-6 text-center">
+              <div>
+                <div className="text-2xl font-bold text-foreground">{upvotedPapers.length}</div>
+                <div className="text-sm text-muted-foreground">Upvotes</div>
+              </div>
+              <div>
+                <div className="text-2xl font-bold text-foreground">{contributedPapers.length}</div>
+                <div className="text-sm text-muted-foreground">Contributions</div>
               </div>
             </div>
-          </aside>
-          
-          <main className="profile-main">
-            <nav className="profile-nav">
-              <button 
-                className={`nav-tab ${activeTab === 'overview' ? 'active' : ''}`}
-                onClick={() => setActiveTab('overview')}
-              >
-                <span className="tab-icon">📊</span>
-                Overview
-              </button>
-              <button 
-                className={`nav-tab ${activeTab === 'upvoted' ? 'active' : ''}`}
-                onClick={() => setActiveTab('upvoted')}
-              >
-                <span className="tab-icon">👍</span>
-                Upvoted
-                <span className="tab-count">{upvotedPapers.length}</span>
-              </button>
-              <button 
-                className={`nav-tab ${activeTab === 'contributing' ? 'active' : ''}`}
-                onClick={() => setActiveTab('contributing')}
-              >
-                <span className="tab-icon">🚀</span>
-                Contributing
-                <span className="tab-count">{contributedPapers.length}</span>
-              </button>
-            </nav>
-            
-            <div className="profile-content">
-              {renderTabContent()}
-            </div>
-          </main>
+          </div>
+        </div>
+      </div>
+
+      {/* Navigation Tabs */}
+      <div className="bg-card border-b border-border sticky top-0 z-10">
+        <div className="container mx-auto px-6">
+          <nav className="flex gap-1">
+            <button 
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors ${
+                activeTab === 'overview' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('overview')}
+            >
+              Overview
+            </button>
+            <button 
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === 'upvoted' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('upvoted')}
+            >
+              Upvoted
+              <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full">
+                {upvotedPapers.length}
+              </span>
+            </button>
+            <button 
+              className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                activeTab === 'contributing' 
+                  ? 'border-primary text-primary' 
+                  : 'border-transparent text-muted-foreground hover:text-foreground'
+              }`}
+              onClick={() => setActiveTab('contributing')}
+            >
+              Contributing
+              <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full">
+                {contributedPapers.length}
+              </span>
+            </button>
+          </nav>
+        </div>
+      </div>
+
+      {/* Content */}
+      <div className="container mx-auto px-6 py-8">
+        <div className="max-w-4xl">
+          {renderTabContent()}
         </div>
       </div>
     </div>

@@ -153,6 +153,7 @@ const DashboardPage: React.FC = () => {
             recentPapers={data?.trendingPapers || []} // Using trending as placeholder for recent
             personalizedPapers={data?.trendingPapers || []} // Using trending as placeholder for personalized
             followingPapers={[]} // Placeholder for following feature
+            onPaperClick={(paper) => console.log('Paper clicked:', paper)}
             isLoading={isLoading}
           />
         </main>
@@ -163,6 +164,7 @@ const DashboardPage: React.FC = () => {
             trendingPapers={data?.trendingPapers || []}
             recentlyViewed={data?.recentlyViewed || []}
             bookmarkedPapers={[]} // Placeholder for bookmarks feature
+            onPaperClick={(paper) => console.log('Paper clicked:', paper)}
             isLoading={isLoading}
           />
         </aside>

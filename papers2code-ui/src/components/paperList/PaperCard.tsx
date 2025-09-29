@@ -2,7 +2,8 @@ import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Paper } from '../../common/types/paper'; // Ensure Status is imported
 import './PaperCard.css';
-import { getStatusClass, getStatusSymbol } from '../../common/utils/statusUtils';
+import { getStatusClass } from '../../common/utils/statusUtils';
+import { StatusBadge } from '@/components/common/StatusBadge';
 
 const ThumbsUpIcon = ({ filled }: { filled: boolean }) => (
   <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill={filled ? 'currentColor' : 'none'} stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -46,7 +47,6 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   }
   // Default class and symbol are now handled within statusUtils or by direct assignment below
   const statusClass = getStatusClass(paper); // Pass the whole paper object
-  const statusSymbol = getStatusSymbol(paper); // Pass the whole paper object
 
   // The switch statement for statusClass and statusSymbol in this component is now redundant
   // as getStatusClass and getStatusSymbol centralize this logic.
@@ -65,10 +65,7 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
         </div>
         <div className="card-meta-bottom">
           <p className="date">Date: {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}</p>
-          <p className={`status ${statusClass}`}>
-            <span className="status-symbol">{statusSymbol}</span>
-            <span className="status-text">{displayStatus}</span>
-          </p>
+          <StatusBadge paper={paper} />
         </div>
       </div>
       <div className="card-actions">
