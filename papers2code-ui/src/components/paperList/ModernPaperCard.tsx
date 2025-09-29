@@ -94,15 +94,15 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
   return (
     <Link to={`/paper/${paper.id}`} className="block h-full group">
       <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col ${className}`.trim()}>
-        <CardContent className="pt-4 pb-4 px-4 h-full flex flex-col">
+        <CardContent className="px-3 py-3 sm:px-4 sm:py-4 h-full flex flex-col">
           {/* Title - Responsive height */}
-          <h3 className="text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-2" style={{ minHeight: 'calc(1.2em * 2.2)' }}>
+          <h3 className="text-[13px] sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-1 sm:mb-2" style={{ minHeight: 'calc(1.2em * 2.2)' }}>
             {paper.title}
           </h3>
           
           {/* Authors • Venue • Date */}
-          <div className="text-xs mb-2 flex-shrink-0">
-            <span className="font-semibold text-foreground">{formattedAuthors}</span>
+          <div className="text-[10px] sm:text-xs mb-2 flex-shrink-0">
+            <span className="font-medium text-muted-foreground">{formattedAuthors}</span>
             {paper.proceeding && (
               <>
                 <span className="mx-1 text-muted-foreground/60">·</span>
@@ -114,7 +114,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
           </div>
 
           {/* Abstract - Responsive height */}
-          <div className="text-sm text-foreground/75 leading-relaxed line-clamp-2 mb-4 flex-1 font-normal" style={{ minHeight: 'calc(1.4em * 2.2)' }}>
+          <div className="text-[11px] sm:text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-2.5 sm:mb-4 flex-1 font-normal" style={{ minHeight: 'calc(1.35em * 2.2)' }}>
             {getPaperDescription(paper, 140)}
           </div>
 
@@ -123,13 +123,13 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
             <div className="flex items-center gap-2">
               {/* Domain Tags */}
               {domainTags.map((tag, index) => (
-                <Badge key={index} variant="default" className="text-xs px-2 py-0.5 h-5 font-medium">
+                <Badge key={index} variant="default" className="text-[9px] sm:text-xs px-2 py-0.5 h-5 sm:h-6 font-medium">
                   {tag}
                 </Badge>
               ))}
               
               {/* Status Badge */}
-              <StatusBadge paper={paper} className="text-xs px-2 py-1 h-6" />
+              <StatusBadge paper={paper} className="text-[10px] sm:text-xs px-2 py-1 h-5 sm:h-6" />
             </div>
             
             <div className="flex items-center gap-1">
@@ -139,7 +139,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                 className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 title="View Code"
               >
-                <Code className="w-4 h-4" />
+                <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               
               {/* PDF Button */}
@@ -148,7 +148,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                 className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 title="Download PDF"
               >
-                <FileDown className="w-4 h-4" />
+                <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
               </button>
               
               {/* Like Button */}
@@ -159,9 +159,9 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                 title="Save to Library"
               >
                 <ThumbsUp 
-                  className={`w-4 h-4 ${paper.currentUserVote === 'up' ? 'fill-current text-primary' : ''}`} 
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${paper.currentUserVote === 'up' ? 'fill-current text-primary' : ''}`} 
                 />
-                <span className="text-xs font-medium">{paper.upvoteCount || 0}</span>
+                <span className="text-[9px] sm:text-xs font-medium">{paper.upvoteCount || 0}</span>
               </button>
             </div>
           </div>
