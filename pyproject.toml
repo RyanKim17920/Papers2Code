@@ -5,7 +5,6 @@ description = "Add your description here"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
-    "bson>=0.5.10",
     "dateutils>=0.6.12",
     "dotenv>=0.9.9",
     "fastapi>=0.115.12",
