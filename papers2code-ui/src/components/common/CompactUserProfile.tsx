@@ -29,7 +29,7 @@ const CompactUserProfile: React.FC<CompactUserProfileProps> = ({ user, onLogout 
       if (onLogout) {
         onLogout();
       }
-      navigate('/');
+      navigate('/papers');
     } catch (error) {
       console.error('Logout failed:', error);
     }

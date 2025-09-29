@@ -45,10 +45,24 @@ class ActivityTrackingService:
             # Include user_id if provided (for logged-in users)
             if user_id:
                 activity_data["userId"] = user_id
-            
-            # Insert into paper_views collection
-            result = await self.paper_views_collection.insert_one(activity_data)
-            return result.inserted_id is not None
+                
+                # For logged-in users, use upsert to avoid duplicates
+                # Replace any existing view by the same user for the same paper
+                filter_criteria = {
+                    "userId": user_id,
+                    "paperId": paper_id
+                }
+                
+                result = await self.paper_views_collection.replace_one(
+                    filter_criteria,
+                    activity_data,
+                    upsert=True
+                )
+                return True
+            else:
+                # For anonymous users, still insert new records
+                result = await self.paper_views_collection.insert_one(activity_data)
+                return result.inserted_id is not None
             
         except Exception as e:
             print(f"Error tracking paper view: {e}")

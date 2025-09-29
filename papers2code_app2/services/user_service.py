@@ -63,8 +63,8 @@ class UserService:
         if upvoted_paper_ids:
             cursor = self.papers_collection.find({"_id": {"$in": list(upvoted_paper_ids)}})
             async for paper_doc in cursor:
-                # Only summary transformation for performance
-                transformed_paper_dict = await transform_paper_async(paper_doc, detail_level="summary")
+                # Pass requesting_user_id_str so that currentUserVote is correctly set
+                transformed_paper_dict = await transform_paper_async(paper_doc, requesting_user_id_str, detail_level="summary")
                 if transformed_paper_dict:
                     paper_response = PaperResponse(**transformed_paper_dict)
                     upvoted_papers_list.append(paper_response)
@@ -88,7 +88,7 @@ class UserService:
         if contributed_paper_ids:
             cursor = self.papers_collection.find({"_id": {"$in": list(contributed_paper_ids)}})
             async for paper_doc in cursor:
-                transformed_paper_dict = await transform_paper_async(paper_doc, detail_level="summary")
+                transformed_paper_dict = await transform_paper_async(paper_doc, requesting_user_id_str, detail_level="summary")
                 if transformed_paper_dict:
                     paper_response = PaperResponse(**transformed_paper_dict)
                     contributed_papers_list.append(paper_response)

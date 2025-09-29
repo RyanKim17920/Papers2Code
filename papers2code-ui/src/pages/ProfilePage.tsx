@@ -5,6 +5,7 @@ import { UserAvatar, LoadingSpinner } from '../common/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi } from '../common/services/api';
 import { Paper } from '../common/types/paper';
 import ModernPaperCard from '../components/paperList/ModernPaperCard';
+import { formatJoinedDate, formatLastSeen } from '../lib/dateUtils';
 
 type TabType = 'overview' | 'upvoted' | 'contributing';
 
@@ -302,10 +303,10 @@ const ProfilePage: React.FC = () => {
                 <div className="flex items-center gap-4 text-sm text-muted-foreground justify-center md:justify-start">
                   <div className="flex items-center gap-1">
                     <Calendar size={14} />
-                    <span>Joined 2 years ago</span>
+                    <span>{formatJoinedDate(userDetails.createdAt)}</span>
                   </div>
                   <span>•</span>
-                  <span>last seen in the past day</span>
+                  <span>{formatLastSeen(userDetails.lastLoginAt)}</span>
                 </div>
               </div>
               
