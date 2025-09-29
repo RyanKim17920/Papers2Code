@@ -1,34 +1,33 @@
 import React from 'react';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../ui/dialog';
+import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
 import { UserDisplayList } from './UserDisplayList';
 import type { PaperActionUsers } from '../../common/services/api';
 
-interface UpvotersModalProps {
-    isOpen: boolean;
-    onClose: () => void;
+interface UpvotersPopoverProps {
+    children: React.ReactNode; // trigger element
     actionUsers: PaperActionUsers | null;
     isLoading: boolean;
     error: string | null;
     upvoteCount: number;
 }
 
-export const UpvotersModal: React.FC<UpvotersModalProps> = ({
-    isOpen,
-    onClose,
+export const UpvotersPopover: React.FC<UpvotersPopoverProps> = ({
+    children,
     actionUsers,
     isLoading,
     error,
     upvoteCount
 }) => {
     return (
-        <Dialog open={isOpen} onOpenChange={onClose}>
-            <DialogContent className="max-w-md">
-                <DialogHeader>
-                    <DialogTitle>
+        <Popover>
+            <PopoverTrigger asChild>
+                {children}
+            </PopoverTrigger>
+            <PopoverContent className="max-w-sm" align="start">
+                <div className="space-y-3">
+                    <h4 className="font-semibold text-sm">
                         Upvotes ({upvoteCount})
-                    </DialogTitle>
-                </DialogHeader>
-                <div className="mt-4">
+                    </h4>
                     <UserDisplayList
                         title=""
                         users={actionUsers?.upvotes}
@@ -37,7 +36,7 @@ export const UpvotersModal: React.FC<UpvotersModalProps> = ({
                         emptyMessage="No upvotes yet."
                     />
                 </div>
-            </DialogContent>
-        </Dialog>
+            </PopoverContent>
+        </Popover>
     );
 };

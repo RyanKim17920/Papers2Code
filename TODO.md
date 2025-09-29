@@ -5,16 +5,28 @@
 
 1. Basic UI FIXES:
 * [X] Add border to search bar on top 
-* [ ] Add animation when hiding filters in papers --> extend the cards to fill the full width 
+* [X] Add animation when hiding filters in papers --> extend the cards to fill the full width 
 * [X] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter) 
 * [X] Cards should always have the text aligned/same height (papers that have two lines of authors are have the tags, date, etc. lower than other cards which makes spacing uneven)
 * [X] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
-* [ ] Make updates page collapsable or just smaller
+* [X] Make up to 3 cards in a row when filter is gone (already implemented - grid shows 1/2/2/3 columns on mobile/sm/lg/xl screens)
+* [X] Make updates page collapsable or just smaller (added collapsible functionality to SiteUpdates component)
     * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on from the admin side)
+        * **Blog System Ideas for Admin Updates:**
+          - Create `/api/admin/updates` endpoint for creating/editing/deleting updates
+          - Add rich text editor for update content (markdown support)
+          - Include categories/tags for updates (e.g., "Feature", "Bug Fix", "Announcement")
+          - Timestamp and author tracking for each update
+          - Simple approval workflow for updates before publishing
+          - Admin dashboard section for managing updates
+          - Support for media attachments (images, links)
+          - SEO-friendly slugs for individual update pages
+          - RSS feed for updates
+          - Email notification system for major updates
 * [ ] Increase information density of paper pages further
-* [ ] Improve the 404 Page not found to be styled exquisitely
+* [X] Improve the 404 Page not found to be styled exquisitely
 * [ ] Fix the view Likes popup of everyone that di so that it doesn't come from top left (should pop out from same location)
-* [ ] Remove all links to papersWithCode to it
+* [X] Remove all links to papersWithCode to it
 * [X] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
 * [ ] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
 

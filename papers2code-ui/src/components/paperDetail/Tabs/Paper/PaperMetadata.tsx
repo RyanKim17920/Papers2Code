@@ -1,10 +1,10 @@
-import React, { useState } from 'react';
+import React from 'react';
 import { Paper } from '../../../../common/types/paper';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
 import { Heart, Github, ExternalLink, Calendar, Users, FileText, Tag } from 'lucide-react';
-import { UpvotersModal } from '../../UpvotersModal';
+import { UpvotersPopover } from '../../UpvotersModal';
 import type { PaperActionUsers } from '../../../../common/services/api';
 import type { UserProfile } from '../../../../common/types/user';
 interface PaperMetadataProps {
@@ -26,8 +26,6 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
     isLoadingActionUsers, 
     actionUsersError 
 }) => {
-    const [showUpvotersModal, setShowUpvotersModal] = useState(false);
-
     return (
         <div className="space-y-6">
             {/* Header Section with Upvotes */}
@@ -74,15 +72,21 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
                     )}
                     
                     {paper.upvoteCount > 0 && (
-                        <Button
-                            variant="ghost"
-                            size="sm"
-                            onClick={() => setShowUpvotersModal(true)}
-                            className="text-muted-foreground hover:text-foreground"
+                        <UpvotersPopover
+                            actionUsers={actionUsers}
+                            isLoading={isLoadingActionUsers}
+                            error={actionUsersError}
+                            upvoteCount={paper.upvoteCount}
                         >
-                            <Users className="h-4 w-4 mr-1" />
-                            View
-                        </Button>
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                className="text-muted-foreground hover:text-foreground"
+                            >
+                                <Users className="h-4 w-4 mr-1" />
+                                View
+                            </Button>
+                        </UpvotersPopover>
                     )}
                 </div>
             </div>
@@ -138,26 +142,7 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
                         </a>
                     </Button>
                 )}
-                
-                {paper.pwcUrl && (
-                    <Button variant="outline" size="sm" asChild className="justify-start gap-2">
-                        <a href={paper.pwcUrl} target="_blank" rel="noopener noreferrer">
-                            <Github className="h-4 w-4" />
-                            PapersWithCode
-                        </a>
-                    </Button>
-                )}
             </div>
-
-            {/* Upvoters Modal */}
-            <UpvotersModal
-                isOpen={showUpvotersModal}
-                onClose={() => setShowUpvotersModal(false)}
-                actionUsers={actionUsers}
-                isLoading={isLoadingActionUsers}
-                error={actionUsersError}
-                upvoteCount={paper.upvoteCount}
-            />
         </div>
     );
 };
