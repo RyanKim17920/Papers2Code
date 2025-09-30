@@ -22,10 +22,10 @@
 * [X] logging out (sign out) goes directly to the papers if logged out from dashboard (in either case), otherwise just go to the page
 * [X] Make the "joined" date in the user profile accurate
 * [X] Make the "last seen" date in the user profile accurate
-* [X] Modify paper views to override any old views by the same userID to the same paper in order to not just spam data (no repeated paperId and userID essentially s)
+* [ ?? ] Modify paper views to override any old views by the same userID to the same paper in order to not just spam data (no repeated paperId and userID essentially s) --> It seems that the paper views don't even have the user Id saved to it... neeeds to be fixed.
 * [X] Thumbs up/loving papers in dashboard does not change backend, connect it properly
 * [X] Saved/Thumbs/Loved doesn't display any papers in dashboard (works in profile though, UNIFY if it's upvoted or saved, let's stick with upvoted first) but it does work in user profile
-* [X] In user profile, upvoted papers should already be highlighted for the thumbs up instead of being not fille
+* [ ] In user profile, upvoted papers should already be highlighted for the thumbs up instead of being not fille
 3. FUTURE CHANGES (mixed) [DO NOT IMPLEMENT RIGHT NOW]:
  * [ ] Search works for all cases
  * [ ] Improve tagging and tags

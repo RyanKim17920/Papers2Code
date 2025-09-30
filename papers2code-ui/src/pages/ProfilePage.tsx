@@ -5,7 +5,7 @@ import { UserAvatar, LoadingSpinner } from '../common/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi } from '../common/services/api';
 import { Paper } from '../common/types/paper';
 import ModernPaperCard from '../components/paperList/ModernPaperCard';
-import { formatJoinedDate, formatLastSeen } from '../lib/dateUtils';
+import { formatJoinedDate, formatLastSeen } from '@/lib/dateUtils';
 
 type TabType = 'overview' | 'upvoted' | 'contributing';
 
