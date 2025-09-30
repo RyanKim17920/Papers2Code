@@ -11,6 +11,7 @@
 * [X] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
 * [X] Make up to 3 cards in a row when filter is gone (already implemented - grid shows 1/2/2/3 columns on mobile/sm/lg/xl screens)
 * [X] Make updates page collapsable or just smaller (added collapsible functionality to SiteUpdates component)
+    * [ ] Needs to be collapsable like actually collapsable (the whole section disappears I guess, , papers can then be doubly columned)
     * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on from the admin side)
         * **Blog System Ideas for Admin Updates:**
           - Create `/api/admin/updates` endpoint for creating/editing/deleting updates
@@ -22,10 +23,14 @@
           - Support for media attachments (images, links)
           - SEO-friendly slugs for individual update pages
           - RSS feed for updates
-          - Email notification system for major updates
-* [ ] Increase information density of paper pages further
+          - Email notification system for major updates (Future)
+* [X] Increase information density of paper pages further
+* [ ] Still needs fixing on space above title in the paper Detail and the Progress
+* [ ] If authors is long enough, make it have a ... that can be expanded and re hidden. 
+* [ ] Increase information density of the paper page further
+* [ ] Clicking on the user profiles in the upvotes should go to their profile
 * [X] Improve the 404 Page not found to be styled exquisitely
-* [ ] Fix the view Likes popup of everyone that di so that it doesn't come from top left (should pop out from same location)
+* [ ] 404 Page should occur for any error including 500 errors, etc. (perhaps it should be a seperate title for each so it matches the error and the other information found such as: Error loading paper: Request failed with status code 500 )
 * [X] Remove all links to papersWithCode to it
 * [X] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
 * [ ] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
