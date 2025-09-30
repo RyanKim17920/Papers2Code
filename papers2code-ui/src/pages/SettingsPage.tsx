@@ -204,7 +204,7 @@ const SettingsPage: React.FC = () => {
   const handleLogout = async () => {
     await logoutUser();
     localStorage.removeItem('csrfToken');
-    navigate('/');
+    navigate('/papers');
     window.location.reload(); // Force reload to clear all state
   };
 

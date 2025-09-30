@@ -197,5 +197,54 @@ class DashboardService:
             logger.error(f"Error in get_recently_viewed_papers for user {user_id}: {e}", exc_info=True)
             raise
 
+    async def get_user_upvoted_papers(self, user_id: str) -> List[PaperResponse]:
+        """Get papers upvoted by the user."""
+        logger.info(f"Starting get_user_upvoted_papers for user_id: {user_id}")
+        try:
+            user_actions_coll = await get_user_actions_collection_async()
+            papers_coll = await get_papers_collection_async()
+            
+            user_obj_id = ObjectId(user_id)
+            
+            # Find all upvote actions by the user
+            upvote_actions_cursor = user_actions_coll.find({
+                "userId": user_obj_id,
+                "actionType": LoggedActionTypes.UPVOTE.value
+            }).sort("createdAt", -1).limit(50)  # Get most recent 50 upvotes
+            
+            upvote_actions = await upvote_actions_cursor.to_list(length=50)
+            logger.info(f"Found {len(upvote_actions)} upvote actions.")
+            
+            if not upvote_actions:
+                return []
+            
+            # Extract paper IDs
+            paper_ids = [action["paperId"] for action in upvote_actions]
+            
+            # Fetch paper details
+            summary_projection = {
+                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
+            }
+            
+            papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}}, summary_projection)
+            papers_list = await papers_cursor.to_list(length=len(paper_ids))
+            
+            # Create a map for ordering
+            papers_map = {p["_id"]: p for p in papers_list}
+            
+            # Order papers based on upvote recency
+            ordered_papers = [papers_map[pid] for pid in paper_ids if pid in papers_map]
+            
+            response = []
+            for paper_doc in ordered_papers:
+                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="summary")
+                response.append(PaperResponse(**transformed_paper))
+                
+            logger.info(f"Successfully retrieved {len(response)} upvoted papers.")
+            return response
+        except Exception as e:
+            logger.error(f"Error in get_user_upvoted_papers for user {user_id}: {e}", exc_info=True)
+            raise
+
 # Singleton instance
 dashboard_service = DashboardService()

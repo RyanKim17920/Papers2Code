@@ -12,6 +12,7 @@ import type { DashboardData } from '@/common/services/api';
 import { 
   fetchDashboardDataFromApi, 
   AuthenticationError,
+  voteOnPaperInApi,
 } from '@/common/services/api';
 import {
   checkCurrentUser,
@@ -57,24 +58,18 @@ const Dashboard: React.FC = () => {
 
   const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
     try {
-      // TODO: Implement actual API call for voting
-      console.log(`Voting ${voteType} on paper ${paperId}`);
+      // Call the actual API to vote on the paper
+      const updatedPaper = await voteOnPaperInApi(paperId, voteType);
       
-      // For now, we'll just update the local state optimistically
-      // In a real app, this would make an API call and then refresh the data
+      // Update the local state with the response from the API
       if (data) {
         const updatePaperVote = (papers: any[]) => 
           papers.map(paper => {
             if (paper.id === paperId) {
-              const currentVote = paper.currentUserVote;
-              const upvoteChange = voteType === 'up' 
-                ? (currentVote === 'up' ? 0 : 1)
-                : (currentVote === 'up' ? -1 : 0);
-              
               return {
                 ...paper,
-                currentUserVote: voteType === 'up' ? 'up' : null,
-                upvoteCount: Math.max(0, paper.upvoteCount + upvoteChange)
+                currentUserVote: updatedPaper.currentUserVote,
+                upvoteCount: updatedPaper.upvoteCount
               };
             }
             return paper;
@@ -112,7 +107,7 @@ const Dashboard: React.FC = () => {
     try {
       await logoutUser();
       setCurrentUser(null);
-      navigate('/');
+      navigate('/papers');
     } catch (logoutErr) {
       console.error('Logout failed:', logoutErr);
     }

@@ -37,10 +37,15 @@ async def get_dashboard_data(
         recently_viewed = await service.get_recently_viewed_papers(user_id)
         logger.info(f"Recently viewed papers fetched: {len(recently_viewed) if recently_viewed else 0} items")
 
+        logger.info("Fetching user upvoted papers...")
+        upvoted_papers = await service.get_user_upvoted_papers(user_id)
+        logger.info(f"User upvoted papers fetched: {len(upvoted_papers) if upvoted_papers else 0} items")
+
         response_data = {
             "trendingPapers": trending_papers,
             "myContributions": my_contributions,
             "recentlyViewed": recently_viewed,
+            "bookmarkedPapers": upvoted_papers,  # Using bookmarkedPapers to represent upvoted papers for now
         }
         logger.info(f"Dashboard data prepared for user {user_id}. Returning response.")
         
