@@ -19,6 +19,7 @@ import {
   logoutUser,
 } from '@/common/services/auth';
 import { cn } from '@/lib/utils';
+import ErrorPage from './ErrorPage';
 
 const Dashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -121,16 +122,14 @@ const Dashboard: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background p-6">
-        <div className="max-w-4xl mx-auto pt-20">
-          <Alert className="bg-card border-destructive/20">
-            <AlertCircle className="h-4 w-4 text-destructive" />
-            <AlertDescription className="text-destructive">
-              {error}
-            </AlertDescription>
-          </Alert>
-        </div>
-      </div>
+      <ErrorPage
+        title="Dashboard Error"
+        message={error}
+        showBackButton={false}
+        showHomeButton={true}
+        showBrowsePapersButton={true}
+        showRefreshButton={true}
+      />
     );
   }
 

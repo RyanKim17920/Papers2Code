@@ -1,5 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '../utils/logger';
+import ErrorPage from '../../pages/ErrorPage';
 import './ErrorBoundary.css';
 
 interface Props {
@@ -39,25 +40,17 @@ export class ErrorBoundary extends Component<Props, State> {
         return this.props.fallback;
       }
 
-      // Default fallback UI
+      // Default fallback UI using ErrorPage component
       return (
-        <div className="error-boundary">
-          <div className="error-content">
-            <h2>🚨 Something went wrong</h2>
-            <p>We're sorry! An unexpected error occurred.</p>
-            <details className="error-details">
-              <summary>Error details (click to expand)</summary>
-              <pre>{this.state.error?.message}</pre>
-              <pre>{this.state.error?.stack}</pre>
-            </details>
-            <button 
-              onClick={() => window.location.reload()}
-              className="button-primary"
-            >
-              Reload Page
-            </button>
-          </div>
-        </div>
+        <ErrorPage
+          title="Something went wrong"
+          message="We're sorry! An unexpected error occurred."
+          details={this.state.error?.message}
+          showBackButton={true}
+          showHomeButton={true}
+          showBrowsePapersButton={true}
+          showRefreshButton={true}
+        />
       );
     }
 
@@ -69,14 +62,14 @@ export class ErrorBoundary extends Component<Props, State> {
 export const PaperListErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
   <ErrorBoundary
     fallback={
-      <div className="error-state">
-        <div className="error-icon">📋</div>
-        <h3>Unable to load papers</h3>
-        <p>There was an error loading the papers list. Please try refreshing the page.</p>
-        <button onClick={() => window.location.reload()} className="button-secondary">
-          Refresh
-        </button>
-      </div>
+      <ErrorPage
+        title="Unable to load papers"
+        message="There was an error loading the papers list. Please try refreshing the page."
+        showBackButton={false}
+        showHomeButton={true}
+        showBrowsePapersButton={false}
+        showRefreshButton={true}
+      />
     }
   >
     {children}
@@ -86,19 +79,14 @@ export const PaperListErrorBoundary: React.FC<{ children: ReactNode }> = ({ chil
 export const PaperDetailErrorBoundary: React.FC<{ children: ReactNode }> = ({ children }) => (
   <ErrorBoundary
     fallback={
-      <div className="error-state">
-        <div className="error-icon">📄</div>
-        <h3>Unable to load paper details</h3>
-        <p>There was an error loading the paper information. Please try going back or refreshing.</p>
-        <div className="error-actions">
-          <button onClick={() => window.history.back()} className="button-secondary">
-            Go Back
-          </button>
-          <button onClick={() => window.location.reload()} className="button-primary">
-            Refresh
-          </button>
-        </div>
-      </div>
+      <ErrorPage
+        title="Unable to load paper details"
+        message="There was an error loading the paper information. Please try going back or refreshing."
+        showBackButton={true}
+        showHomeButton={true}
+        showBrowsePapersButton={true}
+        showRefreshButton={true}
+      />
     }
   >
     {children}

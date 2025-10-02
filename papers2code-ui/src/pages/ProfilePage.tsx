@@ -6,6 +6,7 @@ import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi } from '
 import { Paper } from '../common/types/paper';
 import ModernPaperCard from '../components/paperList/ModernPaperCard';
 import { formatJoinedDate, formatLastSeen } from '@/lib/dateUtils';
+import ErrorPage from './ErrorPage';
 
 type TabType = 'overview' | 'upvoted' | 'contributing';
 
@@ -88,35 +89,29 @@ const ProfilePage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4 p-8 bg-card border border-border rounded-lg shadow-sm max-w-md">
-          <h1 className="text-2xl font-bold text-foreground">Profile Not Found</h1>
-          <p className="text-muted-foreground">{error}</p>
-          <Link 
-            to="/papers" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            ← Back to Papers
-          </Link>
-        </div>
-      </div>
+      <ErrorPage
+        errorCode={error.toLowerCase().includes('not found') ? '404' : undefined}
+        title="Profile Not Found"
+        message={error}
+        showBackButton={true}
+        showHomeButton={true}
+        showBrowsePapersButton={true}
+        showRefreshButton={false}
+      />
     );
   }
 
   if (!profileData) {
     return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center space-y-4 p-8 bg-card border border-border rounded-lg shadow-sm max-w-md">
-          <h1 className="text-2xl font-bold text-foreground">Profile Not Found</h1>
-          <p className="text-muted-foreground">The user profile you're looking for doesn't exist.</p>
-          <Link 
-            to="/papers" 
-            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
-          >
-            ← Back to Papers
-          </Link>
-        </div>
-      </div>
+      <ErrorPage
+        errorCode="404"
+        title="Profile Not Found"
+        message="The user profile you're looking for doesn't exist."
+        showBackButton={true}
+        showHomeButton={true}
+        showBrowsePapersButton={true}
+        showRefreshButton={false}
+      />
     );
   }
 
