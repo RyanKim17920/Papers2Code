@@ -1,9 +1,9 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { Paper } from '../../../../common/types/paper';
 import { StatusBadge } from '@/components/common/StatusBadge';
 import { Button } from '../../../ui/button';
 import { Badge } from '../../../ui/badge';
-import { Heart, Github, ExternalLink, Calendar, Users, FileText, Tag } from 'lucide-react';
+import { Heart, ExternalLink, Calendar, Users, FileText, Tag, ChevronDown, ChevronUp } from 'lucide-react';
 import { UpvotersPopover } from '../../UpvotersModal';
 import type { PaperActionUsers } from '../../../../common/services/api';
 import type { UserProfile } from '../../../../common/types/user';
@@ -26,6 +26,13 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
     isLoadingActionUsers, 
     actionUsersError 
 }) => {
+    const [authorsExpanded, setAuthorsExpanded] = useState(false);
+    
+    // Determine if we should show the expand/collapse feature
+    const authors = paper.authors || [];
+    const MAX_AUTHORS_DISPLAYED = 5;
+    const shouldShowExpandButton = authors.length > MAX_AUTHORS_DISPLAYED;
+    const displayedAuthors = authorsExpanded ? authors : authors.slice(0, MAX_AUTHORS_DISPLAYED);
     return (
         <div className="space-y-6">
             {/* Header Section with Upvotes */}
@@ -95,9 +102,34 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
             <div className="space-y-3">
                 <div className="flex items-start gap-3">
                     <Users className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                    <div>
+                    <div className="flex-1">
                         <div className="text-sm font-medium text-muted-foreground">Authors</div>
-                        <div className="text-sm">{paper.authors?.join(', ') || 'N/A'}</div>
+                        <div className="text-sm">
+                            {displayedAuthors.length > 0 ? displayedAuthors.join(', ') : 'N/A'}
+                            {shouldShowExpandButton && !authorsExpanded && (
+                                <span className="text-muted-foreground">...</span>
+                            )}
+                        </div>
+                        {shouldShowExpandButton && (
+                            <Button
+                                variant="ghost"
+                                size="sm"
+                                onClick={() => setAuthorsExpanded(!authorsExpanded)}
+                                className="mt-1 h-auto py-1 px-2 text-xs text-muted-foreground hover:text-foreground"
+                            >
+                                {authorsExpanded ? (
+                                    <>
+                                        <ChevronUp className="h-3 w-3 mr-1" />
+                                        Show less
+                                    </>
+                                ) : (
+                                    <>
+                                        <ChevronDown className="h-3 w-3 mr-1" />
+                                        Show {authors.length - MAX_AUTHORS_DISPLAYED} more
+                                    </>
+                                )}
+                            </Button>
+                        )}
                     </div>
                 </div>
 
