@@ -4,9 +4,9 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
 import { StatusBadge } from '@/components/common/StatusBadge';
-import { Button } from '@/components/ui/button';
 import type { Paper } from '@/common/types/paper';
 import { getPaperDescription } from '@/common/utils/descriptionUtils';
+import { cn } from '@/lib/utils';
 
 interface ModernFeedTabsProps {
   trendingPapers: Paper[];
@@ -17,6 +17,7 @@ interface ModernFeedTabsProps {
   isLoading: boolean;
   onPaperClick: (paperId: string | number) => void;
   onVote?: (paperId: string, voteType: 'up' | 'none') => Promise<void>;
+  denseLayout?: boolean;
 }
 
 // Removed local status badge color mapping in favor of unified StatusBadge.
@@ -135,6 +136,7 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
   isLoading,
   onPaperClick,
   onVote,
+  denseLayout = false,
 }) => {
   const [activeTab, setActiveTab] = useState('following');
   const [votingStates, setVotingStates] = useState<Record<string, boolean>>({});
@@ -212,7 +214,13 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
         })}
       </div>
 
-      <div className="space-y-3">
+      <div
+        className={cn(
+          denseLayout
+            ? 'grid grid-cols-1 gap-3 md:grid-cols-2 md:gap-4 xl:grid-cols-3 xl:gap-5'
+            : 'space-y-3'
+        )}
+      >
         {(activeTabData?.papers || []).length === 0 ? (
           <div className="text-center py-12 border border-dashed border-border/50 rounded-lg bg-muted/20">
             <p className="text-sm text-muted-foreground">
@@ -226,7 +234,10 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
             return (
               <div
                 key={paper.id}
-                className="p-4 rounded-lg border border-border/50 bg-card/50 cursor-pointer transition-all duration-200 min-h-[160px] flex flex-col hover-raise"
+                className={cn(
+                  'p-4 rounded-lg border border-border/50 bg-card/50 cursor-pointer transition-all duration-200 min-h-[160px] flex flex-col hover-raise',
+                  denseLayout && 'h-full'
+                )}
               >
                 <div 
                   className="flex-1"

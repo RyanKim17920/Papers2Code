@@ -7,13 +7,24 @@ import { useNavigate } from 'react-router-dom';
 interface SiteUpdatesProps {
   updates?: UpdateItem[]; // optional preloaded
   showViewAllLink?: boolean;
+  collapsed?: boolean;
+  defaultCollapsed?: boolean;
+  onCollapsedChange?: (collapsed: boolean) => void;
 }
 
-export const SiteUpdates: React.FC<SiteUpdatesProps> = ({ updates, showViewAllLink = true }) => {
+export const SiteUpdates: React.FC<SiteUpdatesProps> = ({
+  updates,
+  showViewAllLink = true,
+  collapsed,
+  defaultCollapsed = false,
+  onCollapsedChange,
+}) => {
   const [items, setItems] = useState<UpdateItem[]>(updates || []);
   const [loading, setLoading] = useState<boolean>(!updates);
-  const [isCollapsed, setIsCollapsed] = useState(false);
+  const [internalCollapsed, setInternalCollapsed] = useState(defaultCollapsed);
   const navigate = useNavigate();
+  const isControlled = collapsed !== undefined;
+  const isCollapsed = isControlled ? !!collapsed : internalCollapsed;
 
   useEffect(() => {
     let mounted = true;
@@ -35,6 +46,20 @@ export const SiteUpdates: React.FC<SiteUpdatesProps> = ({ updates, showViewAllLi
     };
   }, [updates]);
 
+  useEffect(() => {
+    if (isControlled) {
+      setInternalCollapsed(!!collapsed);
+    }
+  }, [collapsed, isControlled]);
+
+  const handleToggleCollapse = () => {
+    const next = !isCollapsed;
+    if (!isControlled) {
+      setInternalCollapsed(next);
+    }
+    onCollapsedChange?.(next);
+  };
+
   return (
     <div className="mb-6">
       <div className="flex items-center justify-between mb-2">
@@ -42,7 +67,7 @@ export const SiteUpdates: React.FC<SiteUpdatesProps> = ({ updates, showViewAllLi
           <Megaphone className="w-4 h-4 text-primary" />
           <h3 className="text-sm font-medium text-foreground">Updates</h3>
           <button
-            onClick={() => setIsCollapsed(!isCollapsed)}
+            onClick={handleToggleCollapse}
             className="p-1 hover:bg-muted rounded-sm transition-colors"
             aria-label={isCollapsed ? "Expand updates" : "Collapse updates"}
           >

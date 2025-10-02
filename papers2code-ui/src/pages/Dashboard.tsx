@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { AlertCircle } from 'lucide-react';
+import { AlertCircle, Megaphone } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ModernUserProfile } from '@/components/dashboard/ModernUserProfile';
 import { ModernFeedTabs } from '@/components/dashboard/ModernFeedTabs';
@@ -18,12 +18,14 @@ import {
   checkCurrentUser,
   logoutUser,
 } from '@/common/services/auth';
+import { cn } from '@/lib/utils';
 
 const Dashboard: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const [isUpdatesCollapsed, setIsUpdatesCollapsed] = useState(false);
 
   const navigate = useNavigate();
 
@@ -159,10 +161,15 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex">
+        <div className="flex-1 flex relative">
           {/* Center - Feed */}
-  <div className="flex-1 max-w-3xl">
-    <div className="pt-3 pb-6 px-4">
+          <div
+            className={cn(
+              'flex-1 transition-all duration-300',
+              isUpdatesCollapsed ? 'max-w-5xl xl:max-w-6xl 2xl:max-w-7xl' : 'max-w-3xl'
+            )}
+          >
+            <div className="pt-3 pb-6 px-4 lg:px-6">
               <ModernFeedTabs
                 trendingPapers={data?.trendingPapers || []}
                 recentPapers={data?.recentlyViewed || []}
@@ -172,16 +179,32 @@ const Dashboard: React.FC = () => {
                 isLoading={false}
                 onPaperClick={handleNavigateToPaper}
                 onVote={handleVote}
+                denseLayout={isUpdatesCollapsed}
               />
             </div>
           </div>
 
-      {/* Right Sidebar - Updates / News */}
-          <div className="w-80 min-h-screen column-right border-l border-border/60">
-            <div className="pt-3 pb-6 px-4">
-        <SiteUpdates />
+          {/* Right Sidebar - Updates / News */}
+          {!isUpdatesCollapsed ? (
+            <div className="w-80 min-h-screen column-right border-l border-border/60">
+              <div className="pt-3 pb-6 px-4">
+                <SiteUpdates
+                  collapsed={isUpdatesCollapsed}
+                  onCollapsedChange={setIsUpdatesCollapsed}
+                />
+              </div>
             </div>
-          </div>
+          ) : (
+            <button
+              type="button"
+              onClick={() => setIsUpdatesCollapsed(false)}
+              className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2 rounded-md shadow-sm transition-colors absolute top-4 right-4"
+              aria-label="Show updates panel"
+            >
+              <Megaphone className="w-4 h-4" />
+              Show updates
+            </button>
+          )}
         </div>
       </div>
     </div>
