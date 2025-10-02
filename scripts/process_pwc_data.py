@@ -157,14 +157,14 @@ def save_lazyframe_to_mongodb_batched(
     db = client[db_name]
     collection = db[collection_name]
 
-    logging.info("Ensuring index on 'pwc_url' exists (or create it manually)...")
+    logging.info("Ensuring index on 'pwcUrl' exists (or create it manually)...")
     # It's good practice to ensure the index exists before a large batch job
     # Do this once outside the script or uncomment below if needed:
     try:
-        collection.create_index([("pwc_url", 1)], unique=True, background=True)
-        logging.info("Index on 'pwc_url' ensured.")
+        collection.create_index([("pwcUrl", 1)], unique=True, background=True)
+        logging.info("Index on 'pwcUrl' ensured.")
     except Exception as e:
-        logging.warning("Could not ensure index on 'pwc_url': %s. Performance may suffer.", e)
+        logging.warning("Could not ensure index on 'pwcUrl': %s. Performance may suffer.", e)
 
 
     # Collect the LazyFrame using streaming, WITHOUT .unique()
@@ -207,17 +207,23 @@ def save_lazyframe_to_mongodb_batched(
         start_convert = time.time()
         ops_to_add = []
         try:
+            def snake_to_camel(s: str) -> str:
+                parts = s.split('_')
+                return parts[0] + ''.join(p.title() for p in parts[1:]) if parts else s
+
             for record in batch_df.to_dicts():
-                # Basic validation - adjust if needed
-                if record.get("pwc_url"): # Check if key exists and is not None/empty
-                     ops_to_add.append(
-                        ReplaceOne({"pwc_url": record["pwc_url"]}, record, upsert=True)
+                # Transform keys from snake_case to camelCase for MongoDB
+                transformed = {snake_to_camel(k): v for k, v in record.items()}
+                # Basic validation - ensure we have pwcUrl
+                if transformed.get("pwcUrl"):
+                    ops_to_add.append(
+                        ReplaceOne({"pwcUrl": transformed["pwcUrl"]}, transformed, upsert=True)
                     )
                 else:
-                     logging.warning("Skipping record due to missing or invalid 'pwc_url': %s", record.get('id', 'N/A')) # Log identifier if available
+                    logging.warning("Skipping record due to missing or invalid 'pwcUrl': %s", record.get('id', 'N/A'))
         except Exception as e:
-             logging.error("Error during Polars batch %d to_dicts/op creation: %s", polars_batch_num, e)
-             continue # Skip this Polars batch if conversion fails
+            logging.error("Error during Polars batch %d to_dicts/op creation: %s", polars_batch_num, e)
+            continue # Skip this Polars batch if conversion fails
 
         mongo_ops_buffer.extend(ops_to_add)
         convert_time = time.time() - start_convert
@@ -290,20 +296,20 @@ def find_papers_without_code_polars_lazy(
     if not papers_with_abstracts_data:
         logging.warning("No abstracts data provided. Returning an empty LazyFrame.")
         schema = {
-            # Keep pwc_url for now (deprecated but still used as unique key in DB)
-            "pwc_url": pl.Utf8,
+            # Use camelCase for DB fields
+            "pwcUrl": pl.Utf8,
             "title": pl.Utf8,
             "abstract": pl.Utf8,
             "authors": pl.List(pl.Utf8),
-            "url_abs": pl.Utf8,
+            "urlAbs": pl.Utf8,
             # Deprecated fields removed: url_pdf, venue
-            "arxiv_id": pl.Utf8,
-            "publication_date": pl.Datetime,
+            "arxivId": pl.Utf8,
+            "publicationDate": pl.Datetime,
             "tasks": pl.List(pl.Utf8),
             "status": pl.Utf8,
-            "is_implementable": pl.Boolean,
-            # New optional GitHub URL field (store snake_case; backend exposes as camelCase via schema)
-            "url_github": pl.Utf8,
+            "isImplementable": pl.Boolean,
+            # New optional GitHub URL field
+            "urlGithub": pl.Utf8,
         }
         return pl.DataFrame(schema=schema).lazy()
 
@@ -313,16 +319,16 @@ def find_papers_without_code_polars_lazy(
         .filter(pl.col("authors").is_not_null() & pl.col("authors").list.len() > 0) # Authors must exist and list not empty
         .select([
             pl.col("paper_url"),
-            pl.col("paper_url").alias("pwc_url"),
-            pl.col("title").fill_null("").cast(pl.Utf8),
-            pl.col("abstract").fill_null("").cast(pl.Utf8),
-            pl.col("authors").cast(pl.List(pl.Utf8), strict=False).fill_null([]),
-            pl.col("url_abs").fill_null("").cast(pl.Utf8),
-            pl.col("arxiv_id").fill_null("").cast(pl.Utf8),
-            pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d", strict=False, exact=True).alias("publication_date"),
-            pl.col("tasks").cast(pl.List(pl.Utf8), strict=False).fill_null([])
+            pl.col("paper_url").alias("pwcUrl"),
+            pl.col("title").fill_null("").cast(pl.Utf8).alias("title"),
+            pl.col("abstract").fill_null("").cast(pl.Utf8).alias("abstract"),
+            pl.col("authors").cast(pl.List(pl.Utf8), strict=False).fill_null([]).alias("authors"),
+            pl.col("url_abs").fill_null("").cast(pl.Utf8).alias("urlAbs"),
+            pl.col("arxiv_id").fill_null("").cast(pl.Utf8).alias("arxivId"),
+            pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d", strict=False, exact=True).alias("publicationDate"),
+            pl.col("tasks").cast(pl.List(pl.Utf8), strict=False).fill_null([]).alias("tasks")
         ])
-        .filter(pl.col("publication_date").is_not_null())
+        .filter(pl.col("publicationDate").is_not_null())
     )
 
     # Build links LazyFrame to attach a single GitHub URL per paper (top 1 by first occurrence)
@@ -342,20 +348,20 @@ def find_papers_without_code_polars_lazy(
                 pl.LazyFrame(mapped_links)
                 .filter(pl.col("paper_url").is_not_null() & pl.col("repo_url").is_not_null())
                 .group_by("paper_url")
-                .agg(pl.col("repo_url").first().alias("url_github"))
+                .agg(pl.col("repo_url").first().alias("urlGithub"))
             )
             papers_lf = abstracts_lf.join(links_lf, on="paper_url", how="left")
         else:
-            papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("url_github")])
+            papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("urlGithub")])
     else:
-        papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("url_github")])
+        papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("urlGithub")])
 
     return (
         papers_lf
         .with_columns([
             pl.lit("Needs Code").alias("status"),
-            pl.lit(True).alias("is_implementable"),
-            pl.when(pl.col("url_github").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("has_code")
+            pl.lit(True).alias("isImplementable"),
+            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("hasCode")
         ])
         .drop("paper_url")
     )
@@ -406,21 +412,21 @@ def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
             ).otherwise(pl.lit([])).alias("authors"),
             pl.col("url_abs").fill_null("").cast(pl.Utf8),
             pl.col("arxiv_id").fill_null("").cast(pl.Utf8),
-            pl.col("date").cast(pl.Datetime, strict=False).alias("publication_date"),
+            pl.col("date").cast(pl.Datetime, strict=False).alias("publicationDate"),
             pl.when(pl.col("tasks").is_not_null()).then(
                 pl.col("tasks").cast(pl.List(pl.Utf8), strict=False)
             ).otherwise(pl.lit([])).alias("tasks"),
         ])
-        .filter(pl.col("publication_date").is_not_null())
+        .filter(pl.col("publicationDate").is_not_null())
         .select([
             pl.col("paper_url"),
-            pl.col("paper_url").alias("pwc_url"),
+            pl.col("paper_url").alias("pwcUrl"),
             pl.col("title"),
             pl.col("abstract"),
             pl.col("authors"),
-            pl.col("url_abs"),
-            pl.col("arxiv_id"),
-            pl.col("publication_date"),
+            pl.col("url_abs").alias("urlAbs"),
+            pl.col("arxiv_id").alias("arxivId"),
+            pl.col("publicationDate"),
             pl.col("tasks"),
         ])
     )
@@ -437,14 +443,14 @@ def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
                     .select([pl.col("paper_url"), pl.col(repo_col).alias("repo_url")])
                     .filter(pl.col("repo_url").is_not_null())
                     .group_by("paper_url")
-                    .agg(pl.col("repo_url").first().alias("url_github"))
+                    .agg(pl.col("repo_url").first().alias("urlGithub"))
                 )
                 abstracts_lf = abstracts_lf.join(links_clean, on="paper_url", how="left")
             else:
-                abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("url_github"))
+                abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("urlGithub"))
         except Exception as e:
             logging.warning("Links join failed: %s", e)
-            abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("url_github"))
+            abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("urlGithub"))
     else:
         abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("url_github"))
 
@@ -452,8 +458,8 @@ def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
         abstracts_lf
         .with_columns([
             pl.lit("Needs Code").alias("status"),
-            pl.lit(True).alias("is_implementable"),
-            pl.when(pl.col("url_github").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("has_code"),
+            pl.lit(True).alias("isImplementable"),
+            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("hasCode"),
         ])
         .drop("paper_url")
     )

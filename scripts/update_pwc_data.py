@@ -12,6 +12,7 @@ from typing import List, Dict, Any, Optional, Set
 from pymongo import MongoClient, UpdateOne, InsertOne  # <-- Import UpdateOne, InsertOne
 from pymongo.errors import BulkWriteError
 from dotenv import load_dotenv
+from scripts.utils_dbkeys import get_pwc_url, snake_to_camel
 import time # For timing operations
 from tqdm import tqdm
 from datetime import datetime, timezone # <-- Import datetime
@@ -138,11 +139,13 @@ def insert_new_papers_batched(
         ops_to_add = []
         try:
             for record in batch_df.to_dicts():
-                if record.get("pwc_url"): # Basic validation
+                # Normalize incoming record keys to camelCase for storage
+                record = snake_to_camel(record)
+                if get_pwc_url(record): # Basic validation
                     # Use InsertOne for new documents
                     ops_to_add.append(InsertOne(record))
                 else:
-                    logging.warning("Skipping new record due to missing 'pwc_url': %s", record.get('title', 'N/A'))
+                    logging.warning("Skipping new record due to missing 'pwcUrl': %s", record.get('title', 'N/A'))
         except Exception as e:
              logging.error(f"Error converting new papers batch to dicts: {e}")
              continue # Skip this batch
@@ -199,10 +202,16 @@ def main_update():
     papers_collection = db[COLLECTION_NAME]
     removed_papers_collection = db[REMOVED_COLLECTION_NAME] # <-- Get removed collection
 
-    # Ensure essential indexes exist (especially pwc_url)
+    # Ensure essential indexes exist (prefer camelCase, keep compatibility)
     try:
-        papers_collection.create_index([("pwc_url", 1)], unique=True, background=True)
-        logging.info("Index on 'pwc_url' ensured.")
+        papers_collection.create_index([("pwcUrl", 1)], unique=True, background=True)
+        logging.info("Index on 'pwcUrl' ensured.")
+        try:
+            papers_collection.create_index([("pwc_url", 1)], background=True)
+            logging.info("Compatibility index on 'pwc_url' ensured.")
+        except Exception:
+            logging.debug("Skipping creation of compatibility index on 'pwc_url'.")
+
         # Ensure index on removed collection's URL field
         removed_papers_collection.create_index([("original_pwc_url", 1)], background=True)
         logging.info("Index on 'original_pwc_url' in removed_papers ensured.")
@@ -238,13 +247,10 @@ def main_update():
     papers_with_code_urls: Set[str] = {link['paper_url'] for link in links_data if link.get('paper_url')}
     logging.info(f"Found {len(papers_with_code_urls)} papers with code links in the latest data.")
 
-    # Find papers currently marked as needing code, excluding those already removed
+    # Find papers currently marked as needing code. We'll fetch both key names for compatibility
     papers_needing_code_in_db_cursor = papers_collection.find(
-        {
-            "status": "Needs Code",
-            "pwc_url": {"$nin": list(removed_paper_urls)} # <-- Exclude removed URLs
-        },
-        {"_id": 1, "pwc_url": 1}  # Only fetch necessary fields
+        {"status": "Needs Code"},
+        {"_id": 1, "pwc_url": 1, "pwcUrl": 1}
     )
 
     update_operations = []
@@ -254,9 +260,11 @@ def main_update():
 
     for paper in papers_needing_code_in_db_cursor:
         check_count += 1
-        paper_url = paper.get('pwc_url')
-        # Double check it's not in removed set (already filtered in query, but belt-and-suspenders)
-        if paper_url and paper_url not in removed_paper_urls and paper_url in papers_with_code_urls:
+        paper_url = get_pwc_url(paper)
+        # Skip missing urls or ones in removed list
+        if not paper_url or paper_url in removed_paper_urls:
+            continue
+        if paper_url in papers_with_code_urls:
             logging.debug(f"Paper {paper_url} now has code. Preparing update.")
             ids_to_update.append(paper['_id'])
             update_op = UpdateOne(
@@ -282,8 +290,12 @@ def main_update():
 
     # Get all pwc_urls already in the main database for efficient filtering
     start_existing_check = time.time()
-    existing_db_urls_cursor = papers_collection.find({}, {"pwc_url": 1, "_id": 0})
-    existing_db_urls: Set[str] = {doc['pwc_url'] for doc in existing_db_urls_cursor if doc.get('pwc_url')}
+    existing_db_urls_cursor = papers_collection.find({}, {"pwc_url": 1, "pwcUrl": 1, "_id": 0})
+    existing_db_urls: Set[str] = set()
+    for doc in existing_db_urls_cursor:
+        url = get_pwc_url(doc)
+        if url:
+            existing_db_urls.add(url)
     logging.info(f"Found {len(existing_db_urls)} existing paper URLs in main DB in {time.time()-start_existing_check:.2f}s.")
 
     # Use Polars to find new papers without code
@@ -305,24 +317,24 @@ def main_update():
             .filter(~pl.col("paper_url").is_in(removed_paper_urls)) # <-- Exclude removed URLs
             # --- Apply transformations similar to find_papers_without_code_polars_lazy ---
             .select([
-                pl.col("paper_url").alias("pwc_url"), # Keep pwc_url
-                pl.col("title").fill_null("").cast(pl.Utf8),
-                pl.col("abstract").fill_null("").cast(pl.Utf8),
-                pl.col("authors").cast(pl.List(pl.Utf8), strict=False).fill_null([]),
-                pl.col("url_abs").fill_null("").cast(pl.Utf8),
-                pl.col("url_pdf").fill_null("").cast(pl.Utf8),
-                pl.col("arxiv_id").fill_null("").cast(pl.Utf8),
-                pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d", strict=False, exact=True).alias("publication_date"),
-                pl.col("proceeding").alias("venue").fill_null("").cast(pl.Utf8),
-                pl.col("tasks").cast(pl.List(pl.Utf8), strict=False).fill_null([]),
-                # Add default fields for new papers without code
+                pl.col("paper_url").alias("pwcUrl"),
+                pl.col("title").fill_null("").cast(pl.Utf8).alias("title"),
+                pl.col("abstract").fill_null("").cast(pl.Utf8).alias("abstract"),
+                pl.col("authors").cast(pl.List(pl.Utf8), strict=False).fill_null([]).alias("authors"),
+                pl.col("url_abs").fill_null("").cast(pl.Utf8).alias("urlAbs"),
+                pl.col("url_pdf").fill_null("").cast(pl.Utf8).alias("urlPdf"),
+                pl.col("arxiv_id").fill_null("").cast(pl.Utf8).alias("arxivId"),
+                pl.col("date").str.strptime(pl.Datetime, "%Y-%m-%d", strict=False, exact=True).alias("publicationDate"),
+                pl.col("proceeding").alias("venue").fill_null("").cast(pl.Utf8).alias("venue"),
+                pl.col("tasks").cast(pl.List(pl.Utf8), strict=False).fill_null([]).alias("tasks"),
+                # Add default fields for new papers without code (camelCase)
                 pl.lit("Needs Code").alias("status"),
-                pl.lit(True).alias("is_implementable"),
+                pl.lit(True).alias("isImplementable"),
                 pl.lit(0).cast(pl.Int64).alias("upvoteCount"), # Assuming new papers start with 0 votes
                 pl.lit(datetime.now(timezone.utc)).alias("createdAt"), # Add creation timestamp
                 pl.lit(datetime.now(timezone.utc)).alias("lastUpdated")
             ])
-            .filter(pl.col("publication_date").is_not_null())
+            .filter(pl.col("publicationDate").is_not_null())
         )
 
         # Insert the newly identified papers
