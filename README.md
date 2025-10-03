@@ -29,9 +29,10 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment instructio
 ```
 
 **🔒 Security**: 
-- Review [SECURITY.md](SECURITY.md) before deploying
-- Read [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) to understand how public code stays secure
-- Copy [.env.example](.env.example) to `.env` and configure your secrets
+- **Quick Start**: [SECURITY_QUICK_START.md](SECURITY_QUICK_START.md) - Fast setup guide
+- **Full Guide**: [SECURITY.md](SECURITY.md) - Complete security documentation
+- **Open Source**: [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) - How public code stays secure
+- **Configuration**: [.env.example](.env.example) - All environment variables explained
 
 ## 📁 Project Structure
 
