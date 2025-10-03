@@ -60,7 +60,7 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
             </>
           ) : (
             <div className="flex justify-center mb-4">
-              <AlertCircle className="w-24 h-24 text-destructive animate-pulse" />
+              <AlertCircle className="w-32 h-32 text-destructive animate-pulse" />
             </div>
           )}
         </div>
@@ -85,37 +85,37 @@ const ErrorPage: React.FC<ErrorPageProps> = ({
           {showBackButton && (
             <button
               onClick={() => navigate(-1)}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors duration-200 font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors duration-200 font-medium"
             >
-              <ArrowLeft className="w-4 h-4" />
-              Go Back
+              <ArrowLeft className="w-5 h-5" />
+              Back
             </button>
           )}
           {showRefreshButton && (
             <button
               onClick={handleRefresh}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors duration-200 font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-muted hover:bg-muted/80 text-foreground rounded-lg transition-colors duration-200 font-medium"
             >
-              <RefreshCw className="w-4 h-4" />
+              <RefreshCw className="w-5 h-5" />
               Refresh
             </button>
           )}
           {showHomeButton && (
             <button
               onClick={() => navigate('/')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors duration-200 font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-primary hover:bg-primary/90 text-primary-foreground rounded-lg transition-colors duration-200 font-medium"
             >
-              <Home className="w-4 h-4" />
-              Return Home
+              <Home className="w-5 h-5" />
+              Home
             </button>
           )}
           {showBrowsePapersButton && (
             <button
               onClick={() => navigate('/papers')}
-              className="inline-flex items-center gap-2 px-6 py-3 bg-accent hover:bg-accent/80 text-accent-foreground rounded-lg transition-colors duration-200 font-medium"
+              className="inline-flex items-center gap-2 px-4 py-2 bg-accent hover:bg-accent/80 text-accent-foreground rounded-lg transition-colors duration-200 font-medium"
             >
-              <Search className="w-4 h-4" />
-              Browse Papers
+              <Search className="w-5 h-5" />
+              Papers
             </button>
           )}
         </div>
