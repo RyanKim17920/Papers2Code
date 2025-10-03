@@ -9,6 +9,7 @@ import NewContributionButton from '../components/common/NewContributionButton';
 import FeedTabs from '../components/dashboard/FeedTabs';
 import SidebarTabs from '../components/dashboard/SidebarTabs';
 import type { UserProfile } from '../common/types/user';
+import ErrorPage from './ErrorPage';
 import './DashboardPage.css';
 
 const getStatusColor = (status: string) => {
@@ -108,13 +109,14 @@ const DashboardPage: React.FC = () => {
 
   if (error) {
     return (
-      <div className="dashboard-container">
-        <div className="error-state">
-          <div className="error-icon">⚠️</div>
-          <h2>Something went wrong</h2>
-          <p className="error-message">{error}</p>
-        </div>
-      </div>
+      <ErrorPage
+        title="Dashboard Error"
+        message={error}
+        showBackButton={false}
+        showHomeButton={true}
+        showBrowsePapersButton={true}
+        showRefreshButton={true}
+      />
     );
   }
 

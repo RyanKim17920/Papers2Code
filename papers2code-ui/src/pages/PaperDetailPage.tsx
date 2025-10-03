@@ -23,6 +23,7 @@ import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/Implem
 import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
 import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
 import ImplementationProgressCard from '../components/paperDetail/ImplementationProgressCard';
+import ErrorPage from './ErrorPage';
 
 interface PaperDetailPageProps {
     currentUser: UserProfile | null;
@@ -115,11 +116,30 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     }
  
     if (error) {
-        return <div className="error-message">Error loading paper: {error}</div>;
+        return (
+            <ErrorPage
+                title="Error loading paper"
+                message={error}
+                showBackButton={true}
+                showHomeButton={true}
+                showBrowsePapersButton={true}
+                showRefreshButton={true}
+            />
+        );
     }
  
     if (!paper) {
-        return <div className="error-message">Paper not found or failed to load.</div>;
+        return (
+            <ErrorPage
+                errorCode="404"
+                title="Paper not found"
+                message="The paper you're looking for doesn't exist or failed to load."
+                showBackButton={true}
+                showHomeButton={true}
+                showBrowsePapersButton={true}
+                showRefreshButton={false}
+            />
+        );
     }
 
     const isCurrentUserContributor = paper.implementationProgress?.contributors?.some(
