@@ -28,11 +28,13 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment instructio
 ./scripts/deploy_render.sh
 ```
 
-**🔒 Security**: 
-- **Quick Start**: [SECURITY_QUICK_START.md](SECURITY_QUICK_START.md) - Fast setup guide
-- **Full Guide**: [SECURITY.md](SECURITY.md) - Complete security documentation
-- **Open Source**: [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) - How public code stays secure
-- **Configuration**: [.env.example](.env.example) - All environment variables explained
+**🔒 Security Documentation**: 
+- **🚀 Quick Start**: [SECURITY_QUICK_START.md](SECURITY_QUICK_START.md) - Fast setup guide
+- **📖 Full Guide**: [SECURITY.md](SECURITY.md) - Complete security documentation
+- **🔓 Open Source**: [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) - How public code stays secure
+- **🏗️ Architecture**: [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md) - Technical security design
+- **⚙️ Configuration**: [.env.example](.env.example) - All environment variables explained
+- **🛡️ Policy**: [.github/SECURITY_POLICY.md](.github/SECURITY_POLICY.md) - Vulnerability reporting
 
 ## 📁 Project Structure
 
