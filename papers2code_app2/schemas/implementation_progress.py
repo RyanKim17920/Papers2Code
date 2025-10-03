@@ -1,4 +1,4 @@
-from typing import List, Optional
+from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 from enum import Enum
 from pydantic import BaseModel, Field
@@ -7,43 +7,92 @@ from .db_models import PyObjectId, _MongoModel
 from .shared import camel_case_config
 
 # -----------------------------------------------------------------------------
-# Simplified Enums
+# Update Event Types
 # -----------------------------------------------------------------------------
-class EmailStatus(str, Enum):  
-    NOT_SENT = "Not Sent"
-    SENT = "Sent"
+class UpdateEventType(str, Enum):
+    """Types of events that can occur in implementation progress timeline."""
+    INITIATED = "initiated"
+    CONTRIBUTOR_JOINED = "contributor_joined"
+    EMAIL_SENT = "email_sent"
+    STATUS_CHANGED = "status_changed"
+    GITHUB_REPO_LINKED = "github_repo_linked"
+    GITHUB_REPO_UPDATED = "github_repo_updated"
+
+# -----------------------------------------------------------------------------
+# Status Enums (for status_changed events)
+# -----------------------------------------------------------------------------
+class ProgressStatus(str, Enum):
+    """Status values for implementation progress."""
+    STARTED = "Started"
     RESPONSE_RECEIVED = "Response Received"
     CODE_UPLOADED = "Code Uploaded"
     CODE_NEEDS_REFACTORING = "Code Needs Refactoring"
     REFACTORING_IN_PROGRESS = "Refactoring in Progress"
     REFUSED_TO_UPLOAD = "Refused to Upload"
-    NO_RESPONSE = "No Response" 
+    NO_RESPONSE = "No Response"
 
 # -----------------------------------------------------------------------------
-# Simplified Implementation Progress
+# Update Event Schema
+# -----------------------------------------------------------------------------
+class ProgressUpdateEvent(BaseModel):
+    """Individual update event in the implementation progress timeline."""
+    event_type: UpdateEventType
+    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    user_id: Optional[PyObjectId] = None  # User who triggered this event
+    details: Optional[Dict[str, Any]] = Field(default_factory=dict)  # Event-specific data
+    
+    model_config = camel_case_config
+
+# -----------------------------------------------------------------------------
+# Implementation Progress Schema
 # -----------------------------------------------------------------------------
 class ImplementationProgress(_MongoModel):
-    # Note: _id will be the paper_id (ObjectId)
+    """
+    Implementation progress tracking with timeline-based updates.
+    Note: _id will be the paper_id (ObjectId)
+    """
+    # Core fields
     initiated_by: PyObjectId
     contributors: List[PyObjectId] = Field(default_factory=list)
-    email_status: EmailStatus = Field(default=EmailStatus.NOT_SENT)
-    email_sent_at: Optional[datetime] = None  # When the email was sent (for cooldown)
+    status: ProgressStatus = Field(default=ProgressStatus.STARTED)
+    latest_update: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     github_repo_id: Optional[str] = None  # GitHub repository ID/name
+    
+    # Timeline of all updates
+    updates: List[ProgressUpdateEvent] = Field(default_factory=list)
+    
+    # Timestamps
     created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
     updated_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
     @classmethod
     def new(cls, paper_id: PyObjectId, user_id: PyObjectId) -> 'ImplementationProgress':
+        """Create a new implementation progress with initial event."""
+        now = datetime.now(timezone.utc)
+        initial_event = ProgressUpdateEvent(
+            event_type=UpdateEventType.INITIATED,
+            timestamp=now,
+            user_id=user_id,
+            details={}
+        )
         return cls(
-            _id=paper_id,  # Use _id directly instead of id
+            _id=paper_id,
             initiated_by=user_id,
             contributors=[user_id],
-            email_status=EmailStatus.NOT_SENT,
+            status=ProgressStatus.STARTED,
+            latest_update=now,
+            updates=[initial_event],
+            created_at=now,
+            updated_at=now,
         )
     
     model_config = camel_case_config
 
-class ProgressUpdate(BaseModel):  
-    email_status: Optional[EmailStatus] = None
+# -----------------------------------------------------------------------------
+# Update Request Schema
+# -----------------------------------------------------------------------------
+class ProgressUpdateRequest(BaseModel):
+    """Request schema for updating implementation progress."""
+    status: Optional[ProgressStatus] = None
     github_repo_id: Optional[str] = None
     model_config = camel_case_config

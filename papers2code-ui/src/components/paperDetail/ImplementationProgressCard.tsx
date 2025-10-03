@@ -58,9 +58,9 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
                         <span className="text-muted-foreground">Status</span>
                         <Badge 
                             variant="outline" 
-                            className={`text-xs h-4 px-1 ${getStatusColor(progress.emailStatus)}`}
+                            className={`text-xs h-4 px-1 ${getStatusColor(progress.status)}`}
                         >
-                            {progress.emailStatus || 'Not Sent'}
+                            {progress.status || 'Started'}
                         </Badge>
                     </div>
                     

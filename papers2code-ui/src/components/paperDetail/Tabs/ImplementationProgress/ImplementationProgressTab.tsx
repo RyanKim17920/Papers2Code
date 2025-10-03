@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ImplementationProgress, EmailStatus } from '../../../../common/types/implementation';
+import { ImplementationProgress, ProgressStatus, UpdateEventType } from '../../../../common/types/implementation';
 import type { UserProfile } from '../../../../common/types/user';
 import { EmailStatusManager } from './EmailStatusManager';
 import { GitHubRepoManager } from './GitHubRepoManager';
@@ -32,12 +32,15 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     const isContributor = isLoggedIn && progress.contributors.includes(currentUser!.id);
     const isInitiator = isLoggedIn && progress.initiatedBy === currentUser!.id;
     
+    // Check if email has been sent by looking at updates
+    const hasEmailBeenSent = progress.updates.some(u => u.eventType === UpdateEventType.EMAIL_SENT);
+    
     const canModifyPostSentStatus = isLoggedIn && (
         isInitiator || 
-        (progress.emailStatus !== EmailStatus.NOT_SENT && isContributor)
+        (hasEmailBeenSent && isContributor)
     );
 
-    const canMarkAsSent = isLoggedIn && isContributor && progress.emailStatus === EmailStatus.NOT_SENT;
+    const canMarkAsSent = isLoggedIn && isContributor && !hasEmailBeenSent;
     const canModifyRepo = isLoggedIn && isInitiator;
 
     // State for managing updating status and errors
@@ -52,10 +55,12 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
  
     // Auto-update to "No Response" when cooldown expires
     useEffect(() => {
+        const emailSentEvent = progress.updates.find(u => u.eventType === UpdateEventType.EMAIL_SENT);
+        
         const hasReachedNoResponseTime = (): boolean => {
-            if (!progress.emailSentAt) return false;
+            if (!emailSentEvent) return false;
             
-            const sentDate = new Date(progress.emailSentAt);
+            const sentDate = new Date(emailSentEvent.timestamp);
             const now = new Date();
             const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
             
@@ -63,14 +68,14 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         };
 
         const checkAutoNoResponse = async () => {
-            if (progress.emailStatus === EmailStatus.SENT && 
-                progress.emailSentAt && 
+            if (progress.status === ProgressStatus.STARTED && 
+                emailSentEvent && 
                 hasReachedNoResponseTime()) {
                 
                 try {
                     const updatedProgress: ImplementationProgress = {
                         ...progress,
-                        emailStatus: EmailStatus.NO_RESPONSE,
+                        status: ProgressStatus.NO_RESPONSE,
                         updatedAt: new Date().toISOString()
                     };
                     await onImplementationProgressChange(updatedProgress);
@@ -81,7 +86,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         };
  
         checkAutoNoResponse();
-    }, [progress.emailStatus, progress.emailSentAt, onImplementationProgressChange]);
+    }, [progress, onImplementationProgressChange]);
 
     if (!progress) {
         return (
@@ -95,17 +100,17 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
 
     const shouldShowGithubField = (): boolean => {
         return [
-            EmailStatus.CODE_UPLOADED,
-            EmailStatus.CODE_NEEDS_REFACTORING,
-            EmailStatus.REFUSED_TO_UPLOAD,
-            EmailStatus.NO_RESPONSE
-        ].includes(progress.emailStatus);
+            ProgressStatus.CODE_UPLOADED,
+            ProgressStatus.CODE_NEEDS_REFACTORING,
+            ProgressStatus.REFUSED_TO_UPLOAD,
+            ProgressStatus.NO_RESPONSE
+        ].includes(progress.status);
     };
 
     const getWIPStatus = () => {
-        if (progress.emailStatus === EmailStatus.CODE_UPLOADED) {
+        if (progress.status === ProgressStatus.CODE_UPLOADED) {
             return { label: 'Completed', variant: 'default' as const };
-        } else if (progress.emailStatus === EmailStatus.NOT_SENT) {
+        } else if (progress.status === ProgressStatus.STARTED && !hasEmailBeenSent) {
             return { label: 'Not Started', variant: 'secondary' as const };
         } else {
             return { label: 'In Progress', variant: 'outline' as const };

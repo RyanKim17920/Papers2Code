@@ -1,6 +1,6 @@
 // src/services/api.ts
 import { Paper, AdminSettableImplementabilityStatus } from '../types/paper';
-import type { ImplementationProgress, ProgressUpdate } from '../types/implementation';
+import type { ImplementationProgress, ProgressUpdateRequest } from '../types/implementation';
 import type { PaperActionUserProfile, UserProfile } from '../types/user'; // Added UserProfile import
 import { getCsrfToken } from './auth';
 import { API_BASE_URL, PAPERS_API_PREFIX } from './config';
@@ -253,7 +253,7 @@ export const joinOrCreateImplementationProgress = async (
 // --- NEW: Function to update implementation progress ---
 export const updateImplementationProgressInApi = async (
   paperId: string,
-  progressData: ProgressUpdate
+  progressData: ProgressUpdateRequest
 ): Promise<ImplementationProgress> => {
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/implementation-progress/paper/${paperId}`;
 

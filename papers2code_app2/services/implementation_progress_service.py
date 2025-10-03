@@ -10,8 +10,10 @@ from ..database import (
 )
 from ..schemas.implementation_progress import (
     ImplementationProgress,
-    ProgressUpdate, 
-    EmailStatus,
+    ProgressUpdateRequest,
+    ProgressUpdateEvent,
+    UpdateEventType,
+    ProgressStatus,
 )
 from .exceptions import NotFoundException, UserNotContributorException, InvalidRequestException
 # Import PaperActionService and action types
@@ -83,10 +85,25 @@ class ImplementationProgressService:
         if existing_progress_data:
             existing_progress = ImplementationProgress(**existing_progress_data) 
             if user_obj_id not in existing_progress.contributors:
+                # Create a contributor joined event
+                join_event = ProgressUpdateEvent(
+                    event_type=UpdateEventType.CONTRIBUTOR_JOINED,
+                    timestamp=current_time,
+                    user_id=user_obj_id,
+                    details={}
+                )
+                
                 # Use the actual _id from the found document
                 await progress_collection.update_one(
                     {"_id": existing_progress_data["_id"]}, 
-                    {"$addToSet": {"contributors": user_obj_id}, "$set": {"updated_at": current_time}}
+                    {
+                        "$addToSet": {"contributors": user_obj_id},
+                        "$push": {"updates": join_event.model_dump(by_alias=True)},
+                        "$set": {
+                            "latestUpdate": current_time,
+                            "updatedAt": current_time
+                        }
+                    }
                 )
                 # Log ACTION_PROJECT_JOINED
                 try:
@@ -152,10 +169,24 @@ class ImplementationProgressService:
                         existing_progress = ImplementationProgress(**existing_progress_data)
                         # Add user as contributor if not already there
                         if user_obj_id not in existing_progress.contributors:
+                            # Create a contributor joined event
+                            join_event = ProgressUpdateEvent(
+                                event_type=UpdateEventType.CONTRIBUTOR_JOINED,
+                                timestamp=current_time,
+                                user_id=user_obj_id,
+                                details={}
+                            )
                             # Use the actual _id from the found document
                             await progress_collection.update_one(
                                 {"_id": existing_progress_data["_id"]}, 
-                                {"$addToSet": {"contributors": user_obj_id}, "$set": {"updated_at": current_time}}
+                                {
+                                    "$addToSet": {"contributors": user_obj_id},
+                                    "$push": {"updates": join_event.model_dump(by_alias=True)},
+                                    "$set": {
+                                        "latestUpdate": current_time,
+                                        "updatedAt": current_time
+                                    }
+                                }
                             )
                         # Return the updated progress
                         updated_progress_data = await progress_collection.find_one({"_id": existing_progress_data["_id"]})
@@ -163,7 +194,7 @@ class ImplementationProgressService:
                             return ImplementationProgress(**updated_progress_data)
                 raise e
 
-    async def send_author_outreach_email(self, paper_id: str):
+    async def send_author_outreach_email(self, paper_id: str, user_id: str):
         """Fetches paper details and generates the author outreach email template."""
         papers_collection = await get_papers_collection_async()
         paper = await papers_collection.find_one({"_id": ObjectId(paper_id)})
@@ -175,12 +206,48 @@ class ImplementationProgressService:
         paper_link = f"https://papers2code.com/paper/{paper_id}" # Replace with your actual domain
 
         email_content = get_author_outreach_email_template(paper_title, paper_link)
+        
+        # Create email sent event in the progress
+        progress_collection = await get_implementation_progress_collection_async()
+        current_time = datetime.now(timezone.utc)
+        
+        try:
+            paper_obj_id = PyObjectId(paper_id)
+            user_obj_id = PyObjectId(user_id)
+        except Exception:
+            raise InvalidRequestException("Invalid paper or user ID format.")
+        
+        email_event = ProgressUpdateEvent(
+            event_type=UpdateEventType.EMAIL_SENT,
+            timestamp=current_time,
+            user_id=user_obj_id,
+            details={}
+        )
+        
+        # Update progress with email sent event
+        await progress_collection.update_one(
+            {"_id": paper_obj_id},
+            {
+                "$push": {"updates": email_event.model_dump(by_alias=True)},
+                "$set": {
+                    "latestUpdate": current_time,
+                    "updatedAt": current_time
+                }
+            }
+        )
+        
+        # Update paper status
+        await papers_collection.update_one(
+            {"_id": paper_obj_id},
+            {"$set": {"status": "Waiting for Author Response"}}
+        )
+        
         # In a real application, you would integrate with an email sending service here.
         # For now, we'll just log the content.
         return {"message": "Email content generated and logged (email not actually sent).", "subject": email_content['subject'], "body": email_content['body']}
 
-    async def update_progress_by_paper_id(self, paper_id: str, user_id: str, progress_update: ProgressUpdate) -> ImplementationProgress:
-        """Update email status or GitHub repo ID for a progress by paper ID."""
+    async def update_progress_by_paper_id(self, paper_id: str, user_id: str, progress_update: ProgressUpdateRequest) -> ImplementationProgress:
+        """Update status or GitHub repo ID for a progress by paper ID."""
         logger.info(f"update_progress_by_paper_id called with paper_id: {paper_id}, user_id: {user_id}")
         
         progress_collection = await get_implementation_progress_collection_async() 
@@ -208,61 +275,84 @@ class ImplementationProgressService:
         if user_obj_id not in progress.contributors:
             raise UserNotContributorException("User is not a contributor to this progress.")
 
-        update_fields = {}
         update_data = progress_update.model_dump(exclude_unset=True)
-        
-        # Check if email status is being updated to trigger paper status changes
-        email_status_changed = None
-        
-        for key, value in update_data.items():
-            if key == 'email_status' and isinstance(value, EmailStatus):
-                update_fields["emailStatus"] = value.value  # Use camelCase field name
-                email_status_changed = value
-                if value == EmailStatus.SENT:
-                    # Set the timestamp when email was sent
-                    update_fields["emailSentAt"] = datetime.now(timezone.utc)
-            elif key == 'github_repo_id':
-                update_fields["githubRepoId"] = value  # Use camelCase field name
-            else:
-                update_fields[key] = value
-
-        if not update_fields:
+        if not update_data:
             raise InvalidRequestException("No update data provided.")
-
-        update_fields["updatedAt"] = datetime.now(timezone.utc)
+        
+        current_time = datetime.now(timezone.utc)
+        update_fields = {
+            "latestUpdate": current_time,
+            "updatedAt": current_time
+        }
+        events_to_add = []
+        
+        # Handle status changes
+        if 'status' in update_data:
+            new_status = update_data['status']
+            if new_status != progress.status:
+                # Create status changed event
+                status_event = ProgressUpdateEvent(
+                    event_type=UpdateEventType.STATUS_CHANGED,
+                    timestamp=current_time,
+                    user_id=user_obj_id,
+                    details={
+                        "previousStatus": progress.status.value if progress.status else None,
+                        "newStatus": new_status.value
+                    }
+                )
+                events_to_add.append(status_event.model_dump(by_alias=True))
+                update_fields["status"] = new_status.value
+                
+                # Update paper status based on progress status changes
+                paper_status_update = None
+                if new_status == ProgressStatus.RESPONSE_RECEIVED:
+                    paper_status_update = "Work in Progress"
+                elif new_status == ProgressStatus.CODE_UPLOADED:
+                    paper_status_update = "Official Code Posted"
+                elif new_status == ProgressStatus.CODE_NEEDS_REFACTORING:
+                    paper_status_update = "Work in Progress"
+                elif new_status == ProgressStatus.REFACTORING_IN_PROGRESS:
+                    paper_status_update = "Refactoring in Progress"
+                elif new_status == ProgressStatus.REFUSED_TO_UPLOAD:
+                    paper_status_update = "Started"
+                elif new_status == ProgressStatus.NO_RESPONSE:
+                    paper_status_update = "Started"
+                
+                if paper_status_update:
+                    await papers_collection.update_one(
+                        {"_id": paper_obj_id},
+                        {"$set": {"status": paper_status_update}}
+                    )
+        
+        # Handle GitHub repo changes
+        if 'github_repo_id' in update_data:
+            new_repo = update_data['github_repo_id']
+            old_repo = progress.github_repo_id
+            
+            if new_repo != old_repo:
+                event_type = UpdateEventType.GITHUB_REPO_UPDATED if old_repo else UpdateEventType.GITHUB_REPO_LINKED
+                repo_event = ProgressUpdateEvent(
+                    event_type=event_type,
+                    timestamp=current_time,
+                    user_id=user_obj_id,
+                    details={
+                        "githubRepoId": new_repo,
+                        "previousRepoId": old_repo
+                    }
+                )
+                events_to_add.append(repo_event.model_dump(by_alias=True))
+                update_fields["githubRepoId"] = new_repo
 
         # Update the progress using the actual _id from the found document
         actual_id = progress_data["_id"]
+        update_operations = {"$set": update_fields}
+        if events_to_add:
+            update_operations["$push"] = {"updates": {"$each": events_to_add}}
+        
         await progress_collection.update_one(
             {"_id": actual_id},
-            {"$set": update_fields}
+            update_operations
         )
-        
-        # Update paper status based on email status changes
-        if email_status_changed:
-            paper_status_update = None
-            
-            if email_status_changed == EmailStatus.SENT:
-                paper_status_update = "Waiting for Author Response"
-            elif email_status_changed == EmailStatus.RESPONSE_RECEIVED:
-                paper_status_update = "Work in Progress"
-            elif email_status_changed == EmailStatus.CODE_UPLOADED:
-                paper_status_update = "Official Code Posted"
-            elif email_status_changed == EmailStatus.CODE_NEEDS_REFACTORING:
-                paper_status_update = "Work in Progress"
-            elif email_status_changed == EmailStatus.REFACTORING_IN_PROGRESS:
-                paper_status_update = "Refactoring in Progress"
-            elif email_status_changed == EmailStatus.REFUSED_TO_UPLOAD:
-                paper_status_update = "Started"
-            elif email_status_changed == EmailStatus.NO_RESPONSE:
-                paper_status_update = "Started"
-            
-            # Apply the paper status updates
-            if paper_status_update:
-                await papers_collection.update_one(
-                    {"_id": actual_id},
-                    {"$set": {"status": paper_status_update}}
-                )
 
         # Re-fetch the updated progress to return
         updated_progress_data = await progress_collection.find_one({"_id": actual_id})

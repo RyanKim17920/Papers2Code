@@ -1,12 +1,12 @@
 import React from 'react';
-import { EmailStatus } from '../../../../common/types/implementation';
+import { ProgressStatus } from '../../../../common/types/implementation';
 import { Popover, PopoverContent, PopoverTrigger } from '../../../ui/popover';
 import { Code, Mail, CheckCircle, AlertCircle, XCircle, Clock, GitBranch } from 'lucide-react';
 
 export interface TimelineEventData {
   id: string;
   type: 'initiated' | 'email_sent' | 'response' | 'final';
-  status: EmailStatus;
+  status: ProgressStatus;
   timestamp: string;
   title: string;
   description: string;
@@ -30,13 +30,13 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
       case 'email_sent':
         return <Mail className="w-4 h-4" />;
       case 'response':
-        if (event.status === EmailStatus.CODE_UPLOADED) {
+        if (event.status === ProgressStatus.CODE_UPLOADED) {
           return <CheckCircle className="w-4 h-4" />;
-        } else if (event.status === EmailStatus.CODE_NEEDS_REFACTORING) {
+        } else if (event.status === ProgressStatus.CODE_NEEDS_REFACTORING) {
           return <AlertCircle className="w-4 h-4" />;
-        } else if (event.status === EmailStatus.REFUSED_TO_UPLOAD) {
+        } else if (event.status === ProgressStatus.REFUSED_TO_UPLOAD) {
           return <XCircle className="w-4 h-4" />;
-        } else if (event.status === EmailStatus.NO_RESPONSE) {
+        } else if (event.status === ProgressStatus.NO_RESPONSE) {
           return <Clock className="w-4 h-4" />;
         }
         return <Mail className="w-4 h-4" />;
@@ -49,16 +49,16 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
 
   const getEventColor = () => {
     switch (event.status) {
-      case EmailStatus.CODE_UPLOADED:
+      case ProgressStatus.CODE_UPLOADED:
         return 'bg-green-500 border-green-600 text-white';
-      case EmailStatus.CODE_NEEDS_REFACTORING:
+      case ProgressStatus.CODE_NEEDS_REFACTORING:
         return 'bg-yellow-500 border-yellow-600 text-white';
-      case EmailStatus.REFUSED_TO_UPLOAD:
-      case EmailStatus.NO_RESPONSE:
+      case ProgressStatus.REFUSED_TO_UPLOAD:
+      case ProgressStatus.NO_RESPONSE:
         return 'bg-red-500 border-red-600 text-white';
-      case EmailStatus.SENT:
+      case ProgressStatus.RESPONSE_RECEIVED:
         return 'bg-blue-500 border-blue-600 text-white';
-      case EmailStatus.NOT_SENT:
+      case ProgressStatus.STARTED:
         return 'bg-muted border-border text-muted-foreground';
       default:
         return 'bg-primary border-primary text-primary-foreground';

@@ -1,8 +1,9 @@
 import React, { useState } from 'react';
-import { EmailStatus, ImplementationProgress } from '../../../../common/types/implementation';
+import { ProgressStatus, ImplementationProgress, ProgressUpdateRequest } from '../../../../common/types/implementation';
 import type { UserProfile } from '../../../../common/types/user';
 import ConfirmationModal from '../../../../common/components/ConfirmationModal';
 import Modal from '../../../../common/components/Modal';
+import { updateImplementationProgressInApi } from '../../../../common/services/api';
 
 interface EmailStatusManagerProps {
   progress: ImplementationProgress;
@@ -26,11 +27,11 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   currentUser
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
-  const [pendingStatus, setPendingStatus] = useState<EmailStatus | null>(null);
+  const [pendingStatus, setPendingStatus] = useState<ProgressStatus | null>(null);
   const [showResponseModal, setShowResponseModal] = useState(false);
 
-  const handleEmailStatusUpdate = async (newStatus: EmailStatus) => {
-    if (newStatus === EmailStatus.RESPONSE_RECEIVED) {
+  const handleEmailStatusUpdate = async (newStatus: ProgressStatus) => {
+    if (newStatus === ProgressStatus.RESPONSE_RECEIVED) {
       setShowResponseModal(true);
       return;
     }
@@ -39,18 +40,18 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
     setPendingStatus(newStatus);
   };
 
-  const handleResponseTypeSelection = async (responseType: EmailStatus) => {
+  const handleResponseTypeSelection = async (responseType: ProgressStatus) => {
     setShowResponseModal(false);
-    const updatedProgress: ImplementationProgress = {
-      ...progress,
-      emailStatus: responseType,
-      updatedAt: new Date().toISOString()
-    };
+    
     try {
       onUpdatingChange(true);
+      const updateRequest: ProgressUpdateRequest = {
+        status: responseType
+      };
+      const updatedProgress = await updateImplementationProgressInApi(progress.id, updateRequest);
       await onProgressChange(updatedProgress);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to update email status');
+      onError(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
       onUpdatingChange(false);
     }
@@ -60,50 +61,47 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
     if (!pendingStatus) return;
     
     console.log('pendingStatus', pendingStatus);
-    const isMarkingAsSent = pendingStatus === EmailStatus.SENT;
-    const updatedProgress: ImplementationProgress = {
-      ...progress,
-      emailStatus: pendingStatus,
-      emailSentAt: isMarkingAsSent ? new Date().toISOString() : progress.emailSentAt,
-      updatedAt: new Date().toISOString()
-    };
     
     try {
       onUpdatingChange(true);
+      const updateRequest: ProgressUpdateRequest = {
+        status: pendingStatus
+      };
+      const updatedProgress = await updateImplementationProgressInApi(progress.id, updateRequest);
       await onProgressChange(updatedProgress);
       setShowConfirmModal(false);
       setPendingStatus(null);
     } catch (err) {
-      onError(err instanceof Error ? err.message : 'Failed to update email status');
+      onError(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
       onUpdatingChange(false);
     }
   };
 
-  const getStatusIcon = (status: EmailStatus) => {
+  const getStatusIcon = (status: ProgressStatus) => {
     switch (status) {
-      case EmailStatus.NOT_SENT: return '📧';
-      case EmailStatus.SENT: return '✉️';
-      case EmailStatus.RESPONSE_RECEIVED: return '📬';
-      case EmailStatus.CODE_UPLOADED: return '✅';
-      case EmailStatus.CODE_NEEDS_REFACTORING: return '🔧';
-      case EmailStatus.REFUSED_TO_UPLOAD: return '❌';
-      case EmailStatus.NO_RESPONSE: return '📭';
+      case ProgressStatus.STARTED: return '📧';
+      case ProgressStatus.STARTED: return '✉️';
+      case ProgressStatus.RESPONSE_RECEIVED: return '📬';
+      case ProgressStatus.CODE_UPLOADED: return '✅';
+      case ProgressStatus.CODE_NEEDS_REFACTORING: return '🔧';
+      case ProgressStatus.REFUSED_TO_UPLOAD: return '❌';
+      case ProgressStatus.NO_RESPONSE: return '📭';
       default: return '📧';
     }
   };
 
-  const getNextAllowedStatuses = (currentStatus: EmailStatus): EmailStatus[] => {
+  const getNextAllowedStatuses = (currentStatus: ProgressStatus): ProgressStatus[] => {
     switch (currentStatus) {
-      case EmailStatus.NOT_SENT:
-        return [EmailStatus.SENT];
-      case EmailStatus.SENT:
-        return [EmailStatus.RESPONSE_RECEIVED, EmailStatus.NO_RESPONSE];
-      case EmailStatus.RESPONSE_RECEIVED:
-      case EmailStatus.CODE_UPLOADED:
-      case EmailStatus.CODE_NEEDS_REFACTORING:
-      case EmailStatus.REFUSED_TO_UPLOAD:
-      case EmailStatus.NO_RESPONSE:
+      case ProgressStatus.STARTED:
+        return [ProgressStatus.STARTED];
+      case ProgressStatus.STARTED:
+        return [ProgressStatus.RESPONSE_RECEIVED, ProgressStatus.NO_RESPONSE];
+      case ProgressStatus.RESPONSE_RECEIVED:
+      case ProgressStatus.CODE_UPLOADED:
+      case ProgressStatus.CODE_NEEDS_REFACTORING:
+      case ProgressStatus.REFUSED_TO_UPLOAD:
+      case ProgressStatus.NO_RESPONSE:
         return [];
       default:
         return [];
@@ -130,21 +128,21 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
     }
   };
 
-  const getStatusDescription = (status: EmailStatus): string => {
+  const getStatusDescription = (status: ProgressStatus): string => {
     switch (status) {
-      case EmailStatus.NOT_SENT:
+      case ProgressStatus.STARTED:
         return "Ready to contact the paper's authors about implementing their work";
-      case EmailStatus.SENT:
+      case ProgressStatus.STARTED:
         return "Email sent to authors. Waiting for their response within 4 weeks";
-      case EmailStatus.RESPONSE_RECEIVED:
+      case ProgressStatus.RESPONSE_RECEIVED:
         return "Authors have responded! Please specify the type of response";
-      case EmailStatus.CODE_UPLOADED:
+      case ProgressStatus.CODE_UPLOADED:
         return "Authors published their working implementation";
-      case EmailStatus.CODE_NEEDS_REFACTORING:
+      case ProgressStatus.CODE_NEEDS_REFACTORING:
         return "Authors shared code but it needs improvement";
-      case EmailStatus.REFUSED_TO_UPLOAD:
+      case ProgressStatus.REFUSED_TO_UPLOAD:
         return "Authors declined to share their implementation";
-      case EmailStatus.NO_RESPONSE:
+      case ProgressStatus.NO_RESPONSE:
         return "No response received from authors after 4 weeks";
       default:
         return "";
@@ -152,9 +150,9 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   };
 
   const hasReachedNoResponseTime = (): boolean => {
-    if (!progress.emailSentAt) return false;
+    if (!progress.latestUpdate) return false;
     
-    const sentDate = new Date(progress.emailSentAt);
+    const sentDate = new Date(progress.latestUpdate);
     const now = new Date();
     const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
     
@@ -162,9 +160,9 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   };
 
   const getTimeUntilNoResponse = (): string | null => {
-    if (!progress.emailSentAt || hasReachedNoResponseTime()) return null;
+    if (!progress.latestUpdate || hasReachedNoResponseTime()) return null;
     
-    const sentDate = new Date(progress.emailSentAt);
+    const sentDate = new Date(progress.latestUpdate);
     const now = new Date();
     const fourWeeksInMs = 28 * 24 * 60 * 60 * 1000;
     const timePassedMs = now.getTime() - sentDate.getTime();
@@ -187,15 +185,15 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   return (
     <div className="card-header">
       <div className="status-info">
-        <span className="status-icon">{getStatusIcon(progress.emailStatus)}</span>
+        <span className="status-icon">{getStatusIcon(progress.status)}</span>
         <div className="status-details">
-          <h3 className="status-title">{progress.emailStatus}</h3>
-          <p className="status-description">{getStatusDescription(progress.emailStatus)}</p>
+          <h3 className="status-title">{progress.status}</h3>
+          <p className="status-description">{getStatusDescription(progress.status)}</p>
         </div>
       </div>
 
-      {/* Email Status Details */}
-      {progress.emailStatus === EmailStatus.SENT && (
+      {/* Status Details */}
+      {progress.status === ProgressStatus.STARTED && (
         <div className="email-status-details">
           <div className="status-timeline">
             <div className="timeline-item completed">
@@ -203,7 +201,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
               <div className="timeline-content">
                 <span className="timeline-title">Email Sent</span>
                 <span className="timeline-subtitle">
-                  {progress.emailSentAt ? formatDateDistance(progress.emailSentAt) : 'Recently'}
+                  {progress.latestUpdate ? formatDateDistance(progress.latestUpdate) : 'Recently'}
                 </span>
               </div>
             </div>
@@ -233,7 +231,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       )}
 
       {/* Response Received Details */}
-      {progress.emailStatus === EmailStatus.RESPONSE_RECEIVED && (
+      {progress.status === ProgressStatus.RESPONSE_RECEIVED && (
         <div className="email-status-details">
           <div className="status-timeline">
             <div className="timeline-item completed">
@@ -241,7 +239,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
               <div className="timeline-content">
                 <span className="timeline-title">Email Sent</span>
                 <span className="timeline-subtitle">
-                  {progress.emailSentAt ? formatDateDistance(progress.emailSentAt) : 'Previously'}
+                  {progress.latestUpdate ? formatDateDistance(progress.latestUpdate) : 'Previously'}
                 </span>
               </div>
             </div>
@@ -258,20 +256,20 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       )}
 
       {/* Other Status Details */}
-      {(progress.emailStatus === EmailStatus.CODE_UPLOADED || 
-        progress.emailStatus === EmailStatus.CODE_NEEDS_REFACTORING ||
-        progress.emailStatus === EmailStatus.REFUSED_TO_UPLOAD ||
-        progress.emailStatus === EmailStatus.NO_RESPONSE) && (
+      {(progress.status === ProgressStatus.CODE_UPLOADED || 
+        progress.status === ProgressStatus.CODE_NEEDS_REFACTORING ||
+        progress.status === ProgressStatus.REFUSED_TO_UPLOAD ||
+        progress.status === ProgressStatus.NO_RESPONSE) && (
           <div className="email-status-details">
             <div className="status-summary">
               <div className="summary-item">
                 <span className="summary-label">Status:</span>
-                <span className="summary-value">{progress.emailStatus}</span>
+                <span className="summary-value">{progress.status}</span>
               </div>
-              {progress.emailSentAt && (
+              {progress.latestUpdate && (
                 <div className="summary-item">
                   <span className="summary-label">Email sent:</span>
-                  <span className="summary-value">{formatDateDistance(progress.emailSentAt)}</span>
+                  <span className="summary-value">{formatDateDistance(progress.latestUpdate)}</span>
                 </div>
               )}
             </div>
@@ -281,11 +279,11 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       {/* Action Buttons - Only show if user has permission */}
       {(canMarkAsSent || canModifyPostSentStatus) && (
         <div className="card-actions">
-          {getNextAllowedStatuses(progress.emailStatus)
-            .filter((nextStatus) => nextStatus !== EmailStatus.NO_RESPONSE) // Remove NO_RESPONSE button
+          {getNextAllowedStatuses(progress.status)
+            .filter((nextStatus) => nextStatus !== ProgressStatus.NO_RESPONSE) // Remove NO_RESPONSE button
             .map((nextStatus) => {
               const canPerformAction = 
-                nextStatus === EmailStatus.SENT ? canMarkAsSent : canModifyPostSentStatus;
+                nextStatus === ProgressStatus.STARTED ? canMarkAsSent : canModifyPostSentStatus;
               if (!canPerformAction) return null;
               return (
                 <button
@@ -296,7 +294,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
                 >
                   <span className="action-icon">{getStatusIcon(nextStatus)}</span>
                   <span className="action-text">
-                    {nextStatus === EmailStatus.RESPONSE_RECEIVED ? 'Authors Responded' : `Mark as ${nextStatus}`}
+                    {nextStatus === ProgressStatus.RESPONSE_RECEIVED ? 'Authors Responded' : `Mark as ${nextStatus}`}
                   </span>
                 </button>
               );
@@ -358,7 +356,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
           <div className="response-options">
             <button 
               className="response-option success"
-              onClick={() => handleResponseTypeSelection(EmailStatus.CODE_UPLOADED)}
+              onClick={() => handleResponseTypeSelection(ProgressStatus.CODE_UPLOADED)}
               disabled={isUpdating}
             >
               <div className="response-icon">✅</div>
@@ -370,7 +368,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
             
             <button 
               className="response-option warning"
-              onClick={() => handleResponseTypeSelection(EmailStatus.CODE_NEEDS_REFACTORING)}
+              onClick={() => handleResponseTypeSelection(ProgressStatus.CODE_NEEDS_REFACTORING)}
               disabled={isUpdating}
             >
               <div className="response-icon">🔧</div>
@@ -382,7 +380,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
             
             <button 
               className="response-option error"
-              onClick={() => handleResponseTypeSelection(EmailStatus.REFUSED_TO_UPLOAD)}
+              onClick={() => handleResponseTypeSelection(ProgressStatus.REFUSED_TO_UPLOAD)}
               disabled={isUpdating}
             >
               <div className="response-icon">❌</div>
