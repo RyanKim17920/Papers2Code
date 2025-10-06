@@ -26,6 +26,8 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
     isLoadingActionUsers, 
     actionUsersError 
 }) => {
+    const [authorsExpanded, setAuthorsExpanded] = React.useState(false);
+
     // Compute an inferred PDF link when urlPdf is not available.
     // Priority: explicit urlPdf > derive from urlAbs if it looks like an arXiv abs link > derive from arxivId
     const inferPdfFromAbs = (absUrl: string | undefined): string | null => {
@@ -130,9 +132,48 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
             <div className="space-y-3">
                 <div className="flex items-start gap-3">
                     <Users className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                    <div>
+                    <div className="flex-1">
                         <div className="text-sm font-medium text-muted-foreground">Authors</div>
-                        <div className="text-sm">{paper.authors?.join(', ') || 'N/A'}</div>
+                        {paper.authors && paper.authors.length > 0 ? (
+                            <div className="text-sm">
+                                {(() => {
+                                    const authorsList = paper.authors.join(', ');
+                                    const MAX_LENGTH = 150; // characters before truncation
+                                    
+                                    if (authorsList.length <= MAX_LENGTH) {
+                                        return authorsList;
+                                    }
+                                    
+                                    if (authorsExpanded) {
+                                        return (
+                                            <>
+                                                {authorsList}
+                                                <button
+                                                    onClick={() => setAuthorsExpanded(false)}
+                                                    className="ml-2 text-primary hover:underline focus:outline-none"
+                                                >
+                                                    show less
+                                                </button>
+                                            </>
+                                        );
+                                    }
+                                    
+                                    return (
+                                        <>
+                                            {authorsList.slice(0, MAX_LENGTH)}...
+                                            <button
+                                                onClick={() => setAuthorsExpanded(true)}
+                                                className="ml-2 text-primary hover:underline focus:outline-none"
+                                            >
+                                                show more
+                                            </button>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        ) : (
+                            <div className="text-sm">N/A</div>
+                        )}
                     </div>
                 </div>
 

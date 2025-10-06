@@ -177,6 +177,8 @@ class PaperViewService:
     ) -> Tuple[List[Dict[str, Any]], int]:
         """Two-phase Atlas Search: Get IDs first, then fetch full documents only for displayed items"""
         
+        self.logger.debug(f"Atlas Search starting: search_query='{search_query}', author='{author}'")
+        
         atlas_search_index_name = "default"
         papers_collection = await get_papers_collection_async()
         
@@ -257,7 +259,7 @@ class PaperViewService:
             search_stage_compound["filter"] = atlas_compound_filter
 
         if not search_stage_compound:
-            self.logger.warning("Atlas search compound is empty, falling back to standard query")
+            self.logger.warning("Atlas Search compound is empty, falling back to standard query")
             return await self._get_papers_list_standard(
                 skip, limit, sort_by, sort_order, user_id, search_query, author,
                 start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
@@ -270,10 +272,9 @@ class PaperViewService:
         
         phase1_pipeline.append(search_stage)
         
-        # Add score field and filter if needed
+        # Add score field for ranking (no filtering to ensure results)
         if search_query:
             phase1_pipeline.append({"$addFields": {"score": {"$meta": "searchScore"}}})
-            phase1_pipeline.append({"$match": {"score": {"$gt": 3.0}}})
 
         # Minimal projection - just _id and score for sorting
         phase1_pipeline.append({"$project": {"_id": 1, "score": 1, "publicationDate": 1, "upvoteCount": 1, "title": 1}})
@@ -309,7 +310,7 @@ class PaperViewService:
         })
 
         phase1_start = time.time()
-        self.logger.info("PHASE 1: Getting IDs only from Atlas Search")
+        self.logger.debug("Phase 1: Getting IDs from Atlas Search")
         
         try:
             agg_results_cursor = await papers_collection.aggregate(phase1_pipeline)
@@ -318,18 +319,28 @@ class PaperViewService:
             self.logger.info(f"PHASE 1 completed in {time.time() - phase1_start:.4f}s")
             
             if not agg_results or not agg_results[0]:
-                return [], 0
+                self.logger.warning("Atlas Search returned no results, falling back to standard query")
+                return await self._get_papers_list_standard(
+                    skip, limit, sort_by, sort_order, user_id, search_query, author,
+                    start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                )
                 
             paginated_results = agg_results[0].get('paginatedResults', [])
             total_count_list = agg_results[0].get('totalCount', [])
             total_papers = total_count_list[0].get('count', 0) if total_count_list else 0
             
             if not paginated_results:
+                if total_papers == 0:
+                    self.logger.info("Atlas Search found no matches, falling back to standard query")
+                    return await self._get_papers_list_standard(
+                        skip, limit, sort_by, sort_order, user_id, search_query, author,
+                        start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                    )
                 return [], total_papers
             
             # PHASE 2: Get full documents for displayed items only
             phase2_start = time.time()
-            self.logger.info(f"PHASE 2: Fetching full documents for {len(paginated_results)} items")
+            self.logger.debug(f"Phase 2: Fetching full documents for {len(paginated_results)} items")
             
             # Extract IDs in the correct order
             paper_ids = [result["_id"] for result in paginated_results]
@@ -354,8 +365,12 @@ class PaperViewService:
             return ordered_papers, total_papers
             
         except PyMongoError as e:
-            self.logger.error(f"Atlas Search two-phase error: {e}", exc_info=True)
-            raise DatabaseOperationException(f"Error in Atlas Search: {e}")
+            self.logger.error(f"Atlas Search error: {e}", exc_info=True)
+            self.logger.info("Falling back to standard query")
+            return await self._get_papers_list_standard(
+                skip, limit, sort_by, sort_order, user_id, search_query, author,
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+            )
 
     async def _get_papers_list_standard(
         self,
@@ -379,6 +394,24 @@ class PaperViewService:
             mongo_filter_conditions.append({"tasks": {"$in": tags}})
         if venue:
             mongo_filter_conditions.append({"proceeding": {"$regex": venue, "$options": "i"}})
+        
+        # Search query: Use regex-based text search
+        if search_query:
+            self.logger.debug(f"Adding regex search for: '{search_query}'")
+            search_regex = {"$regex": search_query, "$options": "i"}
+            mongo_filter_conditions.append({
+                "$or": [
+                    {"title": search_regex},
+                    {"abstract": search_regex}
+                ]
+            })
+        
+        # Author search: Search in authors array
+        if author:
+            self.logger.debug(f"Adding author search for: '{author}'")
+            mongo_filter_conditions.append({
+                "authors": {"$regex": author, "$options": "i"}
+            })
 
         # Date filters
         date_filter_parts_mongo = {}
