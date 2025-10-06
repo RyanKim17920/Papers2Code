@@ -249,7 +249,7 @@ def main_update():
 
     # Find papers currently marked as needing code. We'll fetch both key names for compatibility
     papers_needing_code_in_db_cursor = papers_collection.find(
-        {"status": "Needs Code"},
+        {"status": "Not Started"},
         {"_id": 1, "pwc_url": 1, "pwcUrl": 1}
     )
 
@@ -270,14 +270,14 @@ def main_update():
             update_op = UpdateOne(
                 {"_id": paper['_id']},
                 {"$set": {
-                    "status": "Code Available", # Or your preferred status
+                    "status": "Official Code Posted", # Or your preferred status
                     "lastUpdated": datetime.now(timezone.utc)
                  }
                 }
             )
             update_operations.append(update_op)
 
-    logging.info(f"Checked {check_count} non-removed papers marked 'Needs Code' in DB in {time.time()-start_update_check:.2f}s.")
+    logging.info(f"Checked {check_count} non-removed papers marked 'Not Started' in DB in {time.time()-start_update_check:.2f}s.")
     if update_operations:
         logging.info(f"Found {len(update_operations)} papers to update to 'Code Available'.")
         batch_mongo_updates(papers_collection, update_operations, MONGO_WRITE_BATCH_SIZE)
@@ -328,7 +328,7 @@ def main_update():
                 pl.col("proceeding").alias("venue").fill_null("").cast(pl.Utf8).alias("venue"),
                 pl.col("tasks").cast(pl.List(pl.Utf8), strict=False).fill_null([]).alias("tasks"),
                 # Add default fields for new papers without code (camelCase)
-                pl.lit("Needs Code").alias("status"),
+                pl.lit("Not Started").alias("status"),
                 pl.lit(True).alias("isImplementable"),
                 pl.lit(0).cast(pl.Int64).alias("upvoteCount"), # Assuming new papers start with 0 votes
                 pl.lit(datetime.now(timezone.utc)).alias("createdAt"), # Add creation timestamp

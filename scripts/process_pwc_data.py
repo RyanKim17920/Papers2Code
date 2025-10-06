@@ -359,7 +359,7 @@ def find_papers_without_code_polars_lazy(
     return (
         papers_lf
         .with_columns([
-            pl.lit("Needs Code").alias("status"),
+            pl.lit("Not Started").alias("status"),
             pl.lit(True).alias("isImplementable"),
             pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("hasCode")
         ])
@@ -457,7 +457,7 @@ def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
     final = (
         abstracts_lf
         .with_columns([
-            pl.lit("Needs Code").alias("status"),
+            pl.lit("Not Started").alias("status"),
             pl.lit(True).alias("isImplementable"),
             pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("hasCode"),
         ])
