@@ -1,12 +1,12 @@
 // Implementation progress types with timeline-based updates
 
 export enum UpdateEventType {
-    INITIATED = 'initiated',
-    CONTRIBUTOR_JOINED = 'contributor_joined',
-    EMAIL_SENT = 'email_sent',
-    STATUS_CHANGED = 'status_changed',
-    GITHUB_REPO_LINKED = 'github_repo_linked',
-    GITHUB_REPO_UPDATED = 'github_repo_updated',
+    INITIATED = 'Initiated',
+    CONTRIBUTOR_JOINED = 'Contributor Joined',
+    EMAIL_SENT = 'Email Sent',
+    STATUS_CHANGED = 'Status Changed',
+    GITHUB_REPO_LINKED = 'GitHub Repo Linked',
+    GITHUB_REPO_UPDATED = 'GitHub Repo Updated',
 }
 
 export enum ProgressStatus {

@@ -74,9 +74,9 @@ def convert_progress_to_new_schema(old_doc: Dict[str, Any]) -> Dict[str, Any]:
     # Build the updates timeline
     updates = []
     
-    # 1. Always start with an "initiated" event
+    # 1. Always start with an "Initiated" event
     initiated_event = {
-        "eventType": "initiated",
+        "eventType": "Initiated",
         "timestamp": old_doc.get("createdAt", datetime.now(timezone.utc)),
         "userId": old_doc.get("initiatedBy"),
         "details": {}
@@ -89,32 +89,32 @@ def convert_progress_to_new_schema(old_doc: Dict[str, Any]) -> Dict[str, Any]:
     for contributor_id in contributors:
         if contributor_id != initiator_id:
             join_event = {
-                "eventType": "contributor_joined",
+                "eventType": "Contributor Joined",
                 "timestamp": old_doc.get("createdAt", datetime.now(timezone.utc)),
                 "userId": contributor_id,
                 "details": {}
             }
             updates.append(join_event)
     
-    # 3. If email was sent, add email_sent event
+    # 3. If email was sent, add Email Sent event
     email_sent_at = old_doc.get("emailSentAt")
     if email_sent_at:
         email_event = {
-            "eventType": "email_sent",
+            "eventType": "Email Sent",
             "timestamp": email_sent_at,
             "userId": initiator_id,
             "details": {}
         }
         updates.append(email_event)
     
-    # 4. If status changed from initial state, add status_changed event
+    # 4. If status changed from initial state, add Status Changed event
     old_status = old_doc.get("emailStatus", "Not Sent")
     new_status = STATUS_MAPPING.get(old_status, "Started")
     
     # Only add status change if it's not the initial "Started" status or if email was sent
     if old_status not in ["Not Sent", "Sent"] and new_status != "Started":
         status_event = {
-            "eventType": "status_changed",
+            "eventType": "Status Changed",
             "timestamp": old_doc.get("updatedAt", datetime.now(timezone.utc)),
             "userId": initiator_id,
             "details": {
@@ -124,11 +124,11 @@ def convert_progress_to_new_schema(old_doc: Dict[str, Any]) -> Dict[str, Any]:
         }
         updates.append(status_event)
     
-    # 5. If GitHub repo exists, add github_repo_linked event
+    # 5. If GitHub repo exists, add GitHub Repo Linked event
     github_repo_id = old_doc.get("githubRepoId")
     if github_repo_id:
         repo_event = {
-            "eventType": "github_repo_linked",
+            "eventType": "GitHub Repo Linked",
             "timestamp": old_doc.get("updatedAt", datetime.now(timezone.utc)),
             "userId": initiator_id,
             "details": {
