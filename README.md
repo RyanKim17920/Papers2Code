@@ -2,6 +2,8 @@
 
 A web application for organizing research papers and tracking their implementation progress with community voting, author contact, and progress tracking.
 
+> **🔓 Open Source & Secure**: This codebase is designed to be 100% public while maintaining production-grade security. See [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) to learn how we achieve security through design, not obscurity.
+
 ## 🚀 Quick Start
 
 ### Development Setup
@@ -26,7 +28,13 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment instructio
 ./scripts/deploy_render.sh
 ```
 
-**🔒 Security**: Review [SECURITY.md](SECURITY.md) before deploying.
+**🔒 Security Documentation**: 
+- **🚀 Quick Start**: [SECURITY_QUICK_START.md](SECURITY_QUICK_START.md) - Fast setup guide
+- **📖 Full Guide**: [SECURITY.md](SECURITY.md) - Complete security documentation
+- **🔓 Open Source**: [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) - How public code stays secure
+- **🏗️ Architecture**: [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md) - Technical security design
+- **⚙️ Configuration**: [.env.example](.env.example) - All environment variables explained
+- **🛡️ Policy**: [.github/SECURITY_POLICY.md](.github/SECURITY_POLICY.md) - Vulnerability reporting
 
 ## 📁 Project Structure
 
