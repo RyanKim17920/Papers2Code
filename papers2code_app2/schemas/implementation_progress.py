@@ -1,7 +1,9 @@
 from typing import List, Optional, Dict, Any
 from datetime import datetime, timezone
 from enum import Enum
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, ConfigDict
+from pydantic.alias_generators import to_camel
+from bson import ObjectId
 
 from .db_models import PyObjectId, _MongoModel
 from .shared import camel_case_config
@@ -86,7 +88,12 @@ class ImplementationProgress(_MongoModel):
             updated_at=now,
         )
     
-    model_config = camel_case_config
+    model_config = ConfigDict(
+        populate_by_name=True,
+        alias_generator=to_camel,
+        arbitrary_types_allowed=True,
+        json_encoders={ObjectId: str, datetime: lambda dt: dt.isoformat()},
+    )
 
 # -----------------------------------------------------------------------------
 # Update Request Schema
