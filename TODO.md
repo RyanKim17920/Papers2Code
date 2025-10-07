@@ -26,18 +26,22 @@
           - Email notification system for major updates (Future)
 * [X] Increase information density of paper pages further
 * [ ] Still needs fixing on space above title in the paper Detail and the Progress
-* [ ] If authors is long enough, make it have a ... that can be expanded and re hidden. 
-* [ ] Increase information density of the paper page further
+* [X] If authors is long enough, make it have a ... that can be expanded and re hidden. 
+* [X] Increase information density of the paper page further
 * [ ] Clicking on the user profiles in the upvotes should go to their profile
 * [X] Improve the 404 Page not found to be styled exquisitely
 * [X] 404 Page should occur for any error including 500 errors, etc. (perhaps it should be a seperate title for each so it matches the error and the other information found such as: Error loading paper: Request failed with status code 500 )
 * [X] Remove all links to papersWithCode to it
 * [X] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
-* [ ] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
+* [X] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
+  * [ ] Github, huggingface, bluesky not working
 * [ ] Timeline visualization
-* [ ] Switch My papers and recent in dashboard
-
-
+* [ ] Remove settings, old settings page from the profile dropbar, also delete the unnecessary tsx files
+* [ ] If person is active right now it should be Last seen now not -1 days ago in profile
+* [ ] DOes display name actually work?? Also, add github link to the profile page
+* [ ] Imrpove the css of buttons like when the login prompt or any prompt show up (ugly)
+* [ ] Swap the recent with the my papers, the my papers should be the first in the feed, delete the for you as well
+* [ ] top search is broken in papers
 2. BASIC BACKEND FIXES:
 * [X] logging out (sign out) goes directly to the papers if logged out from dashboard (in either case), otherwise just go to the page
 * [X] Make the "joined" date in the user profile accurate
@@ -52,10 +56,12 @@
  * [ ] Improve search in general 
  * [ ] more papers in the dashboard for implementation 
  * [ ] for both profile's Updated/Contrbuting and the dashboard cards should be identical, and have ability to go directly to paper link, or github link, along with showing the abstract rather than repeating the title twice
-* [ ] Date of publishing for papers in dashbaord not like 6 months ago or somethhing
+* [ ] Date of publishing for papers in dashbaord not time ago 
 * [ ] Condense all the various careds into some similar method instead of having so many different ones of the same hting
 * [ ] If user has too many contributed to or upvoted have a pagination but vertical on the right side in the white space of the area.
 * [ ] integrate settings into profile as a tab or something, at least improve that UI significantly
 * [ ] implementaiton tracking becomes a timeline not just random information texted 
-* [ ] works for MOBILE
+* [ ] works for MOBILE (especially dashboard right now is broken)
 * [ ] everything to tailwind
+* [ ] Inconsistent taggint form paperList and other papers??
+* [ ] DARK MODE

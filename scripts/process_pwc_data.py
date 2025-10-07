@@ -315,7 +315,11 @@ def find_papers_without_code_polars_lazy(
 
     abstracts_lf = (
         pl.LazyFrame(papers_with_abstracts_data)
+        # Data cleaning filters
         .filter(pl.col("title").is_not_null() & (pl.col("title") != "")) # Title must exist and not be empty
+        .filter(pl.col("title").str.len_chars() >= 10) # Title must be at least 10 characters
+        .filter(pl.col("abstract").is_not_null() & (pl.col("abstract") != "")) # Abstract must exist and not be empty
+        .filter(pl.col("abstract").str.len_chars() >= 50) # Abstract must be at least 50 characters
         .filter(pl.col("authors").is_not_null() & pl.col("authors").list.len() > 0) # Authors must exist and list not empty
         .select([
             pl.col("paper_url"),
@@ -401,15 +405,22 @@ def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
 
     abstracts_lf = pl.concat(scans, how="diagonal_relaxed")
 
-    # Transform
+    # Transform with data cleaning
     abstracts_lf = (
         abstracts_lf
         .filter(pl.col("title").is_not_null() & (pl.col("title") != ""))
+        .filter(pl.col("title").str.len_chars() >= 10) # Title at least 10 chars
+        # Add abstract length filter after filling nulls
+        .with_columns([
+            pl.col("abstract").fill_null("").cast(pl.Utf8).alias("abstract_temp")
+        ])
+        .filter(pl.col("abstract_temp").str.len_chars() >= 50) # Abstract at least 50 chars
+        .drop("abstract_temp")
         .with_columns([
             pl.col("abstract").fill_null("").cast(pl.Utf8),
             pl.when(pl.col("authors").is_not_null()).then(
                 pl.col("authors").cast(pl.List(pl.Utf8), strict=False)
-            ).otherwise(pl.lit([])).alias("authors"),
+            ).otherwise(pl.lit([])).alias("authors_temp"),
             pl.col("url_abs").fill_null("").cast(pl.Utf8),
             pl.col("arxiv_id").fill_null("").cast(pl.Utf8),
             pl.col("date").cast(pl.Datetime, strict=False).alias("publicationDate"),
@@ -418,6 +429,12 @@ def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
             ).otherwise(pl.lit([])).alias("tasks"),
         ])
         .filter(pl.col("publicationDate").is_not_null())
+        # Data quality filters: ensure authors list is not empty
+        .filter(pl.col("authors_temp").list.len() > 0)
+        .with_columns([
+            pl.col("authors_temp").alias("authors")
+        ])
+        .drop("authors_temp")
         .select([
             pl.col("paper_url"),
             pl.col("paper_url").alias("pwcUrl"),
@@ -470,9 +487,15 @@ def main():
     """
     Main execution: download data, define the LazyFrame computation,
     and batch save the processed records to MongoDB.
+    
+    Data Quality Filters Applied:
+    - Title must be at least 10 characters
+    - Abstract must be at least 50 characters
+    - Must have at least 1 author
+    - Must have a valid publication date
     """
     start_total_time = time.time()
-    logging.info("Starting the PapersWithCode data processing job.")
+    logging.info("Starting the PapersWithCode data processing job with data quality filters.")
 
     # (Kept previous code for printing reminders about MongoDB index.)
 

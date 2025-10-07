@@ -1,18 +1,19 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink } from 'lucide-react';
+import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings } from 'lucide-react';
 import { UserAvatar, LoadingSpinner } from '../common/components';
-import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi } from '../common/services/api';
+import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi, getUserProfileSettings } from '../common/services/api';
 import { Paper } from '../common/types/paper';
 import ModernPaperCard from '../components/paperList/ModernPaperCard';
 import { formatJoinedDate, formatLastSeen } from '@/lib/dateUtils';
-import ErrorPage from './ErrorPage';
+import { ProfileSettingsTab } from '../components/profile/ProfileSettingsTab';
 
-type TabType = 'overview' | 'upvoted' | 'contributing';
+type TabType = 'overview' | 'upvoted' | 'contributing' | 'settings';
 
 const ProfilePage: React.FC = () => {
   const { github_username } = useParams<{ github_username: string }>();
   const [profileData, setProfileData] = useState<UserProfileResponse | null>(null);
+  const [currentUserData, setCurrentUserData] = useState<UserProfileResponse | null>(null);
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -58,10 +59,16 @@ const ProfilePage: React.FC = () => {
       try {
         setIsLoading(true);
         setError(null);
-        const data = await fetchUserProfileFromApi(github_username);
+        
+        // Load profile and current user data in parallel
+        const [data, currentUser] = await Promise.all([
+          fetchUserProfileFromApi(github_username),
+          getUserProfileSettings().catch(() => null) // Don't fail if not logged in
+        ]);
         
         if (data) {
           setProfileData(data);
+          setCurrentUserData(currentUser);
         } else {
           setError('User not found');
         }
@@ -76,6 +83,23 @@ const ProfilePage: React.FC = () => {
     loadProfile();
   }, [github_username]);
 
+  const handleProfileUpdate = async () => {
+    // Reload both profile and current user data after update
+    try {
+      const [data, currentUser] = await Promise.all([
+        fetchUserProfileFromApi(github_username!),
+        getUserProfileSettings().catch(() => null)
+      ]);
+      
+      if (data) {
+        setProfileData(data);
+        setCurrentUserData(currentUser);
+      }
+    } catch (err) {
+      console.error('Failed to reload profile:', err);
+    }
+  };
+
   if (isLoading) {
     return (
       <div className="min-h-screen bg-background flex items-center justify-center">
@@ -89,29 +113,35 @@ const ProfilePage: React.FC = () => {
 
   if (error) {
     return (
-      <ErrorPage
-        errorCode={error.toLowerCase().includes('not found') ? '404' : undefined}
-        title="Profile Not Found"
-        message={error}
-        showBackButton={true}
-        showHomeButton={true}
-        showBrowsePapersButton={true}
-        showRefreshButton={false}
-      />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 p-8 bg-card border border-border rounded-lg shadow-sm max-w-md">
+          <h1 className="text-2xl font-bold text-foreground">Profile Not Found</h1>
+          <p className="text-muted-foreground">{error}</p>
+          <Link 
+            to="/papers" 
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            ← Back to Papers
+          </Link>
+        </div>
+      </div>
     );
   }
 
   if (!profileData) {
     return (
-      <ErrorPage
-        errorCode="404"
-        title="Profile Not Found"
-        message="The user profile you're looking for doesn't exist."
-        showBackButton={true}
-        showHomeButton={true}
-        showBrowsePapersButton={true}
-        showRefreshButton={false}
-      />
+      <div className="min-h-screen bg-background flex items-center justify-center">
+        <div className="text-center space-y-4 p-8 bg-card border border-border rounded-lg shadow-sm max-w-md">
+          <h1 className="text-2xl font-bold text-foreground">Profile Not Found</h1>
+          <p className="text-muted-foreground">The user profile you're looking for doesn't exist.</p>
+          <Link 
+            to="/papers" 
+            className="inline-flex items-center gap-2 px-4 py-2 bg-primary text-primary-foreground rounded-md hover:bg-primary/90 transition-colors"
+          >
+            ← Back to Papers
+          </Link>
+        </div>
+      </div>
     );
   }
 
@@ -266,12 +296,25 @@ const ProfilePage: React.FC = () => {
             )}
           </div>
         );
+      
+      case 'settings':
+        return currentUserData?.userDetails ? (
+          <ProfileSettingsTab 
+            currentUser={currentUserData.userDetails}
+            onProfileUpdate={handleProfileUpdate}
+          />
+        ) : null;
+      
       default:
         return null;
     }
   };
 
   console.log('Profile data:', profileData);
+  
+  // Check if current user is viewing their own profile
+  const isOwnProfile = currentUserData?.userDetails?.username === userDetails.username;
+  
   return (
     <div className="min-h-screen bg-background">
       {/* Header Section with Avatar and Basic Info */}
@@ -414,6 +457,19 @@ const ProfilePage: React.FC = () => {
                 {contributedPapers.length}
               </span>
             </button>
+            {isOwnProfile && (
+              <button 
+                className={`px-4 py-3 text-sm font-medium border-b-2 transition-colors flex items-center gap-2 ${
+                  activeTab === 'settings' 
+                    ? 'border-primary text-primary' 
+                    : 'border-transparent text-muted-foreground hover:text-foreground'
+                }`}
+                onClick={() => setActiveTab('settings')}
+              >
+                <Settings size={16} />
+                Settings
+              </button>
+            )}
           </nav>
         </div>
       </div>
