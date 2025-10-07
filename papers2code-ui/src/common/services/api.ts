@@ -478,9 +478,16 @@ async function handleApiResponse<T>(response: AxiosResponse, isPublicEndpoint: b
     throw new Error(`Validation failed: ${data}`);
   }
 
+  if (status === 500) {
+    console.error('Internal Server Error (500):', data);
+    const errorMessage = data?.detail || data?.message || 'Internal server error occurred';
+    throw new Error(`Request failed with status code 500: ${errorMessage}`);
+  }
+
   if (status < 200 || status >= 300) {
     console.error(`API Error ${status}:`, data);
-    throw new Error(`API request failed with status ${status}: ${data}`);
+    const errorMessage = data?.detail || data?.message || data || 'Unknown error';
+    throw new Error(`Request failed with status code ${status}: ${errorMessage}`);
   }
 
   if (status === 204) {

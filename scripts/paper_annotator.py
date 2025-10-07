@@ -1,6 +1,7 @@
 import os
 import dotenv
 from pymongo import MongoClient
+from scripts.utils_dbkeys import get_pwc_url
 import gradio as gr
 
 # ---------------------------------------------------------------------------
@@ -80,7 +81,7 @@ def mark_irrelevant(state):
             "_id": doc["_id"],
             "title": doc["title"],
             "abstract": doc["abstract"],
-            "pwcUrl": doc.get("pwcUrl"),
+            "pwcUrl": get_pwc_url(doc),
         })
         papers.delete_one({"_id": doc["_id"]})
     return load_next(state)

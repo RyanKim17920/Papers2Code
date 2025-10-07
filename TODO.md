@@ -30,11 +30,12 @@
 * [ ] Increase information density of the paper page further
 * [ ] Clicking on the user profiles in the upvotes should go to their profile
 * [X] Improve the 404 Page not found to be styled exquisitely
-* [ ] 404 Page should occur for any error including 500 errors, etc. (perhaps it should be a seperate title for each so it matches the error and the other information found such as: Error loading paper: Request failed with status code 500 )
+* [X] 404 Page should occur for any error including 500 errors, etc. (perhaps it should be a seperate title for each so it matches the error and the other information found such as: Error loading paper: Request failed with status code 500 )
 * [X] Remove all links to papersWithCode to it
 * [X] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
 * [ ] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
 * [ ] Timeline visualization
+* [ ] Switch My papers and recent in dashboard
 
 
 2. BASIC BACKEND FIXES:

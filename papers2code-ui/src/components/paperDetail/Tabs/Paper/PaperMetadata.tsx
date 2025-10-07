@@ -26,6 +26,43 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
     isLoadingActionUsers, 
     actionUsersError 
 }) => {
+    const [authorsExpanded, setAuthorsExpanded] = React.useState(false);
+
+    // Compute an inferred PDF link when urlPdf is not available.
+    // Priority: explicit urlPdf > derive from urlAbs if it looks like an arXiv abs link > derive from arxivId
+    const inferPdfFromAbs = (absUrl: string | undefined): string | null => {
+        if (!absUrl) return null;
+        try {
+            const lower = absUrl.toLowerCase();
+            // arXiv usual abstract links contain '/abs/' or 'arxiv.org/abs/'
+            if (lower.includes('arxiv.org/abs')) {
+                return absUrl.replace('/abs/', '/pdf/') + '.pdf'.replace('//pdf/.pdf', '/pdf');
+            }
+            // Some providers link directly to arXiv via query or other forms; try a simple heuristic
+            const m = absUrl.match(/arxiv\.org\/(abs|pdf)\/(.+)$/i);
+            if (m && m[2]) {
+                return `https://arxiv.org/pdf/${m[2]}.pdf`;
+            }
+        } catch (e) {
+            // fallback to null
+        }
+        return null;
+    };
+
+    const inferredPdf: string | null = React.useMemo(() => {
+        if (paper.urlPdf) return paper.urlPdf;
+        // prefer deriving from urlAbs
+        const fromAbs = inferPdfFromAbs(paper.urlAbs || undefined);
+        if (fromAbs) return fromAbs;
+        // otherwise, use arxivId if available
+        if (paper.arxivId) {
+            // some arXiv ids may contain version like 2101.00001v2 -> strip the vX
+            const id = String(paper.arxivId).replace(/v\d+$/i, '');
+            return `https://arxiv.org/pdf/${id}.pdf`;
+        }
+        return null;
+    }, [paper.urlPdf, paper.urlAbs, paper.arxivId]);
+
     return (
         <div className="space-y-6">
             {/* Header Section with Upvotes */}
@@ -95,9 +132,48 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
             <div className="space-y-3">
                 <div className="flex items-start gap-3">
                     <Users className="h-5 w-5 mt-0.5 text-muted-foreground" />
-                    <div>
+                    <div className="flex-1">
                         <div className="text-sm font-medium text-muted-foreground">Authors</div>
-                        <div className="text-sm">{paper.authors?.join(', ') || 'N/A'}</div>
+                        {paper.authors && paper.authors.length > 0 ? (
+                            <div className="text-sm">
+                                {(() => {
+                                    const authorsList = paper.authors.join(', ');
+                                    const MAX_LENGTH = 150; // characters before truncation
+                                    
+                                    if (authorsList.length <= MAX_LENGTH) {
+                                        return authorsList;
+                                    }
+                                    
+                                    if (authorsExpanded) {
+                                        return (
+                                            <>
+                                                {authorsList}
+                                                <button
+                                                    onClick={() => setAuthorsExpanded(false)}
+                                                    className="ml-2 text-primary hover:underline focus:outline-none"
+                                                >
+                                                    show less
+                                                </button>
+                                            </>
+                                        );
+                                    }
+                                    
+                                    return (
+                                        <>
+                                            {authorsList.slice(0, MAX_LENGTH)}...
+                                            <button
+                                                onClick={() => setAuthorsExpanded(true)}
+                                                className="ml-2 text-primary hover:underline focus:outline-none"
+                                            >
+                                                show more
+                                            </button>
+                                        </>
+                                    );
+                                })()}
+                            </div>
+                        ) : (
+                            <div className="text-sm">N/A</div>
+                        )}
                     </div>
                 </div>
 
@@ -134,9 +210,9 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
                     </Button>
                 )}
                 
-                {paper.urlPdf && (
+                {(paper.urlPdf || inferredPdf) && (
                     <Button variant="outline" size="sm" asChild className="justify-start gap-2">
-                        <a href={paper.urlPdf} target="_blank" rel="noopener noreferrer">
+                        <a href={paper.urlPdf || inferredPdf || '#'} target="_blank" rel="noopener noreferrer">
                             <FileText className="h-4 w-4" />
                             PDF
                         </a>
