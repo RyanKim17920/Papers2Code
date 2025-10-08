@@ -110,10 +110,9 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     const getWIPStatus = () => {
         if (progress.status === ProgressStatus.CODE_UPLOADED) {
             return { label: 'Completed', variant: 'default' as const };
-        } else if (progress.status === ProgressStatus.STARTED && !hasEmailBeenSent) {
-            return { label: 'Not Started', variant: 'secondary' as const };
         } else {
-            return { label: 'In Progress', variant: 'outline' as const };
+            // Show the actual status
+            return { label: progress.status, variant: 'outline' as const };
         }
     };
 
