@@ -268,8 +268,10 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                             <ImplementationProgressCard 
                                 progress={paper.implementationProgress}
                                 paperId={paper.id}
+                                paperStatus={paper.status}
                                 currentUser={currentUser}
                                 onImplementationProgressChange={handleImplementationProgressChange}
+                                onRefreshPaper={loadPaperAndActions}
                             />
                         ) : (
                             <Card className="bg-card/70 backdrop-blur border border-border/60">

@@ -82,11 +82,12 @@ class PaperViewService:
                 # This ensures that the _id field is converted to id and all other fields are properly validated
                 from ..schemas.implementation_progress import ImplementationProgress
                 progress_model = ImplementationProgress(**progress_document)
-                # Use model_dump() without by_alias to get proper field names, then ensure id is included
-                progress_dict = progress_model.model_dump()
-                progress_dict['id'] = str(progress_model.id)  # Ensure id is a string
+                # Use model_dump(by_alias=True) to properly serialize with camelCase field names
+                # This will convert _id to id, snake_case to camelCase, etc.
+                progress_dict = progress_model.model_dump(by_alias=True, mode='json')
                 self.logger.info(f"Service: Progress model ID: {progress_model.id}")
-                self.logger.info(f"Service: Progress dict: {progress_dict}")
+                self.logger.info(f"Service: Progress dict keys: {list(progress_dict.keys())}")
+                self.logger.info(f"Service: Progress dict id field: {progress_dict.get('id')}")
                 paper["implementationProgress"] = progress_dict
             else:
                 paper["implementationProgress"] = None

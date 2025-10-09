@@ -7,6 +7,7 @@ import { Paper } from '../common/types/paper';
 import ModernPaperCard from '../components/paperList/ModernPaperCard';
 import { formatJoinedDate, formatLastSeen } from '@/lib/dateUtils';
 import { ProfileSettingsTab } from '../components/profile/ProfileSettingsTab';
+import { getStatusColorClasses } from '../common/utils/statusUtils';
 
 type TabType = 'overview' | 'upvoted' | 'contributing' | 'settings';
 
@@ -188,7 +189,7 @@ const ProfilePage: React.FC = () => {
                         >
                           {paper.title}
                         </Link>
-                        <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full font-medium whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap border ${getStatusColorClasses(paper.status)}`}>
                           {paper.status}
                         </span>
                       </div>
@@ -213,7 +214,7 @@ const ProfilePage: React.FC = () => {
                         >
                           {paper.title}
                         </Link>
-                        <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full font-medium whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap border ${getStatusColorClasses(paper.status)}`}>
                           {paper.status}
                         </span>
                       </div>

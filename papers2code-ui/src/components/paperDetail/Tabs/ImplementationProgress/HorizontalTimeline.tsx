@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ImplementationProgress, EmailStatus } from '../../../../common/types/implementation';
+import { ImplementationProgress, UpdateEventType, ProgressStatus } from '../../../../common/types/implementation';
 import { TimelineEvent, TimelineEventData } from './TimelineEvent';
 
 interface HorizontalTimelineProps {
@@ -7,52 +7,20 @@ interface HorizontalTimelineProps {
 }
 
 export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress }) => {
-  // Generate timeline events from progress data
+  // Generate timeline events from progress updates array
   const events = useMemo((): TimelineEventData[] => {
-    const eventList: TimelineEventData[] = [];
-
-    // Event 1: Implementation initiated
-    eventList.push({
-      id: 'initiated',
-      type: 'initiated',
-      status: EmailStatus.NOT_SENT,
-      timestamp: progress.createdAt,
-      title: 'Implementation Initiated',
-      description: 'Implementation progress tracking started for this paper.',
-      details: [
-        { label: 'Contributors', value: progress.contributors.length.toString() }
-      ]
+    return progress.updates.map((update, index) => {
+      const eventData: TimelineEventData = {
+        id: `event-${index}`,
+        type: mapEventTypeToDisplay(update.eventType),
+        status: progress.status,
+        timestamp: update.timestamp,
+        title: getEventTitle(update.eventType, update.details),
+        description: getEventDescription(update.eventType, update.details),
+        details: getEventDetails(update.eventType, update.details, progress)
+      };
+      return eventData;
     });
-
-    // Event 2: Email sent (if applicable)
-    if (progress.emailSentAt) {
-      eventList.push({
-        id: 'email_sent',
-        type: 'email_sent',
-        status: EmailStatus.SENT,
-        timestamp: progress.emailSentAt,
-        title: 'Author Contacted',
-        description: 'Email sent to paper authors requesting code implementation.',
-        details: []
-      });
-    }
-
-    // Event 3: Final status (if not just "sent" or "not sent")
-    if (progress.emailStatus !== EmailStatus.NOT_SENT && progress.emailStatus !== EmailStatus.SENT) {
-      eventList.push({
-        id: 'final_status',
-        type: 'final',
-        status: progress.emailStatus,
-        timestamp: progress.updatedAt,
-        title: getStatusTitle(progress.emailStatus),
-        description: getStatusDescription(progress.emailStatus),
-        details: progress.githubRepoId ? [
-          { label: 'Repository', value: 'Available' }
-        ] : []
-      });
-    }
-
-    return eventList;
   }, [progress]);
 
   // Calculate positions with logarithmic-like scaling for long durations
@@ -113,35 +81,122 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
 };
 
 // Helper functions
-function getStatusTitle(status: EmailStatus): string {
+function mapEventTypeToDisplay(eventType: UpdateEventType): 'initiated' | 'email_sent' | 'response' | 'final' {
+  switch (eventType) {
+    case UpdateEventType.INITIATED:
+      return 'initiated';
+    case UpdateEventType.EMAIL_SENT:
+      return 'email_sent';
+    case UpdateEventType.STATUS_CHANGED:
+    case UpdateEventType.GITHUB_REPO_LINKED:
+    case UpdateEventType.GITHUB_REPO_UPDATED:
+      return 'response';
+    case UpdateEventType.CONTRIBUTOR_JOINED:
+      return 'response';
+    default:
+      return 'response';
+  }
+}
+
+function getEventTitle(eventType: UpdateEventType, details?: Record<string, any>): string {
+  switch (eventType) {
+    case UpdateEventType.INITIATED:
+      return 'Implementation Initiated';
+    case UpdateEventType.CONTRIBUTOR_JOINED:
+      return 'Contributor Joined';
+    case UpdateEventType.EMAIL_SENT:
+      return 'Author Contacted';
+    case UpdateEventType.STATUS_CHANGED:
+      return getStatusTitle(details?.newStatus);
+    case UpdateEventType.GITHUB_REPO_LINKED:
+      return 'GitHub Repository Linked';
+    case UpdateEventType.GITHUB_REPO_UPDATED:
+      return 'GitHub Repository Updated';
+    default:
+      return 'Update';
+  }
+}
+
+function getEventDescription(eventType: UpdateEventType, details?: Record<string, any>): string {
+  switch (eventType) {
+    case UpdateEventType.INITIATED:
+      return 'Implementation progress tracking started for this paper.';
+    case UpdateEventType.CONTRIBUTOR_JOINED:
+      return 'A new contributor joined the implementation effort.';
+    case UpdateEventType.EMAIL_SENT:
+      return 'Email sent to paper authors requesting code implementation.';
+    case UpdateEventType.STATUS_CHANGED:
+      return getStatusDescription(details?.newStatus);
+    case UpdateEventType.GITHUB_REPO_LINKED:
+      return 'GitHub repository has been linked to this implementation.';
+    case UpdateEventType.GITHUB_REPO_UPDATED:
+      return 'GitHub repository information has been updated.';
+    default:
+      return '';
+  }
+}
+
+function getEventDetails(eventType: UpdateEventType, details?: Record<string, any>, progress?: ImplementationProgress): Array<{ label: string; value: string }> {
+  const detailsList: Array<{ label: string; value: string }> = [];
+  
+  if (eventType === UpdateEventType.INITIATED && progress) {
+    detailsList.push({ label: 'Contributors', value: progress.contributors.length.toString() });
+  }
+  
+  if (eventType === UpdateEventType.STATUS_CHANGED && details?.previousStatus) {
+    detailsList.push({ label: 'Previous Status', value: details.previousStatus });
+  }
+  
+  if (eventType === UpdateEventType.GITHUB_REPO_LINKED || eventType === UpdateEventType.GITHUB_REPO_UPDATED) {
+    if (details?.githubRepoId) {
+      detailsList.push({ label: 'Repository', value: 'Available' });
+    }
+  }
+  
+  return detailsList;
+}
+
+function getStatusTitle(status?: string): string {
+  if (!status) return 'Status Changed';
+  
   switch (status) {
-    case EmailStatus.CODE_UPLOADED:
+    case ProgressStatus.CODE_UPLOADED:
       return 'Code Published';
-    case EmailStatus.CODE_NEEDS_REFACTORING:
+    case ProgressStatus.CODE_NEEDS_REFACTORING:
       return 'Code Needs Work';
-    case EmailStatus.REFUSED_TO_UPLOAD:
+    case ProgressStatus.REFUSED_TO_UPLOAD:
       return 'Authors Declined';
-    case EmailStatus.NO_RESPONSE:
+    case ProgressStatus.NO_RESPONSE:
       return 'No Response Received';
-    case EmailStatus.RESPONSE_RECEIVED:
+    case ProgressStatus.RESPONSE_RECEIVED:
       return 'Authors Responded';
+    case ProgressStatus.REFACTORING_IN_PROGRESS:
+      return 'Refactoring in Progress';
+    case ProgressStatus.STARTED:
+      return 'Implementation Started';
     default:
       return status;
   }
 }
 
-function getStatusDescription(status: EmailStatus): string {
+function getStatusDescription(status?: string): string {
+  if (!status) return '';
+  
   switch (status) {
-    case EmailStatus.CODE_UPLOADED:
+    case ProgressStatus.CODE_UPLOADED:
       return 'Authors successfully published their working implementation.';
-    case EmailStatus.CODE_NEEDS_REFACTORING:
+    case ProgressStatus.CODE_NEEDS_REFACTORING:
       return 'Authors shared code but it requires improvements.';
-    case EmailStatus.REFUSED_TO_UPLOAD:
+    case ProgressStatus.REFUSED_TO_UPLOAD:
       return 'Authors declined to share their implementation.';
-    case EmailStatus.NO_RESPONSE:
+    case ProgressStatus.NO_RESPONSE:
       return 'No response received from authors after 4 weeks.';
-    case EmailStatus.RESPONSE_RECEIVED:
+    case ProgressStatus.RESPONSE_RECEIVED:
       return 'Authors have responded to the outreach email.';
+    case ProgressStatus.REFACTORING_IN_PROGRESS:
+      return 'Code refactoring is in progress.';
+    case ProgressStatus.STARTED:
+      return 'Implementation has been started.';
     default:
       return '';
   }

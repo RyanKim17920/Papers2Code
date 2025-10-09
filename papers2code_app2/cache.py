@@ -95,5 +95,71 @@ class PaperSearchCache:
         except Exception as e:
             logger.error(f"Cache storage error: {e}")
 
+    async def update_paper_in_cache(self, paper_id: str, status: str) -> None:
+        """Update a specific paper's status across all cached search results"""
+        try:
+            updated_count = 0
+            # For Redis, iterate through all cache keys
+            if hasattr(self.redis_client, 'keys'):
+                pattern = f"{config_settings.CACHE_KEY_PREFIX}:papers_search:*"
+                keys = self.redis_client.keys(pattern)
+                
+                for key in keys:
+                    try:
+                        cached_data = self.redis_client.get(key)
+                        if not cached_data:
+                            continue
+                            
+                        result = json.loads(cached_data)
+                        papers = result.get('papers', [])
+                        modified = False
+                        
+                        # Update the paper if it exists in this cached result
+                        for paper in papers:
+                            if str(paper.get('_id')) == paper_id or str(paper.get('id')) == paper_id:
+                                paper['status'] = status
+                                modified = True
+                        
+                        # Re-cache with updated data if modified
+                        if modified:
+                            # Get remaining TTL
+                            ttl = self.redis_client.ttl(key)
+                            if ttl > 0:
+                                self.redis_client.setex(key, ttl, json.dumps(result, default=str))
+                                updated_count += 1
+                    except Exception as e:
+                        logger.warning(f"Failed to update cache key {key}: {e}")
+                        continue
+                
+                logger.info(f"Updated paper {paper_id} status to '{status}' in {updated_count} cache entries")
+            else:
+                # For in-memory cache, iterate through cache dict
+                if hasattr(self.redis_client, '_cache'):
+                    for key in list(self.redis_client._cache.keys()):
+                        try:
+                            cached_data = self.redis_client._cache.get(key)
+                            if not cached_data:
+                                continue
+                                
+                            result = json.loads(cached_data)
+                            papers = result.get('papers', [])
+                            modified = False
+                            
+                            for paper in papers:
+                                if str(paper.get('_id')) == paper_id or str(paper.get('id')) == paper_id:
+                                    paper['status'] = status
+                                    modified = True
+                            
+                            if modified:
+                                self.redis_client._cache[key] = json.dumps(result, default=str)
+                                updated_count += 1
+                        except Exception as e:
+                            logger.warning(f"Failed to update in-memory cache key {key}: {e}")
+                            continue
+                    
+                    logger.info(f"Updated paper {paper_id} status to '{status}' in {updated_count} in-memory cache entries")
+        except Exception as e:
+            logger.error(f"Cache update error: {e}")
+
 # Global cache instance
 paper_cache = PaperSearchCache()

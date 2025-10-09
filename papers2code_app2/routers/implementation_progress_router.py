@@ -4,8 +4,8 @@ from typing import Optional
 
 from ..schemas.implementation_progress import (
     ImplementationProgress, 
-    ProgressUpdate,
-    EmailStatus
+    ProgressUpdateRequest,
+    ProgressStatus
 )
 from ..services.implementation_progress_service import ImplementationProgressService
 from ..dependencies import get_implementation_progress_service
@@ -75,11 +75,11 @@ async def get_implementation_progress_by_id(
 @handle_service_errors
 async def update_implementation_progress_by_paper_id(
     paper_id: str,
-    update_data: ProgressUpdate,
+    update_data: ProgressUpdateRequest,
     current_user: UserInDBMinimalSchema = Depends(get_current_user),
     service: ImplementationProgressService = Depends(get_implementation_progress_service)
 ):
-    """Update implementation progress (email status and/or GitHub repo) by paper ID."""
+    """Update implementation progress (status and/or GitHub repo) by paper ID."""
     try:
         progress = await service.update_progress_by_paper_id(paper_id, str(current_user.id), update_data)
         return progress
@@ -105,7 +105,7 @@ async def send_author_outreach_email_route(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required to send emails.")
     
     try:
-        result = await service.send_author_outreach_email(paper_id)
+        result = await service.send_author_outreach_email(paper_id, str(current_user.id))
         return result
     except NotFoundException as e:
         raise HTTPException(status_code=status.HTTP_404_NOT_FOUND, detail=str(e))

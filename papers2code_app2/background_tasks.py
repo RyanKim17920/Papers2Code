@@ -16,7 +16,7 @@ from papers2code_app2.database import (
     get_paper_views_collection_async,
     get_popular_papers_recent_collection_async
 )
-from papers2code_app2.schemas.implementation_progress import EmailStatus
+from papers2code_app2.schemas.implementation_progress import ProgressStatus, UpdateEventType
 
 logger = logging.getLogger(__name__)
 
@@ -27,35 +27,65 @@ class BackgroundTaskRunner:
         self.is_running = False
         
     async def update_email_statuses(self) -> Dict[str, Any]:
-        """Update email statuses that are due using efficient bulk operations"""
+        """Update email statuses to 'No Response' after 4 weeks using timeline events"""
         try:
             logger.info("Starting optimized email status update task...")
             collection = await get_implementation_progress_collection_async()
             
             # Calculate threshold once
             four_weeks_ago = datetime.now(timezone.utc) - timedelta(weeks=4)
+            current_time = datetime.now(timezone.utc)
             
-            # Use bulk update for maximum efficiency
-            update_filter = {
-                "emailStatus": EmailStatus.SENT.value,
-                "emailSentAt": {"$exists": True, "$ne": None, "$lte": four_weeks_ago}
-            }
-            
-            update_operation = {
-                "$set": {
-                    "emailStatus": EmailStatus.NO_RESPONSE.value,
-                    "updatedAt": datetime.now(timezone.utc)
+            # Find progress documents where:
+            # - status is "Started" (meaning email was sent but no response yet)
+            # - there's an "Email Sent" event in the updates array older than 4 weeks
+            cursor = collection.find({
+                "status": ProgressStatus.STARTED.value,
+                "updates": {
+                    "$elemMatch": {
+                        "eventType": UpdateEventType.EMAIL_SENT.value,
+                        "timestamp": {"$lte": four_weeks_ago}
+                    }
                 }
-            }
+            })
             
-            # Single bulk update operation instead of individual updates
-            result = await collection.update_many(update_filter, update_operation)
+            updated_count = 0
+            
+            # Process each document individually to add timeline events
+            async for progress in cursor:
+                # Create a status changed event
+                status_event = {
+                    "eventType": UpdateEventType.STATUS_CHANGED.value,
+                    "timestamp": current_time,
+                    "userId": progress.get("initiatedBy"),  # System update, use initiator
+                    "details": {
+                        "previousStatus": ProgressStatus.STARTED.value,
+                        "newStatus": ProgressStatus.NO_RESPONSE.value,
+                        "reason": "Auto-updated: No response after 4 weeks"
+                    }
+                }
+                
+                result = await collection.update_one(
+                    {"_id": progress["_id"]},
+                    {
+                        "$set": {
+                            "status": ProgressStatus.NO_RESPONSE.value,
+                            "latestUpdate": current_time,
+                            "updatedAt": current_time
+                        },
+                        "$push": {
+                            "updates": status_event
+                        }
+                    }
+                )
+                if result.modified_count > 0:
+                    updated_count += 1
             
             return {
                 "success": True,
-                "updated_count": result.modified_count,
+                "updated_count": updated_count,
                 "errors": [],
-                "timestamp": datetime.now(timezone.utc).isoformat()
+                "timestamp": current_time.isoformat()
             }
             
         except Exception as e:

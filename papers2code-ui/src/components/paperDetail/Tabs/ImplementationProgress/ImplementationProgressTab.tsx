@@ -1,5 +1,5 @@
 import React, { useEffect } from 'react';
-import { ImplementationProgress, EmailStatus } from '../../../../common/types/implementation';
+import { ImplementationProgress, ProgressStatus, UpdateEventType } from '../../../../common/types/implementation';
 import type { UserProfile } from '../../../../common/types/user';
 import { EmailStatusManager } from './EmailStatusManager';
 import { GitHubRepoManager } from './GitHubRepoManager';
@@ -11,19 +11,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
 import { GitBranch, Users, Mail, AlertCircle } from 'lucide-react';
+import { getStatusColorClasses } from '../../../../common/utils/statusUtils';
 
 interface ImplementationProgressProps {
     progress: ImplementationProgress;
     paperId: string;
+    paperStatus: string; // The paper's overall status (from paper.status field)
     currentUser: UserProfile | null;
     onImplementationProgressChange: (updatedProgress: ImplementationProgress) => void;
+    onRefreshPaper: () => Promise<void>; // Function to refresh paper data
 }
 
 export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = ({
     progress,
     paperId,
+    paperStatus,
     currentUser,
-    onImplementationProgressChange
+    onImplementationProgressChange,
+    onRefreshPaper
 }) => {
     const { emailContent, fetchEmailContent, isFetchingEmail, emailError, clearEmailContent } = useAuthorOutreachEmail(paperId);
  
@@ -32,17 +37,30 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     const isContributor = isLoggedIn && progress.contributors.includes(currentUser!.id);
     const isInitiator = isLoggedIn && progress.initiatedBy === currentUser!.id;
     
-    const canModifyPostSentStatus = isLoggedIn && (
-        isInitiator || 
-        (progress.emailStatus !== EmailStatus.NOT_SENT && isContributor)
+    // Check if email has been sent by looking at updates
+    const hasEmailBeenSent = progress.updates.some(u => u.eventType === UpdateEventType.EMAIL_SENT);
+    
+    const canModifyPostSentStatus = isLoggedIn && hasEmailBeenSent && (
+        isInitiator || isContributor
     );
 
-    const canMarkAsSent = isLoggedIn && isContributor && progress.emailStatus === EmailStatus.NOT_SENT;
+    const canMarkAsSent = isLoggedIn && isContributor && !hasEmailBeenSent;
     const canModifyRepo = isLoggedIn && isInitiator;
 
     // State for managing updating status and errors
     const [isUpdating, setIsUpdating] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+
+    // Handle sending email and refreshing progress
+    const handleSendEmail = async () => {
+        try {
+            await fetchEmailContent(); // This calls the backend endpoint and adds EMAIL_SENT event
+            // Refresh paper data to get updated status
+            await onRefreshPaper();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to send email');
+        }
+    };
 
     useEffect(() => {
         if (emailError) {
@@ -52,10 +70,12 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
  
     // Auto-update to "No Response" when cooldown expires
     useEffect(() => {
+        const emailSentEvent = progress.updates.find(u => u.eventType === UpdateEventType.EMAIL_SENT);
+        
         const hasReachedNoResponseTime = (): boolean => {
-            if (!progress.emailSentAt) return false;
+            if (!emailSentEvent) return false;
             
-            const sentDate = new Date(progress.emailSentAt);
+            const sentDate = new Date(emailSentEvent.timestamp);
             const now = new Date();
             const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
             
@@ -63,14 +83,14 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         };
 
         const checkAutoNoResponse = async () => {
-            if (progress.emailStatus === EmailStatus.SENT && 
-                progress.emailSentAt && 
+            if (progress.status === ProgressStatus.STARTED && 
+                emailSentEvent && 
                 hasReachedNoResponseTime()) {
                 
                 try {
                     const updatedProgress: ImplementationProgress = {
                         ...progress,
-                        emailStatus: EmailStatus.NO_RESPONSE,
+                        status: ProgressStatus.NO_RESPONSE,
                         updatedAt: new Date().toISOString()
                     };
                     await onImplementationProgressChange(updatedProgress);
@@ -81,7 +101,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         };
  
         checkAutoNoResponse();
-    }, [progress.emailStatus, progress.emailSentAt, onImplementationProgressChange]);
+    }, [progress, onImplementationProgressChange]);
 
     if (!progress) {
         return (
@@ -95,20 +115,19 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
 
     const shouldShowGithubField = (): boolean => {
         return [
-            EmailStatus.CODE_UPLOADED,
-            EmailStatus.CODE_NEEDS_REFACTORING,
-            EmailStatus.REFUSED_TO_UPLOAD,
-            EmailStatus.NO_RESPONSE
-        ].includes(progress.emailStatus);
+            ProgressStatus.CODE_UPLOADED,
+            ProgressStatus.CODE_NEEDS_REFACTORING,
+            ProgressStatus.REFUSED_TO_UPLOAD,
+            ProgressStatus.NO_RESPONSE
+        ].includes(progress.status);
     };
 
     const getWIPStatus = () => {
-        if (progress.emailStatus === EmailStatus.CODE_UPLOADED) {
+        if (progress.status === ProgressStatus.CODE_UPLOADED) {
             return { label: 'Completed', variant: 'default' as const };
-        } else if (progress.emailStatus === EmailStatus.NOT_SENT) {
-            return { label: 'Not Started', variant: 'secondary' as const };
         } else {
-            return { label: 'In Progress', variant: 'outline' as const };
+            // Show the user-facing paper status instead of internal progress status
+            return { label: paperStatus, variant: 'outline' as const };
         }
     };
 
@@ -130,7 +149,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                             Repository Available
                         </Badge>
                     )}
-                    <Badge variant={wipStatus.variant}>
+                    <Badge variant={wipStatus.variant} className={getStatusColorClasses(wipStatus.label)}>
                         {wipStatus.label}
                     </Badge>
                 </div>
@@ -187,6 +206,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                     <CardContent className="space-y-4">
                         <EmailStatusManager
                             progress={progress}
+                            paperId={paperId}
+                            paperStatus={paperStatus}
                             currentUser={currentUser}
                             onProgressChange={onImplementationProgressChange}
                             canMarkAsSent={canMarkAsSent}
@@ -194,6 +215,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                             isUpdating={isUpdating}
                             onUpdatingChange={setIsUpdating}
                             onError={setError}
+                            onSendEmail={handleSendEmail}
+                            isSendingEmail={isFetchingEmail}
                         />
                         
                         {isContributor && (

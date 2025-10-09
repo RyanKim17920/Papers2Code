@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { Paper, ImplementabilityAction } from '../types/paper';
-import type { ImplementationProgress, ProgressUpdate } from '../types/implementation';
+import type { ImplementationProgress, ProgressUpdateRequest } from '../types/implementation';
 import type { UserProfile } from '../types/user';
 import {
     fetchPaperByIdFromApi,
@@ -148,8 +148,8 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
 
         try {
             // Extract the fields that can be updated
-            const progressUpdate: ProgressUpdate = {
-                emailStatus: updatedProgressData.emailStatus,
+            const progressUpdate: ProgressUpdateRequest = {
+                status: updatedProgressData.status,
                 githubRepoId: updatedProgressData.githubRepoId || undefined,
             };
             console.log('updateImplementationProgress: progress data:', updatedProgressData);

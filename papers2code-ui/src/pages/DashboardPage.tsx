@@ -11,25 +11,7 @@ import SidebarTabs from '../components/dashboard/SidebarTabs';
 import type { UserProfile } from '../common/types/user';
 import ErrorPage from './ErrorPage';
 import './DashboardPage.css';
-
-const getStatusColor = (status: string) => {
-  switch (status) {
-    case 'Completed': 
-    case 'Published': 
-    case 'Official Code Posted': 
-      return '#28a745'; // Green
-    case 'Work in Progress': 
-    case 'In Progress':
-      return '#ffc107'; // Yellow  
-    case 'Started': 
-    case 'Submitted':
-      return '#007bff'; // Blue
-    case 'Not Started': 
-      return '#6c757d'; // Gray
-    default: 
-      return '#6c757d';
-  }
-};
+import { getStatusColorHex } from '../common/utils/statusUtils';
 
 const DashboardPage: React.FC = () => {
   const [data, setData] = useState<DashboardData | null>(null);
@@ -85,7 +67,7 @@ const DashboardPage: React.FC = () => {
               {showStatus && (
                 <span 
                   className="sidebar-status-badge"
-                  style={{ backgroundColor: getStatusColor(paper.status) }}
+                  style={{ backgroundColor: getStatusColorHex(paper.status) }}
                 >
                   {paper.status}
                 </span>

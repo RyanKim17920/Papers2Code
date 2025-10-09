@@ -10,22 +10,32 @@ from typing import Dict, Any
 import logging
 
 from papers2code_app2.database import get_implementation_progress_collection_async
-from papers2code_app2.schemas.implementation_progress import EmailStatus
+from papers2code_app2.schemas.implementation_progress import ProgressStatus, UpdateEventType
+from papers2code_app2.schemas.db_models import PyObjectId
 
 router = APIRouter(prefix="/admin/tasks", tags=["Background Tasks"])
 logger = logging.getLogger(__name__)
 
 async def update_email_statuses_task() -> Dict[str, Any]:
-    """Background task to update email statuses"""
+    """Background task to update email statuses to 'No Response' after 4 weeks"""
     try:
         logger.info("Running email status update task...")
         collection = await get_implementation_progress_collection_async()
         
         four_weeks_ago = datetime.now(timezone.utc) - timedelta(weeks=4)
+        current_time = datetime.now(timezone.utc)
         
+        # Find progress documents where:
+        # - status is "Started" (meaning email was sent but no response yet)
+        # - there's an "Email Sent" event in the updates array older than 4 weeks
         cursor = collection.find({
-            "emailStatus": EmailStatus.SENT.value,
-            "emailSentAt": {"$exists": True, "$ne": None, "$lte": four_weeks_ago}
+            "status": ProgressStatus.STARTED.value,
+            "updates": {
+                "$elemMatch": {
+                    "eventType": UpdateEventType.EMAIL_SENT.value,
+                    "timestamp": {"$lte": four_weeks_ago}
+                }
+            }
         })
         
         updated_count = 0
@@ -33,12 +43,28 @@ async def update_email_statuses_task() -> Dict[str, Any]:
         
         async for progress in cursor:
             try:
+                # Create a status changed event
+                status_event = {
+                    "eventType": UpdateEventType.STATUS_CHANGED.value,
+                    "timestamp": current_time,
+                    "userId": progress.get("initiatedBy"),  # System update, use initiator
+                    "details": {
+                        "previousStatus": ProgressStatus.STARTED.value,
+                        "newStatus": ProgressStatus.NO_RESPONSE.value,
+                        "reason": "Auto-updated: No response after 4 weeks"
+                    }
+                }
+                
                 result = await collection.update_one(
                     {"_id": progress["_id"]},
                     {
                         "$set": {
-                            "emailStatus": EmailStatus.NO_RESPONSE.value,
-                            "updatedAt": datetime.now(timezone.utc)
+                            "status": ProgressStatus.NO_RESPONSE.value,
+                            "latestUpdate": current_time,
+                            "updatedAt": current_time
+                        },
+                        "$push": {
+                            "updates": status_event
                         }
                     }
                 )
@@ -51,7 +77,7 @@ async def update_email_statuses_task() -> Dict[str, Any]:
             "success": True,
             "updated_count": updated_count,
             "errors": errors,
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": current_time.isoformat()
         }
         
     except Exception as e:
