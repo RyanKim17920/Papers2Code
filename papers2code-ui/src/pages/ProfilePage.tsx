@@ -6,6 +6,7 @@ import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi } from '
 import { Paper } from '../common/types/paper';
 import ModernPaperCard from '../components/paperList/ModernPaperCard';
 import { formatJoinedDate, formatLastSeen } from '@/lib/dateUtils';
+import { getStatusColorClasses } from '../common/utils/statusUtils';
 import ErrorPage from './ErrorPage';
 
 type TabType = 'overview' | 'upvoted' | 'contributing';
@@ -158,7 +159,7 @@ const ProfilePage: React.FC = () => {
                         >
                           {paper.title}
                         </Link>
-                        <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full font-medium whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap border ${getStatusColorClasses(paper.status)}`}>
                           {paper.status}
                         </span>
                       </div>
@@ -183,7 +184,7 @@ const ProfilePage: React.FC = () => {
                         >
                           {paper.title}
                         </Link>
-                        <span className="px-2 py-1 bg-muted text-muted-foreground text-xs rounded-full font-medium whitespace-nowrap">
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap border ${getStatusColorClasses(paper.status)}`}>
                           {paper.status}
                         </span>
                       </div>

@@ -7,6 +7,8 @@ import { updateImplementationProgressInApi } from '../../../../common/services/a
 
 interface EmailStatusManagerProps {
   progress: ImplementationProgress;
+  paperId: string; // Add paperId to ensure we have a valid ID
+  paperStatus: string; // The paper's overall status (from paper.status field)
   onProgressChange: (updatedProgress: ImplementationProgress) => void;
   canMarkAsSent: boolean;
   canModifyPostSentStatus: boolean;
@@ -14,17 +16,23 @@ interface EmailStatusManagerProps {
   onUpdatingChange: (isUpdating: boolean) => void;
   onError: (error: string | null) => void;
   currentUser: UserProfile | null;
+  onSendEmail: () => Promise<void>; // Function to send outreach email
+  isSendingEmail: boolean; // Loading state for email sending
 }
 
 export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   progress,
+  paperId,
+  paperStatus,
   onProgressChange,
   canMarkAsSent,
   canModifyPostSentStatus,
   isUpdating,
   onUpdatingChange,
   onError,
-  currentUser
+  currentUser,
+  onSendEmail,
+  isSendingEmail
 }) => {
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<ProgressStatus | null>(null);
@@ -48,7 +56,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       const updateRequest: ProgressUpdateRequest = {
         status: responseType
       };
-      const updatedProgress = await updateImplementationProgressInApi(progress.id, updateRequest);
+      const updatedProgress = await updateImplementationProgressInApi(paperId, updateRequest);
       await onProgressChange(updatedProgress);
     } catch (err) {
       onError(err instanceof Error ? err.message : 'Failed to update status');
@@ -67,7 +75,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       const updateRequest: ProgressUpdateRequest = {
         status: pendingStatus
       };
-      const updatedProgress = await updateImplementationProgressInApi(progress.id, updateRequest);
+      const updatedProgress = await updateImplementationProgressInApi(paperId, updateRequest);
       await onProgressChange(updatedProgress);
       setShowConfirmModal(false);
       setPendingStatus(null);
@@ -94,8 +102,9 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   const getNextAllowedStatuses = (currentStatus: ProgressStatus): ProgressStatus[] => {
     switch (currentStatus) {
       case ProgressStatus.STARTED:
-        return [ProgressStatus.STARTED];
-      case ProgressStatus.STARTED:
+        // When status is Started and email has been sent (checked via hasEmailBeenSent in parent),
+        // show "Authors Responded" and "No Response" buttons
+        // When email hasn't been sent yet, the "View Author Outreach Email" button handles that
         return [ProgressStatus.RESPONSE_RECEIVED, ProgressStatus.NO_RESPONSE];
       case ProgressStatus.RESPONSE_RECEIVED:
       case ProgressStatus.CODE_UPLOADED:
@@ -129,11 +138,16 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   };
 
   const getStatusDescription = (status: ProgressStatus): string => {
+    // Check if email has been sent for Started status
+    const hasEmailBeenSent = progress.updates.some(u => u.eventType === 'Email Sent');
+    
     switch (status) {
       case ProgressStatus.STARTED:
-        return "Ready to contact the paper's authors about implementing their work";
-      case ProgressStatus.STARTED:
-        return "Email sent to authors. Waiting for their response within 4 weeks";
+        if (hasEmailBeenSent) {
+          return "Email sent to authors. Waiting for their response within 4 weeks";
+        } else {
+          return "Ready to contact the paper's authors about implementing their work";
+        }
       case ProgressStatus.RESPONSE_RECEIVED:
         return "Authors have responded! Please specify the type of response";
       case ProgressStatus.CODE_UPLOADED:
@@ -187,13 +201,13 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
       <div className="status-info">
         <span className="status-icon">{getStatusIcon(progress.status)}</span>
         <div className="status-details">
-          <h3 className="status-title">{progress.status}</h3>
+          <h3 className="status-title">{paperStatus}</h3>
           <p className="status-description">{getStatusDescription(progress.status)}</p>
         </div>
       </div>
 
-      {/* Status Details */}
-      {progress.status === ProgressStatus.STARTED && (
+      {/* Status Details - STARTED status, EMAIL SENT */}
+      {progress.status === ProgressStatus.STARTED && progress.updates.some(u => u.eventType === 'Email Sent') && (
         <div className="email-status-details">
           <div className="status-timeline">
             <div className="timeline-item completed">
@@ -227,6 +241,31 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
               </div>
             </div>
           )}
+        </div>
+      )}
+      
+      {/* Status Details - STARTED status, EMAIL NOT YET SENT */}
+      {progress.status === ProgressStatus.STARTED && !progress.updates.some(u => u.eventType === 'Email Sent') && (
+        <div className="email-status-details">
+          <div className="status-timeline">
+            <div className="timeline-item completed">
+              <div className="timeline-marker">✓</div>
+              <div className="timeline-content">
+                <span className="timeline-title">Implementation Started</span>
+                <span className="timeline-subtitle">
+                  {progress.createdAt ? formatDateDistance(progress.createdAt) : 'Recently'}
+                </span>
+              </div>
+            </div>
+            
+            <div className="timeline-item pending">
+              <div className="timeline-marker">📧</div>
+              <div className="timeline-content">
+                <span className="timeline-title">Ready to Contact Authors</span>
+                <span className="timeline-subtitle">Send outreach email to begin collaboration</span>
+              </div>
+            </div>
+          </div>
         </div>
       )}
 
@@ -276,8 +315,27 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
           </div>
       )}
 
-      {/* Action Buttons - Only show if user has permission */}
-      {(canMarkAsSent || canModifyPostSentStatus) && (
+      {/* Send Email Button - Show when status is Started and email not sent yet */}
+      {progress.status === ProgressStatus.STARTED && 
+       !progress.updates.some(u => u.eventType === 'Email Sent') && 
+       canMarkAsSent && (
+        <div className="card-actions">
+          <button
+            className="btn btn-primary action-button"
+            onClick={onSendEmail}
+            disabled={isSendingEmail || isUpdating}
+          >
+            <span className="action-icon">📧</span>
+            <span className="action-text">
+              {isSendingEmail ? 'Sending Email...' : 'Send Author Outreach Email'}
+            </span>
+          </button>
+        </div>
+      )}
+
+      {/* Status Change Buttons - Show when email has been sent */}
+      {(canMarkAsSent || canModifyPostSentStatus) && 
+       progress.updates.some(u => u.eventType === 'Email Sent') && (
         <div className="card-actions">
           {getNextAllowedStatuses(progress.status)
             .filter((nextStatus) => nextStatus !== ProgressStatus.NO_RESPONSE) // Remove NO_RESPONSE button

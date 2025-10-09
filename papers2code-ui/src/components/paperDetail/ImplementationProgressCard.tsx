@@ -6,33 +6,26 @@ import { Badge } from '../ui/badge';
 import { ImplementationProgressTab } from './Tabs/ImplementationProgress/ImplementationProgressTab';
 import type { ImplementationProgress } from '../../common/types/implementation';
 import type { UserProfile } from '../../common/types/user';
+import { getStatusColorClasses } from '../../common/utils/statusUtils';
 
 interface ImplementationProgressCardProps {
     progress: ImplementationProgress;
     paperId: string;
+    paperStatus: string; // The paper's overall status (from paper.status field)
     currentUser: UserProfile | null;
     onImplementationProgressChange: (progress: ImplementationProgress) => Promise<void>;
+    onRefreshPaper: () => Promise<void>; // Function to refresh paper data
 }
 
 const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
     progress,
     paperId,
+    paperStatus,
     currentUser,
-    onImplementationProgressChange
+    onImplementationProgressChange,
+    onRefreshPaper
 }) => {
     const [isExpanded, setIsExpanded] = useState(false);
-
-    const getStatusColor = (emailStatus: string) => {
-        switch (emailStatus) {
-            case 'Code Uploaded': 
-            case 'Response Received': return 'bg-green-500/10 text-green-700 border-green-500/20';
-            case 'Sent': return 'bg-blue-500/10 text-blue-700 border-blue-500/20';
-            case 'Not Sent': return 'bg-yellow-500/10 text-yellow-700 border-yellow-500/20';
-            case 'No Response':
-            case 'Refused to Upload': return 'bg-red-500/10 text-red-700 border-red-500/20';
-            default: return 'bg-muted/50 text-muted-foreground border-border';
-        }
-    };
 
     return (
         <Card className="bg-card/70 backdrop-blur border border-border/60">
@@ -58,9 +51,9 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
                         <span className="text-muted-foreground">Status</span>
                         <Badge 
                             variant="outline" 
-                            className={`text-xs h-4 px-1 ${getStatusColor(progress.status)}`}
+                            className={`text-xs h-4 px-1 ${getStatusColorClasses(paperStatus)}`}
                         >
-                            {progress.status || 'Started'}
+                            {paperStatus || 'Not Started'}
                         </Badge>
                     </div>
                     
@@ -87,8 +80,10 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
                         <ImplementationProgressTab 
                             progress={progress}
                             paperId={paperId}
+                            paperStatus={paperStatus}
                             currentUser={currentUser}
                             onImplementationProgressChange={onImplementationProgressChange}
+                            onRefreshPaper={onRefreshPaper}
                         />
                     </div>
                 )}

@@ -8,6 +8,7 @@ from ..database import (
     get_papers_collection_async,
     get_users_collection_async
 )
+from ..cache import paper_cache
 from ..schemas.implementation_progress import (
     ImplementationProgress,
     ProgressUpdateRequest,
@@ -137,6 +138,9 @@ class ImplementationProgressService:
                     {"_id": paper_obj_id},
                     {"$set": {"status": "Started"}}
                 )
+                
+                # Update paper status in cache instead of clearing all
+                await paper_cache.update_paper_in_cache(paper_id, "Started")
 
                 created_progress_data = await progress_collection.find_one({"_id": result.inserted_id})
                 if not created_progress_data:
@@ -242,6 +246,9 @@ class ImplementationProgressService:
             {"$set": {"status": "Waiting for Author Response"}}
         )
         
+        # Update paper status in cache instead of clearing all
+        await paper_cache.update_paper_in_cache(paper_id, "Waiting for Author Response")
+        
         # In a real application, you would integrate with an email sending service here.
         # For now, we'll just log the content.
         return {"message": "Email content generated and logged (email not actually sent).", "subject": email_content['subject'], "body": email_content['body']}
@@ -323,6 +330,8 @@ class ImplementationProgressService:
                         {"_id": paper_obj_id},
                         {"$set": {"status": paper_status_update}}
                     )
+                    # Update paper status in cache instead of clearing all
+                    await paper_cache.update_paper_in_cache(paper_id, paper_status_update)
         
         # Handle GitHub repo changes
         if 'github_repo_id' in update_data:

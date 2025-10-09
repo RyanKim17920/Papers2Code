@@ -11,19 +11,24 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '../..
 import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
 import { GitBranch, Users, Mail, AlertCircle } from 'lucide-react';
+import { getStatusColorClasses } from '../../../../common/utils/statusUtils';
 
 interface ImplementationProgressProps {
     progress: ImplementationProgress;
     paperId: string;
+    paperStatus: string; // The paper's overall status (from paper.status field)
     currentUser: UserProfile | null;
     onImplementationProgressChange: (updatedProgress: ImplementationProgress) => void;
+    onRefreshPaper: () => Promise<void>; // Function to refresh paper data
 }
 
 export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = ({
     progress,
     paperId,
+    paperStatus,
     currentUser,
-    onImplementationProgressChange
+    onImplementationProgressChange,
+    onRefreshPaper
 }) => {
     const { emailContent, fetchEmailContent, isFetchingEmail, emailError, clearEmailContent } = useAuthorOutreachEmail(paperId);
  
@@ -35,9 +40,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     // Check if email has been sent by looking at updates
     const hasEmailBeenSent = progress.updates.some(u => u.eventType === UpdateEventType.EMAIL_SENT);
     
-    const canModifyPostSentStatus = isLoggedIn && (
-        isInitiator || 
-        (hasEmailBeenSent && isContributor)
+    const canModifyPostSentStatus = isLoggedIn && hasEmailBeenSent && (
+        isInitiator || isContributor
     );
 
     const canMarkAsSent = isLoggedIn && isContributor && !hasEmailBeenSent;
@@ -46,6 +50,17 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
     // State for managing updating status and errors
     const [isUpdating, setIsUpdating] = React.useState(false);
     const [error, setError] = React.useState<string | null>(null);
+
+    // Handle sending email and refreshing progress
+    const handleSendEmail = async () => {
+        try {
+            await fetchEmailContent(); // This calls the backend endpoint and adds EMAIL_SENT event
+            // Refresh paper data to get updated status
+            await onRefreshPaper();
+        } catch (err) {
+            setError(err instanceof Error ? err.message : 'Failed to send email');
+        }
+    };
 
     useEffect(() => {
         if (emailError) {
@@ -111,8 +126,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
         if (progress.status === ProgressStatus.CODE_UPLOADED) {
             return { label: 'Completed', variant: 'default' as const };
         } else {
-            // Show the actual status
-            return { label: progress.status, variant: 'outline' as const };
+            // Show the user-facing paper status instead of internal progress status
+            return { label: paperStatus, variant: 'outline' as const };
         }
     };
 
@@ -134,7 +149,7 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                             Repository Available
                         </Badge>
                     )}
-                    <Badge variant={wipStatus.variant}>
+                    <Badge variant={wipStatus.variant} className={getStatusColorClasses(wipStatus.label)}>
                         {wipStatus.label}
                     </Badge>
                 </div>
@@ -191,6 +206,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                     <CardContent className="space-y-4">
                         <EmailStatusManager
                             progress={progress}
+                            paperId={paperId}
+                            paperStatus={paperStatus}
                             currentUser={currentUser}
                             onProgressChange={onImplementationProgressChange}
                             canMarkAsSent={canMarkAsSent}
@@ -198,6 +215,8 @@ export const ImplementationProgressTab: React.FC<ImplementationProgressProps> = 
                             isUpdating={isUpdating}
                             onUpdatingChange={setIsUpdating}
                             onError={setError}
+                            onSendEmail={handleSendEmail}
+                            isSendingEmail={isFetchingEmail}
                         />
                         
                         {isContributor && (
