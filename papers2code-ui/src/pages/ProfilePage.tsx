@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings } from 'lucide-react';
+import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings, Github } from 'lucide-react';
+import { SiBluesky, SiHuggingface } from 'react-icons/si';
 import { UserAvatar, LoadingSpinner } from '../common/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi, getUserProfileSettings } from '../common/services/api';
 import { Paper } from '../common/types/paper';
@@ -364,7 +365,7 @@ const ProfilePage: React.FC = () => {
               </div>
               
               {/* Social Links */}
-              {(userDetails.websiteUrl || userDetails.twitterProfileUrl || userDetails.linkedinProfileUrl || userDetails.blueskyUsername || userDetails.huggingfaceUsername) && (
+              {(userDetails.websiteUrl || userDetails.twitterProfileUrl || userDetails.linkedinProfileUrl || userDetails.blueskyUsername || userDetails.huggingfaceUsername || userDetails.githubProfileUrl) && (
                 <div className="flex gap-3 justify-center md:justify-start">
                   {userDetails.websiteUrl && (
                     <a 
@@ -375,6 +376,17 @@ const ProfilePage: React.FC = () => {
                       title="Website"
                     >
                       <Globe size={16} />
+                    </a>
+                  )}
+                  {userDetails.githubProfileUrl && (
+                    <a 
+                      href={userDetails.githubProfileUrl} 
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                      title="GitHub"
+                    >
+                      <Github size={16} />
                     </a>
                   )}
                   {userDetails.twitterProfileUrl && (
@@ -397,6 +409,28 @@ const ProfilePage: React.FC = () => {
                       title="LinkedIn"
                     >
                       <Linkedin size={16} />
+                    </a>
+                  )}
+                  {userDetails.blueskyUsername && (
+                    <a 
+                      href={userDetails.blueskyUsername.startsWith('http') ? userDetails.blueskyUsername : `https://bsky.app/profile/${userDetails.blueskyUsername}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                      title="Bluesky"
+                    >
+                      <SiBluesky size={16} />
+                    </a>
+                  )}
+                  {userDetails.huggingfaceUsername && (
+                    <a 
+                      href={userDetails.huggingfaceUsername.startsWith('http') ? userDetails.huggingfaceUsername : `https://huggingface.co/${userDetails.huggingfaceUsername}`}
+                      target="_blank" 
+                      rel="noopener noreferrer"
+                      className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
+                      title="Hugging Face"
+                    >
+                      <SiHuggingface size={16} />
                     </a>
                   )}
                 </div>

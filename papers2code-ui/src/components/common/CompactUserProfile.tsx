@@ -102,13 +102,6 @@ const CompactUserProfile: React.FC<CompactUserProfileProps> = ({ user, onLogout 
             Profile
           </Link>
           
-          <Link to="/settings" className="dropdown-item" onClick={closeDropdown}>
-            <svg width="16" height="16" viewBox="0 0 16 16" fill="currentColor">
-              <path d="M8 0a8.2 8.2 0 00-2.3.3l1.3 2.2a4.5 4.5 0 012 0l1.3-2.2A8.2 8.2 0 008 0zM2.2 2.9a8.1 8.1 0 00-1.9 2l2.2 1.3a4.5 4.5 0 011-1.7L2.2 2.9zm11.6 0L12.5 4.5a4.5 4.5 0 011 1.7l2.2-1.3a8.1 8.1 0 00-1.9-2z"/>
-            </svg>
-            Settings
-          </Link>
-          
           <div className="dropdown-divider"></div>
           
           <button onClick={handleLogout} className="dropdown-item logout-item">

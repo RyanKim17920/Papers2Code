@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Command, User, Settings, LogOut, ChevronDown, Github } from 'lucide-react';
+import { Search, Command, User, LogOut, ChevronDown, Github } from 'lucide-react';
 import logo from '../../assets/images/papers2codelogo.png';
 import type { UserProfile } from '../../common/types/user';
 import { Button } from '../ui/button';
@@ -37,6 +37,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
     e.preventDefault();
     if (searchQuery.trim()) {
       navigate(`/papers?searchQuery=${encodeURIComponent(searchQuery.trim())}`);
+      setSearchQuery(''); // Clear the input after search
     } else {
       navigate('/papers');
     }
@@ -133,12 +134,6 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                       <Link to={`/user/${currentUser.username}`} className="flex items-center gap-2">
                         <User className="h-4 w-4" />
                         Profile
-                      </Link>
-                    </DropdownMenuItem>
-                    <DropdownMenuItem asChild>
-                      <Link to="/settings" className="flex items-center gap-2">
-                        <Settings className="h-4 w-4" />
-                        Settings
                       </Link>
                     </DropdownMenuItem>
                     <DropdownMenuSeparator />

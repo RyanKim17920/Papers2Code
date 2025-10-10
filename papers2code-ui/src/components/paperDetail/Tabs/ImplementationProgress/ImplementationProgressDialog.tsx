@@ -114,7 +114,7 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
       <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
         <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
           <DialogHeader>
-            <div className="flex items-start justify-between gap-4">
+            <div className="flex items-start justify-between gap-4 pr-8">
               <div className="flex-1">
                 <DialogTitle className="text-2xl mb-2">Implementation Progress</DialogTitle>
                 <p className="text-sm text-muted-foreground">Track the journey from paper to code</p>

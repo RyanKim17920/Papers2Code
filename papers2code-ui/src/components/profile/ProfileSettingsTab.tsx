@@ -209,29 +209,30 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
   };
 
   return (
-    <div className="space-y-6 max-w-4xl">
+    <div className="space-y-4 max-w-4xl">
       {/* Profile Information */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <User size={20} />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <User size={18} />
             Profile Information
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Update your public profile information and social links
           </CardDescription>
         </CardHeader>
         <CardContent>
           {/* GitHub info */}
-          <div className="mb-6 p-4 bg-muted/50 rounded-lg border border-border">
-            <p className="text-sm font-medium mb-2">GitHub Account (Managed externally)</p>
-            <p className="text-sm text-muted-foreground mb-3">
+          <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+            <p className="text-xs font-medium mb-1">GitHub Account (Managed externally)</p>
+            <p className="text-xs text-muted-foreground mb-2">
               <strong>Username:</strong> {currentUser.username}
             </p>
             <Button
               variant="outline"
               size="sm"
               asChild
+              className="h-7 text-xs"
             >
               <a 
                 href="https://github.com/settings/profile"
@@ -243,111 +244,113 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
             </Button>
           </div>
 
-          <form onSubmit={handleSaveProfile} className="space-y-4">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-2">
-                <Label htmlFor="name">Display Name</Label>
+          <form onSubmit={handleSaveProfile} className="space-y-3">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
+              <div className="space-y-1.5">
+                <Label htmlFor="name" className="text-sm">Display Name</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Your display name"
+                  className="h-9"
                 />
-                <p className="text-xs text-muted-foreground">
-                  This will be shown instead of your GitHub username
-                </p>
+                {!fieldValidation.name?.isValid && (
+                  <p className="text-xs text-muted-foreground">
+                    This will be shown instead of your GitHub username
+                  </p>
+                )}
               </div>
               
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="bio">Bio</Label>
+              <div className="space-y-1.5 md:col-span-2">
+                <Label htmlFor="bio" className="text-sm">Bio</Label>
                 <Textarea
                   id="bio"
                   value={formData.bio}
                   onChange={(e) => handleInputChange('bio', e.target.value)}
                   placeholder="Tell us about yourself..."
-                  rows={3}
+                  rows={2}
+                  className="resize-none"
                 />
-                <p className="text-xs text-muted-foreground">
-                  A short description about yourself and your interests
-                </p>
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="website" className="flex items-center gap-2">
-                  <Globe size={14} />
-                  Website URL
+              <div className="space-y-1.5">
+                <Label htmlFor="website" className="flex items-center gap-1.5 text-sm">
+                  <Globe size={13} />
+                  Website
                 </Label>
                 <Input
                   id="website"
                   value={formData.websiteUrl}
                   onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
                   placeholder="example.com"
-                  className={fieldValidation.websiteUrl?.isValid === false ? 'border-destructive' : ''}
+                  className={`h-9 ${fieldValidation.websiteUrl?.isValid === false ? 'border-destructive' : ''}`}
                 />
-                <p className={`text-xs ${fieldValidation.websiteUrl?.isValid === false ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {fieldValidation.websiteUrl?.errorMessage || 'Your personal website or portfolio'}
-                </p>
+                {fieldValidation.websiteUrl?.isValid === false && (
+                  <p className="text-xs text-destructive">{fieldValidation.websiteUrl?.errorMessage}</p>
+                )}
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="twitter" className="flex items-center gap-2">
-                  <Twitter size={14} />
-                  Twitter Profile
+              <div className="space-y-1.5">
+                <Label htmlFor="twitter" className="flex items-center gap-1.5 text-sm">
+                  <Twitter size={13} />
+                  Twitter
                 </Label>
                 <Input
                   id="twitter"
                   value={formData.twitterProfileUrl}
                   onChange={(e) => handleInputChange('twitterProfileUrl', e.target.value)}
-                  placeholder="username or https://twitter.com/username"
-                  className={fieldValidation.twitterProfileUrl?.isValid === false ? 'border-destructive' : ''}
+                  placeholder="username or URL"
+                  className={`h-9 ${fieldValidation.twitterProfileUrl?.isValid === false ? 'border-destructive' : ''}`}
                 />
-                <p className={`text-xs ${fieldValidation.twitterProfileUrl?.isValid === false ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {fieldValidation.twitterProfileUrl?.errorMessage || 'Enter your Twitter/X username or URL'}
-                </p>
+                {fieldValidation.twitterProfileUrl?.isValid === false && (
+                  <p className="text-xs text-destructive">{fieldValidation.twitterProfileUrl?.errorMessage}</p>
+                )}
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="linkedin" className="flex items-center gap-2">
-                  <Linkedin size={14} />
-                  LinkedIn Profile
+              <div className="space-y-1.5">
+                <Label htmlFor="linkedin" className="flex items-center gap-1.5 text-sm">
+                  <Linkedin size={13} />
+                  LinkedIn
                 </Label>
                 <Input
                   id="linkedin"
                   value={formData.linkedinProfileUrl}
                   onChange={(e) => handleInputChange('linkedinProfileUrl', e.target.value)}
-                  placeholder="john-smith or https://linkedin.com/in/john-smith"
-                  className={fieldValidation.linkedinProfileUrl?.isValid === false ? 'border-destructive' : ''}
+                  placeholder="username or URL"
+                  className={`h-9 ${fieldValidation.linkedinProfileUrl?.isValid === false ? 'border-destructive' : ''}`}
                 />
-                <p className={`text-xs ${fieldValidation.linkedinProfileUrl?.isValid === false ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {fieldValidation.linkedinProfileUrl?.errorMessage || 'Enter your LinkedIn username or URL'}
-                </p>
+                {fieldValidation.linkedinProfileUrl?.isValid === false && (
+                  <p className="text-xs text-destructive">{fieldValidation.linkedinProfileUrl?.errorMessage}</p>
+                )}
               </div>
               
-              <div className="space-y-2">
-                <Label htmlFor="bluesky">Bluesky Handle</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="bluesky" className="text-sm">Bluesky</Label>
                 <Input
                   id="bluesky"
                   value={formData.blueskyUsername}
                   onChange={(e) => handleInputChange('blueskyUsername', e.target.value)}
                   placeholder="username.bsky.social"
-                  className={fieldValidation.blueskyUsername?.isValid === false ? 'border-destructive' : ''}
+                  className={`h-9 ${fieldValidation.blueskyUsername?.isValid === false ? 'border-destructive' : ''}`}
                 />
-                <p className={`text-xs ${fieldValidation.blueskyUsername?.isValid === false ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {fieldValidation.blueskyUsername?.errorMessage || 'Enter your Bluesky handle or full URL'}
-                </p>
+                {fieldValidation.blueskyUsername?.isValid === false && (
+                  <p className="text-xs text-destructive">{fieldValidation.blueskyUsername?.errorMessage}</p>
+                )}
               </div>
               
-              <div className="space-y-2 md:col-span-2">
-                <Label htmlFor="huggingface">Hugging Face Username</Label>
+              <div className="space-y-1.5">
+                <Label htmlFor="huggingface" className="text-sm">Hugging Face</Label>
                 <Input
                   id="huggingface"
                   value={formData.huggingfaceUsername}
                   onChange={(e) => handleInputChange('huggingfaceUsername', e.target.value)}
-                  placeholder="username or https://huggingface.co/username"
-                  className={fieldValidation.huggingfaceUsername?.isValid === false ? 'border-destructive' : ''}
+                  placeholder="username or URL"
+                  className={`h-9 ${fieldValidation.huggingfaceUsername?.isValid === false ? 'border-destructive' : ''}`}
                 />
-                <p className={`text-xs ${fieldValidation.huggingfaceUsername?.isValid === false ? 'text-destructive' : 'text-muted-foreground'}`}>
-                  {fieldValidation.huggingfaceUsername?.errorMessage || 'Enter your Hugging Face username or full URL'}
+                {fieldValidation.huggingfaceUsername?.isValid === false && (
+                  <p className="text-xs text-destructive">{fieldValidation.huggingfaceUsername?.errorMessage}</p>
+                )}
                 </p>
               </div>
             </div>
@@ -361,20 +364,20 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
 
       {/* Notifications */}
       <Card>
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2">
-            <Bell size={20} />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Bell size={18} />
             Notification Preferences
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Manage your email and on-site notification preferences
           </CardDescription>
         </CardHeader>
         <CardContent>
-          <div className="flex items-center justify-center py-8 text-center">
+          <div className="flex items-center justify-center py-4 text-center">
             <div>
-              <p className="text-muted-foreground mb-2">Notification settings will be available soon</p>
-              <span className="inline-block px-3 py-1 bg-muted text-muted-foreground text-xs rounded-full font-medium">
+              <p className="text-sm text-muted-foreground mb-1.5">Notification settings will be available soon</p>
+              <span className="inline-block px-2.5 py-0.5 bg-muted text-muted-foreground text-xs rounded-full font-medium">
                 Coming Soon
               </span>
             </div>
@@ -384,34 +387,36 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
 
       {/* Account Actions */}
       <Card className="border-destructive/50">
-        <CardHeader>
-          <CardTitle className="flex items-center gap-2 text-destructive">
-            <Settings size={20} />
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg text-destructive">
+            <Settings size={18} />
             Account Actions
           </CardTitle>
-          <CardDescription>
+          <CardDescription className="text-xs">
             Manage your account settings and security
           </CardDescription>
         </CardHeader>
-        <CardContent className="space-y-4">
+        <CardContent className="space-y-3">
           <Separator />
           
-          <div className="flex flex-col sm:flex-row gap-3">
+          <div className="flex flex-col sm:flex-row gap-2">
             <Button 
               variant="outline"
+              size="sm"
               onClick={handleLogout}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 h-9"
             >
-              <LogOut size={16} />
+              <LogOut size={14} />
               Log Out
             </Button>
             
             <Button
               variant="destructive"
+              size="sm"
               onClick={handleDeleteAccount}
-              className="flex items-center gap-2"
+              className="flex items-center gap-2 h-9"
             >
-              <Trash2 size={16} />
+              <Trash2 size={14} />
               Delete Account
             </Button>
           </div>
