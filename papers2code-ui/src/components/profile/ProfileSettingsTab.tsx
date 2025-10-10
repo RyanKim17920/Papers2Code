@@ -351,7 +351,6 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
                 {fieldValidation.huggingfaceUsername?.isValid === false && (
                   <p className="text-xs text-destructive">{fieldValidation.huggingfaceUsername?.errorMessage}</p>
                 )}
-                </p>
               </div>
             </div>
 

@@ -365,7 +365,7 @@ const ProfilePage: React.FC = () => {
               </div>
               
               {/* Social Links */}
-              {(userDetails.websiteUrl || userDetails.twitterProfileUrl || userDetails.linkedinProfileUrl || userDetails.blueskyUsername || userDetails.huggingfaceUsername || userDetails.githubProfileUrl) && (
+              {(userDetails.websiteUrl || userDetails.twitterProfileUrl || userDetails.linkedinProfileUrl || userDetails.blueskyUsername || userDetails.huggingfaceUsername || userDetails.username) && (
                 <div className="flex gap-3 justify-center md:justify-start">
                   {userDetails.websiteUrl && (
                     <a 
@@ -378,9 +378,9 @@ const ProfilePage: React.FC = () => {
                       <Globe size={16} />
                     </a>
                   )}
-                  {userDetails.githubProfileUrl && (
+                  {userDetails.username && (
                     <a 
-                      href={userDetails.githubProfileUrl} 
+                      href={`https://github.com/${userDetails.username}`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"

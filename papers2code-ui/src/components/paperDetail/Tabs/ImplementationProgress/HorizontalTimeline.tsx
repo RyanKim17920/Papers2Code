@@ -77,7 +77,7 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
       )}
       
       {/* Timeline events - positioned absolutely so they align with the line */}
-      <div className="relative h-12">
+      <div className="absolute top-0 left-0 right-0 h-12">
         {events.map((event, idx) => (
           <TimelineEvent
             key={event.id}
