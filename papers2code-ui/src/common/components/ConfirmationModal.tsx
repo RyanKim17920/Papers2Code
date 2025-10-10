@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import './ConfirmationModal.css'; // Create this CSS file
 
@@ -25,20 +25,68 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
     children,
     isConfirming = false,
 }) => {
+    // Handle Escape key globally
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                e.preventDefault();
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape, true); // Use capture phase
+        return () => {
+            document.removeEventListener('keydown', handleEscape, true);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen) {
         return null;
-    }    const handleBackdropClick = (e: React.MouseEvent) => {
+    }
+
+    const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Only close if clicking directly on backdrop, not on modal content
         if (e.target === e.currentTarget) {
+            e.stopPropagation();
+            e.preventDefault();
             onClose();
         }
     };
 
+    const handleBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Prevent mouseDown events from reaching Dialog for ALL clicks on backdrop
+        e.stopPropagation();
+    };
+
+    const handleContentClick = (e: React.MouseEvent) => {
+        // Prevent clicks on modal content from closing the modal
+        e.stopPropagation();
+    };
+
+    const handleCloseClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onClose();
+    };
+
     const modalContent = (
-        <div className="modal-backdrop" onClick={handleBackdropClick}>
-            <div className="modal-content" onClick={(e) => e.stopPropagation()}>
+        <div 
+            className="modal-backdrop" 
+            onClick={handleBackdropClick}
+            onMouseDown={handleBackdropMouseDown}
+        >
+            <div 
+                className="modal-content" 
+                onClick={handleContentClick}
+                onMouseDown={handleContentClick}
+            >
                 <button 
                     className="modal-close-button" 
-                    onClick={onClose} 
+                    onClick={handleCloseClick}
+                    onMouseDown={(e) => e.stopPropagation()}
                     aria-label="Close modal"
                     type="button"
                 >
@@ -51,14 +99,16 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 <div className="modal-actions">
                     <button
                         className={`btn ${confirmButtonClass}`}
-                        onClick={onConfirm}
+                        onClick={(e) => { e.stopPropagation(); onConfirm(); }}
+                        onMouseDown={(e) => e.stopPropagation()}
                         disabled={isConfirming}
                     >
                         {isConfirming ? 'Processing...' : confirmText}
                     </button>
                     <button
                         className="btn btn-secondary"
-                        onClick={onClose}
+                        onClick={(e) => { e.stopPropagation(); onClose(); }}
+                        onMouseDown={(e) => e.stopPropagation()}
                         disabled={isConfirming}
                     >
                         {cancelText}

@@ -1,4 +1,4 @@
-import React from 'react';
+import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
 import './ConfirmationModal.css'; // Reuse the same CSS since they have similar structure
 
@@ -21,38 +21,70 @@ const Modal: React.FC<ModalProps> = ({
     showCloseButton = true,
     className = '',
 }) => {
+    // Handle Escape key globally
+    useEffect(() => {
+        if (!isOpen) return;
+
+        const handleEscape = (e: KeyboardEvent) => {
+            if (e.key === 'Escape') {
+                e.stopPropagation();
+                e.preventDefault();
+                onClose();
+            }
+        };
+
+        document.addEventListener('keydown', handleEscape, true); // Use capture phase
+        return () => {
+            document.removeEventListener('keydown', handleEscape, true);
+        };
+    }, [isOpen, onClose]);
+
     if (!isOpen) {
         return null;
     }
 
-    const handleBackdropClick = (e: React.MouseEvent) => {
+    const handleBackdropClick = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Only close if clicking directly on backdrop, not on modal content
         if (e.target === e.currentTarget) {
+            e.stopPropagation();
+            e.preventDefault();
             onClose();
         }
     };
 
-    const handleKeyDown = (e: React.KeyboardEvent) => {
-        if (e.key === 'Escape') {
-            onClose();
-        }
+    const handleBackdropMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+        // Prevent mouseDown events from reaching Dialog for ALL clicks on backdrop
+        e.stopPropagation();
+    };
+
+    const handleContentClick = (e: React.MouseEvent) => {
+        // Prevent clicks on modal content from closing the modal
+        e.stopPropagation();
+    };
+
+    const handleCloseClick = (e: React.MouseEvent) => {
+        e.stopPropagation();
+        e.preventDefault();
+        onClose();
     };
 
     const modalContent = (
         <div 
             className="modal-backdrop" 
             onClick={handleBackdropClick}
-            onKeyDown={handleKeyDown}
-            tabIndex={-1}
+            onMouseDown={handleBackdropMouseDown}
         >
             <div 
                 className={`modal-content ${className}`}
                 style={{ maxWidth }}
-                onClick={(e) => e.stopPropagation()}
+                onClick={handleContentClick}
+                onMouseDown={handleContentClick}
             >
                 {showCloseButton && (
                     <button 
                         className="modal-close-button" 
-                        onClick={onClose} 
+                        onClick={handleCloseClick}
+                        onMouseDown={(e) => e.stopPropagation()}
                         aria-label="Close modal"
                         type="button"
                     >

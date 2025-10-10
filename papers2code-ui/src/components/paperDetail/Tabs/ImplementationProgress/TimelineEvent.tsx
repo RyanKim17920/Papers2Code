@@ -1,7 +1,6 @@
-import React from 'react';
+import React, { useState } from 'react';
 import { ProgressStatus } from '../../../../common/types/implementation';
-import { Popover, PopoverContent, PopoverTrigger } from '../../../ui/popover';
-import { Code, Mail, CheckCircle, AlertCircle, XCircle, Clock, GitBranch } from 'lucide-react';
+import { Code, Mail, CheckCircle, AlertCircle, XCircle, Clock, GitBranch, UserPlus } from 'lucide-react';
 
 export interface TimelineEventData {
   id: string;
@@ -23,6 +22,8 @@ interface TimelineEventProps {
 }
 
 export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, isLast }) => {
+  const [isHovered, setIsHovered] = useState(false);
+
   const getEventIcon = () => {
     switch (event.type) {
       case 'initiated':
@@ -48,20 +49,32 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
   };
 
   const getEventColor = () => {
-    switch (event.status) {
-      case ProgressStatus.CODE_UPLOADED:
-        return 'bg-green-500 border-green-600 text-white';
-      case ProgressStatus.CODE_NEEDS_REFACTORING:
-        return 'bg-yellow-500 border-yellow-600 text-white';
-      case ProgressStatus.REFUSED_TO_UPLOAD:
-      case ProgressStatus.NO_RESPONSE:
-        return 'bg-red-500 border-red-600 text-white';
-      case ProgressStatus.RESPONSE_RECEIVED:
-        return 'bg-blue-500 border-blue-600 text-white';
-      case ProgressStatus.STARTED:
-        return 'bg-muted border-border text-muted-foreground';
+    // Use consistent color scheme matching statusUtils
+    switch (event.type) {
+      case 'initiated':
+        // Cyan for started/initiated - matches 'Started' status
+        return 'bg-cyan-600 border-cyan-700 text-white hover:bg-cyan-700';
+      case 'email_sent':
+        // Yellow/Orange for waiting - matches 'Waiting for Author Response'
+        return 'bg-yellow-600 border-yellow-700 text-white hover:bg-yellow-700';
+      case 'response':
+        if (event.status === ProgressStatus.CODE_UPLOADED) {
+          // Green for completed/uploaded - matches 'Completed'
+          return 'bg-green-600 border-green-700 text-white hover:bg-green-700';
+        } else if (event.status === ProgressStatus.CODE_NEEDS_REFACTORING) {
+          // Orange for needs work - matches 'Code Needs Refactoring'
+          return 'bg-orange-600 border-orange-700 text-white hover:bg-orange-700';
+        } else if (event.status === ProgressStatus.REFUSED_TO_UPLOAD || event.status === ProgressStatus.NO_RESPONSE) {
+          // Red for negative responses
+          return 'bg-red-600 border-red-700 text-white hover:bg-red-700';
+        }
+        // Blue for in progress - matches 'In Progress'
+        return 'bg-blue-600 border-blue-700 text-white hover:bg-blue-700';
+      case 'final':
+        // Green for final completion
+        return 'bg-green-600 border-green-700 text-white hover:bg-green-700';
       default:
-        return 'bg-primary border-primary text-primary-foreground';
+        return 'bg-gray-600 border-gray-700 text-white hover:bg-gray-700';
     }
   };
 
@@ -77,36 +90,39 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
   return (
     <div 
       className="absolute flex flex-col items-center"
-      style={{ left: `${position}%`, transform: 'translateX(-50%)' }}
+      style={{ 
+        left: `${position}%`, 
+        transform: 'translateX(-50%)',
+        top: 0
+      }}
+      onMouseEnter={() => setIsHovered(true)}
+      onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Connecting line (if not last) */}
-      {!isLast && (
-        <div 
-          className="absolute top-6 left-1/2 h-0.5 bg-border"
-          style={{ 
-            width: `calc((100vw - 2rem) * ${(100 - position) / 100})`,
-            maxWidth: '100%'
+      {/* Event node - positioned so the timeline line goes through the center */}
+      <div className="relative">
+        <div
+          className={`relative z-10 w-12 h-12 rounded-full border-4 border-background flex items-center justify-center transition-all cursor-pointer shadow-md ${getEventColor()}`}
+          style={{
+            transform: isHovered ? 'scale(1.15)' : 'scale(1)',
           }}
-        />
-      )}
+        >
+          {getEventIcon()}
+        </div>
+      </div>
       
-      {/* Event node */}
-      <Popover>
-        <PopoverTrigger asChild>
-          <button
-            className={`relative z-10 w-12 h-12 rounded-full border-2 flex items-center justify-center transition-all hover:scale-110 focus:outline-hidden focus:ring-2 focus:ring-primary focus:ring-offset-2 ${getEventColor()}`}
-          >
-            {getEventIcon()}
-          </button>
-        </PopoverTrigger>
-        <PopoverContent className="w-80 p-4" align="start">
+      {/* Hover tooltip */}
+      {isHovered && (
+        <div 
+          className="absolute top-16 left-1/2 -translate-x-1/2 w-72 bg-popover border border-border rounded-lg shadow-lg p-4 z-50 animate-in fade-in-0 zoom-in-95"
+          style={{ pointerEvents: 'none' }}
+        >
           <div className="space-y-3">
             <div>
               <h4 className="font-semibold text-sm text-foreground">{event.title}</h4>
               <p className="text-xs text-muted-foreground mt-1">{formatDate(event.timestamp)}</p>
             </div>
             
-            <p className="text-sm text-foreground">{event.description}</p>
+            <p className="text-sm text-foreground leading-relaxed">{event.description}</p>
             
             {event.details && event.details.length > 0 && (
               <div className="space-y-2 pt-2 border-t border-border">
@@ -119,11 +135,11 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
               </div>
             )}
           </div>
-        </PopoverContent>
-      </Popover>
+        </div>
+      )}
       
       {/* Date label below */}
-      <div className="mt-2 text-xs text-muted-foreground whitespace-nowrap">
+      <div className="mt-2 text-xs text-muted-foreground whitespace-nowrap font-medium">
         {formatDate(event.timestamp)}
       </div>
     </div>

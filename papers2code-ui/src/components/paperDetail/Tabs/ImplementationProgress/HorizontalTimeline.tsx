@@ -61,12 +61,23 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
   }, [events]);
 
   return (
-    <div className="relative w-full px-8 py-12 min-h-[200px]">
-      {/* Base timeline line */}
-      <div className="absolute top-6 left-8 right-8 h-0.5 bg-border" />
+    <div className="relative w-full px-12 py-12 min-h-[240px]">
+      {/* Timeline line - goes through the centers of event circles (48px circles, so 24px from top) */}
+      <div className="absolute left-12 right-12 h-1 bg-border" style={{ top: '24px' }} />
       
-      {/* Timeline events */}
-      <div className="relative">
+      {/* Progress line - colored portion showing completion */}
+      {events.length > 0 && (
+        <div 
+          className="absolute left-12 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-green-500 transition-all duration-500"
+          style={{ 
+            top: '24px',
+            width: `${eventPositions[events.length - 1] - 10}%`
+          }}
+        />
+      )}
+      
+      {/* Timeline events - positioned absolutely so they align with the line */}
+      <div className="relative h-12">
         {events.map((event, idx) => (
           <TimelineEvent
             key={event.id}
