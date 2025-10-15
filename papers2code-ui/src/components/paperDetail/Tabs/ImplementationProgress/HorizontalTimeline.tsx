@@ -61,31 +61,34 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
   }, [events]);
 
   return (
-    <div className="relative w-full px-12 py-12 min-h-[240px]">
-      {/* Timeline line - goes through the centers of event circles (48px circles, so 24px from top) */}
-      <div className="absolute left-12 right-12 h-1 bg-border" style={{ top: '24px' }} />
-      
-      {/* Progress line - colored portion showing completion */}
-      {events.length > 0 && (
-        <div 
-          className="absolute left-12 h-1 bg-gradient-to-r from-cyan-500 via-blue-500 to-green-500 transition-all duration-500"
-          style={{ 
-            top: '24px',
-            width: `${eventPositions[events.length - 1] - 10}%`
-          }}
-        />
-      )}
-      
-      {/* Timeline events - positioned absolutely so they align with the line */}
-      <div className="absolute top-0 left-0 right-0 h-12">
-        {events.map((event, idx) => (
-          <TimelineEvent
-            key={event.id}
-            event={event}
-            position={eventPositions[idx]}
-            isLast={idx === events.length - 1}
+    <div className="relative w-full py-8 min-h-[280px] flex items-center">
+      {/* Container with padding to prevent text overflow */}
+      <div className="relative w-full px-20">
+        {/* Timeline line - extends full width from edge to edge */}
+        <div className="absolute left-0 right-0 h-0.5 bg-border" style={{ top: '24px' }} />
+        
+        {/* Progress line - colored portion showing completion */}
+        {events.length > 0 && (
+          <div 
+            className="absolute left-0 h-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-green-500 transition-all duration-500"
+            style={{ 
+              top: '24px',
+              width: `${eventPositions[events.length - 1]}%`
+            }}
           />
-        ))}
+        )}
+        
+        {/* Timeline events - positioned absolutely so they align with the line */}
+        <div className="relative h-12">
+          {events.map((event, idx) => (
+            <TimelineEvent
+              key={event.id}
+              event={event}
+              position={eventPositions[idx]}
+              isLast={idx === events.length - 1}
+            />
+          ))}
+        </div>
       </div>
     </div>
   );

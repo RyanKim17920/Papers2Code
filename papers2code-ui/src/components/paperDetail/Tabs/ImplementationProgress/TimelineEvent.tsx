@@ -53,28 +53,28 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
     switch (event.type) {
       case 'initiated':
         // Cyan for started/initiated - matches 'Started' status
-        return 'bg-cyan-600 border-cyan-700 text-white hover:bg-cyan-700';
+        return 'bg-cyan-500 border-cyan-600 text-white hover:bg-cyan-600 shadow-cyan-500/20';
       case 'email_sent':
-        // Yellow/Orange for waiting - matches 'Waiting for Author Response'
-        return 'bg-yellow-600 border-yellow-700 text-white hover:bg-yellow-700';
+        // Amber/Yellow for waiting - matches 'Waiting for Author Response'
+        return 'bg-amber-500 border-amber-600 text-white hover:bg-amber-600 shadow-amber-500/20';
       case 'response':
         if (event.status === ProgressStatus.CODE_UPLOADED) {
           // Green for completed/uploaded - matches 'Completed'
-          return 'bg-green-600 border-green-700 text-white hover:bg-green-700';
+          return 'bg-green-500 border-green-600 text-white hover:bg-green-600 shadow-green-500/20';
         } else if (event.status === ProgressStatus.CODE_NEEDS_REFACTORING) {
           // Orange for needs work - matches 'Code Needs Refactoring'
-          return 'bg-orange-600 border-orange-700 text-white hover:bg-orange-700';
+          return 'bg-orange-500 border-orange-600 text-white hover:bg-orange-600 shadow-orange-500/20';
         } else if (event.status === ProgressStatus.REFUSED_TO_UPLOAD || event.status === ProgressStatus.NO_RESPONSE) {
           // Red for negative responses
-          return 'bg-red-600 border-red-700 text-white hover:bg-red-700';
+          return 'bg-red-500 border-red-600 text-white hover:bg-red-600 shadow-red-500/20';
         }
         // Blue for in progress - matches 'In Progress'
-        return 'bg-blue-600 border-blue-700 text-white hover:bg-blue-700';
+        return 'bg-blue-500 border-blue-600 text-white hover:bg-blue-600 shadow-blue-500/20';
       case 'final':
         // Green for final completion
-        return 'bg-green-600 border-green-700 text-white hover:bg-green-700';
+        return 'bg-green-500 border-green-600 text-white hover:bg-green-600 shadow-green-500/20';
       default:
-        return 'bg-gray-600 border-gray-700 text-white hover:bg-gray-700';
+        return 'bg-gray-500 border-gray-600 text-white hover:bg-gray-600 shadow-gray-500/20';
     }
   };
 
@@ -110,11 +110,16 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
         </div>
       </div>
       
-      {/* Hover tooltip */}
+      {/* Hover tooltip - positioned to avoid overflow */}
       {isHovered && (
         <div 
-          className="absolute top-16 left-1/2 -translate-x-1/2 w-72 bg-popover border border-border rounded-lg shadow-lg p-4 z-50 animate-in fade-in-0 zoom-in-95"
-          style={{ pointerEvents: 'none' }}
+          className="absolute top-16 w-72 bg-popover border border-border rounded-lg shadow-xl p-4 z-50 animate-in fade-in-0 zoom-in-95"
+          style={{ 
+            pointerEvents: 'none',
+            left: position < 30 ? '0' : position > 70 ? 'auto' : '50%',
+            right: position > 70 ? '0' : 'auto',
+            transform: position >= 30 && position <= 70 ? 'translateX(-50%)' : 'none'
+          }}
         >
           <div className="space-y-3">
             <div>

@@ -290,8 +290,13 @@ def find_papers_without_code_polars_lazy(
     links_data: List[Dict[str, Any]]
 ) -> Optional[pl.LazyFrame]:
     """
-    Identifies papers that do not have associated code using Polars LazyFrames.
+    Identifies papers and their code status using Polars LazyFrames.
     Uses a clear chain of operations for selection, joining, and column transformations.
+    
+    Fields added:
+    - hasCode: boolean indicating if GitHub URL exists
+    - isImplementable: false if code already exists, true otherwise
+    - isOfficialCode: boolean indicating if the code is from official sources (determined by PapersWithCode)
     """
     if not papers_with_abstracts_data:
         logging.warning("No abstracts data provided. Returning an empty LazyFrame.")
@@ -308,6 +313,8 @@ def find_papers_without_code_polars_lazy(
             "tasks": pl.List(pl.Utf8),
             "status": pl.Utf8,
             "isImplementable": pl.Boolean,
+            "hasCode": pl.Boolean,
+            "isOfficialCode": pl.Boolean,
             # New optional GitHub URL field
             "urlGithub": pl.Utf8,
         }
@@ -337,14 +344,21 @@ def find_papers_without_code_polars_lazy(
 
     # Build links LazyFrame to attach a single GitHub URL per paper (top 1 by first occurrence)
     # Some papers have multiple implementations; per request, take the first one for simplicity.
+    # Also capture whether the code is official (marked as such in the links data)
     if links_data:
         mapped_links = []
         for rec in links_data:
             try:
                 paper_url = rec.get("paper_url")
                 repo_url = rec.get("repo_url") or rec.get("url") or rec.get("repo")
+                # Check if this is marked as official code (various fields might indicate this)
+                is_official = rec.get("is_official", False) or rec.get("official", False)
                 if paper_url and repo_url:
-                    mapped_links.append({"paper_url": paper_url, "repo_url": repo_url})
+                    mapped_links.append({
+                        "paper_url": paper_url, 
+                        "repo_url": repo_url,
+                        "is_official": is_official
+                    })
             except Exception:
                 continue
         if mapped_links:
@@ -352,20 +366,34 @@ def find_papers_without_code_polars_lazy(
                 pl.LazyFrame(mapped_links)
                 .filter(pl.col("paper_url").is_not_null() & pl.col("repo_url").is_not_null())
                 .group_by("paper_url")
-                .agg(pl.col("repo_url").first().alias("urlGithub"))
+                .agg([
+                    pl.col("repo_url").first().alias("urlGithub"),
+                    pl.col("is_official").first().alias("isOfficialCode")
+                ])
             )
             papers_lf = abstracts_lf.join(links_lf, on="paper_url", how="left")
         else:
-            papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("urlGithub")])
+            papers_lf = abstracts_lf.with_columns([
+                pl.lit(None).alias("urlGithub"),
+                pl.lit(False).alias("isOfficialCode")
+            ])
     else:
-        papers_lf = abstracts_lf.with_columns([pl.lit(None).alias("urlGithub")])
+        papers_lf = abstracts_lf.with_columns([
+            pl.lit(None).alias("urlGithub"),
+            pl.lit(False).alias("isOfficialCode")
+        ])
 
     return (
         papers_lf
         .with_columns([
-            pl.lit("Not Started").alias("status"),
-            pl.lit(True).alias("isImplementable"),
-            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("hasCode")
+            # hasCode: true if GitHub URL exists
+            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("hasCode"),
+            # isImplementable: false if code already exists, true if no code yet
+            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(False)).otherwise(pl.lit(True)).alias("isImplementable"),
+            # status: "Official Code Posted" if has code, otherwise "Not Started"
+            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit("Official Code Posted")).otherwise(pl.lit("Not Started")).alias("status"),
+            # isOfficialCode: fill null with False if not set from links join
+            pl.col("isOfficialCode").fill_null(False).alias("isOfficialCode")
         ])
         .drop("paper_url")
     )
@@ -455,28 +483,52 @@ def build_unified_lazy_from_parquet(archive_dir: str) -> Optional[pl.LazyFrame]:
             link_cols = links_scan.columns
             repo_col = next((c for c in ["repo_url", "repository_url", "url", "repo"] if c in link_cols), None)
             if repo_col and "paper_url" in link_cols:
+                # Check if links file has official code indicator
+                official_col = next((c for c in ["is_official", "official"] if c in link_cols), None)
+                agg_cols = [pl.col("repo_url").first().alias("urlGithub")]
+                if official_col:
+                    agg_cols.append(pl.col(official_col).first().alias("isOfficialCode"))
+                
                 links_clean = (
                     links_scan
-                    .select([pl.col("paper_url"), pl.col(repo_col).alias("repo_url")])
+                    .select([pl.col("paper_url"), pl.col(repo_col).alias("repo_url")] + 
+                           ([pl.col(official_col)] if official_col else []))
                     .filter(pl.col("repo_url").is_not_null())
                     .group_by("paper_url")
-                    .agg(pl.col("repo_url").first().alias("urlGithub"))
+                    .agg(agg_cols)
                 )
                 abstracts_lf = abstracts_lf.join(links_clean, on="paper_url", how="left")
+                # Fill isOfficialCode with False if not present from join
+                if "isOfficialCode" not in abstracts_lf.columns:
+                    abstracts_lf = abstracts_lf.with_columns(pl.lit(False).alias("isOfficialCode"))
             else:
-                abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("urlGithub"))
+                abstracts_lf = abstracts_lf.with_columns([
+                    pl.lit(None).alias("urlGithub"),
+                    pl.lit(False).alias("isOfficialCode")
+                ])
         except Exception as e:
             logging.warning("Links join failed: %s", e)
-            abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("urlGithub"))
+            abstracts_lf = abstracts_lf.with_columns([
+                pl.lit(None).alias("urlGithub"),
+                pl.lit(False).alias("isOfficialCode")
+            ])
     else:
-        abstracts_lf = abstracts_lf.with_columns(pl.lit(None).alias("url_github"))
+        abstracts_lf = abstracts_lf.with_columns([
+            pl.lit(None).alias("urlGithub"),
+            pl.lit(False).alias("isOfficialCode")
+        ])
 
     final = (
         abstracts_lf
         .with_columns([
-            pl.lit("Not Started").alias("status"),
-            pl.lit(True).alias("isImplementable"),
+            # hasCode: true if GitHub URL exists
             pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(True)).otherwise(pl.lit(False)).alias("hasCode"),
+            # isImplementable: false if code already exists, true if no code yet
+            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit(False)).otherwise(pl.lit(True)).alias("isImplementable"),
+            # status: "Official Code Posted" if has code, otherwise "Not Started"
+            pl.when(pl.col("urlGithub").is_not_null()).then(pl.lit("Official Code Posted")).otherwise(pl.lit("Not Started")).alias("status"),
+            # isOfficialCode: fill null with False if not set from links join
+            pl.col("isOfficialCode").fill_null(False).alias("isOfficialCode")
         ])
         .drop("paper_url")
     )
