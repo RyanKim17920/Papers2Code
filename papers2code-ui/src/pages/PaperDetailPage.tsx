@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Rocket, Users, ExternalLink, FileText, Code, Vote, Settings } from 'lucide-react';
+import { ArrowLeft, Rocket, Users, ExternalLink, FileText, Code, Vote, Settings, Github, CheckCircle2 } from 'lucide-react';
 
 import { usePaperDetail } from '../common/hooks/usePaperDetail';
 import { useActivityTracking } from '../common/hooks/useActivityTracking';
@@ -67,6 +67,9 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     } = usePaperDetail(paperId, currentUser);
 
     const isAdminView = (currentUser?.isAdmin === true || currentUser?.isOwner == true);
+    
+    // Check if official code is posted (use status as primary indicator)
+    const hasOfficialCode = paper?.status === 'Official Code Posted' || paper?.hasCode === true;
 
     // Track paper view when component mounts or paper changes
     useEffect(() => {
@@ -199,8 +202,8 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                     </div>
                                 </div>
                                 
-                                {/* Compact Community Implementation Bar */}
-                                {currentUser && paper && (
+                                {/* Compact Community Implementation Bar (only if no official code) */}
+                                {currentUser && paper && !hasOfficialCode && (
                                     <div className="bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded p-2 mt-2">
                                         <div className="flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
@@ -264,31 +267,43 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     {/* Right Sidebar - 4 columns */}
                     <div className="lg:col-span-4 flex flex-col gap-2">
                         {/* Official Code Link (if available) */}
-                        {paper.hasCode && paper.urlGithub && (
-                            <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30 backdrop-blur">
+                        {hasOfficialCode && (
+                            <Card className="bg-card/70 backdrop-blur border border-emerald-500/40 shadow-sm">
                                 <CardContent className="p-3">
-                                    <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
-                                        <Code className="w-3 h-3 text-green-500" />
-                                        Official Code Available
-                                    </h3>
-                                    <p className="text-xs text-muted-foreground mb-2">
-                                        The authors have released the official implementation for this paper.
+                                    <div className="flex items-center gap-2 mb-2">
+                                        <div className="p-1.5 rounded-md bg-emerald-500/10">
+                                            <CheckCircle2 className="w-3.5 h-3.5 text-emerald-600 dark:text-emerald-400" />
+                                        </div>
+                                        <h3 className="text-sm font-semibold text-foreground">
+                                            Official Implementation
+                                        </h3>
+                                    </div>
+                                    <p className="text-xs text-muted-foreground mb-3 leading-relaxed">
+                                        Authors have released official code for this paper.
                                     </p>
-                                    <a
-                                        href={paper.urlGithub}
-                                        target="_blank"
-                                        rel="noopener noreferrer"
-                                        className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors text-sm font-medium w-full justify-center"
-                                    >
-                                        <ExternalLink size={14} />
-                                        View on GitHub
-                                    </a>
+                                    {paper.urlGithub ? (
+                                        <a
+                                            href={paper.urlGithub}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            className="group flex items-center justify-center gap-2 px-3 py-2 rounded-md border border-border/60 bg-background/60 hover:bg-accent/50 hover:border-emerald-500/40 transition-all duration-200 text-sm font-medium shadow-sm"
+                                        >
+                                            <Github className="w-3.5 h-3.5 text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
+                                            <span className="text-foreground">View Repository</span>
+                                            <ExternalLink className="w-3 h-3 text-muted-foreground group-hover:text-emerald-600 dark:group-hover:text-emerald-400 transition-colors" />
+                                        </a>
+                                    ) : (
+                                        <div className="flex items-center justify-center gap-2 px-3 py-2 rounded-md bg-muted/30 border border-border/40">
+                                            <Code className="w-3 h-3 text-muted-foreground" />
+                                            <span className="text-xs text-muted-foreground">Link pending</span>
+                                        </div>
+                                    )}
                                 </CardContent>
                             </Card>
                         )}
                         
                         {/* Implementation Progress or Voting (only if no official code) */}
-                        {!paper.hasCode && (
+                        {!hasOfficialCode && (
                             paper.implementationProgress ? (
                                 <ImplementationProgressCard 
                                     progress={paper.implementationProgress}
