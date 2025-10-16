@@ -263,34 +263,60 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
                     {/* Right Sidebar - 4 columns */}
                     <div className="lg:col-span-4 flex flex-col gap-2">
-                        {/* Implementation Progress or Voting */}
-                        {paper.implementationProgress ? (
-                            <ImplementationProgressCard 
-                                progress={paper.implementationProgress}
-                                paperId={paper.id}
-                                paperStatus={paper.status}
-                                currentUser={currentUser}
-                                onImplementationProgressChange={handleImplementationProgressChange}
-                                onRefreshPaper={loadPaperAndActions}
-                            />
-                        ) : (
-                            <Card className="bg-card/70 backdrop-blur border border-border/60">
+                        {/* Official Code Link (if available) */}
+                        {paper.hasCode && paper.urlGithub && (
+                            <Card className="bg-gradient-to-br from-green-500/10 to-emerald-500/10 border-green-500/30 backdrop-blur">
                                 <CardContent className="p-3">
                                     <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
-                                        <Vote className="w-3 h-3 text-primary" />
-                                        Implementability
+                                        <Code className="w-3 h-3 text-green-500" />
+                                        Official Code Available
                                     </h3>
-                                    <ImplementabilityVotingTab
-                                        paper={paper}
-                                        currentUser={currentUser}
-                                        isVoting={isVoting}
-                                        handleImplementabilityVote={handleImplementabilityVote}
-                                        actionUsers={actionUsers}
-                                        isLoadingActionUsers={isLoadingActionUsers}
-                                        actionUsersError={actionUsersError}
-                                    />
+                                    <p className="text-xs text-muted-foreground mb-2">
+                                        The authors have released the official implementation for this paper.
+                                    </p>
+                                    <a
+                                        href={paper.urlGithub}
+                                        target="_blank"
+                                        rel="noopener noreferrer"
+                                        className="inline-flex items-center gap-2 px-3 py-2 bg-green-600 hover:bg-green-700 text-white rounded-md transition-colors text-sm font-medium w-full justify-center"
+                                    >
+                                        <ExternalLink size={14} />
+                                        View on GitHub
+                                    </a>
                                 </CardContent>
                             </Card>
+                        )}
+                        
+                        {/* Implementation Progress or Voting (only if no official code) */}
+                        {!paper.hasCode && (
+                            paper.implementationProgress ? (
+                                <ImplementationProgressCard 
+                                    progress={paper.implementationProgress}
+                                    paperId={paper.id}
+                                    paperStatus={paper.status}
+                                    currentUser={currentUser}
+                                    onImplementationProgressChange={handleImplementationProgressChange}
+                                    onRefreshPaper={loadPaperAndActions}
+                                />
+                            ) : (
+                                <Card className="bg-card/70 backdrop-blur border border-border/60">
+                                    <CardContent className="p-3">
+                                        <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
+                                            <Vote className="w-3 h-3 text-primary" />
+                                            Implementability
+                                        </h3>
+                                        <ImplementabilityVotingTab
+                                            paper={paper}
+                                            currentUser={currentUser}
+                                            isVoting={isVoting}
+                                            handleImplementabilityVote={handleImplementabilityVote}
+                                            actionUsers={actionUsers}
+                                            isLoadingActionUsers={isLoadingActionUsers}
+                                            actionUsersError={actionUsersError}
+                                        />
+                                    </CardContent>
+                                </Card>
+                            )
                         )}
 
                         {/* Admin Actions */}
