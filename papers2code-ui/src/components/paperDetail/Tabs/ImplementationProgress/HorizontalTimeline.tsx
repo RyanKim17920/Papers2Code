@@ -1,91 +1,157 @@
 import React, { useMemo } from 'react';
 import { ImplementationProgress, UpdateEventType, ProgressStatus } from '../../../../common/types/implementation';
 import { TimelineEvent, TimelineEventData } from './TimelineEvent';
+import { FileText, Send, MessageCircle, CheckCircle, Code, AlertCircle, XCircle, Clock } from 'lucide-react';
 
 interface HorizontalTimelineProps {
   progress: ImplementationProgress;
 }
 
+// Define the complete journey with all possible steps
+interface JourneyStep {
+  id: string;
+  title: string;
+  description: string;
+  icon: typeof FileText;
+  order: number;
+}
+
+const JOURNEY_STEPS: JourneyStep[] = [
+  {
+    id: 'initiated',
+    title: 'Tracking Started',
+    description: 'Implementation progress tracking has been set up for this paper.',
+    icon: FileText,
+    order: 1,
+  },
+  {
+    id: 'author_contacted',
+    title: 'Author Contacted',
+    description: 'Outreach email sent to paper authors requesting code implementation.',
+    icon: Send,
+    order: 2,
+  },
+  {
+    id: 'response_received',
+    title: 'Response Received',
+    description: 'Authors have responded to the outreach request.',
+    icon: MessageCircle,
+    order: 3,
+  },
+  {
+    id: 'code_received',
+    title: 'Code Published',
+    description: 'Authors have shared their working implementation code.',
+    icon: CheckCircle,
+    order: 4,
+  },
+  {
+    id: 'verified',
+    title: 'Implementation Verified',
+    description: 'Code has been reviewed and verified to work correctly.',
+    icon: Code,
+    order: 5,
+  },
+];
+
 export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress }) => {
-  // Generate timeline events from progress updates array
-  const events = useMemo((): TimelineEventData[] => {
-    return progress.updates.map((update, index) => {
-      const eventData: TimelineEventData = {
-        id: `event-${index}`,
-        type: mapEventTypeToDisplay(update.eventType),
+  // Map actual events to journey steps and determine completion status
+  const timelineSteps = useMemo(() => {
+    const completedStepIds = new Set<string>();
+    const stepTimestamps: Record<string, string> = {};
+    const stepDetails: Record<string, any> = {};
+    
+    // Map progress updates to journey steps
+    progress.updates.forEach((update) => {
+      const stepId = mapUpdateToJourneyStep(update.eventType, progress.status);
+      if (stepId) {
+        completedStepIds.add(stepId);
+        // Keep the earliest timestamp for each step
+        if (!stepTimestamps[stepId]) {
+          stepTimestamps[stepId] = update.timestamp;
+          stepDetails[stepId] = update.details;
+        }
+      }
+    });
+    
+    // Determine the current step (last completed)
+    const currentStepOrder = Math.max(...Array.from(completedStepIds).map(id => 
+      JOURNEY_STEPS.find(s => s.id === id)?.order || 0
+    ));
+    
+    return JOURNEY_STEPS.map((step): TimelineEventData => {
+      const isCompleted = completedStepIds.has(step.id);
+      const isCurrent = step.order === currentStepOrder && isCompleted;
+      const isFuture = step.order > currentStepOrder;
+      
+      return {
+        id: step.id,
+        type: step.id as any,
         status: progress.status,
-        timestamp: update.timestamp,
-        title: getEventTitle(update.eventType, update.details),
-        description: getEventDescription(update.eventType, update.details),
-        details: getEventDetails(update.eventType, update.details, progress)
+        timestamp: stepTimestamps[step.id] || new Date().toISOString(),
+        title: step.title,
+        description: step.description,
+        icon: step.icon,
+        state: isFuture ? 'future' : isCurrent ? 'current' : 'completed',
+        details: stepDetails[step.id] ? getStepDetails(step.id, stepDetails[step.id], progress) : undefined,
+        isFuture,
+        isClickable: true,
       };
-      return eventData;
     });
   }, [progress]);
 
-  // Calculate positions with logarithmic-like scaling for long durations
-  const eventPositions = useMemo(() => {
-    if (events.length === 0) return [];
-    if (events.length === 1) return [50]; // Center single event
-
-    const timestamps = events.map(e => new Date(e.timestamp).getTime());
-    const minTime = timestamps[0];
-    const maxTime = timestamps[timestamps.length - 1];
-    const totalDuration = maxTime - minTime;
-
-    if (totalDuration === 0) {
-      // All events at same time, distribute evenly
-      return events.map((_, idx) => (idx / (events.length - 1)) * 80 + 10);
-    }
-
-    // Use logarithmic scaling for very long durations (more than 30 days)
-    const thirtyDaysMs = 30 * 24 * 60 * 60 * 1000;
-    const useLogScale = totalDuration > thirtyDaysMs;
-
-    return timestamps.map((timestamp, idx) => {
-      if (idx === 0) return 10; // First event at 10%
-      if (idx === timestamps.length - 1) return 90; // Last event at 90%
-
-      const timeSinceStart = timestamp - minTime;
-      
-      if (useLogScale) {
-        // Logarithmic scaling
-        const logTotal = Math.log(totalDuration + 1);
-        const logCurrent = Math.log(timeSinceStart + 1);
-        return 10 + (logCurrent / logTotal) * 80;
-      } else {
-        // Linear scaling
-        return 10 + (timeSinceStart / totalDuration) * 80;
-      }
+  // Evenly distribute steps across the timeline
+  const stepPositions = useMemo(() => {
+    const totalSteps = timelineSteps.length;
+    if (totalSteps === 0) return [];
+    if (totalSteps === 1) return [50];
+    
+    // Distribute evenly with 10% padding on each side
+    return timelineSteps.map((_, idx) => {
+      return 10 + (idx / (totalSteps - 1)) * 80;
     });
-  }, [events]);
+  }, [timelineSteps]);
+
+  // Calculate the progress percentage for the colored line
+  const progressPercentage = useMemo(() => {
+    const completedCount = timelineSteps.filter(s => s.state === 'completed').length;
+    const currentStepIndex = timelineSteps.findIndex(s => s.state === 'current');
+    
+    if (currentStepIndex >= 0) {
+      return stepPositions[currentStepIndex] || 0;
+    }
+    
+    if (completedCount > 0) {
+      return stepPositions[completedCount - 1] || 0;
+    }
+    
+    return 0;
+  }, [timelineSteps, stepPositions]);
 
   return (
     <div className="relative w-full py-8 min-h-[280px] flex items-center">
       {/* Container with padding to prevent text overflow */}
       <div className="relative w-full px-20">
-        {/* Timeline line - extends full width from edge to edge */}
-        <div className="absolute left-0 right-0 h-0.5 bg-border" style={{ top: '24px' }} />
+        {/* Base timeline line - full width in muted color */}
+        <div className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" style={{ top: '28px' }} />
         
         {/* Progress line - colored portion showing completion */}
-        {events.length > 0 && (
-          <div 
-            className="absolute left-0 h-0.5 bg-gradient-to-r from-cyan-500 via-blue-500 to-green-500 transition-all duration-500"
-            style={{ 
-              top: '24px',
-              width: `${eventPositions[events.length - 1]}%`
-            }}
-          />
-        )}
+        <div 
+          className="absolute left-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full transition-all duration-700 ease-in-out"
+          style={{ 
+            top: '28px',
+            width: `${progressPercentage}%`
+          }}
+        />
         
-        {/* Timeline events - positioned absolutely so they align with the line */}
+        {/* Timeline steps - all steps including future ones */}
         <div className="relative h-12">
-          {events.map((event, idx) => (
+          {timelineSteps.map((step, idx) => (
             <TimelineEvent
-              key={event.id}
-              event={event}
-              position={eventPositions[idx]}
-              isLast={idx === events.length - 1}
+              key={step.id}
+              event={step}
+              position={stepPositions[idx]}
+              isLast={idx === timelineSteps.length - 1}
             />
           ))}
         </div>
@@ -95,123 +161,42 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
 };
 
 // Helper functions
-function mapEventTypeToDisplay(eventType: UpdateEventType): 'initiated' | 'email_sent' | 'response' | 'final' {
+function mapUpdateToJourneyStep(eventType: UpdateEventType, status: ProgressStatus): string | null {
   switch (eventType) {
     case UpdateEventType.INITIATED:
       return 'initiated';
     case UpdateEventType.EMAIL_SENT:
-      return 'email_sent';
+      return 'author_contacted';
     case UpdateEventType.STATUS_CHANGED:
+      if (status === ProgressStatus.RESPONSE_RECEIVED) {
+        return 'response_received';
+      }
+      if (status === ProgressStatus.CODE_UPLOADED) {
+        return 'code_received';
+      }
+      // TODO: Backend should track verification status separately
+      // For now, we don't automatically mark as verified
+      return null;
     case UpdateEventType.GITHUB_REPO_LINKED:
-    case UpdateEventType.GITHUB_REPO_UPDATED:
-      return 'response';
-    case UpdateEventType.CONTRIBUTOR_JOINED:
-      return 'response';
+      return 'code_received';
     default:
-      return 'response';
+      return null;
   }
 }
 
-function getEventTitle(eventType: UpdateEventType, details?: Record<string, any>): string {
-  switch (eventType) {
-    case UpdateEventType.INITIATED:
-      return 'Implementation Initiated';
-    case UpdateEventType.CONTRIBUTOR_JOINED:
-      return 'Contributor Joined';
-    case UpdateEventType.EMAIL_SENT:
-      return 'Author Contacted';
-    case UpdateEventType.STATUS_CHANGED:
-      return getStatusTitle(details?.newStatus);
-    case UpdateEventType.GITHUB_REPO_LINKED:
-      return 'GitHub Repository Linked';
-    case UpdateEventType.GITHUB_REPO_UPDATED:
-      return 'GitHub Repository Updated';
-    default:
-      return 'Update';
-  }
-}
-
-function getEventDescription(eventType: UpdateEventType, details?: Record<string, any>): string {
-  switch (eventType) {
-    case UpdateEventType.INITIATED:
-      return 'Implementation progress tracking started for this paper.';
-    case UpdateEventType.CONTRIBUTOR_JOINED:
-      return 'A new contributor joined the implementation effort.';
-    case UpdateEventType.EMAIL_SENT:
-      return 'Email sent to paper authors requesting code implementation.';
-    case UpdateEventType.STATUS_CHANGED:
-      return getStatusDescription(details?.newStatus);
-    case UpdateEventType.GITHUB_REPO_LINKED:
-      return 'GitHub repository has been linked to this implementation.';
-    case UpdateEventType.GITHUB_REPO_UPDATED:
-      return 'GitHub repository information has been updated.';
-    default:
-      return '';
-  }
-}
-
-function getEventDetails(eventType: UpdateEventType, details?: Record<string, any>, progress?: ImplementationProgress): Array<{ label: string; value: string }> {
+function getStepDetails(stepId: string, details?: Record<string, any>, progress?: ImplementationProgress): Array<{ label: string; value: string }> {
   const detailsList: Array<{ label: string; value: string }> = [];
   
-  if (eventType === UpdateEventType.INITIATED && progress) {
-    detailsList.push({ label: 'Contributors', value: progress.contributors.length.toString() });
-  }
-  
-  if (eventType === UpdateEventType.STATUS_CHANGED && details?.previousStatus) {
-    detailsList.push({ label: 'Previous Status', value: details.previousStatus });
-  }
-  
-  if (eventType === UpdateEventType.GITHUB_REPO_LINKED || eventType === UpdateEventType.GITHUB_REPO_UPDATED) {
-    if (details?.githubRepoId) {
-      detailsList.push({ label: 'Repository', value: 'Available' });
+  if (stepId === 'initiated' && progress) {
+    detailsList.push({ label: 'Contributor', value: progress.initiatedBy || 'Unknown' });
+    if (progress.contributors.length > 0) {
+      detailsList.push({ label: 'Total Contributors', value: progress.contributors.length.toString() });
     }
   }
   
+  if (stepId === 'code_received' && progress?.githubRepoId) {
+    detailsList.push({ label: 'Repository', value: 'Linked' });
+  }
+  
   return detailsList;
-}
-
-function getStatusTitle(status?: string): string {
-  if (!status) return 'Status Changed';
-  
-  switch (status) {
-    case ProgressStatus.CODE_UPLOADED:
-      return 'Code Published';
-    case ProgressStatus.CODE_NEEDS_REFACTORING:
-      return 'Code Needs Work';
-    case ProgressStatus.REFUSED_TO_UPLOAD:
-      return 'Authors Declined';
-    case ProgressStatus.NO_RESPONSE:
-      return 'No Response Received';
-    case ProgressStatus.RESPONSE_RECEIVED:
-      return 'Authors Responded';
-    case ProgressStatus.REFACTORING_IN_PROGRESS:
-      return 'Refactoring in Progress';
-    case ProgressStatus.STARTED:
-      return 'Implementation Started';
-    default:
-      return status;
-  }
-}
-
-function getStatusDescription(status?: string): string {
-  if (!status) return '';
-  
-  switch (status) {
-    case ProgressStatus.CODE_UPLOADED:
-      return 'Authors successfully published their working implementation.';
-    case ProgressStatus.CODE_NEEDS_REFACTORING:
-      return 'Authors shared code but it requires improvements.';
-    case ProgressStatus.REFUSED_TO_UPLOAD:
-      return 'Authors declined to share their implementation.';
-    case ProgressStatus.NO_RESPONSE:
-      return 'No response received from authors after 4 weeks.';
-    case ProgressStatus.RESPONSE_RECEIVED:
-      return 'Authors have responded to the outreach email.';
-    case ProgressStatus.REFACTORING_IN_PROGRESS:
-      return 'Code refactoring is in progress.';
-    case ProgressStatus.STARTED:
-      return 'Implementation has been started.';
-    default:
-      return '';
-  }
 }

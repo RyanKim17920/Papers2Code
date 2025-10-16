@@ -1,7 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings, Github } from 'lucide-react';
-import { SiBluesky, SiHuggingface } from 'react-icons/si';
+import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings, Github, Cloud } from 'lucide-react';
 import { UserAvatar, LoadingSpinner } from '../common/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi, getUserProfileSettings } from '../common/services/api';
 import { Paper } from '../common/types/paper';
@@ -419,7 +418,7 @@ const ProfilePage: React.FC = () => {
                       className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
                       title="Bluesky"
                     >
-                      <SiBluesky size={16} />
+                      <Cloud size={16} />
                     </a>
                   )}
                   {userDetails.huggingfaceUsername && (
@@ -430,7 +429,7 @@ const ProfilePage: React.FC = () => {
                       className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"
                       title="Hugging Face"
                     >
-                      <SiHuggingface size={16} />
+                      <Rocket size={16} />
                     </a>
                   )}
                 </div>

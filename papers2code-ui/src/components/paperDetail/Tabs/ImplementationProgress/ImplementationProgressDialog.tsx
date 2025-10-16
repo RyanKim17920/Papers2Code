@@ -192,47 +192,39 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
               </CardContent>
             </Card>
 
-            {/* Timeline */}
-            <Card>
-              <CardContent className="p-0">
-                <HorizontalTimeline progress={progress} />
-              </CardContent>
-            </Card>
+                    <div className="space-y-6">
+                        {/* Subtitle */}
+                        <p className="text-sm text-muted-foreground -mt-2">
+                            Track the journey from paper to working code
+                        </p>
+                        
+                        {/* Timeline section */}
+                        <div className="bg-gradient-to-br from-card/80 to-card/40 rounded-xl p-8 border border-border/60 shadow-lg">
+                            <div className="flex items-center justify-between mb-6">
+                                <h3 className="text-lg font-bold text-foreground">Progress Journey</h3>
+                                <span className="text-xs text-muted-foreground bg-muted/50 px-3 py-1 rounded-full font-medium">
+                                    {progress.updates.length} {progress.updates.length === 1 ? 'update' : 'updates'}
+                                </span>
+                            </div>
+                            <HorizontalTimeline progress={progress} />
+                        </div>
 
-            {/* Actions */}
-            {isContributor && (
-              <Card>
-                <CardContent className="pt-6">
-                  <div className="space-y-3">
-                    {/* Send Email Button */}
-                    {!hasEmailBeenSent && canMarkAsSent && (
-                      <Button
-                        onClick={onSendEmail}
-                        disabled={isSendingEmail || isUpdating}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <Mail className="w-4 h-4 mr-2" />
-                        {isSendingEmail ? 'Sending Email...' : 'Send Author Outreach Email'}
-                      </Button>
-                    )}
-
-                    {/* Status Update Button */}
-                    {hasEmailBeenSent && canModifyPostSentStatus && progress.status === ProgressStatus.STARTED && (
-                      <Button
-                        onClick={() => handleStatusUpdate(ProgressStatus.RESPONSE_RECEIVED)}
-                        disabled={isUpdating}
-                        className="w-full"
-                        size="lg"
-                      >
-                        <CheckCircle className="w-4 h-4 mr-2" />
-                        Authors Responded
-                      </Button>
-                    )}
-                  </div>
-                </CardContent>
-              </Card>
-            )}
+                        {/* Contextual action buttons - Only show if user can manage */}
+                        {(isContributor && hasEmailBeenSent) && (
+                            <div className="bg-muted/30 rounded-lg p-4 border border-border/50">
+                                <p className="text-xs text-muted-foreground mb-3 font-medium">Quick Actions</p>
+                                <div className="flex flex-wrap gap-3">
+                                    {/* TODO: Add contextual buttons based on current step */}
+                                    {/* - "Log Author Response" when email sent but no response */}
+                                    {/* - "Link GitHub Repo" when code uploaded but no repo */}
+                                    {/* - "Mark as Verified" when code received (backend support needed) */}
+                                    <p className="text-xs text-muted-foreground italic">
+                                        Additional actions coming soon
+                                    </p>
+                                </div>
+                            </div>
+                        )}
+                    </div>
 
             {/* Login/Contributor Prompts */}
             {!isLoggedIn && (

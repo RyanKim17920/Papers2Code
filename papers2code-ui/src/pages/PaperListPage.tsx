@@ -82,7 +82,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
       {!showSidebar && (
   <div className="border-b border-border bg-card">
           <div className="max-w-7xl mx-auto flex items-center justify-between p-6 pb-4">
-            <div className="flex items-center gap-4">
+            <div className="flex items-center gap-4 flex-wrap">
               <Button
                 variant="outline"
                 size="sm"
@@ -96,6 +96,33 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                 <h1 className="text-lg font-semibold">
                   {totalCount} {totalCount === 1 ? 'Paper' : 'Papers'}
                 </h1>
+              </div>
+              {/* Active Filters Display */}
+              <div className="flex items-center gap-2 flex-wrap">
+                {debouncedSearchTerm && (
+                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                    <Search className="w-3 h-3" />
+                    "{debouncedSearchTerm.length > 20 ? debouncedSearchTerm.substring(0, 20) + '...' : debouncedSearchTerm}"
+                  </Badge>
+                )}
+                {advancedFilters.startDate && (
+                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    From: {advancedFilters.startDate}
+                  </Badge>
+                )}
+                {advancedFilters.endDate && (
+                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    To: {advancedFilters.endDate}
+                  </Badge>
+                )}
+                {advancedFilters.searchAuthors && (
+                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {advancedFilters.searchAuthors}
+                  </Badge>
+                )}
               </div>
             </div>
           </div>
@@ -127,23 +154,23 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
 
               {/* Search */}
               <div className="space-y-2 mb-6">
-                <Label className="text-sm font-medium">Search</Label>
+                <Label className="text-sm font-medium">Search Papers</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
                   <Input
                     placeholder="Title, abstract, keywords..."
                     value={searchTerm}
                     onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-10"
+                    className="pl-10 pr-8"
                   />
                   {searchTerm && (
                     <Button
                       variant="ghost"
                       size="sm"
                       onClick={clearSearchTerm}
-                      className="absolute right-2 top-1/2 transform -translate-y-1/2 h-6 w-6 p-0"
+                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
                     >
-                      <X className="w-3 h-3" />
+                      <X className="w-4 h-4" />
                     </Button>
                   )}
                 </div>

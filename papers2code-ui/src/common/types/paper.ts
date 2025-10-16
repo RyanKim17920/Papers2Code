@@ -22,6 +22,7 @@ export interface Paper {
     authors: string[] | null; // from authors
     urlAbs?: string | null; // from url_abs
     urlPdf?: string | null; // from url_pdf
+    urlGithub?: string | null; // from url_github (official code link)
     publicationDate?: string | null; // from publication_date (aliased to publicationDate in backend)
     proceeding?: string | null; // from venue (aliased to proceeding in backend)
     tasks?: string[] | null; // from tags (aliased to tasks in backend)
@@ -33,6 +34,7 @@ export interface Paper {
     isImplementableVotes: number; // from implementable_votes (was optional)
     implementabilityStatus: 'Voting' | 'Community Not Implementable' | 'Community Implementable' | 'Admin Not Implementable' | 'Admin Implementable'; // DO NOT CHANGE
     isImplementable: boolean; // from is_implementable (computed field in backend)
+    hasCode: boolean; // from has_code (indicates if official code exists)
     implementationProgress?: ImplementationProgress; // ADDED
 }
 

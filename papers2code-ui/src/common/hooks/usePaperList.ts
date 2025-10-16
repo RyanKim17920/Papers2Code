@@ -70,7 +70,6 @@ export function usePaperList(authLoading?: boolean) {
     // If authLoading is undefined, readyToLoadData's initial state handles it.
   }, [authLoading, setIsLoading]);  useEffect(() => {
     const currentSearchParamsStr = searchParams.toString();
-    console.log('🔍 URL params changed:', currentSearchParamsStr);
     
     if (currentSearchParamsStr !== prevSearchParamsRef.current) {
         const queryFromUrl = searchParams.get('searchQuery') || '';
@@ -79,29 +78,18 @@ export function usePaperList(authLoading?: boolean) {
         const mainStatusFromUrl = searchParams.get('mainStatus') || '';
         const implStatusFromUrl = searchParams.get('implStatus') || '';
         
-        console.log('📥 Reading from URL:', {
-          searchQuery: queryFromUrl,
-          page: pageFromUrl,
-          sort: sortFromUrl,
-          mainStatus: mainStatusFromUrl,
-          implStatus: implStatusFromUrl
-        });
-        
         // Update search term if different
         if (queryFromUrl !== searchTerm) {
-            console.log('📝 Setting searchTerm:', queryFromUrl);
             setSearchTerm(queryFromUrl);
         }
         
         // Update page if different
         if (pageFromUrl !== currentPage) {
-            console.log('📝 Setting currentPage:', pageFromUrl);
             setCurrentPage(pageFromUrl);
         }
         
         // Update sort if different and valid
         if (sortFromUrl && ['newest', 'oldest', 'upvotes'].includes(sortFromUrl) && sortFromUrl !== sortPreference) {
-            console.log('📝 Setting sortPreference:', sortFromUrl);
             setSortPreference(sortFromUrl);
         }
         
@@ -115,12 +103,9 @@ export function usePaperList(authLoading?: boolean) {
           hasOfficialImpl: searchParams.get('hasOfficialImpl') ? searchParams.get('hasOfficialImpl') === 'true' : undefined,
         };
         
-        console.log('🔧 Auto-applying filters from URL:', filtersFromUrl);
-        
         // Only update filters if they're actually different to avoid triggering the reset effect
         const filtersChanged = JSON.stringify(filtersFromUrl) !== JSON.stringify(appliedAdvancedFilters);
         if (filtersChanged) {
-          console.log('📝 Filters changed, updating both filter states');
           setAdvancedFilters(filtersFromUrl);
           setAppliedAdvancedFilters(filtersFromUrl);
         }
@@ -136,37 +121,9 @@ export function usePaperList(authLoading?: boolean) {
 
   const uiSortValue = isSearchInputActive ? 'relevance' : sortPreference;
   const activeSortDisplay = uiSortValue; // Added for clarity, can be used directly if preferred
-  useEffect(() => {
-    const newParams = new URLSearchParams();
-    
-    // Use debouncedSearchTerm as the source of truth for search query
-    // Only add searchQuery to URL if there's actually a search term
-    if (debouncedSearchTerm && debouncedSearchTerm.trim()) {
-      newParams.set('searchQuery', debouncedSearchTerm.trim());
-    }
-    // If debouncedSearchTerm is empty, we deliberately don't set it, effectively removing it from URL
-    
-    if (currentPage !== 1) {
-      newParams.set('page', currentPage.toString());
-    }
-    if (!isDebouncedSearchActive && sortPreference !== DEFAULT_SORT_PREFERENCE) {
-      newParams.set('sort', sortPreference);
-    }
-    
-    // Preserve all advanced filter parameters
-    if (appliedAdvancedFilters.startDate) newParams.set('startDate', appliedAdvancedFilters.startDate);
-    if (appliedAdvancedFilters.endDate) newParams.set('endDate', appliedAdvancedFilters.endDate);
-    if (appliedAdvancedFilters.searchAuthors) newParams.set('searchAuthors', appliedAdvancedFilters.searchAuthors);
-    if (appliedAdvancedFilters.mainStatus) newParams.set('mainStatus', appliedAdvancedFilters.mainStatus);
-    if (appliedAdvancedFilters.implStatus) newParams.set('implStatus', appliedAdvancedFilters.implStatus);
-    if (appliedAdvancedFilters.hasOfficialImpl !== undefined) newParams.set('hasOfficialImpl', String(appliedAdvancedFilters.hasOfficialImpl));
-    
-    // Check if newParams are different from current searchParams before setting
-    // to avoid unnecessary re-renders and effect runs.
-    if (newParams.toString() !== searchParams.toString()) {
-        setSearchParams(newParams, { replace: true });
-    }
-  }, [debouncedSearchTerm, currentPage, sortPreference, appliedAdvancedFilters, setSearchParams, isDebouncedSearchActive, searchParams]);
+  
+  // REMOVED: URL writing effect that caused circular dependency
+  // Now components update URL directly when user interacts with them
 
 
   // Reset page to 1 when search or filters change
@@ -183,14 +140,6 @@ export function usePaperList(authLoading?: boolean) {
         const sortForAPI = isDebouncedSearchActive ? undefined : sortPreference;
         const effectivePage = currentPage;
 
-        console.log('🚀 Making API call with:', {
-          page: effectivePage,
-          limit: ITEMS_PER_PAGE,
-          searchTerm: isAuthorSearchActive ? undefined : debouncedSearchTerm,
-          sort: sortForAPI,
-          appliedAdvancedFilters: appliedAdvancedFilters
-        });
-
         const response = await fetchPapersFromApi(
           effectivePage,
           ITEMS_PER_PAGE,
@@ -199,12 +148,6 @@ export function usePaperList(authLoading?: boolean) {
           appliedAdvancedFilters,
           abortController.signal
         );
-
-        console.log('✅ API response received:', {
-          totalPapers: response.papers.length,
-          totalPages: response.totalPages,
-          totalCount: response.totalCount
-        });
 
         if (!abortController.signal.aborted) {
           setPapers(response.papers);
@@ -263,6 +206,7 @@ export function usePaperList(authLoading?: boolean) {
 
   const handleSearchChange = useCallback((newSearchTerm: string) => {
     setSearchTerm(newSearchTerm);
+    // Don't update URL here - let debouncedSearchTerm drive the fetch directly
   }, []);
 
   const handleSortChange = useCallback((event: React.ChangeEvent<HTMLSelectElement>) => {
@@ -272,29 +216,64 @@ export function usePaperList(authLoading?: boolean) {
     }
     if (value !== 'relevance') {
       setSortPreference(value);
+      
+      // Update URL with new sort
+      const newParams = new URLSearchParams(searchParams);
+      if (value !== DEFAULT_SORT_PREFERENCE) {
+        newParams.set('sort', value);
+      } else {
+        newParams.delete('sort');
+      }
+      setSearchParams(newParams, { replace: true });
     }
-  }, [isSearchInputActive]);
+  }, [isSearchInputActive, searchParams, setSearchParams]);
 
   const handlePageChange = useCallback((newPage: number) => {
     setCurrentPage(newPage);
+    
+    // Update URL with new page
+    const newParams = new URLSearchParams(searchParams);
+    if (newPage !== 1) {
+      newParams.set('page', newPage.toString());
+    } else {
+      newParams.delete('page');
+    }
+    setSearchParams(newParams, { replace: true });
+    
     window.scrollTo(0, 0);
-  }, []);
+  }, [searchParams, setSearchParams]);
 
   const handlePrev = useCallback(() => {
     if (currentPage > 1) {
       const newPage = currentPage - 1;
       setCurrentPage(newPage);
+      
+      // Update URL
+      const newParams = new URLSearchParams(searchParams);
+      if (newPage !== 1) {
+        newParams.set('page', newPage.toString());
+      } else {
+        newParams.delete('page');
+      }
+      setSearchParams(newParams, { replace: true });
+      
       window.scrollTo(0,0);
     }
-  }, [currentPage]);
+  }, [currentPage, searchParams, setSearchParams]);
 
   const handleNext = useCallback(() => {
     if (currentPage < totalPages) {
       const newPage = currentPage + 1;
       setCurrentPage(newPage);
+      
+      // Update URL
+      const newParams = new URLSearchParams(searchParams);
+      newParams.set('page', newPage.toString());
+      setSearchParams(newParams, { replace: true });
+      
       window.scrollTo(0,0);
     }
-  }, [currentPage, totalPages]);
+  }, [currentPage, totalPages, searchParams, setSearchParams]);
 
   const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
     try {
