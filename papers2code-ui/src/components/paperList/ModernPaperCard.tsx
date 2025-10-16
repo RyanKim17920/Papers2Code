@@ -133,23 +133,33 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
             </div>
             
             <div className="flex items-center gap-1">
-              {/* Code Button */}
-              <button
-                onClick={(e) => e.preventDefault()}
-                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title="View Code"
-              >
-                <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
+              {/* Code Button - Only show if official code exists */}
+              {paper.urlGithub && (
+                <a
+                  href={paper.urlGithub}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded hover:bg-emerald-500/10 transition-colors text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                  title="View Official Code"
+                >
+                  <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </a>
+              )}
               
-              {/* PDF Button */}
-              <button
-                onClick={(e) => e.preventDefault()}
-                className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
-                title="Download PDF"
-              >
-                <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
-              </button>
+              {/* PDF Button - Links to PDF or Abstract */}
+              {(paper.urlPdf || paper.urlAbs) && (
+                <a
+                  href={paper.urlPdf || paper.urlAbs}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  title={paper.urlPdf ? "Download PDF" : "View Abstract"}
+                >
+                  <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </a>
+              )}
               
               {/* Like Button */}
               <button

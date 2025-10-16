@@ -169,6 +169,8 @@ async def transform_paper_async(
         "upvote_count": paper_doc.get("upvoteCount", 0),       
         "status": paper_doc.get("status", "Not Started"),
         "url_github": _transform_url(paper_doc.get("urlGithub")),  # Include in base for all detail levels
+        "url_abs": _transform_url(paper_doc.get("urlAbs")),  # Include in base for paper list icons
+        "url_pdf": _transform_url(paper_doc.get("urlPdf")),  # Include in base for paper list icons
         "has_code": paper_doc.get("hasCode", False),  # Include in base for all detail levels
     }
 
@@ -196,8 +198,6 @@ async def transform_paper_async(
             "pwc_url": _transform_url(paper_doc.get("pwcUrl")),
             "arxiv_id": paper_doc.get("arxivId"), 
             "abstract": paper_doc.get("abstract"),
-            "url_abs": _transform_url(paper_doc.get("urlAbs")),         
-            "url_pdf": _transform_url(paper_doc.get("urlPdf")),
             "venue": paper_doc.get("venue"), # Assumes DB field is "venue"
             "tags": paper_doc.get("tasks", []), # Assumes DB field is "tasks", Pydantic field "tags" has alias "tasks"
             "implementability_status": current_implementability_status,
