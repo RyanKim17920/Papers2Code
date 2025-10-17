@@ -221,22 +221,16 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                             </div>
                                             
                                             <div className="flex gap-1">
-                                                {paper.implementationProgress ? (
-                                                    isCurrentUserContributor ? (
-                                                        <Button variant="outline" size="sm" onClick={() => setActiveTab('implementationProgress')} className="gap-1 h-6 text-xs px-2">
-                                                            <ExternalLink size={10} />
-                                                            Progress
-                                                        </Button>
-                                                    ) : (
-                                                        <Button variant="secondary" size="sm" onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} className="gap-1 h-6 text-xs px-2">
-                                                            <Users size={10} />
-                                                            Join
-                                                        </Button>
-                                                    )
-                                                ) : (
+                                                {!paper.implementationProgress && (
                                                     <Button onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} size="sm" className="gap-1 h-6 text-xs px-2">
                                                         <Rocket size={10} />
                                                         Start
+                                                    </Button>
+                                                )}
+                                                {paper.implementationProgress && !isCurrentUserContributor && (
+                                                    <Button variant="secondary" size="sm" onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} className="gap-1 h-6 text-xs px-2">
+                                                        <Users size={10} />
+                                                        Join
                                                     </Button>
                                                 )}
                                             </div>

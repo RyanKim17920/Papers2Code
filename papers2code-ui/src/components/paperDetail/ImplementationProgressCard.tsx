@@ -62,56 +62,65 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
 
     return (
         <>
-            <Card className="bg-card/70 backdrop-blur border border-border/60 hover:border-border transition-colors">
-                <CardContent className="p-2 space-y-2">
+            <Card 
+                className="bg-card/70 backdrop-blur border border-border/60 hover:border-primary/30 transition-all cursor-pointer group"
+                onClick={() => setIsDialogOpen(true)}
+            >
+                <CardContent className="p-3 space-y-2.5">
+                    {/* Header */}
                     <div className="flex items-center justify-between">
-                        <h3 className="text-sm font-semibold text-foreground flex items-center gap-1">
-                            <Code className="w-3 h-3 text-primary" />
+                        <h3 className="text-base font-bold text-foreground flex items-center gap-1.5">
+                            <Code className="w-4 h-4 text-primary" />
                             Progress
                         </h3>
+                        <Badge 
+                            variant="outline" 
+                            className={`text-xs h-5 px-2 font-medium ${getStatusColorClasses(paperStatus)}`}
+                        >
+                            {paperStatus || 'Not Started'}
+                        </Badge>
                     </div>
 
-                    {/* Basic info */}
-                    <div className="space-y-1">
-                        <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Status</span>
-                            <Badge 
-                                variant="outline" 
-                                className={`text-xs h-4 px-1 ${getStatusColorClasses(paperStatus)}`}
-                            >
-                                {paperStatus || 'Not Started'}
-                            </Badge>
+                    {/* Metrics Grid */}
+                    <div className="grid grid-cols-2 gap-2">
+                        <div className="bg-muted/30 rounded-lg p-2 border border-border/40">
+                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">
+                                Contributors
+                            </div>
+                            <div className="text-xl font-bold text-foreground">
+                                {progress.contributors?.length || 0}
+                            </div>
                         </div>
                         
-                        <div className="flex items-center justify-between text-xs">
-                            <span className="text-muted-foreground">Contributors</span>
-                            <span className="font-medium">{progress.contributors?.length || 0}</span>
-                        </div>
-
-                        {progress.githubRepoId && (
-                            <div className="flex items-center justify-between text-xs">
-                                <span className="text-muted-foreground">Repository</span>
-                                <GitBranch size={10} className="text-primary" />
+                        <div className="bg-muted/30 rounded-lg p-2 border border-border/40">
+                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">
+                                Updates
                             </div>
-                        )}
-
-                        {/* Latest update preview */}
-                        <div className="flex items-center gap-1 text-xs text-muted-foreground pt-1">
-                            <Clock size={9} />
-                            <span className="text-[10px]">{getLatestUpdateText()}</span>
+                            <div className="text-xl font-bold text-foreground">
+                                {progress.updates?.length || 0}
+                            </div>
                         </div>
                     </div>
 
-                    {/* View Timeline Button */}
-                    <Button
-                        variant="outline"
-                        size="sm"
-                        onClick={() => setIsDialogOpen(true)}
-                        className="w-full h-6 text-xs flex items-center gap-1"
-                    >
-                        <ExternalLink size={10} />
-                        View Timeline & Details
-                    </Button>
+                    {/* Repository badge if exists */}
+                    {progress.githubRepoId && (
+                        <div className="flex items-center gap-1.5 text-xs bg-primary/5 text-primary px-2 py-1 rounded border border-primary/20">
+                            <GitBranch size={11} />
+                            <span className="font-medium">Repository Linked</span>
+                        </div>
+                    )}
+
+                    {/* Latest update */}
+                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground border-t border-border/40 pt-2">
+                        <Clock size={11} className="flex-shrink-0" />
+                        <span className="text-[11px] leading-tight">{getLatestUpdateText()}</span>
+                    </div>
+
+                    {/* Hover hint */}
+                    <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground/60 group-hover:text-primary/80 transition-colors pt-1">
+                        <ExternalLink size={9} />
+                        <span className="font-medium">Click to view timeline</span>
+                    </div>
                 </CardContent>
             </Card>
 

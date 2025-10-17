@@ -129,9 +129,9 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
   }, [timelineSteps, stepPositions]);
 
   return (
-    <div className="relative w-full py-8 min-h-[280px] flex items-center">
+    <div className="relative w-full py-4 min-h-[180px] flex items-center">
       {/* Container with padding to prevent text overflow */}
-      <div className="relative w-full px-20">
+      <div className="relative w-full px-12">
         {/* Base timeline line - full width in muted color */}
         <div className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" style={{ top: '28px' }} />
         

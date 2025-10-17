@@ -30,13 +30,13 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
   const Icon = event.icon;
 
   const getNodeStyles = () => {
-    const baseStyles = "relative z-10 w-14 h-14 rounded-full border-4 flex items-center justify-center transition-all shadow-lg";
+    const baseStyles = "relative z-10 w-12 h-12 rounded-full border-3 flex items-center justify-center transition-all shadow-md";
     
     switch (event.state) {
       case 'completed':
         return `${baseStyles} bg-primary border-primary/20 text-primary-foreground hover:scale-110 cursor-pointer`;
       case 'current':
-        return `${baseStyles} bg-gradient-to-br from-primary to-primary/80 border-primary/30 text-primary-foreground hover:scale-115 cursor-pointer ring-4 ring-primary/20 animate-pulse`;
+        return `${baseStyles} bg-gradient-to-br from-primary to-primary/80 border-primary/30 text-primary-foreground hover:scale-110 cursor-pointer ring-3 ring-primary/20 animate-pulse`;
       case 'future':
         return `${baseStyles} bg-muted/50 border-muted-foreground/20 text-muted-foreground/50 hover:bg-muted/70 hover:text-muted-foreground/70 cursor-help`;
       default:
@@ -68,7 +68,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
       {/* Event node */}
       <div className="relative">
         <div className={getNodeStyles()}>
-          <Icon className="w-6 h-6" />
+          <Icon className="w-5 h-5" />
         </div>
       </div>
       
@@ -77,16 +77,16 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
         <>
           {/* Arrow/stem pointing to the node */}
           <div 
-            className="absolute w-0 h-0 border-l-8 border-r-8 border-b-8 border-l-transparent border-r-transparent border-b-popover z-40"
+            className="absolute w-0 h-0 border-l-6 border-r-6 border-b-6 border-l-transparent border-r-transparent border-b-popover z-40"
             style={{ 
-              top: '60px',
+              top: '52px',
               left: '50%',
               transform: 'translateX(-50%)',
             }}
           />
           
           <div 
-            className="absolute top-[68px] w-80 bg-popover border-2 border-border rounded-xl shadow-2xl p-5 z-50 animate-in fade-in-0 zoom-in-95 duration-200"
+            className="absolute top-[58px] w-72 bg-popover border border-border rounded-lg shadow-xl p-4 z-50 animate-in fade-in-0 zoom-in-95 duration-200"
             style={{ 
               pointerEvents: 'none',
               left: position < 30 ? '0' : position > 70 ? 'auto' : '50%',
@@ -94,38 +94,38 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
               transform: position >= 30 && position <= 70 ? 'translateX(-50%)' : 'none'
             }}
           >
-            <div className="space-y-3">
+            <div className="space-y-2">
               <div className="flex items-start justify-between">
                 <div className="flex-1">
-                  <h4 className="font-bold text-base text-foreground">{event.title}</h4>
+                  <h4 className="font-bold text-sm text-foreground">{event.title}</h4>
                   {!event.isFuture && (
-                    <p className="text-xs text-muted-foreground mt-1 font-medium">{formatDate(event.timestamp)}</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{formatDate(event.timestamp)}</p>
                   )}
                   {event.isFuture && (
-                    <p className="text-xs text-muted-foreground mt-1 italic">Not yet reached</p>
+                    <p className="text-[10px] text-muted-foreground mt-0.5 italic">Not yet reached</p>
                   )}
                 </div>
-                <div className={`ml-3 p-2 rounded-lg ${event.state === 'completed' ? 'bg-primary/10' : event.state === 'current' ? 'bg-primary/20' : 'bg-muted'}`}>
-                  <Icon className={`w-5 h-5 ${event.state === 'future' ? 'text-muted-foreground/50' : 'text-primary'}`} />
+                <div className={`ml-2 p-1.5 rounded-lg ${event.state === 'completed' ? 'bg-primary/10' : event.state === 'current' ? 'bg-primary/20' : 'bg-muted'}`}>
+                  <Icon className={`w-4 h-4 ${event.state === 'future' ? 'text-muted-foreground/50' : 'text-primary'}`} />
                 </div>
               </div>
               
-              <p className="text-sm text-muted-foreground leading-relaxed">{event.description}</p>
+              <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
               
               {event.details && event.details.length > 0 && (
-                <div className="space-y-2 pt-3 border-t border-border/50">
+                <div className="space-y-1.5 pt-2 border-t border-border/50">
                   {event.details.map((detail, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-xs">
+                    <div key={idx} className="flex justify-between items-center text-[10px]">
                       <span className="text-muted-foreground font-medium">{detail.label}</span>
-                      <span className="font-semibold text-foreground bg-muted/50 px-2 py-1 rounded">{detail.value}</span>
+                      <span className="font-semibold text-foreground bg-muted/50 px-1.5 py-0.5 rounded">{detail.value}</span>
                     </div>
                   ))}
                 </div>
               )}
               
               {event.isFuture && (
-                <div className="pt-2 mt-2 border-t border-border/50">
-                  <p className="text-xs text-muted-foreground italic">
+                <div className="pt-1.5 mt-1.5 border-t border-border/50">
+                  <p className="text-[10px] text-muted-foreground italic">
                     This step will be completed as the implementation progresses.
                   </p>
                 </div>
@@ -136,7 +136,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
       )}
       
       {/* Label below */}
-      <div className={`mt-3 text-xs whitespace-nowrap font-semibold transition-colors ${
+      <div className={`mt-2 text-[10px] whitespace-nowrap font-semibold transition-colors ${
         event.state === 'future' 
           ? 'text-muted-foreground/60' 
           : event.state === 'current'
@@ -147,7 +147,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
       </div>
       
       {!event.isFuture && (
-        <div className="mt-1 text-[10px] text-muted-foreground whitespace-nowrap">
+        <div className="mt-0.5 text-[9px] text-muted-foreground whitespace-nowrap">
           {formatDate(event.timestamp)}
         </div>
       )}
