@@ -119,20 +119,20 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
           </div>
 
           {/* Footer: Domain Tags + Status + Actions - Fixed at bottom */}
-          <div className="flex items-center justify-between mt-auto">
-            <div className="flex items-center gap-2">
+          <div className="flex items-center justify-between gap-2 mt-auto flex-wrap">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
               {/* Domain Tags */}
               {domainTags.map((tag, index) => (
-                <Badge key={index} variant="default" className="text-[9px] sm:text-xs px-2 py-0.5 h-5 sm:h-6 font-medium">
+                <Badge key={index} variant="default" className="text-[9px] sm:text-xs px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-medium whitespace-nowrap">
                   {tag}
                 </Badge>
               ))}
               
               {/* Status Badge */}
-              <StatusBadge paper={paper} className="text-[10px] sm:text-xs px-2 py-1 h-5 sm:h-6" />
+              <StatusBadge paper={paper} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-1 h-5 sm:h-6" />
             </div>
             
-            <div className="flex items-center gap-1">
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
               {/* Code Button - Only show if official code exists */}
               {paper.urlGithub && (
                 <a
@@ -140,7 +140,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="p-1.5 rounded hover:bg-emerald-500/10 transition-colors text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                  className="p-1 sm:p-1.5 rounded hover:bg-emerald-500/10 transition-colors text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
                   title="View Official Code"
                 >
                   <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -154,7 +154,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
                   target="_blank"
                   rel="noopener noreferrer"
                   onClick={(e) => e.stopPropagation()}
-                  className="p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  className="p-1 sm:p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                   title={paper.urlPdf ? "Download PDF" : "View Abstract"}
                 >
                   <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
@@ -165,7 +165,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
               <button
                 onClick={handleVoteClick}
                 disabled={isVoting}
-                className="flex items-center gap-1 p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                className="flex items-center gap-0.5 sm:gap-1 p-1 sm:p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
                 title="Save to Library"
               >
                 <ThumbsUp 
