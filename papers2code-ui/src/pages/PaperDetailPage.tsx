@@ -176,64 +176,161 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 )}
 
                 {/* Ultra Compact Grid Layout */}
-                <div className="grid grid-cols-1 lg:grid-cols-12 gap-2">
+                <div className="grid grid-cols-1 lg:grid-cols-12 gap-3">
                     {/* Main Paper Content - 8 columns */}
                     <div className="lg:col-span-8">
                         <Card className="bg-card/70 backdrop-blur border border-border/60">
-                            <CardContent className="p-3">
+                            <CardContent className="p-4 sm:p-5">
                                 {/* Title & Metadata in Horizontal Layout */}
-                                <div className="flex flex-col gap-2">
-                                    <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight">
-                                        {paper.title}
-                                    </h1>
+                                <div className="flex flex-col gap-3">
+                                    <div className="flex items-start justify-between gap-3">
+                                        <h1 className="text-xl md:text-2xl font-bold text-foreground leading-tight flex-1">
+                                            {paper.title}
+                                        </h1>
+                                        {/* Upvote moved to top right */}
+                                        {currentUser ? (
+                                            <Button
+                                                variant={paper.currentUserVote === 'up' ? "default" : "outline"}
+                                                size="sm"
+                                                onClick={() => handleUpvote(paper.currentUserVote === 'up' ? 'none' : 'up')}
+                                                disabled={isVoting}
+                                                className="gap-1.5 h-8 px-3 shrink-0"
+                                            >
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 24 24"
+                                                    fill={paper.currentUserVote === 'up' ? "currentColor" : "none"}
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    className="w-4 h-4"
+                                                >
+                                                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                                                </svg>
+                                                <span className="text-sm font-semibold">{paper.upvoteCount || 0}</span>
+                                            </Button>
+                                        ) : (
+                                            <Badge variant="secondary" className="gap-1.5 h-8 px-3">
+                                                <svg
+                                                    xmlns="http://www.w3.org/2000/svg"
+                                                    viewBox="0 0 24 24"
+                                                    fill="none"
+                                                    stroke="currentColor"
+                                                    strokeWidth="2"
+                                                    strokeLinecap="round"
+                                                    strokeLinejoin="round"
+                                                    className="w-4 h-4"
+                                                >
+                                                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
+                                                </svg>
+                                                <span className="text-sm font-semibold">{paper.upvoteCount || 0}</span>
+                                            </Badge>
+                                        )}
+                                    </div>
                                     
-                                    {/* Horizontal Metadata Layout */}
+                                    {/* Horizontal Metadata Layout - without upvote */}
                                     <div className="flex flex-wrap items-center justify-between gap-2">
-                                        <PaperMetadata 
-                                            paper={paper}
-                                            currentUser={currentUser}
-                                            handleUpvote={handleUpvote}
-                                            isVoting={isVoting}
-                                            actionUsers={actionUsers}
-                                            isLoadingActionUsers={isLoadingActionUsers}
-                                            actionUsersError={actionUsersError}
-                                        />
+                                        <div className="flex flex-wrap items-center gap-3 text-sm text-muted-foreground">
+                                            <div className="flex items-center gap-1.5">
+                                                <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                                                </svg>
+                                                <span className="font-medium text-foreground text-sm">{paper.authors?.slice(0, 3).join(', ') || 'Unknown'}{paper.authors && paper.authors.length > 3 && ', et al.'}</span>
+                                            </div>
+                                            {paper.proceeding && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 21V5a2 2 0 00-2-2H7a2 2 0 00-2 2v16m14 0h2m-2 0h-5m-9 0H3m2 0h5M9 7h1m-1 4h1m4-4h1m-1 4h1m-5 10v-5a1 1 0 011-1h2a1 1 0 011 1v5m-4 0h4" />
+                                                    </svg>
+                                                    <span className="font-semibold text-primary text-sm">{paper.proceeding}</span>
+                                                </div>
+                                            )}
+                                            {paper.publicationDate && (
+                                                <div className="flex items-center gap-1.5">
+                                                    <svg className="w-4 h-4 text-primary" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                                        <rect x="3" y="4" width="18" height="18" rx="2" ry="2" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+                                                        <line x1="16" y1="2" x2="16" y2="6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+                                                        <line x1="8" y1="2" x2="8" y2="6" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+                                                        <line x1="3" y1="10" x2="21" y2="10" strokeWidth={2} strokeLinecap="round" strokeLinejoin="round"/>
+                                                    </svg>
+                                                    <span className="text-foreground text-sm">{new Date(paper.publicationDate).toLocaleDateString()}</span>
+                                                </div>
+                                            )}
+                                        </div>
                                         <ImplementabilityNotice paper={paper} />
+                                    </div>
+                                    
+                                    {/* Tags and Links Section */}
+                                    <div className="flex flex-wrap items-center gap-2 mt-2 pt-2 border-t border-border/40">
+                                        {/* Tags */}
+                                        {paper.tasks && paper.tasks.length > 0 && (
+                                            <div className="flex flex-wrap items-center gap-1.5">
+                                                {paper.tasks.slice(0, 5).map((tag, index) => (
+                                                    <Badge key={index} variant="secondary" className="text-xs px-2.5 py-1 bg-primary/10 text-primary border-primary/20">
+                                                        {tag}
+                                                    </Badge>
+                                                ))}
+                                            </div>
+                                        )}
+                                        
+                                        {/* Links */}
+                                        <div className="flex items-center gap-2 ml-auto">
+                                            {paper.urlPdf && (
+                                                <a
+                                                    href={paper.urlPdf}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/60 bg-card/60 hover:bg-accent/50 text-sm font-medium text-foreground hover:border-primary/40 transition-all shadow-sm"
+                                                >
+                                                    <FileText className="w-4 h-4 text-blue-600 dark:text-blue-400" />
+                                                    PDF
+                                                </a>
+                                            )}
+                                            {paper.urlAbs && (
+                                                <a
+                                                    href={paper.urlAbs}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/60 bg-card/60 hover:bg-accent/50 text-sm font-medium text-foreground hover:border-primary/40 transition-all shadow-sm"
+                                                >
+                                                    <ExternalLink className="w-4 h-4 text-purple-600 dark:text-purple-400" />
+                                                    Abstract
+                                                </a>
+                                            )}
+                                            {paper.arxivId && (
+                                                <a
+                                                    href={`https://arxiv.org/abs/${paper.arxivId}`}
+                                                    target="_blank"
+                                                    rel="noopener noreferrer"
+                                                    className="inline-flex items-center gap-1.5 px-2.5 py-1.5 rounded-md border border-border/60 bg-card/60 hover:bg-accent/50 text-sm font-medium text-foreground hover:border-primary/40 transition-all shadow-sm"
+                                                >
+                                                    <Code className="w-4 h-4 text-orange-600 dark:text-orange-400" />
+                                                    arXiv
+                                                </a>
+                                            )}
+                                        </div>
                                     </div>
                                 </div>
                                 
                                 {/* Compact Community Implementation Bar (only if no official code) */}
-                                {currentUser && paper && !hasOfficialCode && (
+                                {currentUser && paper && !hasOfficialCode && !paper.implementationProgress && (
                                     <div className="bg-gradient-to-r from-primary/5 to-accent/5 border border-primary/20 rounded p-2 mt-2">
                                         <div className="flex items-center justify-between gap-2">
                                             <div className="flex items-center gap-2">
                                                 <div className="p-1 rounded bg-primary/10 shrink-0">
-                                                    {paper.implementationProgress ? <Users className="h-3 w-3 text-primary" /> : <Rocket className="h-3 w-3 text-primary" />}
+                                                    <Rocket className="h-3 w-3 text-primary" />
                                                 </div>
                                                 <div>
                                                     <span className="font-medium text-xs">Community Implementation:</span>
-                                                    <span className="text-muted-foreground text-xs ml-1">
-                                                        {paper.implementationProgress ? (
-                                                            isCurrentUserContributor ? "You're contributing" : "Active effort"
-                                                        ) : "Be the first!"}
-                                                    </span>
+                                                    <span className="text-muted-foreground text-xs ml-1">Be the first!</span>
                                                 </div>
                                             </div>
                                             
-                                            <div className="flex gap-1">
-                                                {!paper.implementationProgress && (
-                                                    <Button onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} size="sm" className="gap-1 h-6 text-xs px-2">
-                                                        <Rocket size={10} />
-                                                        Start
-                                                    </Button>
-                                                )}
-                                                {paper.implementationProgress && !isCurrentUserContributor && (
-                                                    <Button variant="secondary" size="sm" onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} className="gap-1 h-6 text-xs px-2">
-                                                        <Users size={10} />
-                                                        Join
-                                                    </Button>
-                                                )}
-                                            </div>
+                                            <Button onClick={handleInitiateImplementationEffort} disabled={isProcessingEffortAction} size="sm" className="gap-1 h-6 text-xs px-2">
+                                                <Rocket size={10} />
+                                                Start
+                                            </Button>
                                         </div>
                                         
                                         {effortActionError && (
@@ -245,12 +342,12 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                 )}
 
                                 {/* Abstract Section */}
-                                <div className="border-t border-border/60 pt-2 mt-2">
-                                    <h3 className="text-sm font-semibold text-foreground mb-1 flex items-center gap-1">
-                                        <FileText className="w-3 h-3 text-primary" />
+                                <div className="border-t border-border/60 pt-3 mt-3">
+                                    <h3 className="text-base font-semibold text-foreground mb-2 flex items-center gap-2">
+                                        <FileText className="w-4 h-4 text-primary" />
                                         Abstract
                                     </h3>
-                                    <p className="text-muted-foreground leading-relaxed text-xs">
+                                    <p className="text-foreground leading-relaxed text-sm">
                                         {paper.abstract || 'Abstract not available.'}
                                     </p>
                                 </div>

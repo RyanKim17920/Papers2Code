@@ -1,9 +1,16 @@
 import React from 'react';
+import { Info, ThumbsUp, ThumbsDown } from 'lucide-react';
 import { Paper, ImplementabilityAction } from '../../../../common/types/paper';
 import type { UserProfile } from '../../../../common/types/user';
 import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
 import type { PaperActionUsers } from '../../../../common/services/api'; // Add this line
+import {
+    Tooltip,
+    TooltipContent,
+    TooltipProvider,
+    TooltipTrigger,
+} from '../../../ui/tooltip';
 
 
 interface ImplementabilityTabProps {
@@ -76,83 +83,135 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
     const commonButtonDisabled = isVoting || isAdminSetStatus;
 
     return (
-        <div className="space-y-4">
+        <div className="space-y-6">
+            {/* Header with Info Tooltip */}
+            <div className="flex items-start gap-3">
+                <div className="flex-1">
+                    <h3 className="text-base font-semibold text-foreground mb-1">
+                        Paper Implementability
+                    </h3>
+                    <p className="text-sm text-muted-foreground">
+                        Help the community determine if this paper can be implemented in code
+                    </p>
+                </div>
+                <TooltipProvider>
+                    <Tooltip>
+                        <TooltipTrigger asChild>
+                            <button className="flex-shrink-0 p-2 rounded-lg bg-card/60 hover:bg-accent/50 border border-border/60 hover:border-primary/40 transition-colors">
+                                <Info className="w-4 h-4 text-primary" />
+                            </button>
+                        </TooltipTrigger>
+                        <TooltipContent side="left" className="max-w-xs">
+                            <div className="space-y-2">
+                                <p className="font-semibold text-sm">What does "Not Implementable" mean?</p>
+                                <ul className="text-xs space-y-1 list-disc list-inside">
+                                    <li>Papers not related to coding or programming</li>
+                                    <li>Pure theoretical research without practical implementation</li>
+                                    <li>Dataset papers that cannot be recreated</li>
+                                    <li>Survey or review papers with no code component</li>
+                                    <li>Papers requiring proprietary tools or unavailable resources</li>
+                                </ul>
+                            </div>
+                        </TooltipContent>
+                    </Tooltip>
+                </TooltipProvider>
+            </div>
+
+            {/* Status Message */}
             {statusMessage && (
-                <div className={`p-3 rounded-lg border text-sm ${
-                    statusMessageType === 'success' ? 'bg-emerald-50 border-emerald-200 text-emerald-700' :
-                    statusMessageType === 'error' ? 'bg-red-50 border-red-200 text-red-700' :
-                    statusMessageType === 'warning' ? 'bg-amber-50 border-amber-200 text-amber-700' :
-                    'bg-blue-50 border-blue-200 text-blue-700'
+                <div className={`p-4 rounded-lg border text-sm ${
+                    statusMessageType === 'success' ? 'bg-emerald-50/50 border-emerald-200/60 text-emerald-700' :
+                    statusMessageType === 'error' ? 'bg-red-50/50 border-red-200/60 text-red-700' :
+                    statusMessageType === 'warning' ? 'bg-amber-50/50 border-amber-200/60 text-amber-700' :
+                    'bg-blue-50/50 border-blue-200/60 text-blue-700'
                 }`}>
-                    {statusMessage}
+                    <div className="flex items-start gap-2">
+                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
+                        <span>{statusMessage}</span>
+                    </div>
                 </div>
             )}
 
             {showVotingControls ? (
-                <div className="space-y-4">
+                <div className="space-y-5">
+                    {/* Voting Instructions - only show during active voting */}
                     {!isAdminSetStatus && paper.implementabilityStatus === 'Voting' && (
-                        <div className="text-sm text-muted-foreground space-y-2 p-3 bg-muted/30 rounded-lg">
-                            <p>
-                                Use <FaThumbsUp /> if this paper <strong>can</strong> be implemented.
-                            </p>
-                            <p>
-                                Use <FaThumbsDown /> if this paper <strong>cannot</strong> be implemented.
-                            </p>
+                        <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-4">
+                            <p className="text-sm font-medium text-foreground mb-3">Cast Your Vote:</p>
+                            <div className="space-y-2 text-sm text-muted-foreground">
+                                <div className="flex items-center gap-2">
+                                    <ThumbsUp className="w-4 h-4 text-emerald-600" />
+                                    <span>This paper <strong>can be implemented</strong> in code</span>
+                                </div>
+                                <div className="flex items-center gap-2">
+                                    <ThumbsDown className="w-4 h-4 text-red-600" />
+                                    <span>This paper <strong>cannot be implemented</strong> in code</span>
+                                </div>
+                            </div>
                         </div>
                     )}
                     
+                    {/* Voting Buttons */}
                     <div className="space-y-3">
                         {currentUser ? (
-                            <>
-                                <VoteButton
-                                    onClick={handleIsImplementableClick}
-                                    disabled={commonButtonDisabled}
-                                    voted={currentUserVotedIsImplementable}
-                                    count={paper.isImplementableVotes}
-                                    icon={<FaThumbsUp />}
-                                    text="Implementable"
-                                    className="thumbs-up w-full"
-                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedIsImplementable ? "Retract vote" : "Vote implementable")}
-                                />
-                                <VoteButton
-                                    onClick={handleNotImplementableClick}
-                                    disabled={commonButtonDisabled}
-                                    voted={currentUserVotedNotImplementable}
-                                    count={paper.nonImplementableVotes}
-                                    icon={<FaThumbsDown />}
-                                    text="Not Implementable"
-                                    className="thumbs-down w-full"
-                                    title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedNotImplementable ? "Retract vote" : "Vote not implementable")}
-                                />
-                                {showRetractButton && (
-                                    <RetractVoteButton 
-                                        onClick={() => handleImplementabilityVote('retract')} 
-                                        disabled={commonButtonDisabled} 
-                                        title="Retract your current vote"
-                                        className="w-full"
+                            <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-4">
+                                <div className="space-y-3">
+                                    <VoteButton
+                                        onClick={handleIsImplementableClick}
+                                        disabled={commonButtonDisabled}
+                                        voted={currentUserVotedIsImplementable}
+                                        count={paper.isImplementableVotes}
+                                        icon={<FaThumbsUp />}
+                                        text="Implementable"
+                                        className="thumbs-up w-full"
+                                        title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedIsImplementable ? "Retract vote" : "Vote implementable")}
                                     />
-                                )}
-                            </>
+                                    <VoteButton
+                                        onClick={handleNotImplementableClick}
+                                        disabled={commonButtonDisabled}
+                                        voted={currentUserVotedNotImplementable}
+                                        count={paper.nonImplementableVotes}
+                                        icon={<FaThumbsDown />}
+                                        text="Not Implementable"
+                                        className="thumbs-down w-full"
+                                        title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedNotImplementable ? "Retract vote" : "Vote not implementable")}
+                                    />
+                                    {showRetractButton && (
+                                        <RetractVoteButton 
+                                            onClick={() => handleImplementabilityVote('retract')} 
+                                            disabled={commonButtonDisabled} 
+                                            title="Retract your current vote"
+                                            className="w-full"
+                                        />
+                                    )}
+                                </div>
+                            </div>
                         ) : (
-                            <p className="text-sm text-muted-foreground text-center">Please log in to vote</p>
+                            <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-6 text-center">
+                                <p className="text-sm text-muted-foreground">Please log in to vote on implementability</p>
+                            </div>
                         )}
                     </div>
                     
-                    <div className="space-y-3 text-sm">
-                        <UserDisplayList
-                            title="Implementable"
-                            users={actionUsers?.votedIsImplementable}
-                            isLoading={isLoadingActionUsers}
-                            error={actionUsersError}
-                            emptyMessage="No votes yet"
-                        />
-                        <UserDisplayList
-                            title="Not Implementable"
-                            users={actionUsers?.votedNotImplementable}
-                            isLoading={isLoadingActionUsers}
-                            error={actionUsersError}
-                            emptyMessage="No votes yet"
-                        />
+                    {/* User Lists */}
+                    <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-4">
+                        <div className="space-y-4">
+                            <UserDisplayList
+                                title="Voted Implementable"
+                                users={actionUsers?.votedIsImplementable}
+                                isLoading={isLoadingActionUsers}
+                                error={actionUsersError}
+                                emptyMessage="No votes yet"
+                            />
+                            <div className="border-t border-border/40" />
+                            <UserDisplayList
+                                title="Voted Not Implementable"
+                                users={actionUsers?.votedNotImplementable}
+                                isLoading={isLoadingActionUsers}
+                                error={actionUsersError}
+                                emptyMessage="No votes yet"
+                            />
+                        </div>
                     </div>
                 </div>
             ) : null}

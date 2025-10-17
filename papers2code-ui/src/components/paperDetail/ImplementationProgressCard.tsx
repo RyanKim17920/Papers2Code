@@ -60,18 +60,22 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
         return `${eventTypeMap[latestUpdate.eventType] || latestUpdate.eventType} • ${timeText}`;
     };
 
+    const isCurrentUserContributor = progress.contributors?.some(
+        (contributorId) => contributorId === currentUser?.id
+    );
+
     return (
         <>
             <Card 
-                className="bg-card/70 backdrop-blur border border-border/60 hover:border-primary/30 transition-all cursor-pointer group"
+                className="bg-card/70 backdrop-blur border border-primary/40 hover:border-primary/60 transition-all cursor-pointer group shadow-sm hover:shadow-md"
                 onClick={() => setIsDialogOpen(true)}
             >
                 <CardContent className="p-3 space-y-2.5">
                     {/* Header */}
                     <div className="flex items-center justify-between">
                         <h3 className="text-base font-bold text-foreground flex items-center gap-1.5">
-                            <Code className="w-4 h-4 text-primary" />
-                            Progress
+                            <Code className="w-5 h-5 text-primary" />
+                            Implementation Progress
                         </h3>
                         <Badge 
                             variant="outline" 
@@ -80,6 +84,16 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
                             {paperStatus || 'Not Started'}
                         </Badge>
                     </div>
+
+                    {/* Contributor Status Banner */}
+                    {isCurrentUserContributor && (
+                        <div className="flex items-center gap-1.5 text-xs bg-primary/15 text-primary px-2 py-1.5 rounded border border-primary/30">
+                            <svg className="w-3 h-3" fill="currentColor" viewBox="0 0 20 20">
+                                <path d="M9 6a3 3 0 11-6 0 3 3 0 016 0zM17 6a3 3 0 11-6 0 3 3 0 016 0zM12.93 17c.046-.327.07-.66.07-1a6.97 6.97 0 00-1.5-4.33A5 5 0 0119 16v1h-6.07zM6 11a5 5 0 015 5v1H1v-1a5 5 0 015-5z" />
+                            </svg>
+                            <span className="font-semibold">You're Contributing</span>
+                        </div>
+                    )}
 
                     {/* Metrics Grid */}
                     <div className="grid grid-cols-2 gap-2">
