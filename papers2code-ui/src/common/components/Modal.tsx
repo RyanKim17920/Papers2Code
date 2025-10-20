@@ -62,6 +62,11 @@ const Modal: React.FC<ModalProps> = ({
         e.stopPropagation();
     };
 
+    const handleContentMouseDown = (e: React.MouseEvent) => {
+        // Only stop propagation to prevent backdrop from closing, but allow button clicks
+        e.stopPropagation();
+    };
+
     const handleCloseClick = (e: React.MouseEvent) => {
         e.stopPropagation();
         e.preventDefault();
@@ -77,8 +82,6 @@ const Modal: React.FC<ModalProps> = ({
             <div 
                 className={`modal-content ${className}`}
                 style={{ maxWidth }}
-                onClick={handleContentClick}
-                onMouseDown={handleContentClick}
             >
                 {showCloseButton && (
                     <button 

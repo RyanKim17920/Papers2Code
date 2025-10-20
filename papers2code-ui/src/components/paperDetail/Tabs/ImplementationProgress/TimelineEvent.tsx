@@ -30,15 +30,15 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
   const Icon = event.icon;
 
   const getNodeStyles = () => {
-    const baseStyles = "relative z-10 w-12 h-12 rounded-full border-3 flex items-center justify-center transition-all shadow-md";
+    const baseStyles = "relative z-10 w-12 h-12 rounded-full border-3 flex items-center justify-center transition-all duration-300 ease-out shadow-md";
     
     switch (event.state) {
       case 'completed':
-        return `${baseStyles} bg-primary border-primary/20 text-primary-foreground hover:scale-110 cursor-pointer`;
+        return `${baseStyles} bg-primary border-primary/20 text-primary-foreground hover:scale-105 cursor-pointer`;
       case 'current':
-        return `${baseStyles} bg-gradient-to-br from-primary to-primary/80 border-primary/30 text-primary-foreground hover:scale-110 cursor-pointer ring-3 ring-primary/20 animate-pulse`;
+        return `${baseStyles} bg-gradient-to-br from-primary to-primary/80 border-primary/30 text-primary-foreground hover:scale-105 cursor-pointer ring-3 ring-primary/20`;
       case 'future':
-        return `${baseStyles} bg-muted/50 border-muted-foreground/20 text-muted-foreground/50 hover:bg-muted/70 hover:text-muted-foreground/70 cursor-help`;
+        return `${baseStyles} bg-muted/50 border-muted-foreground/20 text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground/60 cursor-help`;
       default:
         return baseStyles;
     }
@@ -65,74 +65,63 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
       onMouseEnter={() => setIsHovered(true)}
       onMouseLeave={() => setIsHovered(false)}
     >
-      {/* Event node */}
-      <div className="relative">
+      {/* Event node - positioned so its center aligns with the timeline */}
+      <div className="relative flex items-center justify-center" style={{ height: '48px' }}>
         <div className={getNodeStyles()}>
           <Icon className="w-5 h-5" />
         </div>
       </div>
       
-      {/* Tooltip with arrow/stem */}
+      {/* Tooltip - positioned above the node to prevent scrolling */}
       {isHovered && (
-        <>
-          {/* Arrow/stem pointing to the node */}
-          <div 
-            className="absolute w-0 h-0 border-l-6 border-r-6 border-b-6 border-l-transparent border-r-transparent border-b-popover z-40"
-            style={{ 
-              top: '52px',
-              left: '50%',
-              transform: 'translateX(-50%)',
-            }}
-          />
-          
-          <div 
-            className="absolute top-[58px] w-72 bg-popover border border-border rounded-lg shadow-xl p-4 z-50 animate-in fade-in-0 zoom-in-95 duration-200"
-            style={{ 
-              pointerEvents: 'none',
-              left: position < 30 ? '0' : position > 70 ? 'auto' : '50%',
-              right: position > 70 ? '0' : 'auto',
-              transform: position >= 30 && position <= 70 ? 'translateX(-50%)' : 'none'
-            }}
-          >
-            <div className="space-y-2">
-              <div className="flex items-start justify-between">
-                <div className="flex-1">
-                  <h4 className="font-bold text-sm text-foreground">{event.title}</h4>
-                  {!event.isFuture && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{formatDate(event.timestamp)}</p>
-                  )}
-                  {event.isFuture && (
-                    <p className="text-[10px] text-muted-foreground mt-0.5 italic">Not yet reached</p>
-                  )}
-                </div>
-                <div className={`ml-2 p-1.5 rounded-lg ${event.state === 'completed' ? 'bg-primary/10' : event.state === 'current' ? 'bg-primary/20' : 'bg-muted'}`}>
-                  <Icon className={`w-4 h-4 ${event.state === 'future' ? 'text-muted-foreground/50' : 'text-primary'}`} />
-                </div>
+        <div 
+          className="fixed z-[100] w-72 bg-popover border border-border rounded-lg shadow-xl p-4 animate-in fade-in-0 zoom-in-95 duration-300"
+          style={{ 
+            // Position above the cursor to prevent modal scroll issues
+            bottom: '50%',
+            left: position < 30 ? `${position + 5}%` : position > 70 ? `${position - 20}%` : `${position}%`,
+            transform: position >= 30 && position <= 70 ? 'translate(-50%, -50%)' : 'translateY(-50%)',
+            pointerEvents: 'none',
+          }}
+        >
+          <div className="space-y-2">
+            <div className="flex items-start justify-between">
+              <div className="flex-1">
+                <h4 className="font-bold text-sm text-foreground">{event.title}</h4>
+                {!event.isFuture && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{formatDate(event.timestamp)}</p>
+                )}
+                {event.isFuture && (
+                  <p className="text-[10px] text-muted-foreground mt-0.5 italic">Not yet reached</p>
+                )}
               </div>
-              
-              <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
-              
-              {event.details && event.details.length > 0 && (
-                <div className="space-y-1.5 pt-2 border-t border-border/50">
-                  {event.details.map((detail, idx) => (
-                    <div key={idx} className="flex justify-between items-center text-[10px]">
-                      <span className="text-muted-foreground font-medium">{detail.label}</span>
-                      <span className="font-semibold text-foreground bg-muted/50 px-1.5 py-0.5 rounded">{detail.value}</span>
-                    </div>
-                  ))}
-                </div>
-              )}
-              
-              {event.isFuture && (
-                <div className="pt-1.5 mt-1.5 border-t border-border/50">
-                  <p className="text-[10px] text-muted-foreground italic">
-                    This step will be completed as the implementation progresses.
-                  </p>
-                </div>
-              )}
+              <div className={`ml-2 p-1.5 rounded-lg ${event.state === 'completed' ? 'bg-primary/10' : event.state === 'current' ? 'bg-primary/20' : 'bg-muted'}`}>
+                <Icon className={`w-4 h-4 ${event.state === 'future' ? 'text-muted-foreground/50' : 'text-primary'}`} />
+              </div>
             </div>
+            
+            <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
+            
+            {event.details && event.details.length > 0 && (
+              <div className="space-y-1.5 pt-2 border-t border-border/50">
+                {event.details.map((detail, idx) => (
+                  <div key={idx} className="flex justify-between items-center text-[10px]">
+                    <span className="text-muted-foreground font-medium">{detail.label}</span>
+                    <span className="font-semibold text-foreground bg-muted/50 px-1.5 py-0.5 rounded">{detail.value}</span>
+                  </div>
+                ))}
+              </div>
+            )}
+            
+            {event.isFuture && (
+              <div className="pt-1.5 mt-1.5 border-t border-border/50">
+                <p className="text-[10px] text-muted-foreground italic">
+                  This step will be completed as the implementation progresses.
+                </p>
+              </div>
+            )}
           </div>
-        </>
+        </div>
       )}
       
       {/* Label below */}

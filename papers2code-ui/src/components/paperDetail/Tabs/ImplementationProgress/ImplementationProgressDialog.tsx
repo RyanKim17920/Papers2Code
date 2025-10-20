@@ -6,7 +6,7 @@ import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { HorizontalTimeline } from './HorizontalTimeline';
-import { GitBranch, Users, Mail, ExternalLink, Clock, CheckCircle } from 'lucide-react';
+import { GitBranch, Users, Mail, ExternalLink, Clock, CheckCircle, MessageCircle } from 'lucide-react';
 import { getStatusColorClasses } from '../../../../common/utils/statusUtils';
 import { useContributorProfiles } from '../../../../common/hooks/useContributorProfiles';
 import { UserDisplayList } from '../../UserDisplayList';
@@ -112,14 +112,14 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
   return (
     <>
       <Dialog open={isOpen} onOpenChange={handleDialogOpenChange}>
-        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto">
+        <DialogContent className="max-w-5xl max-h-[90vh] overflow-y-auto overflow-x-hidden">
           <DialogHeader>
             <div className="flex items-start justify-between gap-4 pr-8">
               <div className="flex-1">
                 <DialogTitle className="text-2xl mb-2">Implementation Progress</DialogTitle>
                 <p className="text-sm text-muted-foreground">Track the journey from paper to code</p>
               </div>
-              <Badge variant={wipStatus.variant} className={getStatusColorClasses(wipStatus.label)}>
+              <Badge variant={wipStatus.variant} className={`${getStatusColorClasses(wipStatus.label)} whitespace-nowrap`}>
                 {wipStatus.label}
               </Badge>
             </div>
@@ -168,6 +168,19 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                     </a>
                   )}
 
+                  {/* Send Email Button */}
+                  {canMarkAsSent && (
+                    <Button
+                      onClick={onSendEmail}
+                      disabled={isSendingEmail}
+                      className="flex items-center gap-2"
+                      variant="default"
+                    >
+                      <Mail className="w-4 h-4" />
+                      {isSendingEmail ? 'Sending...' : 'Send Outreach Email'}
+                    </Button>
+                  )}
+
                   {/* Email Status */}
                   <div className="flex items-center gap-3 p-3">
                     <div className={`flex items-center justify-center w-10 h-10 rounded-full ${
@@ -192,6 +205,33 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
               </CardContent>
             </Card>
 
+            {/* Prominent Author Response Button - Only show if user can update after email sent */}
+            {canModifyPostSentStatus && (
+              <Card className="border-2 border-primary/40 bg-gradient-to-br from-primary/5 to-accent/5">
+                <CardContent className="pt-6">
+                  <div className="flex items-center justify-between gap-4">
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-foreground mb-1">
+                        Update Implementation Status
+                      </h3>
+                      <p className="text-sm text-muted-foreground">
+                        Have you received a response from the authors? Log the update here.
+                      </p>
+                    </div>
+                    <Button
+                      onClick={() => setShowResponseModal(true)}
+                      disabled={isUpdating}
+                      size="lg"
+                      className="flex items-center gap-2 bg-primary hover:bg-primary/90 text-primary-foreground shadow-lg"
+                    >
+                      <MessageCircle className="w-5 h-5" />
+                      Log Author Response
+                    </Button>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
                     <div className="space-y-3">
                         {/* Subtitle */}
                         <p className="text-sm text-muted-foreground -mt-2">
@@ -208,22 +248,6 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                             </div>
                             <HorizontalTimeline progress={progress} />
                         </div>
-
-                        {/* Contextual action buttons - Only show if user can manage */}
-                        {(isContributor && hasEmailBeenSent) && (
-                            <div className="bg-muted/30 rounded-lg p-3 border border-border/50">
-                                <p className="text-xs text-muted-foreground mb-2 font-medium">Quick Actions</p>
-                                <div className="flex flex-wrap gap-2">
-                                    {/* TODO: Add contextual buttons based on current step */}
-                                    {/* - "Log Author Response" when email sent but no response */}
-                                    {/* - "Link GitHub Repo" when code uploaded but no repo */}
-                                    {/* - "Mark as Verified" when code received (backend support needed) */}
-                                    <p className="text-xs text-muted-foreground italic">
-                                        Additional actions coming soon
-                                    </p>
-                                </div>
-                            </div>
-                        )}
                     </div>
 
             {/* Login/Contributor Prompts */}
@@ -269,67 +293,65 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
         />
       </Modal>
 
-      {/* Response Type Modal */}
-      {showResponseModal && (
-        <Modal
-          isOpen={showResponseModal}
-          onClose={() => setShowResponseModal(false)}
-          title="What was the author's response?"
-          maxWidth="600px"
-          showCloseButton={true}
-        >
+      {/* Response Type Modal - Using Dialog instead of Modal for better compatibility */}
+      <Dialog open={showResponseModal} onOpenChange={(open) => !open && setShowResponseModal(false)}>
+        <DialogContent className="max-w-2xl">
+          <DialogHeader>
+            <DialogTitle>What was the author's response?</DialogTitle>
+          </DialogHeader>
+          
           <p className="mb-6 text-sm text-muted-foreground">
             Please select the type of response you received from the paper's authors:
           </p>
           
           <div className="space-y-3 mb-4">
-            <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-4 hover:bg-green-500/10 hover:border-green-500"
+            <button
+              className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-green-500 hover:bg-green-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => confirmStatusUpdate(ProgressStatus.CODE_UPLOADED)}
               disabled={isUpdating}
+              type="button"
             >
-              <div className="flex items-start gap-3 text-left">
+              <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Code Uploaded</div>
+                  <div className="font-semibold text-foreground">Code Uploaded</div>
                   <div className="text-xs text-muted-foreground">Authors published their working implementation</div>
                 </div>
               </div>
-            </Button>
+            </button>
 
-            <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-4 hover:bg-yellow-500/10 hover:border-yellow-500"
+            <button
+              className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-yellow-500 hover:bg-yellow-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => confirmStatusUpdate(ProgressStatus.CODE_NEEDS_REFACTORING)}
               disabled={isUpdating}
+              type="button"
             >
-              <div className="flex items-start gap-3 text-left">
+              <div className="flex items-start gap-3">
                 <Clock className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Code Needs Refactoring</div>
+                  <div className="font-semibold text-foreground">Code Needs Refactoring</div>
                   <div className="text-xs text-muted-foreground">Authors shared code but it needs improvement</div>
                 </div>
               </div>
-            </Button>
+            </button>
 
-            <Button
-              variant="outline"
-              className="w-full justify-start h-auto py-4 hover:bg-red-500/10 hover:border-red-500"
+            <button
+              className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => confirmStatusUpdate(ProgressStatus.REFUSED_TO_UPLOAD)}
               disabled={isUpdating}
+              type="button"
             >
-              <div className="flex items-start gap-3 text-left">
+              <div className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold">Refused to Upload</div>
+                  <div className="font-semibold text-foreground">Refused to Upload</div>
                   <div className="text-xs text-muted-foreground">Authors declined to share their implementation</div>
                 </div>
               </div>
-            </Button>
+            </button>
           </div>
-        </Modal>
-      )}
+        </DialogContent>
+      </Dialog>
 
       {/* Confirmation Modal */}
       {showConfirmModal && (

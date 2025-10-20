@@ -39,18 +39,25 @@ const JOURNEY_STEPS: JourneyStep[] = [
     order: 3,
   },
   {
+    id: 'code_started',
+    title: 'Code Started',
+    description: 'Authors have begun working on the implementation.',
+    icon: Clock,
+    order: 4,
+  },
+  {
     id: 'code_received',
     title: 'Code Published',
     description: 'Authors have shared their working implementation code.',
     icon: CheckCircle,
-    order: 4,
+    order: 5,
   },
   {
     id: 'verified',
     title: 'Implementation Verified',
     description: 'Code has been reviewed and verified to work correctly.',
     icon: Code,
-    order: 5,
+    order: 6,
   },
 ];
 
@@ -117,29 +124,33 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     const completedCount = timelineSteps.filter(s => s.state === 'completed').length;
     const currentStepIndex = timelineSteps.findIndex(s => s.state === 'current');
     
+    // If there's a current step, the line should reach it
     if (currentStepIndex >= 0) {
       return stepPositions[currentStepIndex] || 0;
     }
     
+    // If only completed steps, reach the last completed step
     if (completedCount > 0) {
-      return stepPositions[completedCount - 1] || 0;
+      const lastCompletedIndex = timelineSteps.length - 1 - 
+        [...timelineSteps].reverse().findIndex(s => s.state === 'completed');
+      return stepPositions[lastCompletedIndex] || 0;
     }
     
     return 0;
   }, [timelineSteps, stepPositions]);
 
   return (
-    <div className="relative w-full py-4 min-h-[180px] flex items-center">
+    <div className="relative w-full py-6 min-h-[140px] flex items-center">
       {/* Container with padding to prevent text overflow */}
       <div className="relative w-full px-12">
         {/* Base timeline line - full width in muted color */}
-        <div className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" style={{ top: '28px' }} />
+        <div className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" style={{ top: '24px' }} />
         
         {/* Progress line - colored portion showing completion */}
         <div 
           className="absolute left-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full transition-all duration-700 ease-in-out"
           style={{ 
-            top: '28px',
+            top: '24px',
             width: `${progressPercentage}%`
           }}
         />
@@ -170,6 +181,9 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, status: ProgressStat
     case UpdateEventType.STATUS_CHANGED:
       if (status === ProgressStatus.RESPONSE_RECEIVED) {
         return 'response_received';
+      }
+      if (status === ProgressStatus.CODE_NEEDS_REFACTORING) {
+        return 'code_started';
       }
       if (status === ProgressStatus.CODE_UPLOADED) {
         return 'code_received';
