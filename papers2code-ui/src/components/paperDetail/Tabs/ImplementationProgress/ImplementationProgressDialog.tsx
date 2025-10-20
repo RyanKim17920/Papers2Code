@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useState } from 'react';
 import { ImplementationProgress, ProgressStatus, UpdateEventType } from '../../../../common/types/implementation';
 import type { UserProfile } from '../../../../common/types/user';
 import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../ui/dialog';
@@ -22,7 +22,6 @@ interface ImplementationProgressDialogProps {
   paperStatus: string;
   currentUser: UserProfile | null;
   onImplementationProgressChange: (updatedProgress: ImplementationProgress) => void;
-  onRefreshPaper: () => Promise<void>;
   onSendEmail: () => Promise<void>;
   isSendingEmail: boolean;
 }
@@ -35,13 +34,11 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
   paperStatus,
   currentUser,
   onImplementationProgressChange,
-  onRefreshPaper,
   onSendEmail,
   isSendingEmail
 }) => {
   const [showContributorsModal, setShowContributorsModal] = useState(false);
   const [isUpdating, setIsUpdating] = useState(false);
-  const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showResponseModal, setShowResponseModal] = useState(false);
 
@@ -78,14 +75,6 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
     return `https://github.com/${repoId}`;
   };
 
-  const handleStatusUpdate = async (newStatus: ProgressStatus) => {
-    if (newStatus === ProgressStatus.RESPONSE_RECEIVED) {
-      setShowResponseModal(true);
-      return;
-    }
-    setShowConfirmModal(true);
-  };
-
   const confirmStatusUpdate = async (status: ProgressStatus) => {
     try {
       setIsUpdating(true);
@@ -94,7 +83,7 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
       setShowConfirmModal(false);
       setShowResponseModal(false);
     } catch (err) {
-      setError(err instanceof Error ? err.message : 'Failed to update status');
+      console.error('Failed to update status:', err);
     } finally {
       setIsUpdating(false);
     }
@@ -349,7 +338,7 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                         key={action.status}
                         onClick={() => {
                           if (action.requiresGithub && !progress.githubRepoId) {
-                            setError('Please add GitHub repository first');
+                            console.error('GitHub repository required but not linked');
                             return;
                           }
                           confirmStatusUpdate(action.status);

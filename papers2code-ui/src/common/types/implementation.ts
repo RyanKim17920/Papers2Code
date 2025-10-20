@@ -32,7 +32,7 @@ export interface ProgressUpdateEvent {
     eventType: UpdateEventType;
     timestamp: string;
     userId?: string | null;
-    details?: Record<string, any>;
+    details?: Record<string, unknown>;
 }
 
 export interface ImplementationProgress {

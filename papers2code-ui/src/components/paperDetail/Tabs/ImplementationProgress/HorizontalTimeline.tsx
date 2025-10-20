@@ -1,7 +1,7 @@
 import React, { useMemo } from 'react';
 import { ImplementationProgress, UpdateEventType, ProgressStatus } from '../../../../common/types/implementation';
 import { TimelineEvent, TimelineEventData } from './TimelineEvent';
-import { FileText, Send, MessageCircle, CheckCircle, Code, AlertCircle, XCircle, Clock } from 'lucide-react';
+import { FileText, Send, MessageCircle, CheckCircle, Code, Clock, GitBranch } from 'lucide-react';
 
 interface HorizontalTimelineProps {
   progress: ImplementationProgress;
@@ -172,7 +172,7 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
   const timelineSteps = useMemo(() => {
     const completedStepIds = new Set<string>();
     const stepTimestamps: Record<string, string> = {};
-    const stepDetails: Record<string, any> = {};
+    const stepDetails: Record<string, Record<string, unknown>> = {};
     
     // Map progress updates to journey steps
     progress.updates.forEach((update) => {
@@ -199,7 +199,7 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
       
       return {
         id: step.id,
-        type: step.id as any,
+        type: step.id,
         status: progress.status,
         timestamp: stepTimestamps[step.id] || new Date().toISOString(),
         title: step.title,
@@ -327,7 +327,7 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, status: ProgressStat
   }
 }
 
-function getStepDetails(stepId: string, details?: Record<string, any>, progress?: ImplementationProgress): Array<{ label: string; value: string }> {
+function getStepDetails(stepId: string, details?: Record<string, unknown>, progress?: ImplementationProgress): Array<{ label: string; value: string }> {
   const detailsList: Array<{ label: string; value: string }> = [];
   
   if (stepId === 'initiated' && progress) {
