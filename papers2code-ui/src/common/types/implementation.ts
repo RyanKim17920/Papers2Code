@@ -7,14 +7,23 @@ export enum UpdateEventType {
     STATUS_CHANGED = 'Status Changed',
     GITHUB_REPO_LINKED = 'GitHub Repo Linked',
     GITHUB_REPO_UPDATED = 'GitHub Repo Updated',
+    VALIDATION_STARTED = 'Validation Started',
+    VALIDATION_COMPLETED = 'Validation Completed',
 }
 
 export enum ProgressStatus {
+    NOT_STARTED = 'Not Started',
     STARTED = 'Started',
-    RESPONSE_RECEIVED = 'Response Received',
-    CODE_UPLOADED = 'Code Uploaded',
+    EMAIL_SENT = 'Email Sent',
+    OFFICIAL_CODE_POSTED = 'Official Code Posted',
     CODE_NEEDS_REFACTORING = 'Code Needs Refactoring',
-    REFACTORING_IN_PROGRESS = 'Refactoring in Progress',
+    REFACTORING_STARTED = 'Refactoring Started',
+    REFACTORING_FINISHED = 'Refactoring Finished',
+    VALIDATION_IN_PROGRESS = 'Validation in Progress',
+    VALIDATION_COMPLETED = 'Validation Completed',
+    NO_CODE_FROM_AUTHOR = 'No Code from Author',
+    GITHUB_CREATED = 'GitHub Created',
+    CODE_NEEDED = 'Code Needed',
     REFUSED_TO_UPLOAD = 'Refused to Upload',
     NO_RESPONSE = 'No Response',
 }

@@ -14,54 +14,160 @@ interface JourneyStep {
   description: string;
   icon: typeof FileText;
   order: number;
+  path?: 'common' | 'official' | 'refactoring' | 'community';
 }
 
-const JOURNEY_STEPS: JourneyStep[] = [
+// Common steps for all paths
+const COMMON_STEPS: JourneyStep[] = [
   {
     id: 'initiated',
     title: 'Tracking Started',
     description: 'Implementation progress tracking has been set up for this paper.',
     icon: FileText,
     order: 1,
+    path: 'common',
   },
   {
-    id: 'author_contacted',
-    title: 'Author Contacted',
+    id: 'email_sent',
+    title: 'Authors Contacted',
     description: 'Outreach email sent to paper authors requesting code implementation.',
     icon: Send,
     order: 2,
+    path: 'common',
   },
+];
+
+// Path 1: Official Code Path (direct from email to completion)
+const OFFICIAL_CODE_PATH: JourneyStep[] = [
   {
-    id: 'response_received',
-    title: 'Response Received',
-    description: 'Authors have responded to the outreach request.',
+    id: 'official_code_posted',
+    title: 'Official Code Posted',
+    description: 'Authors published their official implementation directly.',
+    icon: CheckCircle,
+    order: 3,
+    path: 'official',
+  },
+];
+
+// Path 2: Refactoring Path
+const REFACTORING_PATH: JourneyStep[] = [
+  {
+    id: 'code_needs_refactoring',
+    title: 'Code Needs Work',
+    description: 'Authors shared code that needs improvement.',
     icon: MessageCircle,
     order: 3,
+    path: 'refactoring',
   },
   {
-    id: 'code_started',
-    title: 'Code Started',
-    description: 'Authors have begun working on the implementation.',
+    id: 'refactoring_started',
+    title: 'Refactoring Started',
+    description: 'Working on improving the code.',
     icon: Clock,
     order: 4,
+    path: 'refactoring',
   },
   {
-    id: 'code_received',
-    title: 'Code Published',
-    description: 'Authors have shared their working implementation code.',
-    icon: CheckCircle,
-    order: 5,
-  },
-  {
-    id: 'verified',
-    title: 'Implementation Verified',
-    description: 'Code has been reviewed and verified to work correctly.',
+    id: 'refactoring_finished',
+    title: 'Refactoring Complete',
+    description: 'Code improvements finished.',
     icon: Code,
+    order: 5,
+    path: 'refactoring',
+  },
+  {
+    id: 'validation',
+    title: 'Validation',
+    description: 'Working with authors to validate the implementation.',
+    icon: CheckCircle,
     order: 6,
+    path: 'refactoring',
+  },
+];
+
+// Path 3: Community Implementation Path
+const COMMUNITY_PATH: JourneyStep[] = [
+  {
+    id: 'no_code_from_author',
+    title: 'No Author Code',
+    description: 'Authors don\'t have code available.',
+    icon: MessageCircle,
+    order: 3,
+    path: 'community',
+  },
+  {
+    id: 'github_created',
+    title: 'Repository Created',
+    description: 'GitHub repository set up for implementation.',
+    icon: GitBranch,
+    order: 4,
+    path: 'community',
+  },
+  {
+    id: 'code_needed',
+    title: 'Implementation Started',
+    description: 'Community is building the implementation.',
+    icon: Code,
+    order: 5,
+    path: 'community',
+  },
+  {
+    id: 'implementation_complete',
+    title: 'Implementation Complete',
+    description: 'Community implementation finished.',
+    icon: CheckCircle,
+    order: 6,
+    path: 'community',
   },
 ];
 
 export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress }) => {
+  // Determine which path we're on based on the status
+  const currentPath = useMemo(() => {
+    const status = progress.status;
+    
+    if (status === ProgressStatus.OFFICIAL_CODE_POSTED) {
+      return 'official';
+    }
+    
+    if ([
+      ProgressStatus.CODE_NEEDS_REFACTORING,
+      ProgressStatus.REFACTORING_STARTED,
+      ProgressStatus.REFACTORING_FINISHED,
+      ProgressStatus.VALIDATION_IN_PROGRESS,
+      ProgressStatus.VALIDATION_COMPLETED
+    ].includes(status)) {
+      return 'refactoring';
+    }
+    
+    if ([
+      ProgressStatus.NO_CODE_FROM_AUTHOR,
+      ProgressStatus.GITHUB_CREATED,
+      ProgressStatus.CODE_NEEDED
+    ].includes(status)) {
+      return 'community';
+    }
+    
+    return 'common';
+  }, [progress.status]);
+  
+  // Get the journey steps for the current path
+  const journeySteps = useMemo(() => {
+    let pathSteps: JourneyStep[] = [];
+    
+    if (currentPath === 'official') {
+      pathSteps = [...COMMON_STEPS, ...OFFICIAL_CODE_PATH];
+    } else if (currentPath === 'refactoring') {
+      pathSteps = [...COMMON_STEPS, ...REFACTORING_PATH];
+    } else if (currentPath === 'community') {
+      pathSteps = [...COMMON_STEPS, ...COMMUNITY_PATH];
+    } else {
+      pathSteps = [...COMMON_STEPS];
+    }
+    
+    return pathSteps;
+  }, [currentPath]);
+
   // Map actual events to journey steps and determine completion status
   const timelineSteps = useMemo(() => {
     const completedStepIds = new Set<string>();
@@ -83,10 +189,10 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     
     // Determine the current step (last completed)
     const currentStepOrder = Math.max(...Array.from(completedStepIds).map(id => 
-      JOURNEY_STEPS.find(s => s.id === id)?.order || 0
+      journeySteps.find(s => s.id === id)?.order || 0
     ));
     
-    return JOURNEY_STEPS.map((step): TimelineEventData => {
+    return journeySteps.map((step): TimelineEventData => {
       const isCompleted = completedStepIds.has(step.id);
       const isCurrent = step.order === currentStepOrder && isCompleted;
       const isFuture = step.order > currentStepOrder;
@@ -105,7 +211,7 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
         isClickable: true,
       };
     });
-  }, [progress]);
+  }, [progress, journeySteps]);
 
   // Evenly distribute steps across the timeline
   const stepPositions = useMemo(() => {
@@ -177,22 +283,45 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, status: ProgressStat
     case UpdateEventType.INITIATED:
       return 'initiated';
     case UpdateEventType.EMAIL_SENT:
-      return 'author_contacted';
+      return 'email_sent';
     case UpdateEventType.STATUS_CHANGED:
-      if (status === ProgressStatus.RESPONSE_RECEIVED) {
-        return 'response_received';
+      // Official code path
+      if (status === ProgressStatus.OFFICIAL_CODE_POSTED) {
+        return 'official_code_posted';
       }
+      // Refactoring path
       if (status === ProgressStatus.CODE_NEEDS_REFACTORING) {
-        return 'code_started';
+        return 'code_needs_refactoring';
       }
-      if (status === ProgressStatus.CODE_UPLOADED) {
-        return 'code_received';
+      if (status === ProgressStatus.REFACTORING_STARTED) {
+        return 'refactoring_started';
       }
-      // TODO: Backend should track verification status separately
-      // For now, we don't automatically mark as verified
+      if (status === ProgressStatus.REFACTORING_FINISHED) {
+        return 'refactoring_finished';
+      }
+      if (status === ProgressStatus.VALIDATION_IN_PROGRESS || status === ProgressStatus.VALIDATION_COMPLETED) {
+        return 'validation';
+      }
+      // Community path
+      if (status === ProgressStatus.NO_CODE_FROM_AUTHOR) {
+        return 'no_code_from_author';
+      }
+      if (status === ProgressStatus.GITHUB_CREATED) {
+        return 'github_created';
+      }
+      if (status === ProgressStatus.CODE_NEEDED) {
+        return 'code_needed';
+      }
       return null;
     case UpdateEventType.GITHUB_REPO_LINKED:
-      return 'code_received';
+      // Could be part of any path where repo is linked
+      if (status === ProgressStatus.GITHUB_CREATED) {
+        return 'github_created';
+      }
+      return null;
+    case UpdateEventType.VALIDATION_STARTED:
+    case UpdateEventType.VALIDATION_COMPLETED:
+      return 'validation';
     default:
       return null;
   }

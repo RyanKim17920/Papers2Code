@@ -228,12 +228,31 @@ class ImplementationProgressService:
             details={}
         )
         
-        # Update progress with email sent event
+        # Also create a status changed event to EMAIL_SENT
+        status_event = ProgressUpdateEvent(
+            event_type=UpdateEventType.STATUS_CHANGED,
+            timestamp=current_time,
+            user_id=user_obj_id,
+            details={
+                "previousStatus": ProgressStatus.STARTED.value,
+                "newStatus": ProgressStatus.EMAIL_SENT.value
+            }
+        )
+        
+        # Update progress with email sent event and status change
         await progress_collection.update_one(
             {"_id": paper_obj_id},
             {
-                "$push": {"updates": email_event.model_dump(by_alias=True)},
+                "$push": {
+                    "updates": {
+                        "$each": [
+                            email_event.model_dump(by_alias=True),
+                            status_event.model_dump(by_alias=True)
+                        ]
+                    }
+                },
                 "$set": {
+                    "status": ProgressStatus.EMAIL_SENT.value,
                     "latestUpdate": current_time,
                     "updatedAt": current_time
                 }
@@ -297,6 +316,20 @@ class ImplementationProgressService:
         if 'status' in update_data:
             new_status = update_data['status']
             if new_status != progress.status:
+                # Validation: Check if GitHub repo is required for certain statuses
+                github_required_statuses = [
+                    ProgressStatus.OFFICIAL_CODE_POSTED,
+                    ProgressStatus.REFACTORING_STARTED,
+                    ProgressStatus.REFACTORING_FINISHED,
+                    ProgressStatus.CODE_NEEDED
+                ]
+                
+                if new_status in github_required_statuses and not progress.github_repo_id:
+                    raise InvalidRequestException(
+                        f"GitHub repository must be linked before updating status to '{new_status.value}'. "
+                        "Please add the GitHub repository first."
+                    )
+                
                 # Create status changed event
                 status_event = ProgressUpdateEvent(
                     event_type=UpdateEventType.STATUS_CHANGED,
@@ -310,18 +343,48 @@ class ImplementationProgressService:
                 events_to_add.append(status_event.model_dump(by_alias=True))
                 update_fields["status"] = new_status.value
                 
+                # Add validation events if transitioning to validation states
+                if new_status == ProgressStatus.VALIDATION_IN_PROGRESS:
+                    validation_event = ProgressUpdateEvent(
+                        event_type=UpdateEventType.VALIDATION_STARTED,
+                        timestamp=current_time,
+                        user_id=user_obj_id,
+                        details={}
+                    )
+                    events_to_add.append(validation_event.model_dump(by_alias=True))
+                elif new_status == ProgressStatus.VALIDATION_COMPLETED:
+                    validation_event = ProgressUpdateEvent(
+                        event_type=UpdateEventType.VALIDATION_COMPLETED,
+                        timestamp=current_time,
+                        user_id=user_obj_id,
+                        details={}
+                    )
+                    events_to_add.append(validation_event.model_dump(by_alias=True))
+                
                 # Update paper status based on progress status changes
                 paper_status_update = None
-                if new_status == ProgressStatus.RESPONSE_RECEIVED:
-                    paper_status_update = "Work in Progress"
-                elif new_status == ProgressStatus.CODE_UPLOADED:
+                if new_status == ProgressStatus.EMAIL_SENT:
+                    paper_status_update = "Waiting for Author Response"
+                elif new_status == ProgressStatus.OFFICIAL_CODE_POSTED:
                     paper_status_update = "Official Code Posted"
                 elif new_status == ProgressStatus.CODE_NEEDS_REFACTORING:
-                    paper_status_update = "Work in Progress"
-                elif new_status == ProgressStatus.REFACTORING_IN_PROGRESS:
+                    paper_status_update = "Code Needs Refactoring"
+                elif new_status == ProgressStatus.REFACTORING_STARTED:
                     paper_status_update = "Refactoring in Progress"
+                elif new_status == ProgressStatus.REFACTORING_FINISHED:
+                    paper_status_update = "Ready for Validation"
+                elif new_status == ProgressStatus.VALIDATION_IN_PROGRESS:
+                    paper_status_update = "Validation in Progress"
+                elif new_status == ProgressStatus.VALIDATION_COMPLETED:
+                    paper_status_update = "Validated"
+                elif new_status == ProgressStatus.NO_CODE_FROM_AUTHOR:
+                    paper_status_update = "Community Implementation Needed"
+                elif new_status == ProgressStatus.GITHUB_CREATED:
+                    paper_status_update = "Repository Created"
+                elif new_status == ProgressStatus.CODE_NEEDED:
+                    paper_status_update = "Work in Progress"
                 elif new_status == ProgressStatus.REFUSED_TO_UPLOAD:
-                    paper_status_update = "Started"
+                    paper_status_update = "Community Implementation Needed"
                 elif new_status == ProgressStatus.NO_RESPONSE:
                     paper_status_update = "Started"
                 
