@@ -318,12 +318,22 @@ class ImplementationProgressService:
                     paper_status_update = "Official Code Posted"
                 elif new_status == ProgressStatus.CODE_NEEDS_REFACTORING:
                     paper_status_update = "Work in Progress"
-                elif new_status == ProgressStatus.REFACTORING_IN_PROGRESS:
+                elif new_status == ProgressStatus.REFACTORING_STARTED:
                     paper_status_update = "Refactoring in Progress"
+                elif new_status == ProgressStatus.REFACTORING_FINISHED:
+                    paper_status_update = "Refactoring Finished"
+                elif new_status == ProgressStatus.VALIDATION_IN_PROGRESS:
+                    paper_status_update = "Validation In Progress"
+                elif new_status == ProgressStatus.OFFICIAL_CODE_POSTED:
+                    paper_status_update = "Official Code Posted"
                 elif new_status == ProgressStatus.REFUSED_TO_UPLOAD:
                     paper_status_update = "Started"
                 elif new_status == ProgressStatus.NO_RESPONSE:
                     paper_status_update = "Started"
+                elif new_status == ProgressStatus.GITHUB_CREATED:
+                    paper_status_update = "Started"
+                elif new_status == ProgressStatus.CODE_STARTED:
+                    paper_status_update = "Work in Progress"
                 
                 if paper_status_update:
                     await papers_collection.update_one(
