@@ -130,11 +130,11 @@ const COMMUNITY_PATH_STEPS: JourneyStep[] = [
 ];
 
 export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress }) => {
-  // Determine which path we're on based on the current status
-  const currentPath = useMemo(() => {
+    // Determine which path the progress is on based on the current state
+  const currentPath = useMemo((): 'common' | 'official' | 'refactoring' | 'community' => {
     const hasEmailSent = progress.updates.some(u => u.eventType === UpdateEventType.EMAIL_SENT);
     
-    if (!hasEmailSent) {
+    if (!hasEmailSent && progress.status !== ProgressStatus.EMAIL_SENT) {
       return 'common';
     }
     
@@ -270,23 +270,23 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
   }, [timelineSteps, stepPositions]);
 
   return (
-    <div className="relative w-full py-6 min-h-[140px] flex items-center">
+    <div className="relative w-full py-10 min-h-[180px] flex items-center">
       {/* Container with padding to prevent text overflow */}
-      <div className="relative w-full px-12">
+      <div className="relative w-full px-16">
         {/* Base timeline line - full width in muted color */}
-        <div className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" style={{ top: '24px' }} />
+        <div className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" style={{ top: '28px' }} />
         
         {/* Progress line - colored portion showing completion */}
         <div 
           className="absolute left-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full transition-all duration-700 ease-in-out"
           style={{ 
-            top: '24px',
+            top: '28px',
             width: `${progressPercentage}%`
           }}
         />
         
         {/* Timeline steps - all steps including future ones */}
-        <div className="relative h-12">
+        <div className="relative h-16">
           {timelineSteps.map((step, idx) => (
             <TimelineEvent
               key={step.id}
@@ -313,6 +313,9 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, currentStatus: Progr
         const newStatus = details.newStatus;
         
         // Map status changes to journey steps
+        if (newStatus === ProgressStatus.EMAIL_SENT) {
+          return 'author_contacted';
+        }
         if (newStatus === ProgressStatus.OFFICIAL_CODE_POSTED || newStatus === ProgressStatus.CODE_UPLOADED) {
           return 'official_code_posted';
         }

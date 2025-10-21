@@ -275,12 +275,30 @@ class ImplementationProgressService:
             details={},
         )
 
-        # Update progress with email sent event
+        # Create a status changed event
+        status_event = ProgressUpdateEvent(
+            event_type=UpdateEventType.STATUS_CHANGED,
+            timestamp=current_time,
+            user_id=user_obj_id,
+            details={
+                "previousStatus": ProgressStatus.STARTED.value,
+                "newStatus": ProgressStatus.EMAIL_SENT.value
+            },
+        )
+
+        # Update progress with email sent event and status change
         await progress_collection.update_one(
             {"_id": paper_obj_id},
             {
-                "$push": {"updates": email_event.model_dump(by_alias=True)},
-                "$set": {"latestUpdate": current_time, "updatedAt": current_time},
+                "$push": {"updates": {"$each": [
+                    email_event.model_dump(by_alias=True),
+                    status_event.model_dump(by_alias=True)
+                ]}},
+                "$set": {
+                    "status": ProgressStatus.EMAIL_SENT.value,
+                    "latestUpdate": current_time,
+                    "updatedAt": current_time
+                },
             },
         )
 
@@ -368,7 +386,9 @@ class ImplementationProgressService:
 
                 # Update paper status based on progress status changes
                 paper_status_update = None
-                if new_status == ProgressStatus.RESPONSE_RECEIVED:
+                if new_status == ProgressStatus.EMAIL_SENT:
+                    paper_status_update = "Waiting for Author Response"
+                elif new_status == ProgressStatus.RESPONSE_RECEIVED:
                     paper_status_update = "Work in Progress"
                 elif new_status == ProgressStatus.CODE_UPLOADED:
                     paper_status_update = "Official Code Posted"

@@ -11,6 +11,7 @@ export enum UpdateEventType {
 
 export enum ProgressStatus {
     STARTED = 'Started',
+    EMAIL_SENT = 'Email Sent',
     RESPONSE_RECEIVED = 'Response Received',
     CODE_UPLOADED = 'Code Uploaded',
     CODE_NEEDS_REFACTORING = 'Code Needs Refactoring',
