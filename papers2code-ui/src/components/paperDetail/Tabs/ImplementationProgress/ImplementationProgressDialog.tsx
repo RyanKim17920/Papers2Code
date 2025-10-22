@@ -6,12 +6,12 @@ import { Badge } from '../../../ui/badge';
 import { Button } from '../../../ui/button';
 import { Card, CardContent } from '../../../ui/card';
 import { HorizontalTimeline } from './HorizontalTimeline';
-import { GitBranch, Users, Mail, ExternalLink, Clock, CheckCircle, MessageCircle } from 'lucide-react';
+import { GitBranch, Users, Mail, ExternalLink, Clock, CheckCircle, MessageCircle, Code } from 'lucide-react';
 import { getStatusColorClasses } from '../../../../common/utils/statusUtils';
 import { useContributorProfiles } from '../../../../common/hooks/useContributorProfiles';
 import { UserDisplayList } from '../../UserDisplayList';
 import Modal from '../../../../common/components/Modal';
-import { updateImplementationProgressInApi } from '../../../../common/services/api';
+import { updateImplementationProgressInApi, createGitHubRepositoryForPaper } from '../../../../common/services/api';
 import ConfirmationModal from '../../../../common/components/ConfirmationModal';
 
 interface ImplementationProgressDialogProps {
@@ -44,11 +44,15 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
   const [error, setError] = useState<string | null>(null);
   const [showConfirmModal, setShowConfirmModal] = useState(false);
   const [showResponseModal, setShowResponseModal] = useState(false);
+  const [githubRepoInput, setGithubRepoInput] = useState(progress.githubRepoId || '');
+  const [selectedResponseStatus, setSelectedResponseStatus] = useState<ProgressStatus | null>(null);
+  const [isCreatingRepo, setIsCreatingRepo] = useState(false);
+  const [showSuccessModal, setShowSuccessModal] = useState(false);
 
   // Handle Dialog close - prevent closing if any modal is open
   const handleDialogOpenChange = (open: boolean) => {
     // If trying to close the dialog (open = false), check if any modal is open
-    if (!open && (showContributorsModal || showResponseModal || showConfirmModal)) {
+    if (!open && (showContributorsModal || showResponseModal || showConfirmModal || showSuccessModal)) {
       // Don't close the dialog if a modal is open
       return;
     }
@@ -61,8 +65,33 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
   const isContributor = isLoggedIn && progress.contributors.includes(currentUser!.id);
   const isInitiator = isLoggedIn && progress.initiatedBy === currentUser!.id;
   const hasEmailBeenSent = progress.updates.some(u => u.eventType === UpdateEventType.EMAIL_SENT);
-  const canModifyPostSentStatus = isLoggedIn && hasEmailBeenSent && (isInitiator || isContributor);
+  
+  // Only show "Log Author Response" button if email sent and still waiting for response
+  const isWaitingForResponse = progress.status === ProgressStatus.STARTED || progress.status === ProgressStatus.EMAIL_SENT;
+  const canModifyPostSentStatus = isLoggedIn && hasEmailBeenSent && isWaitingForResponse && (isInitiator || isContributor);
   const canMarkAsSent = isLoggedIn && isContributor && !hasEmailBeenSent;
+  
+  // Determine what actions are available based on current status
+  const canProgressRefactoring = isLoggedIn && isContributor && (
+    progress.status === ProgressStatus.CODE_NEEDS_REFACTORING ||
+    progress.status === ProgressStatus.REFACTORING_STARTED ||
+    progress.status === ProgressStatus.REFACTORING_FINISHED ||
+    progress.status === ProgressStatus.VALIDATION_IN_PROGRESS
+  );
+  
+  const canProgressCommunity = isLoggedIn && isContributor && (
+    progress.status === ProgressStatus.REFUSED_TO_UPLOAD ||
+    progress.status === ProgressStatus.NO_RESPONSE ||
+    progress.status === ProgressStatus.GITHUB_CREATED ||
+    progress.status === ProgressStatus.CODE_STARTED
+  );
+  
+  const needsGithubRepo = !progress.githubRepoId && (
+    progress.status === ProgressStatus.CODE_NEEDS_REFACTORING ||
+    progress.status === ProgressStatus.REFUSED_TO_UPLOAD ||
+    progress.status === ProgressStatus.NO_RESPONSE ||
+    progress.status === ProgressStatus.GITHUB_CREATED
+  );
 
   // Fetch contributors
   const { contributorUsers, isLoading: isLoadingContributors } = useContributorProfiles({
@@ -89,10 +118,19 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
   const confirmStatusUpdate = async (status: ProgressStatus) => {
     try {
       setIsUpdating(true);
-      const updatedProgress = await updateImplementationProgressInApi(paperId, { status });
+      const updateData: any = { status };
+      
+      // If GitHub repo input is provided, include it
+      if (githubRepoInput && githubRepoInput.trim()) {
+        updateData.githubRepoId = githubRepoInput.trim();
+      }
+      
+      const updatedProgress = await updateImplementationProgressInApi(paperId, updateData);
       await onImplementationProgressChange(updatedProgress);
       setShowConfirmModal(false);
       setShowResponseModal(false);
+      setSelectedResponseStatus(null);
+      setGithubRepoInput('');
     } catch (err) {
       setError(err instanceof Error ? err.message : 'Failed to update status');
     } finally {
@@ -100,8 +138,50 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
     }
   };
 
+  const handleCreateGitHubRepo = async () => {
+    try {
+      setIsCreatingRepo(true);
+      setError(null);
+      
+      // Simply call the API without any parameters - the backend will handle everything
+      const result = await createGitHubRepositoryForPaper(paperId);
+      
+      // Check if README was successfully updated
+      if (!result.repository?.readme_updated) {
+        console.warn('Repository created but README was not updated with paper information');
+      }
+      
+      // Automatically fill in the created repository full name
+      setGithubRepoInput(result.repository.full_name);
+      
+      // Update the progress with the newly created repository
+      await onImplementationProgressChange(result.progress);
+      
+      // Automatically update status to GITHUB_CREATED
+      const updateData = { 
+        status: ProgressStatus.GITHUB_CREATED,
+        githubRepoId: result.repository.full_name
+      };
+      const updatedProgress = await updateImplementationProgressInApi(paperId, updateData);
+      await onImplementationProgressChange(updatedProgress);
+      
+      // Show success modal
+      setShowSuccessModal(true);
+      setError(null);
+      
+    } catch (err) {
+      if (err instanceof Error) {
+        setError(err.message);
+      } else {
+        setError('Failed to create GitHub repository. Please try again.');
+      }
+    } finally {
+      setIsCreatingRepo(false);
+    }
+  };
+
   const getWIPStatus = () => {
-    if (progress.status === ProgressStatus.CODE_UPLOADED) {
+    if (progress.status === ProgressStatus.CODE_UPLOADED || progress.status === ProgressStatus.OFFICIAL_CODE_POSTED) {
       return { label: 'Completed', variant: 'default' as const };
     }
     return { label: paperStatus, variant: 'outline' as const };
@@ -116,8 +196,8 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
           <DialogHeader>
             <div className="flex items-start justify-between gap-4 pr-8">
               <div className="flex-1">
-                <DialogTitle className="text-2xl mb-2">Implementation Progress</DialogTitle>
-                <p className="text-sm text-muted-foreground">Track the journey from paper to code</p>
+                <DialogTitle className="text-2xl mb-2 font-bold">Implementation Progress</DialogTitle>
+                <p className="text-sm text-foreground/70 font-medium">Track the journey from paper to code</p>
               </div>
               <Badge variant={wipStatus.variant} className={`${getStatusColorClasses(wipStatus.label)} whitespace-nowrap`}>
                 {wipStatus.label}
@@ -125,10 +205,10 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
             </div>
           </DialogHeader>
 
-          <div className="space-y-6 mt-4">
+          <div className="space-y-8 mt-6">
             {/* Status Bar */}
             <Card>
-              <CardContent className="pt-6">
+              <CardContent className="pt-6 pb-4">
                 <div className="flex items-center justify-between gap-4 flex-wrap">
                   {/* Contributors */}
                   <button
@@ -139,8 +219,8 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                       <Users className="w-5 h-5" />
                     </div>
                     <div className="text-left">
-                      <div className="text-2xl font-bold">{progress.contributors.length}</div>
-                      <div className="text-xs text-muted-foreground">
+                      <div className="text-2xl font-bold text-foreground">{progress.contributors.length}</div>
+                      <div className="text-xs text-foreground/70 font-semibold">
                         {progress.contributors.length === 1 ? 'Contributor' : 'Contributors'}
                       </div>
                     </div>
@@ -158,10 +238,10 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                         <GitBranch className="w-5 h-5" />
                       </div>
                       <div className="text-left">
-                        <div className="text-sm font-medium flex items-center gap-1">
+                        <div className="text-sm font-medium flex items-center gap-1 text-foreground">
                           View Repository <ExternalLink className="w-3 h-3" />
                         </div>
-                        <div className="text-xs text-muted-foreground truncate max-w-[200px]">
+                        <div className="text-xs text-foreground/70 font-medium truncate max-w-[200px]">
                           {progress.githubRepoId}
                         </div>
                       </div>
@@ -231,6 +311,229 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                 </CardContent>
               </Card>
             )}
+            
+            {/* GitHub Repo Required Warning */}
+            {needsGithubRepo && (
+              <Card className="border-2 border-yellow-500/40 bg-gradient-to-br from-yellow-500/5 to-accent/5">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <GitBranch className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-foreground mb-1">
+                        Create GitHub Repository
+                      </h3>
+                      <p className="text-sm text-foreground/80 font-medium mb-4">
+                        We'll automatically create a repository from our template with the paper details pre-filled.
+                      </p>
+                      
+                      {/* One-Click Repository Creation */}
+                      <Button
+                        onClick={handleCreateGitHubRepo}
+                        disabled={isCreatingRepo}
+                        className="w-full flex items-center justify-center gap-2 mb-4"
+                      >
+                        <GitBranch className="w-4 h-4" />
+                        {isCreatingRepo ? 'Creating Repository...' : 'Create Repository from Template'}
+                      </Button>
+                      
+                      {/* Manual Link Option */}
+                      <div className="pt-4 border-t border-border">
+                        <p className="text-xs text-muted-foreground mb-2">Or link an existing repository:</p>
+                        <div className="flex gap-2">
+                          <input
+                            type="text"
+                            placeholder="e.g., username/repo-name"
+                            value={githubRepoInput}
+                            onChange={(e) => setGithubRepoInput(e.target.value)}
+                            className="flex-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground text-sm"
+                            disabled={isUpdating}
+                          />
+                          <Button
+                            onClick={async () => {
+                              if (!githubRepoInput.trim()) return;
+                              try {
+                                setIsUpdating(true);
+                                const updatedProgress = await updateImplementationProgressInApi(paperId, { 
+                                  githubRepoId: githubRepoInput.trim() 
+                                });
+                                await onImplementationProgressChange(updatedProgress);
+                                setGithubRepoInput('');
+                              } catch (err) {
+                                setError(err instanceof Error ? err.message : 'Failed to link repository');
+                              } finally {
+                                setIsUpdating(false);
+                              }
+                            }}
+                            disabled={isUpdating || !githubRepoInput.trim()}
+                            variant="outline"
+                            size="sm"
+                          >
+                            {isUpdating ? 'Linking...' : 'Link'}
+                          </Button>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Refactoring Path - Link Repository if missing */}
+            {canProgressRefactoring && !progress.githubRepoId && (
+              <Card className="border-2 border-blue-500/40 bg-gradient-to-br from-blue-500/5 to-accent/5">
+                <CardContent className="pt-6 space-y-4">
+                  <div className="flex items-start gap-3">
+                    <GitBranch className="w-5 h-5 text-blue-600 flex-shrink-0 mt-0.5" />
+                    <div className="flex-1">
+                      <h3 className="text-base font-semibold text-foreground mb-1">
+                        Link Author's Repository
+                      </h3>
+                      <p className="text-sm text-foreground/80 font-medium mb-4">
+                        The authors shared code that needs refactoring. Please link their repository here.
+                      </p>
+                      
+                      <div className="flex gap-2">
+                        <input
+                          type="text"
+                          placeholder="e.g., username/repo-name or full URL"
+                          value={githubRepoInput}
+                          onChange={(e) => setGithubRepoInput(e.target.value)}
+                          className="flex-1 px-3 py-2 border border-border rounded-md focus:outline-none focus:ring-2 focus:ring-primary bg-background text-foreground text-sm"
+                          disabled={isUpdating}
+                        />
+                        <Button
+                          onClick={async () => {
+                            if (!githubRepoInput.trim()) return;
+                            try {
+                              setIsUpdating(true);
+                              const updatedProgress = await updateImplementationProgressInApi(paperId, { 
+                                githubRepoId: githubRepoInput.trim() 
+                              });
+                              await onImplementationProgressChange(updatedProgress);
+                              setGithubRepoInput('');
+                            } catch (err) {
+                              setError(err instanceof Error ? err.message : 'Failed to link repository');
+                            } finally {
+                              setIsUpdating(false);
+                            }
+                          }}
+                          disabled={isUpdating || !githubRepoInput.trim()}
+                          size="default"
+                        >
+                          {isUpdating ? 'Linking...' : 'Link Repository'}
+                        </Button>
+                      </div>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Refactoring Path Progression */}
+            {canProgressRefactoring && progress.githubRepoId && (
+              <Card className="border-2 border-blue-500/40 bg-gradient-to-br from-blue-500/5 to-accent/5">
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Clock className="w-5 h-5 text-blue-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold text-foreground">
+                          Refactoring Progress
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Update the refactoring status as you make progress.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {progress.status === ProgressStatus.CODE_NEEDS_REFACTORING && (
+                        <Button
+                          onClick={() => confirmStatusUpdate(ProgressStatus.REFACTORING_STARTED)}
+                          disabled={isUpdating}
+                          variant="default"
+                          size="sm"
+                        >
+                          Mark Refactoring Started
+                        </Button>
+                      )}
+                      {progress.status === ProgressStatus.REFACTORING_STARTED && (
+                        <Button
+                          onClick={() => confirmStatusUpdate(ProgressStatus.REFACTORING_FINISHED)}
+                          disabled={isUpdating}
+                          variant="default"
+                          size="sm"
+                        >
+                          Mark Refactoring Finished
+                        </Button>
+                      )}
+                      {progress.status === ProgressStatus.REFACTORING_FINISHED && (
+                        <Button
+                          onClick={() => confirmStatusUpdate(ProgressStatus.VALIDATION_IN_PROGRESS)}
+                          disabled={isUpdating}
+                          variant="default"
+                          size="sm"
+                        >
+                          Start Validation with Authors
+                        </Button>
+                      )}
+                      {progress.status === ProgressStatus.VALIDATION_IN_PROGRESS && (
+                        <Button
+                          onClick={() => confirmStatusUpdate(ProgressStatus.OFFICIAL_CODE_POSTED)}
+                          disabled={isUpdating}
+                          variant="default"
+                          size="sm"
+                        >
+                          Mark as Official Code Posted
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+
+            {/* Community Path Progression */}
+            {canProgressCommunity && progress.githubRepoId && (
+              <Card className="border-2 border-purple-500/40 bg-gradient-to-br from-purple-500/5 to-accent/5">
+                <CardContent className="pt-6">
+                  <div className="space-y-3">
+                    <div className="flex items-center gap-3 mb-3">
+                      <Code className="w-5 h-5 text-purple-600 flex-shrink-0" />
+                      <div className="flex-1">
+                        <h3 className="text-base font-semibold text-foreground">
+                          Community Implementation Progress
+                        </h3>
+                        <p className="text-sm text-muted-foreground">
+                          Update the implementation status as you make progress.
+                        </p>
+                      </div>
+                    </div>
+                    <div className="flex gap-2 flex-wrap">
+                      {(progress.status === ProgressStatus.REFUSED_TO_UPLOAD || progress.status === ProgressStatus.NO_RESPONSE) && (
+                        <Button
+                          onClick={() => confirmStatusUpdate(ProgressStatus.GITHUB_CREATED)}
+                          disabled={isUpdating}
+                          variant="default"
+                          size="sm"
+                        >
+                          Mark GitHub Created
+                        </Button>
+                      )}
+                      {progress.status === ProgressStatus.GITHUB_CREATED && (
+                        <Button
+                          onClick={() => confirmStatusUpdate(ProgressStatus.CODE_STARTED)}
+                          disabled={isUpdating}
+                          variant="default"
+                          size="sm"
+                        >
+                          Mark Code Started
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
 
                     <div className="space-y-3">
                         {/* Subtitle */}
@@ -293,29 +596,36 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
         />
       </Modal>
 
-      {/* Response Type Modal - Using Dialog instead of Modal for better compatibility */}
-      <Dialog open={showResponseModal} onOpenChange={(open) => !open && setShowResponseModal(false)}>
+      {/* Response Type Modal - Direct status update without GitHub input */}
+      <Dialog open={showResponseModal} onOpenChange={(open) => {
+        if (!open) {
+          setShowResponseModal(false);
+          setSelectedResponseStatus(null);
+        }
+      }}>
         <DialogContent className="max-w-2xl">
           <DialogHeader>
-            <DialogTitle>What was the author's response?</DialogTitle>
+            <DialogTitle>
+              What was the author's response?
+            </DialogTitle>
           </DialogHeader>
           
-          <p className="mb-6 text-sm text-muted-foreground">
+          <p className="mb-6 text-sm text-foreground/80 font-medium">
             Please select the type of response you received from the paper's authors:
           </p>
-          
+              
           <div className="space-y-3 mb-4">
             <button
               className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-green-500 hover:bg-green-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
-              onClick={() => confirmStatusUpdate(ProgressStatus.CODE_UPLOADED)}
+              onClick={() => confirmStatusUpdate(ProgressStatus.OFFICIAL_CODE_POSTED)}
               disabled={isUpdating}
               type="button"
             >
               <div className="flex items-start gap-3">
                 <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-foreground">Code Uploaded</div>
-                  <div className="text-xs text-muted-foreground">Authors published their working implementation</div>
+                  <div className="font-semibold text-foreground">Official Code Posted</div>
+                  <div className="text-xs text-muted-foreground">Authors published their official working implementation</div>
                 </div>
               </div>
             </button>
@@ -330,7 +640,7 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                 <Clock className="w-5 h-5 text-yellow-600 flex-shrink-0 mt-0.5" />
                 <div>
                   <div className="font-semibold text-foreground">Code Needs Refactoring</div>
-                  <div className="text-xs text-muted-foreground">Authors shared code but it needs improvement</div>
+                  <div className="text-xs text-muted-foreground">Authors shared code but it needs improvement before publishing</div>
                 </div>
               </div>
             </button>
@@ -344,8 +654,8 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
               <div className="flex items-start gap-3">
                 <Mail className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-foreground">Refused to Upload</div>
-                  <div className="text-xs text-muted-foreground">Authors declined to share their implementation</div>
+                  <div className="font-semibold text-foreground">Refused to Upload / No Response</div>
+                  <div className="text-xs text-muted-foreground">Authors declined to share or did not respond</div>
                 </div>
               </div>
             </button>
@@ -366,6 +676,55 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
         >
           <p>Are you sure you want to update the status?</p>
         </ConfirmationModal>
+      )}
+
+      {/* Success Modal */}
+      {showSuccessModal && (
+        <Modal
+          isOpen={showSuccessModal}
+          onClose={() => setShowSuccessModal(false)}
+          title="Repository Created Successfully!"
+        >
+          <div className="space-y-4">
+            <div className="flex items-center gap-3 p-4 bg-green-500/10 border border-green-500/20 rounded-lg">
+              <CheckCircle className="w-6 h-6 text-green-600 flex-shrink-0" />
+              <div>
+                <p className="text-sm font-semibold text-foreground">Your GitHub repository has been created and populated with paper details.</p>
+                <p className="text-xs text-foreground/70 mt-1">Status automatically updated to "GitHub Created"</p>
+              </div>
+            </div>
+            
+            {githubRepoInput && (
+              <div className="space-y-2">
+                <label className="text-sm font-medium text-foreground/80">Repository URL</label>
+                <div className="flex items-center gap-2">
+                  <input
+                    type="text"
+                    value={getGithubUrl(githubRepoInput)}
+                    readOnly
+                    className="flex-1 px-3 py-2 text-sm border rounded-md bg-muted/50"
+                  />
+                  <a
+                    href={getGithubUrl(githubRepoInput)}
+                    target="_blank"
+                    rel="noopener noreferrer"
+                    className="px-4 py-2 text-sm font-medium text-white bg-primary rounded-md hover:bg-primary/90 transition-colors flex items-center gap-2"
+                  >
+                    <ExternalLink size={14} />
+                    View
+                  </a>
+                </div>
+              </div>
+            )}
+
+            <Button
+              onClick={() => setShowSuccessModal(false)}
+              className="w-full"
+            >
+              Close
+            </Button>
+          </div>
+        </Modal>
       )}
     </>
   );

@@ -11,12 +11,18 @@ export enum UpdateEventType {
 
 export enum ProgressStatus {
     STARTED = 'Started',
+    EMAIL_SENT = 'Email Sent',
     RESPONSE_RECEIVED = 'Response Received',
     CODE_UPLOADED = 'Code Uploaded',
     CODE_NEEDS_REFACTORING = 'Code Needs Refactoring',
-    REFACTORING_IN_PROGRESS = 'Refactoring in Progress',
+    REFACTORING_STARTED = 'Refactoring Started',
+    REFACTORING_FINISHED = 'Refactoring Finished',
+    VALIDATION_IN_PROGRESS = 'Validation In Progress',
+    OFFICIAL_CODE_POSTED = 'Official Code Posted',
     REFUSED_TO_UPLOAD = 'Refused to Upload',
     NO_RESPONSE = 'No Response',
+    GITHUB_CREATED = 'GitHub Created',
+    CODE_STARTED = 'Code Started',
 }
 
 export interface ProgressUpdateEvent {

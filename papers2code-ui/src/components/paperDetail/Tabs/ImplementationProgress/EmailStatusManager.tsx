@@ -89,7 +89,7 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   const getStatusIcon = (status: ProgressStatus) => {
     switch (status) {
       case ProgressStatus.STARTED: return '📧';
-      case ProgressStatus.STARTED: return '✉️';
+      case ProgressStatus.EMAIL_SENT: return '✉️';
       case ProgressStatus.RESPONSE_RECEIVED: return '📬';
       case ProgressStatus.CODE_UPLOADED: return '✅';
       case ProgressStatus.CODE_NEEDS_REFACTORING: return '🔧';
@@ -106,6 +106,9 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
         // show "Authors Responded" and "No Response" buttons
         // When email hasn't been sent yet, the "View Author Outreach Email" button handles that
         return [ProgressStatus.RESPONSE_RECEIVED, ProgressStatus.NO_RESPONSE];
+      case ProgressStatus.EMAIL_SENT:
+        // When status is Email Sent, allow moving to Response Received or No Response
+        return [ProgressStatus.RESPONSE_RECEIVED, ProgressStatus.NO_RESPONSE];
       case ProgressStatus.RESPONSE_RECEIVED:
       case ProgressStatus.CODE_UPLOADED:
       case ProgressStatus.CODE_NEEDS_REFACTORING:
@@ -120,13 +123,13 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   const formatDateDistance = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = Math.max(0, now.getTime() - date.getTime()); // Prevent negative values
     
     const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
     const hours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
     const minutes = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
     
-    if (days > 0) {
+    if (days >= 1) {
       return `${days}d ago`;
     } else if (hours > 0) {
       return `${hours}h ago`;
@@ -148,6 +151,8 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
         } else {
           return "Ready to contact the paper's authors about implementing their work";
         }
+      case ProgressStatus.EMAIL_SENT:
+        return "Email sent to authors. Waiting for their response within 4 weeks";
       case ProgressStatus.RESPONSE_RECEIVED:
         return "Authors have responded! Please specify the type of response";
       case ProgressStatus.CODE_UPLOADED:
