@@ -72,15 +72,17 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
         </div>
       </div>
       
-      {/* Tooltip - positioned above the node to prevent scrolling */}
+      {/* Tooltip - positioned to stay within viewport */}
       {isHovered && (
         <div 
-          className="fixed z-[100] w-72 bg-popover border border-border rounded-lg shadow-xl p-4 animate-in fade-in-0 zoom-in-95 duration-300"
+          className="absolute z-[100] w-72 bg-popover border border-border rounded-lg shadow-xl p-4 animate-in fade-in-0 zoom-in-95 duration-300"
           style={{ 
-            // Position above the cursor to prevent modal scroll issues
-            bottom: '50%',
-            left: position < 30 ? `${position + 5}%` : position > 70 ? `${position - 20}%` : `${position}%`,
-            transform: position >= 30 && position <= 70 ? 'translate(-50%, -50%)' : 'translateY(-50%)',
+            // Position above the node and adjust horizontal position based on location
+            bottom: '100%',
+            marginBottom: '12px',
+            left: isLast ? 'auto' : position < 15 ? '0' : '50%',
+            right: isLast ? '0' : 'auto',
+            transform: !isLast && position >= 15 ? 'translateX(-50%)' : 'none',
             pointerEvents: 'none',
           }}
         >
@@ -89,10 +91,10 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
               <div className="flex-1">
                 <h4 className="font-bold text-sm text-foreground">{event.title}</h4>
                 {!event.isFuture && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5 font-medium">{formatDate(event.timestamp)}</p>
+                  <p className="text-[10px] text-foreground/60 mt-0.5 font-semibold">{formatDate(event.timestamp)}</p>
                 )}
                 {event.isFuture && (
-                  <p className="text-[10px] text-muted-foreground mt-0.5 italic">Not yet reached</p>
+                  <p className="text-[10px] text-foreground/50 mt-0.5 italic font-medium">Not yet reached</p>
                 )}
               </div>
               <div className={`ml-2 p-1.5 rounded-lg ${event.state === 'completed' ? 'bg-primary/10' : event.state === 'current' ? 'bg-primary/20' : 'bg-muted'}`}>
@@ -100,14 +102,14 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
               </div>
             </div>
             
-            <p className="text-xs text-muted-foreground leading-relaxed">{event.description}</p>
+            <p className="text-xs text-foreground/70 leading-relaxed font-medium">{event.description}</p>
             
             {event.details && event.details.length > 0 && (
               <div className="space-y-1.5 pt-2 border-t border-border/50">
                 {event.details.map((detail, idx) => (
                   <div key={idx} className="flex justify-between items-center text-[10px]">
-                    <span className="text-muted-foreground font-medium">{detail.label}</span>
-                    <span className="font-semibold text-foreground bg-muted/50 px-1.5 py-0.5 rounded">{detail.value}</span>
+                    <span className="text-foreground/70 font-semibold">{detail.label}</span>
+                    <span className="font-bold text-foreground bg-muted/50 px-1.5 py-0.5 rounded">{detail.value}</span>
                   </div>
                 ))}
               </div>

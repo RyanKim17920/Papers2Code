@@ -10,7 +10,11 @@ from .schemas.user_activity import LoggedActionTypes
 logger = logging.getLogger(__name__)
 
 env_path = os.path.join(os.path.dirname(__file__), '..', '.env')
+logger.info(f"DEBUG: Loading .env from: {env_path}")
+logger.info(f"DEBUG: .env exists: {os.path.exists(env_path)}")
 load_dotenv(dotenv_path=env_path, override=True)
+logger.info(f"DEBUG: GITHUB_TEMPLATE_REPO from os.environ: '{os.environ.get('GITHUB_TEMPLATE_REPO', 'NOT SET')}'")
+logger.info(f"DEBUG: GITHUB_TEMPLATE_REPO from os.getenv: '{os.getenv('GITHUB_TEMPLATE_REPO', 'NOT SET')}')")
 
 # Implementability Status Constants (migrated to enum)
 IMPL_STATUS_VOTING = LoggedActionTypes.VOTING.value
@@ -33,17 +37,21 @@ class GitHubOAuthSettings(BaseSettings):
     AUTHORIZE_URL: str = Field("https://github.com/login/oauth/authorize", env="GITHUB_AUTHORIZE_URL")
     ACCESS_TOKEN_URL: str = Field("https://github.com/login/oauth/access_token", env="GITHUB_ACCESS_TOKEN_URL")
     API_USER_URL: str = Field("https://api.github.com/user", env="GITHUB_API_USER_URL")
-    SCOPE: str = Field("user:email", env="GITHUB_SCOPE")
+    SCOPE: str = Field("user:email public_repo", env="GITHUB_SCOPE")  # Added public_repo for creating repositories
+    TEMPLATE_REPO: str = Field("", env="GITHUB_TEMPLATE_REPO")  # Optional: organization/template-repo-name
     model_config = SettingsConfigDict(
         extra="ignore",
         case_sensitive=False
     )
     def __init__(self, **data: Any):
         super().__init__(**data)
+        logger.info(f"DEBUG: GitHubOAuthSettings __init__ called with data: {data}")
+        logger.info(f"DEBUG: After super().__init__, TEMPLATE_REPO is: '{self.TEMPLATE_REPO}'")
         if self.CLIENT_ID is None:
             self.CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
         if self.CLIENT_SECRET is None:
             self.CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
+        logger.info(f"DEBUG: After __init__, TEMPLATE_REPO is: '{self.TEMPLATE_REPO}'")
 
 class VotingThresholdSettings(BaseSettings):
     NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD: int = Field(3, env="NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD")
@@ -99,4 +107,5 @@ class AppSettings(BaseSettings):    # Core settings
     )
 
 config_settings = AppSettings()
+logger.info(f"DEBUG: config_settings.GITHUB.TEMPLATE_REPO after initialization: '{config_settings.GITHUB.TEMPLATE_REPO}'")
 

@@ -22,8 +22,10 @@
 }
 
 .section-subtitle {
-    color: var(--text-muted-color);
+    color: var(--text-color);
+    opacity: 0.8;
     font-size: 0.9rem;
+    font-weight: 500;
     margin-bottom: 0;
 }
 
@@ -75,8 +77,9 @@
 .header-subtitle {
   margin: 0;
   font-size: 1.125rem;
-  color: var(--text-muted-color);
-  font-weight: 400;
+  color: var(--text-color);
+  opacity: 0.8;
+  font-weight: 500;
   line-height: 1.6;
 }
 
@@ -1378,10 +1381,11 @@
 
 .stats-card .stat-label {
   font-size: 0.7rem;
-  color: var(--text-muted-color);
+  color: var(--text-color);
+  opacity: 0.85;
   text-transform: uppercase;
   letter-spacing: 0.5px;
-  font-weight: 500;
+  font-weight: 600;
 }
 
 .card-actions {

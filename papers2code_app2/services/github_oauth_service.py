@@ -194,6 +194,7 @@ class GitHubOAuthService:
                     "avatarUrl": avatar_url,
                     "email": email,
                     "github_id": github_user_id,
+                    "githubAccessToken": github_token,  # Store the token for API calls
                     "updatedAt": current_time,
                     "lastLoginAt": current_time,
                 }

@@ -123,13 +123,13 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
   const formatDateDistance = (dateString: string): string => {
     const date = new Date(dateString);
     const now = new Date();
-    const diffMs = now.getTime() - date.getTime();
+    const diffMs = Math.max(0, now.getTime() - date.getTime()); // Prevent negative values
     
     const days = Math.floor(diffMs / (24 * 60 * 60 * 1000));
     const hours = Math.floor((diffMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
     const minutes = Math.floor((diffMs % (60 * 60 * 1000)) / (60 * 1000));
     
-    if (days > 0) {
+    if (days >= 1) {
       return `${days}d ago`;
     } else if (hours > 0) {
       return `${hours}h ago`;

@@ -47,8 +47,23 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
         if (!latestUpdate) return 'No updates yet';
         
         const date = new Date(latestUpdate.timestamp);
-        const daysAgo = Math.floor((Date.now() - date.getTime()) / (1000 * 60 * 60 * 24));
-        const timeText = daysAgo === 0 ? 'Today' : daysAgo === 1 ? 'Yesterday' : `${daysAgo}d ago`;
+        const now = Date.now();
+        const diffMs = Math.max(0, now - date.getTime()); // Prevent negative values
+        const daysAgo = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+        
+        let timeText;
+        if (daysAgo === 0) {
+            const hoursAgo = Math.floor(diffMs / (1000 * 60 * 60));
+            if (hoursAgo === 0) {
+                timeText = 'Just now';
+            } else {
+                timeText = `${hoursAgo}h ago`;
+            }
+        } else if (daysAgo === 1) {
+            timeText = 'Yesterday';
+        } else {
+            timeText = `${daysAgo}d ago`;
+        }
         
         const eventTypeMap: Record<string, string> = {
             'Initiated': 'Started implementation',
@@ -64,6 +79,13 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
         (contributorId) => contributorId === currentUser?.id
     );
 
+    const getGithubUrl = (repoId: string) => {
+        if (repoId.startsWith('http')) {
+            return repoId;
+        }
+        return `https://github.com/${repoId}`;
+    };
+
     return (
         <>
             <Card 
@@ -72,14 +94,14 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
             >
                 <CardContent className="p-3 space-y-2.5">
                     {/* Header */}
-                    <div className="flex items-center justify-between">
+                    <div className="flex items-start justify-between gap-2">
                         <h3 className="text-base font-bold text-foreground flex items-center gap-1.5">
                             <Code className="w-5 h-5 text-primary" />
                             Implementation Progress
                         </h3>
                         <Badge 
                             variant="outline" 
-                            className={`text-xs h-5 px-2 font-medium ${getStatusColorClasses(paperStatus)}`}
+                            className={`text-xs h-5 px-2 font-medium whitespace-nowrap ${getStatusColorClasses(paperStatus)}`}
                         >
                             {paperStatus || 'Not Started'}
                         </Badge>
@@ -98,7 +120,7 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
                     {/* Metrics Grid */}
                     <div className="grid grid-cols-2 gap-2">
                         <div className="bg-muted/30 rounded-lg p-2 border border-border/40">
-                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">
+                            <div className="text-[10px] text-foreground/70 font-semibold uppercase tracking-wide mb-0.5">
                                 Contributors
                             </div>
                             <div className="text-xl font-bold text-foreground">
@@ -107,7 +129,7 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
                         </div>
                         
                         <div className="bg-muted/30 rounded-lg p-2 border border-border/40">
-                            <div className="text-[10px] text-muted-foreground font-medium uppercase tracking-wide mb-0.5">
+                            <div className="text-[10px] text-foreground/70 font-semibold uppercase tracking-wide mb-0.5">
                                 Updates
                             </div>
                             <div className="text-xl font-bold text-foreground">
@@ -118,22 +140,29 @@ const ImplementationProgressCard: React.FC<ImplementationProgressCardProps> = ({
 
                     {/* Repository badge if exists */}
                     {progress.githubRepoId && (
-                        <div className="flex items-center gap-1.5 text-xs bg-primary/5 text-primary px-2 py-1 rounded border border-primary/20">
-                            <GitBranch size={11} />
-                            <span className="font-medium">Repository Linked</span>
-                        </div>
+                        <a
+                            href={getGithubUrl(progress.githubRepoId)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            onClick={(e) => e.stopPropagation()} // Prevent opening the dialog
+                            className="flex items-center gap-2 text-sm bg-primary/5 text-primary px-3 py-2 rounded-lg border border-primary/20 hover:bg-primary/10 hover:border-primary/30 transition-colors font-medium"
+                        >
+                            <GitBranch size={14} />
+                            <span className="font-semibold">Repository Linked</span>
+                            <ExternalLink size={12} className="ml-auto" />
+                        </a>
                     )}
 
                     {/* Latest update */}
-                    <div className="flex items-center gap-1.5 text-xs text-muted-foreground border-t border-border/40 pt-2">
+                    <div className="flex items-center gap-1.5 text-xs text-foreground/70 border-t border-border/40 pt-2">
                         <Clock size={11} className="flex-shrink-0" />
-                        <span className="text-[11px] leading-tight">{getLatestUpdateText()}</span>
+                        <span className="text-[11px] leading-tight font-medium">{getLatestUpdateText()}</span>
                     </div>
 
                     {/* Hover hint */}
-                    <div className="flex items-center justify-center gap-1 text-[10px] text-muted-foreground/60 group-hover:text-primary/80 transition-colors pt-1">
-                        <ExternalLink size={9} />
-                        <span className="font-medium">Click to view timeline</span>
+                    <div className="flex items-center justify-center gap-1.5 text-xs text-foreground/60 group-hover:text-primary/80 transition-colors pt-1">
+                        <ExternalLink size={11} />
+                        <span className="font-semibold">Click to view timeline</span>
                     </div>
                 </CardContent>
             </Card>

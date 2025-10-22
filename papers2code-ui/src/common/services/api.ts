@@ -263,6 +263,18 @@ export const updateImplementationProgressInApi = async (
   const updatedProgress = await handleApiResponse<ImplementationProgress>(response);
   return updatedProgress;
 };
+
+// --- NEW: Function to automatically create GitHub repository from template and link to implementation progress ---
+export const createGitHubRepositoryForPaper = async (
+  paperId: string
+): Promise<{ success: boolean; repository: any; progress: ImplementationProgress }> => {
+  const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/implementation-progress/paper/${paperId}/create-github-repo`;
+
+  const response = await api.post(url, {});
+
+  const result = await handleApiResponse<{ success: boolean; repository: any; progress: ImplementationProgress }>(response);
+  return result;
+};
 // --- End NEW ---
 
 // --- User Profile API Functions ---

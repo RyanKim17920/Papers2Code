@@ -243,9 +243,9 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     if (totalSteps === 0) return [];
     if (totalSteps === 1) return [50];
     
-    // Distribute evenly with 10% padding on each side
+    // Distribute evenly with small padding (5% on each side to prevent cutoff)
     return timelineSteps.map((_, idx) => {
-      return 10 + (idx / (totalSteps - 1)) * 80;
+      return 5 + (idx / (totalSteps - 1)) * 90;
     });
   }, [timelineSteps]);
 
@@ -270,23 +270,31 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
   }, [timelineSteps, stepPositions]);
 
   return (
-    <div className="relative w-full py-10 min-h-[180px] flex items-center">
+    <div className="relative w-full py-12 min-h-[200px] flex items-center">
       {/* Container with padding to prevent text overflow */}
-      <div className="relative w-full px-16">
-        {/* Base timeline line - full width in muted color */}
-        <div className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" style={{ top: '28px' }} />
+      <div className="relative w-full px-20">
+        {/* Base timeline line - spans from 5% to 95% to match node positions */}
+        <div 
+          className="absolute h-1 bg-muted/40 rounded-full" 
+          style={{ 
+            top: '32px',
+            left: '5%',
+            right: '5%'
+          }} 
+        />
         
         {/* Progress line - colored portion showing completion */}
         <div 
-          className="absolute left-0 h-1 bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full transition-all duration-700 ease-in-out"
+          className="absolute h-1 bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full transition-all duration-700 ease-in-out"
           style={{ 
-            top: '28px',
-            width: `${progressPercentage}%`
+            top: '32px',
+            left: '5%',
+            width: `${Math.max(0, progressPercentage - 5)}%`
           }}
         />
         
         {/* Timeline steps - all steps including future ones */}
-        <div className="relative h-16">
+        <div className="relative h-20">
           {timelineSteps.map((step, idx) => (
             <TimelineEvent
               key={step.id}
