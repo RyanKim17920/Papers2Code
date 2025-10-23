@@ -4,7 +4,7 @@ import { AlertCircle, Megaphone } from 'lucide-react';
 import { Alert, AlertDescription } from '@/components/ui/alert';
 import { ModernUserProfile } from '@/components/dashboard/ModernUserProfile';
 import { ModernFeedTabs } from '@/components/dashboard/ModernFeedTabs';
-import { ModernContributions } from '@/components/dashboard/ModernContributions';
+import { ModernSidebarTabs } from '@/components/dashboard/ModernSidebarTabs';
 import { SiteUpdates } from '@/components/dashboard/SiteUpdates';
 import { LoadingDashboard } from '@/components/dashboard/LoadingDashboard';
 import type { UserProfile } from '@/common/types/user';
@@ -147,13 +147,11 @@ const Dashboard: React.FC = () => {
             />
             
             <div className="mt-6">
-              <ModernContributions
-                contributions={data?.myContributions || []}
+              <ModernSidebarTabs
+                trendingPapers={[]}
+                recentlyViewed={data?.recentlyViewed || []}
                 isLoading={false}
                 onPaperClick={handleNavigateToPaper}
-                onViewAll={handleViewAllContributions}
-                onNewContribution={handleNewContribution}
-                onVote={handleVote}
               />
             </div>
           </div>
@@ -171,9 +169,8 @@ const Dashboard: React.FC = () => {
             <div className="pt-3 pb-6 px-4 lg:px-6">
               <ModernFeedTabs
                 trendingPapers={data?.trendingPapers || []}
-                recentPapers={data?.recentlyViewed || []}
-                personalizedPapers={data?.personalizedPapers || data?.trendingPapers || []}
-                followingPapers={data?.followingPapers || []}
+                recentPapers={data?.trendingPapers || []}
+                myPapers={data?.myContributions || []}
         bookmarkedPapers={data?.bookmarkedPapers || []}
                 isLoading={false}
                 onPaperClick={handleNavigateToPaper}

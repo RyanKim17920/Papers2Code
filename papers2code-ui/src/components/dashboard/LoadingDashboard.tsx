@@ -32,21 +32,16 @@ export const LoadingDashboard: React.FC = () => {
             </div>
             
             <div className="mt-6">
-              {/* ModernContributions Skeleton with real text */}
+              {/* Recent Papers Skeleton with real text */}
               <div className="space-y-3">
-                <div className="flex justify-between items-center mb-3">
-                  <h3 className="text-sm font-medium text-foreground">My Papers</h3>
-                  <button className="text-xs text-muted-foreground hover:text-foreground transition-colors">
-                    View all
-                  </button>
-                </div>
+                <h3 className="text-sm font-medium text-foreground mb-3">Recent Papers</h3>
                 <div className="space-y-2">
-                  {[...Array(3)].map((_, i) => (
-                    <div key={i} className="p-2 rounded-lg border border-border/50 bg-card/50">
-                      <Skeleton className="h-4 w-3/4 mb-2" />
+                  {[...Array(5)].map((_, i) => (
+                    <div key={i} className="p-3 rounded-lg border border-border/30 bg-card/30">
+                      <Skeleton className="h-3 w-full mb-1" />
                       <div className="flex items-center justify-between">
-                        <Skeleton className="h-3 w-20" />
-                        <Skeleton className="h-3 w-16" />
+                        <Skeleton className="h-2 w-20" />
+                        <Skeleton className="h-2 w-10" />
                       </div>
                     </div>
                   ))}
@@ -68,8 +63,8 @@ export const LoadingDashboard: React.FC = () => {
                 </div>
                 <div className="flex space-x-1 bg-muted/30 p-1 rounded-lg mb-4 w-full">
                   <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium bg-card text-foreground shadow-sm border border-border/30 flex-1">
-                    <span className="w-3 h-3 i-lucide-users"></span>
-                    <span>Following</span>
+                    <span className="w-3 h-3 i-lucide-file-text"></span>
+                    <span>My Papers</span>
                     <Skeleton className="h-4 w-6 bg-muted/50 rounded" />
                   </div>
                   <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium text-muted-foreground flex-1">
@@ -78,18 +73,8 @@ export const LoadingDashboard: React.FC = () => {
                     <Skeleton className="h-4 w-6 bg-muted/50 rounded" />
                   </div>
                   <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium text-muted-foreground flex-1">
-                    <span className="w-3 h-3 i-lucide-clock"></span>
-                    <span>Recent</span>
-                    <Skeleton className="h-4 w-6 bg-muted/50 rounded" />
-                  </div>
-                  <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium text-muted-foreground flex-1">
-                    <span className="w-3 h-3 i-lucide-sparkles"></span>
-                    <span>For You</span>
-                    <Skeleton className="h-4 w-6 bg-muted/50 rounded" />
-                  </div>
-                   <div className="flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium text-muted-foreground flex-1">
-                    <span className="w-3 h-3 i-lucide-heart"></span>
-                    <span>Saved</span>
+                    <span className="w-3 h-3 i-lucide-thumbs-up"></span>
+                    <span>Upvoted</span>
                     <Skeleton className="h-4 w-6 bg-muted/50 rounded" />
                   </div>
                 </div>

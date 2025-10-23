@@ -63,19 +63,10 @@ export const ModernSidebarTabs: React.FC<ModernSidebarTabsProps> = ({
   isLoading,
   onPaperClick,
 }) => {
-  const [activeTab, setActiveTab] = useState('trending');
-
-  const tabs = [
-    { id: 'trending', label: 'Trending', papers: trendingPapers.slice(0, 8), icon: TrendingUp },
-    { id: 'recent', label: 'Recent', papers: recentlyViewed.slice(0, 8), icon: History },
-  ];
-
-  const activeTabData = tabs.find(tab => tab.id === activeTab);
-
   if (isLoading) {
     return (
       <div>
-        <h3 className="text-sm font-medium text-foreground mb-3">Discovery</h3>
+        <h3 className="text-sm font-medium text-foreground mb-3">Recent Papers</h3>
         <div className="space-y-2">
           {[...Array(5)].map((_, i) => (
             <div key={i} className="animate-pulse p-2 rounded border border-border/50 bg-card/50">
@@ -88,45 +79,21 @@ export const ModernSidebarTabs: React.FC<ModernSidebarTabsProps> = ({
     );
   }
 
+  const papers = recentlyViewed.slice(0, 8);
+
   return (
     <div>
-      <h3 className="text-sm font-medium text-foreground mb-3">Discovery</h3>
-      
-      {/* Tab Navigation */}
-      <div className="flex flex-col space-y-1 mb-4">
-        {tabs.map((tab) => {
-          const Icon = tab.icon;
-          return (
-            <button
-              key={tab.id}
-              onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center justify-between px-3 py-2 rounded text-xs font-medium transition-colors text-left ${
-                activeTab === tab.id
-                  ? 'bg-primary/10 text-primary'
-                  : 'text-muted-foreground hover:text-foreground hover:bg-muted/30'
-              }`}
-            >
-              <div className="flex items-center gap-2">
-                <Icon className="w-3 h-3" />
-                <span>{tab.label}</span>
-              </div>
-              <span className="text-xs bg-muted/50 px-1.5 py-0.5 rounded">
-                {tab.papers.length}
-              </span>
-            </button>
-          );
-        })}
-      </div>
+      <h3 className="text-sm font-medium text-foreground mb-3">Recent Papers</h3>
 
       <div className="space-y-2">
-        {(activeTabData?.papers || []).length === 0 ? (
+        {papers.length === 0 ? (
           <div className="text-center py-8 border border-dashed border-border/50 rounded-lg bg-muted/20">
             <p className="text-xs text-muted-foreground">
-              No {activeTabData?.label.toLowerCase()} papers yet
+              No recent papers yet
             </p>
           </div>
         ) : (
-          (activeTabData?.papers || []).map((paper) => (
+          papers.map((paper) => (
             <div
               key={paper.id}
               onClick={() => onPaperClick(paper.id)}

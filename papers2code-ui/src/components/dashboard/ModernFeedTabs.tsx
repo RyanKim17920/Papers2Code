@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { TrendingUp, Clock, ThumbsUp, Users, ChevronDown, Sparkles, MessageCircle, ExternalLink } from 'lucide-react';
+import { TrendingUp, Clock, ThumbsUp, FileText, ChevronDown, MessageCircle, ExternalLink } from 'lucide-react';
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
 import { Card, CardContent } from '@/components/ui/card';
 import { Badge } from '@/components/ui/badge';
@@ -11,8 +11,7 @@ import { cn } from '@/lib/utils';
 interface ModernFeedTabsProps {
   trendingPapers: Paper[];
   recentPapers: Paper[];
-  personalizedPapers: Paper[];
-  followingPapers: Paper[];
+  myPapers: Paper[];
   bookmarkedPapers?: Paper[];
   isLoading: boolean;
   onPaperClick: (paperId: string | number) => void;
@@ -131,15 +130,14 @@ const PaperCard: React.FC<{ paper: Paper; onClick: () => void }> = ({ paper, onC
 export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
   trendingPapers,
   recentPapers,
-  personalizedPapers,
-  followingPapers,
+  myPapers,
   bookmarkedPapers = [],
   isLoading,
   onPaperClick,
   onVote,
   denseLayout = false,
 }) => {
-  const [activeTab, setActiveTab] = useState('following');
+  const [activeTab, setActiveTab] = useState('mypapers');
   const [votingStates, setVotingStates] = useState<Record<string, boolean>>({});
 
   const handleVote = async (paperId: string, e: React.MouseEvent) => {
@@ -148,7 +146,7 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
     
     setVotingStates(prev => ({ ...prev, [paperId]: true }));
     try {
-      const paper = [...trendingPapers, ...recentPapers, ...personalizedPapers, ...followingPapers]
+      const paper = [...trendingPapers, ...recentPapers, ...myPapers, ...(bookmarkedPapers || [])]
         .find(p => p.id === paperId);
       const nextVoteType = paper?.currentUserVote === 'up' ? 'none' : 'up';
       await onVote(paperId, nextVoteType);
@@ -160,10 +158,8 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
   };
 
   const tabs = [
-    { id: 'following', label: 'Following', papers: followingPapers, icon: Users },
+    { id: 'mypapers', label: 'My Papers', papers: myPapers, icon: FileText },
     { id: 'trending', label: 'Trending', papers: trendingPapers, icon: TrendingUp },
-    { id: 'recent', label: 'Recent', papers: recentPapers, icon: Clock },
-    { id: 'personalized', label: 'For You', papers: personalizedPapers, icon: Sparkles },
     { id: 'saved', label: 'Upvoted', papers: bookmarkedPapers, icon: ThumbsUp },
   ];
 
@@ -192,14 +188,14 @@ export const ModernFeedTabs: React.FC<ModernFeedTabsProps> = ({
         <h2 className="text-xl font-semibold text-foreground">Feed</h2>
       </div>
       {/* Tab Navigation moved under the title to avoid same line as tabs */}
-      <div className="flex space-x-1 bg-muted/30 p-1 rounded-lg mb-4">
+      <div className="flex space-x-1 bg-muted/30 p-1 rounded-lg mb-4 w-full">
         {tabs.map((tab) => {
           const Icon = tab.icon;
           return (
             <button
               key={tab.id}
               onClick={() => setActiveTab(tab.id)}
-              className={`flex items-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-colors ${
+              className={`flex items-center justify-center gap-2 px-3 py-1.5 rounded text-xs font-medium transition-colors flex-1 ${
                 activeTab === tab.id
                   ? 'bg-card text-foreground shadow-sm border border-border/30'
                   : 'text-muted-foreground hover:text-foreground'
