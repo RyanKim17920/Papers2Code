@@ -179,11 +179,12 @@ async def transform_paper_async(
     if "implementationProgress" in paper_doc and paper_doc["implementationProgress"] is not None:
         transformed_data["implementationProgress"] = paper_doc["implementationProgress"]
 
-    if detail_level == "full":
-        raw_implementability_status = paper_doc.get("implementabilityStatus") # Assuming DB field is "implementability_status"
+    # Add fields for summary level (used in dashboard and profile)
+    if detail_level in ["summary", "full"]:
+        raw_implementability_status = paper_doc.get("implementabilityStatus")
         current_implementability_status = IMPL_STATUS_VOTING
         if raw_implementability_status:
-            if raw_implementability_status.lower() == "voting": # Ensure case-insensitive check for "voting"
+            if raw_implementability_status.lower() == "voting":
                 current_implementability_status = IMPL_STATUS_VOTING
             elif raw_implementability_status in [
                 IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, 
@@ -192,15 +193,24 @@ async def transform_paper_async(
                 IMPL_STATUS_ADMIN_NOT_IMPLEMENTABLE
             ]:
                 current_implementability_status = raw_implementability_status
-            # else: keep default IMPL_STATUS_VOTING if value is unrecognized
-
+        
+        # Truncate abstract for summary level to reduce payload size
+        abstract = paper_doc.get("abstract", "")
+        if detail_level == "summary" and abstract:
+            abstract = abstract[:300] if len(abstract) > 300 else abstract
+        
+        transformed_data.update({
+            "abstract": abstract,
+            "venue": paper_doc.get("venue"),  # Also known as "proceeding"
+            "tags": paper_doc.get("tasks", []),  # DB field is "tasks", Pydantic field "tags" has alias "tasks"
+            "implementability_status": current_implementability_status,
+        })
+    
+    # Add additional fields only for full detail level
+    if detail_level == "full":
         transformed_data.update({
             "pwc_url": _transform_url(paper_doc.get("pwcUrl")),
-            "arxiv_id": paper_doc.get("arxivId"), 
-            "abstract": paper_doc.get("abstract"),
-            "venue": paper_doc.get("venue"), # Assumes DB field is "venue"
-            "tags": paper_doc.get("tasks", []), # Assumes DB field is "tasks", Pydantic field "tags" has alias "tasks"
-            "implementability_status": current_implementability_status,
+            "arxiv_id": paper_doc.get("arxivId"),
         })
 
     try:

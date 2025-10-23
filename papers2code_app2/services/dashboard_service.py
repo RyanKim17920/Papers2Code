@@ -53,7 +53,9 @@ class DashboardService:
 
             # Prepare projection and convert IDs to ObjectId when needed
             summary_projection = {
-                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
+                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1,
+                "abstract": 1, "venue": 1, "tasks": 1, "implementabilityStatus": 1,
+                "urlGithub": 1, "urlAbs": 1, "urlPdf": 1, "hasCode": 1
             }
             # Convert string ids to ObjectId if possible, otherwise keep as-is
             paper_object_ids = []
@@ -125,7 +127,9 @@ class DashboardService:
                 logger.info("User has no contributions.")
                 return []
             summary_projection = {
-                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
+                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1,
+                "abstract": 1, "venue": 1, "tasks": 1, "implementabilityStatus": 1,
+                "urlGithub": 1, "urlAbs": 1, "urlPdf": 1, "hasCode": 1
             }
             paper_ids_list = list(contributed_paper_ids)
             logger.info(f"Fetching paper details for {len(paper_ids_list)} contributions.")
@@ -174,7 +178,9 @@ class DashboardService:
             
             logger.info(f"Fetching details for {len(paper_ids)} recently viewed papers.")
             summary_projection = {
-                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
+                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1,
+                "abstract": 1, "venue": 1, "tasks": 1, "implementabilityStatus": 1,
+                "urlGithub": 1, "urlAbs": 1, "urlPdf": 1, "hasCode": 1
             }
             
             papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}}, summary_projection)
@@ -223,7 +229,9 @@ class DashboardService:
             
             # Fetch paper details
             summary_projection = {
-                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1
+                "title": 1, "authors": 1, "publicationDate": 1, "upvoteCount": 1, "status": 1,
+                "abstract": 1, "venue": 1, "tasks": 1, "implementabilityStatus": 1,
+                "urlGithub": 1, "urlAbs": 1, "urlPdf": 1, "hasCode": 1
             }
             
             papers_cursor = papers_coll.find({"_id": {"$in": paper_ids}}, summary_projection)
