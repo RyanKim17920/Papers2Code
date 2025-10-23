@@ -82,8 +82,7 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
   const canProgressCommunity = isLoggedIn && isContributor && (
     progress.status === ProgressStatus.REFUSED_TO_UPLOAD ||
     progress.status === ProgressStatus.NO_RESPONSE ||
-    progress.status === ProgressStatus.GITHUB_CREATED ||
-    progress.status === ProgressStatus.CODE_STARTED
+    progress.status === ProgressStatus.GITHUB_CREATED
   );
   
   const needsGithubRepo = !progress.githubRepoId && (
@@ -509,24 +508,14 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                       </div>
                     </div>
                     <div className="flex gap-2 flex-wrap">
-                      {(progress.status === ProgressStatus.REFUSED_TO_UPLOAD || progress.status === ProgressStatus.NO_RESPONSE) && (
-                        <Button
-                          onClick={() => confirmStatusUpdate(ProgressStatus.GITHUB_CREATED)}
-                          disabled={isUpdating}
-                          variant="default"
-                          size="sm"
-                        >
-                          Mark GitHub Created
-                        </Button>
-                      )}
                       {progress.status === ProgressStatus.GITHUB_CREATED && (
                         <Button
-                          onClick={() => confirmStatusUpdate(ProgressStatus.CODE_STARTED)}
+                          onClick={() => confirmStatusUpdate(ProgressStatus.CODE_UPLOADED)}
                           disabled={isUpdating}
                           variant="default"
                           size="sm"
                         >
-                          Mark Code Started
+                          Mark Implementation Complete
                         </Button>
                       )}
                     </div>
@@ -702,8 +691,19 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                     type="text"
                     value={getGithubUrl(githubRepoInput)}
                     readOnly
-                    className="flex-1 px-3 py-2 text-sm border rounded-md bg-muted/50"
+                    className="flex-1 px-3 py-2 text-sm border rounded-md bg-muted/50 text-foreground"
                   />
+                  <Button
+                    onClick={() => {
+                      navigator.clipboard.writeText(getGithubUrl(githubRepoInput));
+                    }}
+                    variant="outline"
+                    size="sm"
+                    className="flex items-center gap-2"
+                  >
+                    <ExternalLink size={14} />
+                    Copy
+                  </Button>
                   <a
                     href={getGithubUrl(githubRepoInput)}
                     target="_blank"
@@ -720,6 +720,7 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
             <Button
               onClick={() => setShowSuccessModal(false)}
               className="w-full"
+              type="button"
             >
               Close
             </Button>

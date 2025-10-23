@@ -1,5 +1,5 @@
 import React from 'react';
-import { Info, ThumbsUp, ThumbsDown } from 'lucide-react';
+import { Info, ThumbsUp, ThumbsDown, Vote } from 'lucide-react';
 import { Paper, ImplementabilityAction } from '../../../../common/types/paper';
 import type { UserProfile } from '../../../../common/types/user';
 import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
@@ -83,25 +83,20 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
     const commonButtonDisabled = isVoting || isAdminSetStatus;
 
     return (
-        <div className="space-y-6">
-            {/* Header with Info Tooltip */}
-            <div className="flex items-start gap-3">
-                <div className="flex-1">
-                    <h3 className="text-base font-semibold text-foreground mb-1">
-                        Paper Implementability
-                    </h3>
-                    <p className="text-sm text-muted-foreground">
-                        Help the community determine if this paper can be implemented in code
-                    </p>
-                </div>
+        <div className="space-y-4">
+            {/* Info Tooltip - Standalone, positioned to avoid header overlap */}
+            <div className="flex items-start justify-between gap-3">
+                <p className="text-sm text-muted-foreground flex-1">
+                    Help the community determine if this paper can be implemented in code
+                </p>
                 <TooltipProvider>
                     <Tooltip>
                         <TooltipTrigger asChild>
-                            <button className="flex-shrink-0 p-2 rounded-lg bg-card/60 hover:bg-accent/50 border border-border/60 hover:border-primary/40 transition-colors">
-                                <Info className="w-4 h-4 text-primary" />
+                            <button className="relative flex-shrink-0 p-2 rounded-lg bg-primary/10 hover:bg-primary/20 border border-primary/30 hover:border-primary/50 transition-all duration-200 group">
+                                <Info className="w-4 h-4 text-primary group-hover:scale-110 transition-transform" />
                             </button>
                         </TooltipTrigger>
-                        <TooltipContent side="left" className="max-w-xs">
+                        <TooltipContent side="left" className="max-w-xs z-50">
                             <div className="space-y-2">
                                 <p className="font-semibold text-sm">What does "Not Implementable" mean?</p>
                                 <ul className="text-xs space-y-1 list-disc list-inside">
@@ -117,44 +112,47 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
                 </TooltipProvider>
             </div>
 
-            {/* Status Message */}
+            {/* Status Message - Enhanced styling */}
             {statusMessage && (
-                <div className={`p-4 rounded-lg border text-sm ${
-                    statusMessageType === 'success' ? 'bg-emerald-50/50 border-emerald-200/60 text-emerald-700' :
-                    statusMessageType === 'error' ? 'bg-red-50/50 border-red-200/60 text-red-700' :
-                    statusMessageType === 'warning' ? 'bg-amber-50/50 border-amber-200/60 text-amber-700' :
-                    'bg-blue-50/50 border-blue-200/60 text-blue-700'
+                <div className={`p-4 rounded-xl border-2 text-sm backdrop-blur-sm ${
+                    statusMessageType === 'success' ? 'bg-emerald-50/80 border-emerald-300 text-emerald-800 dark:bg-emerald-950/40 dark:border-emerald-700 dark:text-emerald-300' :
+                    statusMessageType === 'error' ? 'bg-red-50/80 border-red-300 text-red-800 dark:bg-red-950/40 dark:border-red-700 dark:text-red-300' :
+                    statusMessageType === 'warning' ? 'bg-amber-50/80 border-amber-300 text-amber-800 dark:bg-amber-950/40 dark:border-amber-700 dark:text-amber-300' :
+                    'bg-blue-50/80 border-blue-300 text-blue-800 dark:bg-blue-950/40 dark:border-blue-700 dark:text-blue-300'
                 }`}>
-                    <div className="flex items-start gap-2">
-                        <Info className="w-4 h-4 mt-0.5 flex-shrink-0" />
-                        <span>{statusMessage}</span>
+                    <div className="flex items-start gap-3">
+                        <Info className="w-5 h-5 mt-0.5 flex-shrink-0" />
+                        <span className="leading-relaxed">{statusMessage}</span>
                     </div>
                 </div>
             )}
 
             {showVotingControls ? (
-                <div className="space-y-5">
-                    {/* Voting Instructions - only show during active voting */}
+                <div className="space-y-4">
+                    {/* Voting Instructions - Enhanced visual design */}
                     {!isAdminSetStatus && paper.implementabilityStatus === 'Voting' && (
-                        <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-4">
-                            <p className="text-sm font-medium text-foreground mb-3">Cast Your Vote:</p>
-                            <div className="space-y-2 text-sm text-muted-foreground">
-                                <div className="flex items-center gap-2">
-                                    <ThumbsUp className="w-4 h-4 text-emerald-600" />
-                                    <span>This paper <strong>can be implemented</strong> in code</span>
+                        <div className="bg-gradient-to-br from-primary/5 to-accent/10 backdrop-blur border-2 border-primary/20 rounded-xl p-5 shadow-sm">
+                            <p className="text-sm font-semibold text-foreground mb-3 flex items-center gap-2">
+                                <Vote className="w-4 h-4 text-primary" />
+                                Cast Your Vote
+                            </p>
+                            <div className="space-y-2.5 text-sm">
+                                <div className="flex items-center gap-3 p-2 rounded-lg bg-background/60 border border-border/40">
+                                    <ThumbsUp className="w-5 h-5 text-emerald-600 flex-shrink-0" />
+                                    <span className="text-muted-foreground">This paper <strong className="text-foreground">can be implemented</strong> in code</span>
                                 </div>
-                                <div className="flex items-center gap-2">
-                                    <ThumbsDown className="w-4 h-4 text-red-600" />
-                                    <span>This paper <strong>cannot be implemented</strong> in code</span>
+                                <div className="flex items-center gap-3 p-2 rounded-lg bg-background/60 border border-border/40">
+                                    <ThumbsDown className="w-5 h-5 text-red-600 flex-shrink-0" />
+                                    <span className="text-muted-foreground">This paper <strong className="text-foreground">cannot be implemented</strong> in code</span>
                                 </div>
                             </div>
                         </div>
                     )}
                     
-                    {/* Voting Buttons */}
+                    {/* Voting Buttons - Enhanced layout and styling */}
                     <div className="space-y-3">
                         {currentUser ? (
-                            <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-4">
+                            <div className="bg-gradient-to-br from-card/80 to-card/60 backdrop-blur border-2 border-border/60 rounded-xl p-5 shadow-md">
                                 <div className="space-y-3">
                                     <VoteButton
                                         onClick={handleIsImplementableClick}
@@ -163,7 +161,7 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
                                         count={paper.isImplementableVotes}
                                         icon={<FaThumbsUp />}
                                         text="Implementable"
-                                        className="thumbs-up w-full"
+                                        className="thumbs-up w-full !py-3 text-base shadow-sm hover:shadow-md transition-all"
                                         title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedIsImplementable ? "Retract vote" : "Vote implementable")}
                                     />
                                     <VoteButton
@@ -173,7 +171,7 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
                                         count={paper.nonImplementableVotes}
                                         icon={<FaThumbsDown />}
                                         text="Not Implementable"
-                                        className="thumbs-down w-full"
+                                        className="thumbs-down w-full !py-3 text-base shadow-sm hover:shadow-md transition-all"
                                         title={isAdminSetStatus ? "Voting disabled by admin" : (currentUserVotedNotImplementable ? "Retract vote" : "Vote not implementable")}
                                     />
                                     {showRetractButton && (
@@ -181,21 +179,21 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
                                             onClick={() => handleImplementabilityVote('retract')} 
                                             disabled={commonButtonDisabled} 
                                             title="Retract your current vote"
-                                            className="w-full"
+                                            className="w-full !py-2.5 shadow-sm"
                                         />
                                     )}
                                 </div>
                             </div>
                         ) : (
-                            <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-6 text-center">
-                                <p className="text-sm text-muted-foreground">Please log in to vote on implementability</p>
+                            <div className="bg-gradient-to-br from-muted/40 to-muted/20 backdrop-blur border-2 border-dashed border-border/60 rounded-xl p-8 text-center">
+                                <p className="text-sm font-medium text-muted-foreground">Please log in to vote on implementability</p>
                             </div>
                         )}
                     </div>
                     
-                    {/* User Lists */}
-                    <div className="bg-card/70 backdrop-blur border border-border/60 rounded-lg p-4">
-                        <div className="space-y-4">
+                    {/* User Lists - Enhanced card design */}
+                    <div className="bg-card/60 backdrop-blur border-2 border-border/50 rounded-xl p-5 shadow-sm">
+                        <div className="space-y-5">
                             <UserDisplayList
                                 title="Voted Implementable"
                                 users={actionUsers?.votedIsImplementable}
@@ -203,7 +201,7 @@ export const ImplementabilityVotingTab: React.FC<ImplementabilityTabProps> = ({
                                 error={actionUsersError}
                                 emptyMessage="No votes yet"
                             />
-                            <div className="border-t border-border/40" />
+                            <div className="border-t-2 border-border/30" />
                             <UserDisplayList
                                 title="Voted Not Implementable"
                                 users={actionUsers?.votedNotImplementable}

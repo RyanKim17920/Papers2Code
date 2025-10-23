@@ -81,16 +81,12 @@ const HeroHeader = () => {
           transition={{ duration: 0.8, delay: 0.2 }}
         >
           <div className="stat-item">
-            <div className="stat-number">2.4K+</div>
+            <div className="stat-number">500K+</div>
             <div className="stat-label">Research Papers</div>
           </div>
           <div className="stat-item">
-            <div className="stat-number">1.8K+</div>
+            <div className="stat-number">200K+</div>
             <div className="stat-label">Implementations</div>
-          </div>
-          <div className="stat-item">
-            <div className="stat-number">890+</div>
-            <div className="stat-label">Contributors</div>
           </div>
         </motion.div>
       </div>

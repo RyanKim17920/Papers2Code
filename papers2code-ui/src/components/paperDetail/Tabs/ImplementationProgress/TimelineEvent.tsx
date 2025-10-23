@@ -30,7 +30,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
   const Icon = event.icon;
 
   const getNodeStyles = () => {
-    const baseStyles = "relative z-10 w-12 h-12 rounded-full border-3 flex items-center justify-center transition-all duration-300 ease-out shadow-md";
+    const baseStyles = "relative z-20 w-12 h-12 rounded-full border-3 flex items-center justify-center transition-all duration-300 ease-out shadow-md";
     
     switch (event.state) {
       case 'completed':
@@ -38,7 +38,7 @@ export const TimelineEvent: React.FC<TimelineEventProps> = ({ event, position, i
       case 'current':
         return `${baseStyles} bg-gradient-to-br from-primary to-primary/80 border-primary/30 text-primary-foreground hover:scale-105 cursor-pointer ring-3 ring-primary/20`;
       case 'future':
-        return `${baseStyles} bg-muted/50 border-muted-foreground/20 text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground/60 cursor-help`;
+        return `${baseStyles} bg-background border-muted-foreground/20 text-muted-foreground/50 hover:bg-muted/60 hover:text-muted-foreground/60 cursor-help`;
       default:
         return baseStyles;
     }

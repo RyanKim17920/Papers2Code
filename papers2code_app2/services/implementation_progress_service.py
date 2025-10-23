@@ -272,28 +272,17 @@ class ImplementationProgressService:
             event_type=UpdateEventType.EMAIL_SENT,
             timestamp=current_time,
             user_id=user_obj_id,
-            details={},
-        )
-
-        # Create a status changed event
-        status_event = ProgressUpdateEvent(
-            event_type=UpdateEventType.STATUS_CHANGED,
-            timestamp=current_time,
-            user_id=user_obj_id,
             details={
                 "previousStatus": ProgressStatus.STARTED.value,
                 "newStatus": ProgressStatus.EMAIL_SENT.value
             },
         )
 
-        # Update progress with email sent event and status change
+        # Update progress with email sent event (which also changes status)
         await progress_collection.update_one(
             {"_id": paper_obj_id},
             {
-                "$push": {"updates": {"$each": [
-                    email_event.model_dump(by_alias=True),
-                    status_event.model_dump(by_alias=True)
-                ]}},
+                "$push": {"updates": email_event.model_dump(by_alias=True)},
                 "$set": {
                     "status": ProgressStatus.EMAIL_SENT.value,
                     "latestUpdate": current_time,

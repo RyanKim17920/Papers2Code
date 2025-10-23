@@ -151,8 +151,8 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
 
     return (
         <div className="min-h-screen bg-background">
-            {/* Compact Header */}
-            <div className="bg-card/40 backdrop-blur border-b border-border/60 sticky top-0 z-40">
+            {/* Compact Header - Reduced z-index to allow tooltips to appear above */}
+            <div className="bg-card/40 backdrop-blur border-b border-border/60 sticky top-0 z-30">
                 <div className="max-w-7xl mx-auto px-6 py-2">
                     <Link 
                         to="/papers" 
@@ -405,11 +405,13 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                     onRefreshPaper={loadPaperAndActions}
                                 />
                             ) : (
-                                <Card className="bg-card/70 backdrop-blur border border-border/60">
-                                    <CardContent className="p-3">
-                                        <h3 className="text-sm font-semibold text-foreground mb-2 flex items-center gap-1">
-                                            <Vote className="w-3 h-3 text-primary" />
-                                            Implementability
+                                <Card className="bg-card/70 backdrop-blur border border-border/60 shadow-sm hover:shadow-md transition-shadow">
+                                    <CardContent className="p-4">
+                                        <h3 className="text-base font-bold text-foreground mb-3 flex items-center gap-2">
+                                            <div className="p-2 rounded-lg bg-primary/10 border border-primary/20">
+                                                <Vote className="w-5 h-5 text-primary" />
+                                            </div>
+                                            <span>Paper Implementability</span>
                                         </h3>
                                         <ImplementabilityVotingTab
                                             paper={paper}

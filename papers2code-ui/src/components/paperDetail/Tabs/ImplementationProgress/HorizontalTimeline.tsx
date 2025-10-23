@@ -106,17 +106,9 @@ const COMMUNITY_PATH_STEPS: JourneyStep[] = [
   {
     id: 'github_created',
     title: 'GitHub Created',
-    description: 'Repository created for community implementation.',
+    description: 'Repository created and code implementation started.',
     icon: GitBranch,
     order: 4,
-    path: 'community',
-  },
-  {
-    id: 'code_started',
-    title: 'Code Started',
-    description: 'Community has begun implementing the paper.',
-    icon: Clock,
-    order: 5,
     path: 'community',
   },
   {
@@ -124,7 +116,7 @@ const COMMUNITY_PATH_STEPS: JourneyStep[] = [
     title: 'Implementation Complete',
     description: 'Community implementation is complete and verified.',
     icon: CheckCircle,
-    order: 6,
+    order: 5,
     path: 'community',
   },
 ];
@@ -165,8 +157,7 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     
     if (progress.status === ProgressStatus.REFUSED_TO_UPLOAD || 
         progress.status === ProgressStatus.NO_RESPONSE ||
-        progress.status === ProgressStatus.GITHUB_CREATED ||
-        progress.status === ProgressStatus.CODE_STARTED) {
+        progress.status === ProgressStatus.GITHUB_CREATED) {
       return 'community';
     }
     
@@ -237,15 +228,15 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     });
   }, [progress, journeySteps]);
 
-  // Evenly distribute steps across the timeline
+  // Evenly distribute steps across the full timeline width
   const stepPositions = useMemo(() => {
     const totalSteps = timelineSteps.length;
     if (totalSteps === 0) return [];
     if (totalSteps === 1) return [50];
     
-    // Distribute evenly with small padding (5% on each side to prevent cutoff)
+    // Distribute evenly from 0% to 100%
     return timelineSteps.map((_, idx) => {
-      return 5 + (idx / (totalSteps - 1)) * 90;
+      return (idx / (totalSteps - 1)) * 100;
     });
   }, [timelineSteps]);
 
@@ -273,36 +264,37 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     <div className="relative w-full py-12 min-h-[200px] flex items-center">
       {/* Container with padding to prevent text overflow */}
       <div className="relative w-full px-20">
-        {/* Base timeline line - spans from 5% to 95% to match node positions */}
-        <div 
-          className="absolute h-1 bg-muted/40 rounded-full" 
-          style={{ 
-            top: '32px',
-            left: '5%',
-            right: '5%'
-          }} 
-        />
-        
-        {/* Progress line - colored portion showing completion */}
-        <div 
-          className="absolute h-1 bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full transition-all duration-700 ease-in-out"
-          style={{ 
-            top: '32px',
-            left: '5%',
-            width: `${Math.max(0, progressPercentage - 5)}%`
-          }}
-        />
-        
-        {/* Timeline steps - all steps including future ones */}
-        <div className="relative h-20">
-          {timelineSteps.map((step, idx) => (
-            <TimelineEvent
-              key={step.id}
-              event={step}
-              position={stepPositions[idx]}
-              isLast={idx === timelineSteps.length - 1}
-            />
-          ))}
+        {/* Inner container for the timeline */}
+        <div className="relative">
+          {/* Base timeline line - full width from left to right edge */}
+          <div 
+            className="absolute left-0 right-0 h-1 bg-muted/40 rounded-full" 
+            style={{ 
+              top: '24px'
+            }} 
+          />
+          
+          {/* Progress line - colored portion showing completion */}
+          <div 
+            className="absolute h-1 bg-gradient-to-r from-primary via-primary/80 to-primary rounded-full transition-all duration-700 ease-in-out"
+            style={{ 
+              top: '24px',
+              left: '0',
+              width: `${progressPercentage}%`
+            }}
+          />
+          
+          {/* Timeline steps - all steps including future ones */}
+          <div className="relative h-20">
+            {timelineSteps.map((step, idx) => (
+              <TimelineEvent
+                key={step.id}
+                event={step}
+                position={stepPositions[idx]}
+                isLast={idx === timelineSteps.length - 1}
+              />
+            ))}
+          </div>
         </div>
       </div>
     </div>
@@ -345,9 +337,6 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, currentStatus: Progr
         if (newStatus === ProgressStatus.GITHUB_CREATED) {
           return 'github_created';
         }
-        if (newStatus === ProgressStatus.CODE_STARTED) {
-          return 'code_started';
-        }
       }
       return null;
     case UpdateEventType.GITHUB_REPO_LINKED:
@@ -356,7 +345,7 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, currentStatus: Progr
           currentStatus === ProgressStatus.REFACTORING_STARTED) {
         return 'code_needs_refactoring';
       }
-      if (currentStatus === ProgressStatus.GITHUB_CREATED || currentStatus === ProgressStatus.CODE_STARTED) {
+      if (currentStatus === ProgressStatus.GITHUB_CREATED) {
         return 'github_created';
       }
       return null;

@@ -166,11 +166,13 @@
 /* Hero Stats */
 .hero-stats {
   display: grid;
-  grid-template-columns: repeat(3, 1fr);
-  gap: 0.75rem; /* Compact gap */
+  grid-template-columns: repeat(2, 1fr);
+  gap: 2rem; /* Increased gap for better spacing with 2 items */
   margin-top: 0.75rem; /* Minimal margin */
   margin-bottom: 0.75rem; /* Minimal margin to prevent overflow */
-  max-width: 100%;
+  max-width: 500px; /* Constrain width for better centering */
+  margin-left: auto;
+  margin-right: auto;
   overflow: hidden;
   flex-shrink: 1;
   min-height: 0; /* Allow flex shrinking */
