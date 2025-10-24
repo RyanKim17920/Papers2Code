@@ -22,7 +22,7 @@ export function formatLastSeen(dateString: string | null | undefined): string {
     if (isNaN(date.getTime())) return 'Never';
     
     const now = new Date();
-    const diffInMs = now.getTime() - date.getTime();
+    const diffInMs = Math.max(0, now.getTime() - date.getTime()); // Prevent negative values
     const diffInDays = Math.floor(diffInMs / (1000 * 60 * 60 * 24));
     
     if (diffInDays === 0) {
