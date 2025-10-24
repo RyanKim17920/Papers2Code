@@ -1,7 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '../utils/logger';
 import ErrorPage from '../../pages/ErrorPage';
-import './ErrorBoundary.css';
 
 interface Props {
   children: ReactNode;
