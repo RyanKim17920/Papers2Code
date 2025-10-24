@@ -292,3 +292,57 @@ All colors MUST be HSL.
     font-feature-settings: "rlig" 1, "calt" 1;
   }
 }
+
+/* Status Badge Utilities - Shared across multiple components */
+@layer components {
+  .status {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.8em] font-medium ml-2.5 border border-transparent whitespace-nowrap overflow-hidden align-middle;
+  }
+
+  .status-symbol {
+    @apply text-[0.9em] flex-shrink-0;
+  }
+
+  .status-text {
+    @apply overflow-hidden text-ellipsis;
+  }
+
+  /* Status color variants */
+  .status-default,
+  .status-needs-code,
+  .status-unknown {
+    @apply bg-[#f8f9fa] text-[#6c757d] border-[#dee2e6];
+  }
+
+  .status-not-started {
+    @apply bg-[#e9ecef] text-[#495057] border-[#ced4da];
+  }
+
+  .status-started {
+    @apply bg-[#d1ecf1] text-[#0c5460] border-[#bee5eb];
+  }
+
+  .status-waiting-author {
+    @apply bg-[#fff3cd] text-[#856404] border-[#ffeeba];
+  }
+
+  .status-in-progress {
+    @apply bg-[#e7f3ff] text-[#0056b3] border-[#b8daff];
+  }
+
+  .status-completed {
+    @apply bg-[#e6f9f0] text-[#198754] border-[#a3e9c1];
+  }
+
+  .status-non-implementable {
+    @apply bg-[#fff5f5] text-[#c82333] border-[#f5c6cb] font-semibold;
+  }
+
+  .status-official-code {
+    @apply bg-[#c8e6c9] text-[#2e7d32];
+  }
+
+  .status-not-started-disputed {
+    @apply bg-[#fff59d] text-[#f57f17] border-[#f57f17];
+  }
+}
