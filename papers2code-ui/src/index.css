@@ -291,6 +291,22 @@ All colors MUST be HSL.
   @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  /* Custom scrollbar styling */
+  body::-webkit-scrollbar {
+    width: 12px;
+  }
+  body::-webkit-scrollbar-track {
+    background: #f1f3f5;
+  }
+  body::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color, #197c9a);
+    border-radius: 20px;
+    border: 3px solid #f1f3f5;
+  }
+  body::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-dark-color, #0f4c6e);
+  }
 }
 
 /* Status Badge Utilities - Shared across multiple components */
