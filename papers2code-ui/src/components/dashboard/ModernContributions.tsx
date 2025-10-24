@@ -3,7 +3,6 @@ import { FileText, ThumbsUp, ExternalLink } from 'lucide-react';
 import { Button } from '@/components/ui/button';
 import type { Paper } from '@/common/types/paper';
 import { getStatusClass } from '@/common/utils/statusUtils';
-import '@/components/paperList/PaperCard.css'; // ensures status-* classes are available
 import { StatusBadge } from '@/components/common/StatusBadge';
 
 interface ModernContributionsProps {
