@@ -62,6 +62,6 @@
 * [ ] integrate settings into profile as a tab or something, at least improve that UI significantly
 * [ ] implementaiton tracking becomes a timeline not just random information texted 
 * [ ] works for MOBILE (especially dashboard right now is broken)
-* [x] everything to tailwind (73% complete - 19/26 CSS files converted, see TAILWIND_MIGRATION_FINAL.md)
+* [x] everything to tailwind (81% complete - 21/26 CSS files converted, see TAILWIND_MIGRATION_STATUS.md)
 * [ ] Inconsistent taggint form paperList and other papers??
 * [ ] DARK MODE
