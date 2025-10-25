@@ -102,7 +102,7 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="max-w-[1400px] mx-auto p-8 bg-[#F6F8FA] min-h-[calc(100vh-80px)] font-[Poppins,-apple-system,BlinkMacSystemFont,Segoe_UI,system-ui,sans-serif] relative z-[1]">
+    <div className="max-w-[1400px] mx-auto p-8 bg-[#F6F8FA] min-h-[calc(100vh-80px)] font-[Source_Sans_Pro,Open_Sans,Lato,-apple-system,BlinkMacSystemFont,Segoe_UI,system-ui,sans-serif] relative z-[1]">
       <div className="grid grid-cols-[20%_55%_25%] gap-6 items-start min-h-[calc(100vh-200px)]">
         {/* Left Sidebar - Compact Profile & Contributions */}
         <aside className="flex flex-col gap-6 bg-[#f0f3f6] p-6 border-r border-[#d0d7de] min-h-[calc(100vh-200px)]">
