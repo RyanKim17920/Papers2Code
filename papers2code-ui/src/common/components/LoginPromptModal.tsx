@@ -1,5 +1,4 @@
 import React from 'react';
-import './ConfirmationModal.css'; // Reuse existing modal styles or create specific ones
 import { redirectToGitHubLogin } from '../services/auth';
 import { useModal } from '../context/ModalContext';
 
