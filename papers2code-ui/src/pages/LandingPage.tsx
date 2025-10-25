@@ -1,7 +1,6 @@
 import { useState, FC, useEffect } from 'react';
 import { motion, useScroll } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import './LandingPage.css';
 import HeroHeader from '../components/landing/HeroHeader';
 import { HeroAnimation } from '../components/landing/HeroAnimation'; 
 import CtaSection from '../components/landing/CtaSection';
@@ -39,11 +38,11 @@ const ScrollSlide: FC<ScrollSlideProps> = ({ index, setActiveScene, activeScene,
     const isActive = activeScene === index;
 
     return (
-        <section ref={ref} className="scroll-slide">
-            <div className={`slide-content ${isActive ? 'is-active' : ''}`}>
-                {isIntro && <h1 className='intro-title'>Reproducibility in ML Research is <span className="highlight-text">Broken</span></h1>}
-                {!isIntro && title && <h2 className='slide-title'>{title}</h2>}
-                {subtitle && <p className="slide-subtitle">{subtitle}</p>}
+        <section ref={ref} className="h-screen w-full flex flex-col justify-center px-[8%] py-[5vh] box-border max-[992px]:h-auto max-[992px]:min-h-[50vh]">
+            <div className={`transition-all duration-[800ms] ease-out ${isActive ? 'opacity-100 blur-0 translate-y-0' : 'opacity-20 blur-[5px] translate-y-[15px]'}`}>
+                {isIntro && <h1 className='text-[clamp(2.2rem,4vw,3.2rem)] font-bold leading-tight mb-6 text-[var(--text-heading-color)] max-[768px]:text-[clamp(1.8rem,6vw,2.5rem)]'>Reproducibility in ML Research is <span className="text-[var(--danger-color)]">Broken</span></h1>}
+                {!isIntro && title && <h2 className='text-[clamp(2.2rem,4vw,3.2rem)] font-bold leading-tight mb-6 text-[var(--text-heading-color)] max-[768px]:text-[clamp(1.8rem,6vw,2.5rem)]'>{title}</h2>}
+                {subtitle && <p className="text-xl leading-relaxed text-[var(--text-muted-color)] max-[768px]:text-base">{subtitle}</p>}
             </div>
         </section>
     );
@@ -205,17 +204,27 @@ const LandingPage = () => {
   }, [activeScene]);
 
   return (
-    <div className="landing-container">
+    <div className="w-full max-w-full overflow-x-hidden relative">
+      <style>{`
+        @keyframes pulse-glow {
+          from { box-shadow: 0 2px 10px rgba(59, 130, 246, 0.3); }
+          to { box-shadow: 0 2px 15px rgba(59, 130, 246, 0.5); }
+        }
+      `}</style>
+      
       {/* The animated blue scrollbar */}
-      <motion.div className="scroll-progress-bar" style={{ scaleX: scrollYProgress }} />
+      <motion.div 
+        className="fixed top-0 left-0 h-1 bg-gradient-to-r from-[var(--primary-color)] via-[#3b82f6] via-[#06b6d4] via-[#10b981] to-[var(--accent-color)] z-[1000] origin-left shadow-[0_2px_10px_rgba(59,130,246,0.3)] animate-[pulse-glow_2s_infinite_alternate]" 
+        style={{ scaleX: scrollYProgress }} 
+      />
 
       {/* Hero Header - Logo, search, overview */}
       <HeroHeader />
 
       {/* This container provides the scrollable height and contains both text and visuals */}
-      <div className="scrollytelling-container">
-        <div className="scrollytelling-text-wrapper">
-          <div className="story-text-container">
+      <div className="flex relative h-[500vh] overflow-visible max-[992px]:flex-col max-[992px]:h-auto">
+        <div className="w-1/2 relative z-10 h-[500vh] overflow-visible max-[992px]:w-full max-[992px]:h-auto">
+          <div className="w-full relative z-10 max-[992px]:w-full max-[992px]:h-auto">
             {storyContent.map(story => (
               <ScrollSlide
                 key={story.index}
@@ -228,14 +237,14 @@ const LandingPage = () => {
         </div>
         
         {/* Animation wrapper ensures proper sticky containment */}
-        <div className="hero-animation-wrapper">
+        <div className="w-1/2 h-[500vh] relative block overflow-visible max-[992px]:w-full max-[992px]:h-auto">
           <HeroAnimation activeScene={activeScene} />
         </div>
       </div>
 
       {/* The rest of the page flows naturally after the scrollytelling */}
-      <div className="page-content-after-hero">
-        <div className="transition-spacer" />
+      <div className="relative top-0 left-0 w-full z-[15] bg-white shadow-[0_-10px_30px_rgba(0,0,0,0.15)] border-t-4 border-[#3b82f6] mt-8">
+        <div className="h-40 bg-gradient-to-b from-[rgba(233,236,239,0.3)] to-white max-[992px]:hidden" />
         <CtaSection />
       </div>
     </div>
