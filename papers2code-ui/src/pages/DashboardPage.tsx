@@ -10,7 +10,6 @@ import FeedTabs from '../components/dashboard/FeedTabs';
 import SidebarTabs from '../components/dashboard/SidebarTabs';
 import type { UserProfile } from '../common/types/user';
 import ErrorPage from './ErrorPage';
-import './DashboardPage.css';
 import { getStatusColorHex } from '../common/utils/statusUtils';
 
 const DashboardPage: React.FC = () => {
@@ -52,17 +51,17 @@ const DashboardPage: React.FC = () => {
   const renderPaperList = (papers: Paper[], emptyMessage: string, showStatus = false) => {
     if (papers.length === 0) {
       return (
-        <div className="sidebar-empty">
+        <div className="text-[#6b7280] text-sm italic text-center py-8">
           <p className="empty-message">{emptyMessage}</p>
         </div>
       );
     }
     
     return (
-      <div className="sidebar-paper-list">
+      <div className="space-y-3 max-h-[600px] overflow-y-auto">
         {papers.slice(0, 5).map((paper) => (
-          <Link key={paper.id} to={`/paper/${paper.id}`} className="sidebar-paper-item">
-            <div className="sidebar-paper-header">
+          <Link key={paper.id} to={`/paper/${paper.id}`} className="bg-white p-3 rounded-lg border border-[#e5e7eb] cursor-pointer transition-all duration-200 hover:border-[#3b82f6] hover:shadow-md">
+            <div className="text-lg font-semibold text-[#1f2937] mb-4 pb-3 border-b-2 border-[#e5e7eb]">
               <h4 className="sidebar-paper-title">{paper.title}</h4>
               {showStatus && (
                 <span 
@@ -74,7 +73,7 @@ const DashboardPage: React.FC = () => {
               )}
             </div>
             {paper.authors && paper.authors.length > 0 && (
-              <p className="sidebar-paper-authors">
+              <p className="text-xs text-[#6b7280] mt-2 truncate">
                 {paper.authors.slice(0, 2).join(', ')}
                 {paper.authors.length > 2 && '...'}
               </p>
@@ -103,10 +102,10 @@ const DashboardPage: React.FC = () => {
   }
 
   return (
-    <div className="dashboard-container">
-      <div className="dashboard-layout">
+    <div className="max-w-[1400px] mx-auto p-8 bg-[#F6F8FA] min-h-[calc(100vh-80px)] font-[Poppins,-apple-system,BlinkMacSystemFont,Segoe_UI,system-ui,sans-serif] relative z-[1]">
+      <div className="grid grid-cols-[20%_55%_25%] gap-6 items-start min-h-[calc(100vh-200px)]">
         {/* Left Sidebar - Compact Profile & Contributions */}
-        <aside className="left-sidebar">
+        <aside className="flex flex-col gap-6 bg-[#f0f3f6] p-6 border-r border-[#d0d7de] min-h-[calc(100vh-200px)]">
           {currentUser && (
             <CompactUserProfile 
               user={currentUser} 
@@ -131,7 +130,7 @@ const DashboardPage: React.FC = () => {
         </aside>
 
         {/* Main Content - Feed Tabs */}
-        <main className="main-content">
+        <main className="flex flex-col gap-0 bg-white border border-[#d0d7de] rounded-lg shadow-sm overflow-hidden">
           <FeedTabs
             trendingPapers={data?.trendingPapers || []}
             recentPapers={data?.trendingPapers || []} // Using trending as placeholder for recent
@@ -143,7 +142,7 @@ const DashboardPage: React.FC = () => {
         </main>
 
         {/* Right Sidebar - Discovery Tabs */}
-        <aside className="right-sidebar">
+        <aside className="flex flex-col gap-6 bg-[#f0f3f6] p-6 border-l border-[#d0d7de] min-h-[calc(100vh-200px)]">
           <SidebarTabs
             trendingPapers={data?.trendingPapers || []}
             recentlyViewed={data?.recentlyViewed || []}

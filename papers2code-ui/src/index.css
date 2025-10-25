@@ -362,3 +362,92 @@ All colors MUST be HSL.
     @apply bg-[#fff59d] text-[#f57f17] border-[#f57f17];
   }
 }
+/* CSS Variables from App.css */
+:root {
+  /* Primary Palette */
+  --primary-color: #197c9a;
+  --primary-dark-color: #0f4c6e;
+  --primary-accent-color: #3ab0ff;
+  --primary-hover-color: #13687E;
+  --primary-light-color: #e8f7fa;
+  --primary-rgb: 25, 124, 154;
+
+  /* Secondary Palette */
+  --secondary-dark-color: #5a6268;
+  --secondary-color: #6c757d;
+  --secondary-light-color: #e9ecef;
+  --secondary-accent-color: #adb5bd;
+  --secondary-rgb: 108, 117, 125;
+  --secondary-accent-rgb: 173, 181, 189;
+  
+  /* Gradient Colors */
+  --gradient-start: #f9fdfe;
+  --gradient-middle: #f5fbfd;
+  --gradient-end: #f0f9fa;
+  --gradient-accent: rgba(var(--primary-rgb), 0.03);
+
+  /* Neutrals */
+  --background-color: #fdfdfe;
+  --card-background-color: #ffffff;
+  --header-footer-bg: #ffffff;
+  --border-color: #e9ecef;
+  --border-color-light: #f8f9fa;
+  --light-gray-bg: #f1f3f5;
+  --dark-color: #343a40;
+  
+  /* Text Colors */
+  --text-color: #212529;
+  --text-muted-color: #6c757d;
+  --text-heading-color: #1a3a3a;
+  --text-on-primary: #ffffff;
+  --text-on-dark: #ffffff;
+  --text-on-secondary: #ffffff;
+
+  /* Status Colors */
+  --success-color: #28a745;
+  --success-light-color: #eafaf1;
+  --success-dark-color: #1f7a3b;
+  --warning-color: #ffc107;
+  --warning-light-color: #fffbeb;
+  --warning-text-color: #5d4a00;
+  --warning-dark-color: #b78100;
+  --info-color: #17a2b8;
+  --info-light-color: #e7f6f8;
+  --info-text-color: #0c5460;
+  --info-dark-color: #117a8b;
+  --danger-color: #dc3545;
+  --danger-light-color: #f8d7da;
+  --danger-text-color: #721c24;
+  --danger-dark-color: #c62828;
+  --skipped-color: #adb5bd;
+  --skipped-light-color: #f8f9fa;
+
+  /* Additional Colors */
+  --card-alt-background-color: #fafbfc;
+  --background-alt-color: #f8f9fa;
+  --background-hover-light: rgba(var(--primary-rgb), 0.05);
+  --primary-background-medium: #d1eaff;
+  --button-secondary-bg: #f8f9fa;
+  --button-secondary-text: var(--text-color);
+  --button-secondary-hover-bg: #e9ecef;
+  --grey-color: #ccc;
+  --grey-light-color: #f0f0f0;
+  --grey-dark-color: #555;
+
+  /* Shadows & Radii */
+  --box-shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --box-shadow-md: 0 5px 10px rgba(0,0,0,0.07);
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+
+  --content-max-width: 1400px;
+  --accent-color: #3ab0ff;
+}
+
+/* Gradient animation */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
+}
