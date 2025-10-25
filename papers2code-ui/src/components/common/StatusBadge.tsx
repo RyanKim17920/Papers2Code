@@ -1,7 +1,6 @@
 import React from 'react';
 import type { Paper } from '@/common/types/paper';
 import { getStatusClass } from '@/common/utils/statusUtils';
-import '@/components/paperList/PaperCard.css';
 
 interface StatusBadgeProps {
   paper: Paper;

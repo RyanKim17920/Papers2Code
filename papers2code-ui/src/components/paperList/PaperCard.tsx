@@ -1,7 +1,6 @@
 import React, { useState } from 'react';
 import { Link } from 'react-router-dom';
 import { Paper } from '../../common/types/paper'; // Ensure Status is imported
-import './PaperCard.css';
 import { getStatusClass } from '../../common/utils/statusUtils';
 import { StatusBadge } from '@/components/common/StatusBadge';
 
@@ -55,33 +54,33 @@ const PaperCard: React.FC<PaperCardProps> = ({ paper, onVote }) => {
   // --- End Determine Status and Class ---
 
   return (
-    <div className="paper-card">
-      <h3>
-        <Link to={`/paper/${paper.id}`}>{paper.title}</Link>
+    <div className="border border-[var(--border-color)] rounded-xl px-6 py-5 bg-gradient-to-br from-[rgba(0,72,90,0.01)] to-[rgba(0,72,90,0.15)] shadow-[var(--box-shadow-sm)] transition-[box-shadow,transform] duration-[0.25s] ease-in-out flex flex-col h-[300px] flex-[0_0_calc(33.333%-20px)] min-w-[300px] box-border overflow-y-hidden hover:shadow-[var(--box-shadow-md)] hover:-translate-y-1 hover:border-[rgba(25,124,154,0.2)] max-[1100px]:flex-[0_0_calc(50%-15px)] max-[680px]:flex-[0_0_100%] max-[680px]:min-w-0 max-[680px]:h-auto">
+      <h3 className="m-0 mb-3.5 text-[1.15em] font-semibold leading-[1.4] text-[var(--text-heading-color)] h-[4.2em] [-webkit-line-clamp:3] [line-clamp:3] [-webkit-box-orient:vertical] overflow-hidden">
+        <Link to={`/paper/${paper.id}`} className="no-underline text-inherit hover:text-[var(--primary-color)]">{paper.title}</Link>
       </h3>
-      <div className="card-meta-content">
-        <div className="card-meta-top">
-          <p className="authors">Authors: {authors}</p>
+      <div className="flex flex-col flex-grow justify-start">
+        <div className="mb-2.5">
+          <p className="text-[0.87em] text-[var(--text-muted-color)] m-0 mb-1.5 leading-[1.5] font-normal whitespace-nowrap overflow-hidden text-ellipsis">Authors: {authors}</p>
         </div>
-        <div className="card-meta-bottom">
-          <p className="date">Date: {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}</p>
+        <div className="mb-3.5">
+          <p className="text-[0.87em] text-[var(--text-muted-color)] m-0 mb-1.5 leading-[1.5] font-medium">Date: {paper.publicationDate ? new Date(paper.publicationDate).toLocaleDateString() : 'N/A'}</p>
           <StatusBadge paper={paper} />
         </div>
       </div>
-      <div className="card-actions">
-        <div className="vote-section">
+      <div className="flex justify-between items-center mt-auto pt-2.5 border-t border-[var(--border-color)] max-[680px]:flex-col max-[680px]:items-start max-[680px]:gap-2.5">
+        <div className="flex items-center gap-2 relative">
            <button
-             className={`vote-button ${paper.currentUserVote === 'up' ? 'active' : ''}`}
+             className={`bg-none border-none p-1.5 cursor-pointer text-[var(--text-muted-color)] transition-[color,transform] duration-200 flex items-center justify-center disabled:cursor-not-allowed disabled:opacity-60 hover:text-[var(--primary-color)] focus:outline-none focus:shadow-none ${paper.currentUserVote === 'up' ? 'text-[var(--primary-color)]' : ''}`}
              onClick={handleVoteClick}
              disabled={isVoting}
              title={paper.currentUserVote === 'up' ? 'Remove vote' : 'Upvote'}
            >
              <ThumbsUpIcon filled={paper.currentUserVote === 'up'} />
            </button>
-           <span className="upvote-count">{paper.upvoteCount}</span>
-           {voteError && <span className="vote-error-tooltip">{voteError}</span>}
+           <span className="text-[0.9em] font-semibold text-[var(--text-color)] min-w-[20px] text-left">{paper.upvoteCount}</span>
+           {voteError && <span className="absolute bottom-[110%] left-1/2 -translate-x-1/2 bg-[var(--danger-color)] text-white px-2 py-1 rounded-sm text-[0.8em] whitespace-nowrap z-10 opacity-90">{voteError}</span>}
         </div>
-        <Link to={`/paper/${paper.id}`} className="details-link">
+        <Link to={`/paper/${paper.id}`} className="px-3 py-1.5 bg-[var(--primary-light-color)] text-[var(--primary-color)] no-underline rounded-lg text-[0.85em] font-medium text-center transition-[background-color,box-shadow,color] duration-200 border border-[var(--primary-color)] hover:bg-[var(--primary-color)] hover:text-[var(--text-on-primary)] hover:shadow-[0_2px_4px_rgba(0,0,0,0.1)] max-[680px]:self-stretch max-[680px]:text-center">
           View Details
         </Link>
       </div>

@@ -22,7 +22,6 @@ const Dashboard = lazy(() => import('@/pages/Dashboard'));
 const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
 const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
 const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
-import '@/App.css';
 
 // 2. Create a new instance of the QueryClient
 // This is done outside the component to prevent it from being recreated on every render.
@@ -78,9 +77,9 @@ function App() {
     <QueryClientProvider client={queryClient}>
       <ModalProvider>
         <AuthInitializer />
-          <div className="app-container">
+          <div className="flex flex-col min-h-screen w-full max-w-full box-border relative before:content-[''] before:fixed before:inset-0 before:w-full before:h-full before:pointer-events-none before:opacity-40 before:bg-[radial-gradient(var(--gradient-accent)_1px,transparent_1px),radial-gradient(var(--gradient-accent)_1px,transparent_1px)] before:bg-[length:40px_40px] before:bg-[0_0,20px_20px] before:z-[-1]">
             <GlobalHeader currentUser={currentUser} handleLogout={handleLogout} />
-            <main className="app-main">
+            <main className="flex-grow p-0 w-full box-border flex flex-col items-stretch justify-start relative overflow-y-auto overflow-x-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-[200px] before:bg-gradient-to-b before:from-[rgba(25,124,154,0.03)] before:to-transparent before:z-[-1] before:pointer-events-none">
               <ErrorBoundary>
                 <Suspense fallback={null}>
                 <Routes>
@@ -111,7 +110,7 @@ function App() {
             </main>          
             <LoginPromptModal />
 
-            <footer className="app-footer"> 
+            <footer className="bg-[rgba(241,243,245,0.8)] text-[var(--text-muted-color)] text-center py-4 text-sm border-t border-[var(--border-color-light)]"> 
             </footer>
           </div>
       </ModalProvider>

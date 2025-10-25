@@ -291,4 +291,163 @@ All colors MUST be HSL.
   @apply bg-gradient-to-br from-[hsl(var(--gradient-start))] to-[hsl(var(--gradient-end))] text-foreground min-h-screen;
     font-feature-settings: "rlig" 1, "calt" 1;
   }
+  
+  /* Custom scrollbar styling */
+  body::-webkit-scrollbar {
+    width: 12px;
+  }
+  body::-webkit-scrollbar-track {
+    background: #f1f3f5;
+  }
+  body::-webkit-scrollbar-thumb {
+    background-color: var(--primary-color, #197c9a);
+    border-radius: 20px;
+    border: 3px solid #f1f3f5;
+  }
+  body::-webkit-scrollbar-thumb:hover {
+    background-color: var(--primary-dark-color, #0f4c6e);
+  }
+}
+
+/* Status Badge Utilities - Shared across multiple components */
+@layer components {
+  .status {
+    @apply inline-flex items-center gap-1.5 px-2.5 py-1 rounded-lg text-[0.8em] font-medium ml-2.5 border border-transparent whitespace-nowrap overflow-hidden align-middle;
+  }
+
+  .status-symbol {
+    @apply text-[0.9em] flex-shrink-0;
+  }
+
+  .status-text {
+    @apply overflow-hidden text-ellipsis;
+  }
+
+  /* Status color variants */
+  .status-default,
+  .status-needs-code,
+  .status-unknown {
+    @apply bg-[#f8f9fa] text-[#6c757d] border-[#dee2e6];
+  }
+
+  .status-not-started {
+    @apply bg-[#e9ecef] text-[#495057] border-[#ced4da];
+  }
+
+  .status-started {
+    @apply bg-[#d1ecf1] text-[#0c5460] border-[#bee5eb];
+  }
+
+  .status-waiting-author {
+    @apply bg-[#fff3cd] text-[#856404] border-[#ffeeba];
+  }
+
+  .status-in-progress {
+    @apply bg-[#e7f3ff] text-[#0056b3] border-[#b8daff];
+  }
+
+  .status-completed {
+    @apply bg-[#e6f9f0] text-[#198754] border-[#a3e9c1];
+  }
+
+  .status-non-implementable {
+    @apply bg-[#fff5f5] text-[#c82333] border-[#f5c6cb] font-semibold;
+  }
+
+  .status-official-code {
+    @apply bg-[#c8e6c9] text-[#2e7d32];
+  }
+
+  .status-not-started-disputed {
+    @apply bg-[#fff59d] text-[#f57f17] border-[#f57f17];
+  }
+}
+/* CSS Variables from App.css */
+:root {
+  /* Primary Palette */
+  --primary-color: #197c9a;
+  --primary-dark-color: #0f4c6e;
+  --primary-accent-color: #3ab0ff;
+  --primary-hover-color: #13687E;
+  --primary-light-color: #e8f7fa;
+  --primary-rgb: 25, 124, 154;
+
+  /* Secondary Palette */
+  --secondary-dark-color: #5a6268;
+  --secondary-color: #6c757d;
+  --secondary-light-color: #e9ecef;
+  --secondary-accent-color: #adb5bd;
+  --secondary-rgb: 108, 117, 125;
+  --secondary-accent-rgb: 173, 181, 189;
+  
+  /* Gradient Colors */
+  --gradient-start: #f9fdfe;
+  --gradient-middle: #f5fbfd;
+  --gradient-end: #f0f9fa;
+  --gradient-accent: rgba(var(--primary-rgb), 0.03);
+
+  /* Neutrals */
+  --background-color: #fdfdfe;
+  --card-background-color: #ffffff;
+  --header-footer-bg: #ffffff;
+  --border-color: #e9ecef;
+  --border-color-light: #f8f9fa;
+  --light-gray-bg: #f1f3f5;
+  --dark-color: #343a40;
+  
+  /* Text Colors */
+  --text-color: #212529;
+  --text-muted-color: #6c757d;
+  --text-heading-color: #1a3a3a;
+  --text-on-primary: #ffffff;
+  --text-on-dark: #ffffff;
+  --text-on-secondary: #ffffff;
+
+  /* Status Colors */
+  --success-color: #28a745;
+  --success-light-color: #eafaf1;
+  --success-dark-color: #1f7a3b;
+  --warning-color: #ffc107;
+  --warning-light-color: #fffbeb;
+  --warning-text-color: #5d4a00;
+  --warning-dark-color: #b78100;
+  --info-color: #17a2b8;
+  --info-light-color: #e7f6f8;
+  --info-text-color: #0c5460;
+  --info-dark-color: #117a8b;
+  --danger-color: #dc3545;
+  --danger-light-color: #f8d7da;
+  --danger-text-color: #721c24;
+  --danger-dark-color: #c62828;
+  --skipped-color: #adb5bd;
+  --skipped-light-color: #f8f9fa;
+
+  /* Additional Colors */
+  --card-alt-background-color: #fafbfc;
+  --background-alt-color: #f8f9fa;
+  --background-hover-light: rgba(var(--primary-rgb), 0.05);
+  --primary-background-medium: #d1eaff;
+  --button-secondary-bg: #f8f9fa;
+  --button-secondary-text: var(--text-color);
+  --button-secondary-hover-bg: #e9ecef;
+  --grey-color: #ccc;
+  --grey-light-color: #f0f0f0;
+  --grey-dark-color: #555;
+
+  /* Shadows & Radii */
+  --box-shadow-sm: 0 2px 4px rgba(0,0,0,0.05);
+  --box-shadow-md: 0 5px 10px rgba(0,0,0,0.07);
+  --border-radius-sm: 4px;
+  --border-radius-md: 8px;
+  --border-radius-lg: 12px;
+
+  --content-max-width: 1400px;
+  --accent-color: #3ab0ff;
+}
+
+/* Gradient animation */
+@keyframes gradientShift {
+  0% { background-position: 0% 50%; }
+  50% { background-position: 100% 50%; }
+  100% { background-position: 0% 50%; }
 }

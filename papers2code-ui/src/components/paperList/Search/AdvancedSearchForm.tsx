@@ -2,7 +2,6 @@ import React from 'react';
 import DatePicker from 'react-datepicker';
 import 'react-datepicker/dist/react-datepicker.css';
 import { AdvancedPaperFilters } from '../../../common/services/api';
-import './AdvancedSearchForm.css';
 
 
 interface AdvancedSearchFormProps {
@@ -83,11 +82,11 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
 
 
   return (
-    <div className="advanced-search-form">
+    <div className="bg-[var(--card-background-color,#ffffff)] border border-[var(--border-color)] rounded-lg p-5 mt-4 mb-6 shadow-[0_2px_5px_rgba(0,0,0,0.05)] overflow-visible text-[var(--text-color,#212529)]">
       <h4>Advanced Search</h4>
-      <div className="form-grid">
+      <div className="flex flex-wrap gap-5 my-8 mb-5 items-start justify-start overflow-visible">
         {/* Date Range */}
-        <div className="form-group">
+        <div className="flex flex-col flex-1 min-w-[180px] overflow-visible">
           <label htmlFor="startDate">Published After:</label>
           <AnyDatePicker
             selected={parseDateString(filters.startDate)}
@@ -99,7 +98,7 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
             {...datePickerProps}
           />
         </div>
-        <div className="form-group">
+        <div className="flex flex-col flex-1 min-w-[180px] overflow-visible">
           <label htmlFor="endDate">Published Before:</label>
           <AnyDatePicker
             selected={parseDateString(filters.endDate)}
@@ -115,7 +114,7 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
 
         {/* Author Search */}
         {/* ... author input remains the same ... */}
-         <div className="form-group"> {/* No longer needs form-group-full-width */}
+         <div className="flex flex-col flex-1 min-w-[180px] overflow-visible"> {/* No longer needs form-group-full-width */}
           <label htmlFor="searchAuthors">Authors:</label>
           <input
             type="text"
@@ -124,14 +123,14 @@ const AdvancedSearchForm: React.FC<AdvancedSearchFormProps> = ({
             placeholder="e.g., Hinton, LeCun"
             value={filters.searchAuthors || ''}
             onChange={handleInputChange}
-            className="form-control"
+            className="px-3 py-2 text-[0.95em] text-left font-[inherit] text-[var(--text-color,#212529)] bg-[var(--input-background,#fff)] border border-[var(--border-color)] rounded transition-[border-color,box-shadow] duration-200 w-full box-border overflow-visible focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
           />
         </div>
       </div>
 
       {/* Action Buttons */}
       {/* ... buttons remain the same ... */}
-      <div className="form-actions">
+      <div className="flex gap-2.5 justify-end flex-wrap mt-2.5">
         <button type="button" onClick={onApply} className="btn btn-primary">
           Apply Filters
         </button>

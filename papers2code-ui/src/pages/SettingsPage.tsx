@@ -13,7 +13,6 @@ import {
   type NormalizedUrlResult
 } from '../common/utils/urlNormalization';
 import ConfirmationModal from '../common/components/ConfirmationModal';
-import './SettingsPage.css';
 
 interface UserProfileFormData {
   name: string;
@@ -229,8 +228,8 @@ const SettingsPage: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="settings-page">
-        <div className="settings-container">
+      <div className="min-h-[calc(100vh-120px)] w-full relative overflow-x-hidden before:content-[''] before:fixed before:inset-0 before:w-full before:h-full before:pointer-events-none before:opacity-30 before:bg-[radial-gradient(var(--gradient-accent)_1px,transparent_1px),radial-gradient(var(--gradient-accent)_1px,transparent_1px)] before:bg-[length:40px_40px] before:bg-[0_0,20px_20px] before:z-[-1] after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-[200px] after:bg-gradient-to-b after:from-[rgba(25,124,154,0.03)] after:to-[rgba(25,124,154,0)] after:z-[-1] after:pointer-events-none">
+        <div className="max-w-[var(--content-max-width)] mx-auto px-9 py-10 w-full box-border">
           <div className="loading-state">
             <CircularProgress size={40} className="loading-spinner" />
             <Typography variant="body1" className="loading-text">
@@ -244,9 +243,9 @@ const SettingsPage: React.FC = () => {
 
   if (!profileData) {
     return (
-      <div className="settings-page">
-        <div className="settings-container">
-          <div className="settings-alert settings-alert-error">
+      <div className="min-h-[calc(100vh-120px)] w-full relative overflow-x-hidden before:content-[''] before:fixed before:inset-0 before:w-full before:h-full before:pointer-events-none before:opacity-30 before:bg-[radial-gradient(var(--gradient-accent)_1px,transparent_1px),radial-gradient(var(--gradient-accent)_1px,transparent_1px)] before:bg-[length:40px_40px] before:bg-[0_0,20px_20px] before:z-[-1] after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-[200px] after:bg-gradient-to-b after:from-[rgba(25,124,154,0.03)] after:to-[rgba(25,124,154,0)] after:z-[-1] after:pointer-events-none">
+        <div className="max-w-[var(--content-max-width)] mx-auto px-9 py-10 w-full box-border">
+          <div className="px-4 py-3 mb-5 bg-[var(--danger-light-color)] border border-[var(--danger-color)] rounded-lg text-[var(--danger-text-color)] text-sm">
             You must be logged in to access settings.
           </div>
         </div>
@@ -257,10 +256,10 @@ const SettingsPage: React.FC = () => {
   const currentUser = profileData.userDetails;
 
   return (
-    <div className="settings-page">
-      <div className="settings-container">
+    <div className="min-h-[calc(100vh-120px)] w-full relative overflow-x-hidden before:content-[''] before:fixed before:inset-0 before:w-full before:h-full before:pointer-events-none before:opacity-30 before:bg-[radial-gradient(var(--gradient-accent)_1px,transparent_1px),radial-gradient(var(--gradient-accent)_1px,transparent_1px)] before:bg-[length:40px_40px] before:bg-[0_0,20px_20px] before:z-[-1] after:content-[''] after:absolute after:top-0 after:left-0 after:w-full after:h-[200px] after:bg-gradient-to-b after:from-[rgba(25,124,154,0.03)] after:to-[rgba(25,124,154,0)] after:z-[-1] after:pointer-events-none">
+      <div className="max-w-[var(--content-max-width)] mx-auto px-9 py-10 w-full box-border">
         {/* Page Header */}
-        <div className="settings-header">
+        <div className="mb-10 text-left">
           <Typography variant="h4" component="h1" className="settings-title">
             Settings
           </Typography>
@@ -270,7 +269,7 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* Profile Information Section */}
-        <div className="settings-section-content"> 
+        <div className="space-y-6"> 
           <div className="settings-section-header">
             <Typography variant="h6" component="h2" className="settings-section-title">
               Profile Information
@@ -302,7 +301,7 @@ const SettingsPage: React.FC = () => {
           </div>
 
           {/* Editable profile form */}
-          <form onSubmit={handleSaveProfile} className="profile-form">
+          <form onSubmit={handleSaveProfile} className="space-y-6">
             <div className="form-grid">
               <div className="form-field">
                 <TextField
@@ -313,7 +312,7 @@ const SettingsPage: React.FC = () => {
                   helperText="This will be shown instead of your GitHub username where applicable"
                   fullWidth
                   variant="outlined"
-                  className="settings-input"
+                  className="w-full px-4 py-3 text-base font-[inherit] text-[var(--text-color)] bg-[var(--card-background-color)] border border-[var(--border-color)] rounded-lg box-border transition-[border-color,box-shadow] duration-200 placeholder:text-[var(--text-muted-color)] placeholder:opacity-70 focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
                 />
               </div>
               
@@ -328,7 +327,7 @@ const SettingsPage: React.FC = () => {
                   helperText="A short description about yourself and your interests"
                   fullWidth
                   variant="outlined"
-                  className="settings-input"
+                  className="w-full px-4 py-3 text-base font-[inherit] text-[var(--text-color)] bg-[var(--card-background-color)] border border-[var(--border-color)] rounded-lg box-border transition-[border-color,box-shadow] duration-200 placeholder:text-[var(--text-muted-color)] placeholder:opacity-70 focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
                 />
               </div>
               
@@ -345,7 +344,7 @@ const SettingsPage: React.FC = () => {
                   error={fieldValidation.websiteUrl?.isValid === false}
                   fullWidth
                   variant="outlined"
-                  className="settings-input"
+                  className="w-full px-4 py-3 text-base font-[inherit] text-[var(--text-color)] bg-[var(--card-background-color)] border border-[var(--border-color)] rounded-lg box-border transition-[border-color,box-shadow] duration-200 placeholder:text-[var(--text-muted-color)] placeholder:opacity-70 focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
                 />
               </div>
               
@@ -362,7 +361,7 @@ const SettingsPage: React.FC = () => {
                   error={fieldValidation.twitterProfileUrl?.isValid === false}
                   fullWidth
                   variant="outlined"
-                  className="settings-input"
+                  className="w-full px-4 py-3 text-base font-[inherit] text-[var(--text-color)] bg-[var(--card-background-color)] border border-[var(--border-color)] rounded-lg box-border transition-[border-color,box-shadow] duration-200 placeholder:text-[var(--text-muted-color)] placeholder:opacity-70 focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
                 />
               </div>
               
@@ -379,7 +378,7 @@ const SettingsPage: React.FC = () => {
                   error={fieldValidation.linkedinProfileUrl?.isValid === false}
                   fullWidth
                   variant="outlined"
-                  className="settings-input"
+                  className="w-full px-4 py-3 text-base font-[inherit] text-[var(--text-color)] bg-[var(--card-background-color)] border border-[var(--border-color)] rounded-lg box-border transition-[border-color,box-shadow] duration-200 placeholder:text-[var(--text-muted-color)] placeholder:opacity-70 focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
                 />
               </div>
               
@@ -396,7 +395,7 @@ const SettingsPage: React.FC = () => {
                   error={fieldValidation.blueskyUsername?.isValid === false}
                   fullWidth
                   variant="outlined"
-                  className="settings-input"
+                  className="w-full px-4 py-3 text-base font-[inherit] text-[var(--text-color)] bg-[var(--card-background-color)] border border-[var(--border-color)] rounded-lg box-border transition-[border-color,box-shadow] duration-200 placeholder:text-[var(--text-muted-color)] placeholder:opacity-70 focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
                 />
               </div>
               
@@ -413,20 +412,20 @@ const SettingsPage: React.FC = () => {
                   error={fieldValidation.huggingfaceUsername?.isValid === false}
                   fullWidth
                   variant="outlined"
-                  className="settings-input"
+                  className="w-full px-4 py-3 text-base font-[inherit] text-[var(--text-color)] bg-[var(--card-background-color)] border border-[var(--border-color)] rounded-lg box-border transition-[border-color,box-shadow] duration-200 placeholder:text-[var(--text-muted-color)] placeholder:opacity-70 focus:outline-none focus:border-[var(--primary-color)] focus:shadow-[0_0_0_3px_rgba(var(--primary-rgb),0.2)]"
                 />
               </div>
             </div>
 
             {/* Alert Messages */}
             {error && (
-              <div className="settings-alert settings-alert-error">
+              <div className="px-4 py-3 mb-5 bg-[var(--danger-light-color)] border border-[var(--danger-color)] rounded-lg text-[var(--danger-text-color)] text-sm">
                 {error}
               </div>
             )}
 
             {successMessage && (
-              <div className="settings-alert settings-alert-success">
+              <div className="px-4 py-3 mb-5 bg-[var(--success-light-color)] border border-[var(--success-color)] rounded-lg text-[var(--success-dark-color)] text-sm">
                 {successMessage}
               </div>
             )}
@@ -447,7 +446,7 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* Notification Preferences Section */}
-        <div className="settings-section">
+        <div className="bg-[var(--card-background-color)] rounded-xl shadow-[var(--box-shadow-md)] border border-[var(--border-color)] p-8 mb-8">
           <div className="settings-section-header">
             <Typography variant="h6" component="h2" className="settings-section-title">
               Notification Preferences
@@ -462,7 +461,7 @@ const SettingsPage: React.FC = () => {
         </div>
 
         {/* Account Actions Section */}
-        <div className="settings-section danger-zone">
+        <div className="bg-[var(--card-background-color)] rounded-xl shadow-[var(--box-shadow-md)] border-2 border-[var(--danger-color)] p-8 mb-8">
           <div className="settings-section-header">
             <Typography variant="h6" component="h2" className="settings-section-title danger-title">
               Account Actions

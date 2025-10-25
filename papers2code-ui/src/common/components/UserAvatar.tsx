@@ -1,6 +1,5 @@
 import React, { useState, useEffect } from 'react';
 import { User } from 'lucide-react';
-import './UserAvatar.css'; // We'll create this for specific styles
 
 interface UserAvatarProps {
     avatarUrl: string | null | undefined;
@@ -30,7 +29,7 @@ const UserAvatar: React.FC<UserAvatarProps> = ({ avatarUrl, username, className,
             />
         );
     }
-    return <User className={`${className} ${iconClassName || 'default-avatar-icon'}`} />;
+    return <User className={`${className} ${iconClassName || 'text-gray-300'}`} />;
 };
 
 export default UserAvatar;

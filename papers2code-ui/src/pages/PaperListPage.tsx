@@ -13,7 +13,6 @@ import ModernPaperCard from '../components/paperList/ModernPaperCard';
 import ModernPaginationControls from '../components/paperList/ModernPaginationControls';
 import PaperListSkeleton from '../components/paperList/PaperListSkeleton';
 import PaginationSkeleton from '../components/paperList/PaginationSkeleton';
-import './PaperListPage.css';
 
 interface PaperListPageProps {
   authLoading: boolean;

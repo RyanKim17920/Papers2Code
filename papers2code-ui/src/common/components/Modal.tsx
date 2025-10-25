@@ -1,6 +1,5 @@
 import React, { useEffect } from 'react';
 import ReactDOM from 'react-dom';
-import './ConfirmationModal.css'; // Reuse the same CSS since they have similar structure
 
 interface ModalProps {
     isOpen: boolean;
