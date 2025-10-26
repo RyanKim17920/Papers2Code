@@ -224,3 +224,17 @@ dist-ssr
 *.sw?
 
 *.parquet
+
+# TypeScript build info files
+*.tsbuildinfo
+
+# Temporary files
+*.tmp
+*.temp
+.*.swp
+.*.swo
+*~
+
+# Test output
+test-results/
+playwright-report/
