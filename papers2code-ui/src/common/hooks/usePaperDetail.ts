@@ -83,7 +83,7 @@ export function usePaperDetail(paperId: string | undefined, currentUser: UserPro
             setActionUsers(fetchedActionUsers);
 
         } catch (err) {
-            console.error(`Failed to load data for paper ${paperId}:`, err);
+            console.error("Failed to load data for paper %s:", paperId, err);
             if (err instanceof Error && err.message.includes('action users')) {
                 setActionUsersError(err.message);
             } else {
