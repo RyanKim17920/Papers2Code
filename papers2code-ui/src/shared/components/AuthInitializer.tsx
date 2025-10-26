@@ -1,5 +1,5 @@
 import { useEffect } from 'react';
-import { useModal } from '../context/ModalContext';
+import { useModal } from '@/shared/contexts/ModalContext';
 import { setLoginPromptHandler } from '../services/api';
 
 const AuthInitializer = () => {

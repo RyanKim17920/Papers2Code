@@ -1,6 +1,6 @@
 import React from 'react';
 import { redirectToGitHubLogin } from '../services/auth';
-import { useModal } from '../context/ModalContext';
+import { useModal } from '@/shared/contexts/ModalContext';
 
 const LoginPromptModal: React.FC = () => {
     // MODIFIED: Use correct properties from useModal hook

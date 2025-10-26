@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ProgressStatus, ImplementationProgress, ProgressUpdateRequest } from '../../../../common/types/implementation';
-import type { UserProfile } from '../../../../common/types/user';
-import ConfirmationModal from '../../../../common/components/ConfirmationModal';
-import Modal from '../../../../common/components/Modal';
-import { updateImplementationProgressInApi } from '../../../../common/services/api';
+import { ProgressStatus, ImplementationProgress, ProgressUpdateRequest } from '@/shared/types/implementation';
+import type { UserProfile } from '@/shared/types/user';
+import ConfirmationModal from '@/shared/components/ConfirmationModal';
+import Modal from '@/shared/components/Modal';
+import { updateImplementationProgressInApi } from '@/shared/services/api';
 
 interface EmailStatusManagerProps {
   progress: ImplementationProgress;

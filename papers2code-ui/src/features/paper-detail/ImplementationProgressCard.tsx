@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
 import { Code, GitBranch, ExternalLink, Clock } from 'lucide-react';
-import { Card, CardContent } from '../ui/card';
-import { Badge } from '../ui/badge';
-import { Button } from '../ui/button';
-import { ImplementationProgressDialog } from './Tabs/ImplementationProgress/ImplementationProgressDialog';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { ImplementationProgressDialog } from '@/features/paper-detail/Tabs/ImplementationProgress/ImplementationProgressDialog';
 import { useAuthorOutreachEmail } from '@/shared/hooks/useAuthorOutreachEmail';
 import type { ImplementationProgress, UpdateEventType } from '@/shared/types/implementation';
 import type { UserProfile } from '@/shared/types/user';

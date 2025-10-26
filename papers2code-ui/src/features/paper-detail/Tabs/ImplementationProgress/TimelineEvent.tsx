@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { ProgressStatus } from '../../../../common/types/implementation';
+import { ProgressStatus } from '@/shared/types/implementation';
 import { LucideIcon } from 'lucide-react';
 
 export interface TimelineEventData {

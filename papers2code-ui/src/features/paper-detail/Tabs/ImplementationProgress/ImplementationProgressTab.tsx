@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { ImplementationProgress, ProgressStatus, UpdateEventType } from '../../../../common/types/implementation';
-import type { UserProfile } from '../../../../common/types/user';
-import { useAuthorOutreachEmail } from '../../../../common/hooks/useAuthorOutreachEmail';
+import { ImplementationProgress, ProgressStatus, UpdateEventType } from '@/shared/types/implementation';
+import type { UserProfile } from '@/shared/types/user';
+import { useAuthorOutreachEmail } from '@/shared/hooks/useAuthorOutreachEmail';
 import { ImplementationProgressDialog } from './ImplementationProgressDialog';
 
 interface ImplementationProgressProps {

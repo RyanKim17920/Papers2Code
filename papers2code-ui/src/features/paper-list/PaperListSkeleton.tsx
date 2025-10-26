@@ -1,7 +1,7 @@
 import React from 'react';
-import { Card, CardContent } from '../ui/card';
-import { Skeleton } from '../ui/skeleton';
-import { Separator } from '../ui/separator';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Skeleton } from '@/shared/ui/skeleton';
+import { Separator } from '@/shared/ui/separator';
 
 interface PaperListSkeletonProps {
   count?: number;

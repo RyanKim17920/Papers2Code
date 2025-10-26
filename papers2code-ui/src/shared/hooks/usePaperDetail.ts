@@ -17,7 +17,7 @@ import {
     updateImplementationProgressInApi // Placeholder for the new API function
 } from '../services/api';
 
-import { useModal } from '../context/ModalContext';
+import { useModal } from '@/shared/contexts/ModalContext';
 
 export type ActiveTab = 'paperInfo' | 'details' | 'upvotes' | 'implementability' | 'admin' | 'implementationProgress';
 

@@ -1,5 +1,5 @@
 import React, { useMemo } from 'react';
-import { ImplementationProgress, UpdateEventType, ProgressStatus } from '../../../../common/types/implementation';
+import { ImplementationProgress, UpdateEventType, ProgressStatus } from '@/shared/types/implementation';
 import { TimelineEvent, TimelineEventData } from './TimelineEvent';
 import { FileText, Send, MessageCircle, CheckCircle, Code, AlertCircle, XCircle, Clock, GitBranch, Wrench, ShieldCheck } from 'lucide-react';
 

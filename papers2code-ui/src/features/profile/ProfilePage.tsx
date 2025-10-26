@@ -4,9 +4,9 @@ import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, Ext
 import { UserAvatar, LoadingSpinner } from '@/shared/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi, getUserProfileSettings } from '@/shared/services/api';
 import { Paper } from '@/shared/types/paper';
-import ModernPaperCard from '../components/paperList/ModernPaperCard';
+import ModernPaperCard from '@/features/paper-list/ModernPaperCard';
 import { formatJoinedDate, formatLastSeen } from '@/shared/utils/dateUtils';
-import { ProfileSettingsTab } from '../components/profile/ProfileSettingsTab';
+import { ProfileSettingsTab } from '@/features/profile/ProfileSettingsTab';
 import { getStatusColorClasses } from '@/shared/utils/statusUtils';
 
 type TabType = 'overview' | 'upvoted' | 'contributing' | 'settings';

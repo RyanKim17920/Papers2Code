@@ -1,5 +1,5 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { ImplementationProgress } from '../../../../common/types/implementation';
+import { ImplementationProgress } from '@/shared/types/implementation';
 
 interface GitHubRepoManagerProps {
   progress: ImplementationProgress;

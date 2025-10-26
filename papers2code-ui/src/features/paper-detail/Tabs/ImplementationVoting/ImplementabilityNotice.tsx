@@ -1,6 +1,6 @@
 import React from 'react';
 import { ThumbsUp, ThumbsDown } from 'lucide-react';
-import { Paper } from '../../../../common/types/paper';
+import { Paper } from '@/shared/types/paper';
 
 interface ImplementabilityNoticeProps {
     paper: Paper;

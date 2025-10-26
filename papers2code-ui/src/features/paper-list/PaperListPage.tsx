@@ -1,18 +1,18 @@
 import React, { useState, useEffect } from 'react';
 import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
-import { usePaperList, SortPreference } from '../common/hooks/usePaperList';
+import { usePaperList, SortPreference } from '@/shared/hooks/usePaperList';
 import { LoadingSpinner } from '@/shared/components';
-import { Button } from '../components/ui/button';
-import { Input } from '../components/ui/input';
-import { Label } from '../components/ui/label';
-import { Card, CardContent } from '../components/ui/card';
-import { Separator } from '../components/ui/separator';
-import { Badge } from '../components/ui/badge';
-import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '../components/ui/select';
-import ModernPaperCard from '../components/paperList/ModernPaperCard';
-import ModernPaginationControls from '../components/paperList/ModernPaginationControls';
-import PaperListSkeleton from '../components/paperList/PaperListSkeleton';
-import PaginationSkeleton from '../components/paperList/PaginationSkeleton';
+import { Button } from '@/shared/ui/button';
+import { Input } from '@/shared/ui/input';
+import { Label } from '@/shared/ui/label';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Separator } from '@/shared/ui/separator';
+import { Badge } from '@/shared/ui/badge';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import ModernPaperCard from '@/features/paper-list/ModernPaperCard';
+import ModernPaginationControls from '@/features/paper-list/ModernPaginationControls';
+import PaperListSkeleton from '@/features/paper-list/PaperListSkeleton';
+import PaginationSkeleton from '@/features/paper-list/PaginationSkeleton';
 
 interface PaperListPageProps {
   authLoading: boolean;

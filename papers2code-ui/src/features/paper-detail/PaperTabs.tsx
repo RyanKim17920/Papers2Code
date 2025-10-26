@@ -1,6 +1,6 @@
 import React from 'react';
 import { Paper } from '@/shared/types/paper';
-import { cn } from '../../lib/utils';
+import { cn } from '@/shared/utils/utils';
 
 interface PaperTabsProps {
     activeTab: string;

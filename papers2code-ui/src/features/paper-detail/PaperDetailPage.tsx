@@ -2,27 +2,27 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
 import { ArrowLeft, Rocket, Users, ExternalLink, FileText, Code, Vote, Settings, Github, CheckCircle2 } from 'lucide-react';
 
-import { usePaperDetail } from '../common/hooks/usePaperDetail';
-import { useActivityTracking } from '../common/hooks/useActivityTracking';
-import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '../common/hooks/usePaperDetail';
+import { usePaperDetail } from '@/shared/hooks/usePaperDetail';
+import { useActivityTracking } from '@/shared/hooks/useActivityTracking';
+import type { ActiveTab as ActiveTabType, AdminSettableImplementabilityStatus } from '@/shared/hooks/usePaperDetail';
 import type { UserProfile } from '@/shared/types/user';
 import type { ImplementationProgress } from '@/shared/types/implementation';
 
 import { LoadingSpinner } from '@/shared/components';
 import ConfirmationModal from '@/shared/components/ConfirmationModal';
-import { Card, CardContent } from '../components/ui/card';
-import { Button } from '../components/ui/button';
-import { Badge } from '../components/ui/badge';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
 
-import PaperMetadata from '../components/paperDetail/Tabs/Paper/PaperMetadata';
+import PaperMetadata from '@/features/paper-detail/Tabs/Paper/PaperMetadata';
 
-import PaperTabs from '../components/paperDetail/PaperTabs';
-import ImplementabilityNotice from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityNotice';
+import PaperTabs from '@/features/paper-detail/PaperTabs';
+import ImplementabilityNotice from '@/features/paper-detail/Tabs/ImplementationVoting/ImplementabilityNotice';
 
-import { ImplementabilityVotingTab } from '../components/paperDetail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
-import { OwnerActions } from '../components/paperDetail/Tabs/Admin/OwnerActions';
-import { ImplementationProgressTab } from '../components/paperDetail/Tabs/ImplementationProgress/ImplementationProgressTab';
-import ImplementationProgressCard from '../components/paperDetail/ImplementationProgressCard';
+import { ImplementabilityVotingTab } from '@/features/paper-detail/Tabs/ImplementationVoting/ImplementabilityVotingTab';
+import { OwnerActions } from '@/features/paper-detail/Tabs/Admin/OwnerActions';
+import { ImplementationProgressTab } from '@/features/paper-detail/Tabs/ImplementationProgress/ImplementationProgressTab';
+import ImplementationProgressCard from '@/features/paper-detail/ImplementationProgressCard';
 import ErrorPage from '@/features/auth/ErrorPage';
 
 interface PaperDetailPageProps {

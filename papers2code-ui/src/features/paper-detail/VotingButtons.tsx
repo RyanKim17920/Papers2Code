@@ -4,7 +4,7 @@ import { Paper, ImplementabilityAction, AdminSettableImplementabilityStatus, Sta
 import { voteOnPaperInApi, flagImplementabilityInApi, setImplementabilityInApi, CsrfError, AuthenticationError } from '@/shared/services/api';
 import type { UserProfile } from '@/shared/types/user';
 import ConfirmationModal from '@/shared/components/ConfirmationModal';
-import { useModal } from '@/shared/context/ModalContext';
+import { useModal } from '@/shared/contexts/ModalContext';
 
 export const FaArrowUp = () => <ArrowUp className="h-4 w-4" />;
 export const FaThumbsUp = () => <ThumbsUp className="h-4 w-4" />;

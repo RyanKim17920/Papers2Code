@@ -1,6 +1,6 @@
 import React, { Component, ErrorInfo, ReactNode } from 'react';
 import { logger } from '../utils/logger';
-import ErrorPage from '../../pages/ErrorPage';
+import ErrorPage from '@/features/auth/ErrorPage';
 
 interface Props {
   children: ReactNode;

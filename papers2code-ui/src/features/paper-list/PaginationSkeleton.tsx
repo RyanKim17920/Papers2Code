@@ -1,5 +1,5 @@
 import React from 'react';
-import { Skeleton } from '../ui/skeleton';
+import { Skeleton } from '@/shared/ui/skeleton';
 
 const PaginationSkeleton: React.FC = () => {
   return (

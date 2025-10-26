@@ -1,9 +1,9 @@
 import React, { useState } from 'react';
-import { ImplementationProgress } from '../../../../common/types/implementation';
-import type { UserProfile } from '../../../../common/types/user';
-import Modal from '../../../../common/components/Modal';
+import { ImplementationProgress } from '@/shared/types/implementation';
+import type { UserProfile } from '@/shared/types/user';
+import Modal from '@/shared/components/Modal';
 import { UserDisplayList } from '../../UserDisplayList';
-import { useContributorProfiles } from '../../../../common/hooks/useContributorProfiles';
+import { useContributorProfiles } from '@/shared/hooks/useContributorProfiles';
 
 interface ContributorsDisplayProps {
   progress: ImplementationProgress;

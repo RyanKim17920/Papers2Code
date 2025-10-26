@@ -1,16 +1,16 @@
 import React from 'react';
 import { Info, ThumbsUp, ThumbsDown, Vote } from 'lucide-react';
-import { Paper, ImplementabilityAction } from '../../../../common/types/paper';
-import type { UserProfile } from '../../../../common/types/user';
+import { Paper, ImplementabilityAction } from '@/shared/types/paper';
+import type { UserProfile } from '@/shared/types/user';
 import { VoteButton, RetractVoteButton, FaThumbsUp, FaThumbsDown } from '../../VotingButtons';
 import { UserDisplayList } from '../../UserDisplayList'; // Named import
-import type { PaperActionUsers } from '../../../../common/services/api'; // Add this line
+import type { PaperActionUsers } from '@/shared/services/api'; // Add this line
 import {
     Tooltip,
     TooltipContent,
     TooltipProvider,
     TooltipTrigger,
-} from '../../../ui/tooltip';
+} from '@/shared/ui/tooltip';
 
 
 interface ImplementabilityTabProps {

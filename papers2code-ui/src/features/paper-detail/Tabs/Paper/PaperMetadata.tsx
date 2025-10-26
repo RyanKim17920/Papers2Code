@@ -1,12 +1,12 @@
 import React from 'react';
-import { Paper } from '../../../../common/types/paper';
+import { Paper } from '@/shared/types/paper';
 import { StatusBadge } from '@/shared/components/StatusBadge';
-import { Button } from '../../../ui/button';
-import { Badge } from '../../../ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Badge } from '@/shared/ui/badge';
 import { Heart, Github, ExternalLink, Calendar, Users, FileText, Tag } from 'lucide-react';
 import { UpvotersPopover } from '../../UpvotersModal';
-import type { PaperActionUsers } from '../../../../common/services/api';
-import type { UserProfile } from '../../../../common/types/user';
+import type { PaperActionUsers } from '@/shared/services/api';
+import type { UserProfile } from '@/shared/types/user';
 interface PaperMetadataProps {
     paper: Paper;
     currentUser: UserProfile | null;

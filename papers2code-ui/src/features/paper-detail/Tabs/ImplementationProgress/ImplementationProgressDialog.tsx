@@ -1,18 +1,18 @@
 import React, { useEffect, useState } from 'react';
-import { ImplementationProgress, ProgressStatus, UpdateEventType } from '../../../../common/types/implementation';
-import type { UserProfile } from '../../../../common/types/user';
-import { Dialog, DialogContent, DialogHeader, DialogTitle } from '../../../ui/dialog';
-import { Badge } from '../../../ui/badge';
-import { Button } from '../../../ui/button';
-import { Card, CardContent } from '../../../ui/card';
+import { ImplementationProgress, ProgressStatus, UpdateEventType } from '@/shared/types/implementation';
+import type { UserProfile } from '@/shared/types/user';
+import { Dialog, DialogContent, DialogHeader, DialogTitle } from '@/shared/ui/dialog';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { Card, CardContent } from '@/shared/ui/card';
 import { HorizontalTimeline } from './HorizontalTimeline';
 import { GitBranch, Users, Mail, ExternalLink, Clock, CheckCircle, MessageCircle, Code } from 'lucide-react';
-import { getStatusColorClasses } from '../../../../common/utils/statusUtils';
-import { useContributorProfiles } from '../../../../common/hooks/useContributorProfiles';
+import { getStatusColorClasses } from '@/shared/utils/statusUtils';
+import { useContributorProfiles } from '@/shared/hooks/useContributorProfiles';
 import { UserDisplayList } from '../../UserDisplayList';
-import Modal from '../../../../common/components/Modal';
-import { updateImplementationProgressInApi, createGitHubRepositoryForPaper } from '../../../../common/services/api';
-import ConfirmationModal from '../../../../common/components/ConfirmationModal';
+import Modal from '@/shared/components/Modal';
+import { updateImplementationProgressInApi, createGitHubRepositoryForPaper } from '@/shared/services/api';
+import ConfirmationModal from '@/shared/components/ConfirmationModal';
 
 interface ImplementationProgressDialogProps {
   isOpen: boolean;

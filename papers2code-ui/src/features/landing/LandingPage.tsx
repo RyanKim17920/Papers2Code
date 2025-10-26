@@ -1,9 +1,9 @@
 import { useState, FC, useEffect } from 'react';
 import { motion, useScroll } from 'framer-motion';
 import { useInView } from 'react-intersection-observer';
-import HeroHeader from '../components/landing/HeroHeader';
-import { HeroAnimation } from '../components/landing/HeroAnimation'; 
-import CtaSection from '../components/landing/CtaSection';
+import HeroHeader from '@/features/landing/HeroHeader';
+import { HeroAnimation } from '@/features/landing/HeroAnimation'; 
+import CtaSection from '@/features/landing/CtaSection';
 
 // The text content for each step of the animation
 const storyContent = [

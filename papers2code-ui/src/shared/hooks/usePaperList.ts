@@ -3,7 +3,7 @@ import { useSearchParams } from 'react-router-dom';
 import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters, AuthenticationError, CsrfError } from '../services/api';
 import { Paper } from '../types/paper';
 import useDebounce from './useDebounce';
-import { useModal } from '../context/ModalContext';
+import { useModal } from '@/shared/contexts/ModalContext';
 
 const DEBOUNCE_DELAY = 500;
 const ITEMS_PER_PAGE = 12;

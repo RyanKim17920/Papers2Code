@@ -1,5 +1,5 @@
 import React from 'react';
-import { Popover, PopoverContent, PopoverTrigger } from '../ui/popover';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { UserDisplayList } from './UserDisplayList';
 import type { PaperActionUsers } from '@/shared/services/api';
 

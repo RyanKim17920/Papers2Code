@@ -1,9 +1,9 @@
 import React, { useState, useEffect } from 'react';
 // Import the backend-compatible status type if available, or use string literals directly for comparison.
 // For now, we assume paper.implementabilityStatus is already correctly typed with backend values.
-import { Paper } from '../../../../common/types/paper';
-import { AdminSettableImplementabilityStatus } from '../../../../common/hooks/usePaperDetail';
-import type { UserProfile } from '../../../../common/types/user';
+import { Paper } from '@/shared/types/paper';
+import { AdminSettableImplementabilityStatus } from '@/shared/hooks/usePaperDetail';
+import type { UserProfile } from '@/shared/types/user';
 // import './OwnerActions.css'; // Assuming this will be fixed or is not critical for this change
 
 interface OwnerActionsProps {
