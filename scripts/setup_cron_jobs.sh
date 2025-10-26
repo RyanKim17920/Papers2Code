@@ -47,7 +47,7 @@ echo "Project root: $PROJECT_ROOT"
 echo "Python path: $PYTHON_PATH"
 
 # Email updater cron job
-EMAIL_SCRIPT="$PROJECT_ROOT/api/cron/email-updater.py"
+EMAIL_SCRIPT="$PROJECT_ROOT/scripts/cron/email-updater.py"
 POPULAR_SCRIPT="$PROJECT_ROOT/scripts/popular-papers.py"
 
 # Check if scripts exist

@@ -29,7 +29,7 @@ try:
     import subprocess
     
     # Test email updater script
-    result = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, '.'); exec(open('api/cron/email-updater.py').read())"], 
+    result = subprocess.run([sys.executable, "-c", "import sys; sys.path.insert(0, '.'); exec(open('scripts/cron/email-updater.py').read())"], 
                            capture_output=True, text=True, cwd=project_root, timeout=5)
     if result.returncode == 0 or "Starting email status update" in result.stdout:
         print("✓ Email updater script is syntactically correct")
@@ -48,9 +48,9 @@ try:
     print("✅ Scripts have been created and are syntactically correct")
     print("✅ Background task system is available")
     print("\n📋 Created files:")
-    print("  - api/cron/email-updater.py (email status updates)")
+    print("  - scripts/cron/email-updater.py (email status updates)")
     print("  - scripts/popular-papers.py (popular papers analytics)")
-    print("  - api/cron/test.py (test suite)")
+    print("  - scripts/cron/test.py (test suite)")
     print("  - scripts/setup_cron_jobs.sh (deployment helper)")
     print("  - Enhanced scripts/copy_prod_data_to_test.py")
     
