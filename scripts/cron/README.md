@@ -10,11 +10,11 @@ The cron job system handles periodic maintenance tasks like email status updates
 
 ### Core Scripts
 - **`email-updater.py`** - Updates email statuses for implementation progress records
-- **`../scripts/popular-papers.py`** - Calculates and caches popular papers analytics
+- **`../popular-papers.py`** - Calculates and caches popular papers analytics
 - **`test.py`** - Test suite for validating cron job functionality
 
 ### Deployment
-- **`../scripts/setup_cron_jobs.sh`** - Bash script to configure cron jobs for different environments
+- **`../setup_cron_jobs.sh`** - Bash script to configure cron jobs for different environments
 
 ## Email Updater (`email-updater.py`)
 
@@ -29,7 +29,7 @@ Updates email statuses from "Sent" to "No Response" for emails that were sent mo
 ### Usage
 ```bash
 # Manual execution
-python /path/to/api/cron/email-updater.py
+python /path/to/scripts/cron/email-updater.py
 
 # With environment variables
 ENV_TYPE=PROD MONGO_URI_PROD=mongodb://... python email-updater.py
@@ -86,7 +86,7 @@ Validates that all cron jobs can execute properly before deployment.
 
 ### Usage
 ```bash
-python /path/to/api/cron/test.py
+python /path/to/scripts/cron/test.py
 ```
 
 ### Tests
@@ -122,7 +122,7 @@ python /path/to/api/cron/test.py
    crontab -e
    
    # Add entries (example for production)
-   0 */6 * * * cd /path/to/papers2code && python api/cron/email-updater.py >> /var/log/papers2code/email-updater.log 2>&1
+   0 */6 * * * cd /path/to/papers2code && python scripts/cron/email-updater.py >> /var/log/papers2code/email-updater.log 2>&1
    0 */3 * * * cd /path/to/papers2code && python scripts/popular-papers.py >> /var/log/papers2code/popular-papers.log 2>&1
    ```
 
@@ -153,7 +153,7 @@ tail -f /var/log/papers2code/email-updater.log
 tail -f /var/log/papers2code/popular-papers.log
 
 # Test manually
-python api/cron/test.py
+python scripts/cron/test.py
 ```
 
 ### Common Issues
