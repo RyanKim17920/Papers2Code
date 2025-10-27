@@ -459,6 +459,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                     onConfirm={confirmAndStartEffort}
                     title="Confirm Start Implementation Effort"
                     confirmText="Yes, Start Effort"
+                    confirmButtonClass="btn-primary"
                     isConfirming={isProcessingEffortAction} 
                 >
                     <p>Starting an implementation effort indicates this paper is considered implementable, you will work on it, and community implementability voting will be superseded.</p>

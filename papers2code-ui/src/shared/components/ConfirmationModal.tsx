@@ -98,12 +98,19 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                 }
             `}</style>
             <div 
-                className="fixed inset-0 w-full h-full bg-gradient-to-br from-[rgba(var(--primary-rgb,0,0,0),0.4)] to-[rgba(var(--primary-rgb,0,0,0),0.6)] backdrop-blur-[8px] z-[9999] animate-[modalBackdropFadeIn_0.2s_ease-out]" 
+                className="fixed inset-0 w-full h-full bg-gradient-to-br from-[rgba(var(--primary-rgb,0,0,0),0.4)] to-[rgba(var(--primary-rgb,0,0,0),0.6)] backdrop-blur-[8px] z-[9999]"
+                style={{
+                    animation: 'modalBackdropFadeIn 0.2s ease-out'
+                }}
                 onClick={handleBackdropClick}
                 onMouseDown={handleBackdropMouseDown}
             >
                 <div 
-                    className="bg-[var(--card-background-color,#ffffff)] p-8 rounded-xl shadow-[var(--box-shadow-md,0_5px_10px_rgba(0,0,0,0.07))] min-w-[320px] max-w-[520px] w-[calc(100%-40px)] max-h-[90vh] overflow-visible border border-[var(--border-color,rgba(0,0,0,0.1))] fixed top-1/2 left-1/2 -translate-x-1/2 -translate-y-1/2 animate-[modalContentSlideIn_0.3s_cubic-bezier(0.34,1.56,0.64,1)] max-[640px]:p-6 max-[640px]:rounded-lg max-[640px]:min-w-0 max-[640px]:w-full" 
+                    className="bg-[var(--card-background-color,#ffffff)] p-8 rounded-xl shadow-[var(--box-shadow-md,0_5px_10px_rgba(0,0,0,0.07))] min-w-[320px] max-w-[520px] w-[calc(100%-40px)] max-h-[90vh] overflow-visible border border-[var(--border-color,rgba(0,0,0,0.1))] fixed top-1/2 left-1/2 max-[640px]:p-6 max-[640px]:rounded-lg max-[640px]:min-w-0 max-[640px]:w-full"
+                    style={{
+                        transform: 'translate(-50%, -50%)',
+                        animation: 'modalContentSlideIn 0.3s cubic-bezier(0.34, 1.56, 0.64, 1)'
+                    }}
                     onClick={handleContentClick}
                     onMouseDown={handleContentClick}
                 >
@@ -123,9 +130,27 @@ const ConfirmationModal: React.FC<ConfirmationModalProps> = ({
                     <div className="flex justify-end gap-3 mt-auto pt-6 border-t-2 border-[var(--border-color-light,rgba(0,0,0,0.05))] max-[640px]:flex-col max-[640px]:gap-2">
                         <button
                             className={`min-w-[100px] px-6 py-3 rounded-lg font-semibold text-[0.95rem] transition-all duration-200 border-2 border-transparent cursor-pointer relative overflow-hidden hover:-translate-y-px hover:shadow-[var(--box-shadow-sm,0_2px_4px_rgba(0,0,0,0.05))] active:translate-y-0 disabled:opacity-60 disabled:cursor-not-allowed disabled:transform-none disabled:shadow-none before:content-[''] before:absolute before:inset-0 before:bg-gradient-to-br before:from-white/10 before:to-white/0 before:opacity-0 before:transition-opacity before:duration-200 hover:before:opacity-100 max-[640px]:w-full max-[640px]:min-w-0 ${confirmButtonClass}`}
+                            style={{
+                                background: `linear-gradient(135deg, var(--primary-color, #197c9a) 0%, var(--primary-dark-color, #0f4c6e) 100%)`,
+                                color: `var(--text-on-primary, #ffffff)`,
+                                borderColor: `var(--primary-color, #197c9a)`,
+                                boxShadow: `0 2px 4px rgba(var(--primary-rgb, 25, 124, 154), 0.2)`
+                            }}
                             onClick={(e) => { e.stopPropagation(); onConfirm(); }}
                             onMouseDown={(e) => e.stopPropagation()}
                             disabled={isConfirming}
+                            onMouseEnter={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background = `linear-gradient(135deg, var(--primary-dark-color, #0f4c6e) 0%, #0a3045 100%)`;
+                                (e.currentTarget as HTMLButtonElement).style.borderColor = `var(--primary-dark-color, #0f4c6e)`;
+                                (e.currentTarget as HTMLButtonElement).style.transform = `translateY(-1px)`;
+                                (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 4px 8px rgba(var(--primary-rgb, 25, 124, 154), 0.3)`;
+                            }}
+                            onMouseLeave={(e) => {
+                                (e.currentTarget as HTMLButtonElement).style.background = `linear-gradient(135deg, var(--primary-color, #197c9a) 0%, var(--primary-dark-color, #0f4c6e) 100%)`;
+                                (e.currentTarget as HTMLButtonElement).style.borderColor = `var(--primary-color, #197c9a)`;
+                                (e.currentTarget as HTMLButtonElement).style.transform = `translateY(0)`;
+                                (e.currentTarget as HTMLButtonElement).style.boxShadow = `0 2px 4px rgba(var(--primary-rgb, 25, 124, 154), 0.2)`;
+                            }}
                         >
                             {isConfirming ? 'Processing...' : confirmText}
                         </button>
