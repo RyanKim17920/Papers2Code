@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight, Tags } from 'lucide-react';
 import { usePaperList, SortPreference } from '@/shared/hooks/usePaperList';
 import { LoadingSpinner } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
@@ -9,6 +9,8 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { Separator } from '@/shared/ui/separator';
 import { Badge } from '@/shared/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { MultiSelect } from '@/shared/ui/multi-select';
+import { fetchTagsFromApi } from '@/shared/services/api';
 import ModernPaperCard from '@/features/paper-list/ModernPaperCard';
 import ModernPaginationControls from '@/features/paper-list/ModernPaginationControls';
 import PaperListSkeleton from '@/features/paper-list/PaperListSkeleton';
@@ -61,6 +63,30 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
     handleClearAdvancedFilters,
     isSearchActive,
   } = usePaperList(authLoading);
+
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+  // Fetch all tags on mount
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await fetchTagsFromApi();
+        setAvailableTags(tags);
+      } catch (error) {
+        console.error('Failed to load tags:', error);
+      }
+    };
+    loadTags();
+  }, []);
+
+  const handleTagsSearch = async (query: string) => {
+    try {
+      const tags = await fetchTagsFromApi(query);
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error('Failed to search tags:', error);
+    }
+  };
 
   const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
     handleAdvancedFilterChange(field, value);
@@ -283,6 +309,22 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                     <SelectItem value="false">Without Code</SelectItem>
                   </SelectContent>
                 </Select>
+              </div>
+
+              {/* Tags Filter */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                  <Tags className="w-3 h-3" />
+                  Tags
+                </Label>
+                <MultiSelect
+                  options={availableTags}
+                  selected={advancedFilters.tags || []}
+                  onChange={(tags) => handleAdvancedFilterChange('tags', tags)}
+                  placeholder="Type to search tags..."
+                  emptyMessage="No tags found"
+                  onSearch={handleTagsSearch}
+                />
               </div>
 
               {/* Filter Actions */}
