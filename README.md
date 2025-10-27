@@ -69,7 +69,7 @@ Papers-2-code/
 ### Core Functionality
 - **📚 Paper Management**: Add, search, and organize research papers
 - **🗳️ Community Voting**: Vote on paper implementability 
-- **👥 User Authentication**: GitHub OAuth integration
+- **👥 User Authentication**: GitHub and Google OAuth integration
 - **📊 Progress Tracking**: Track implementation progress and status
 - **✉️ Author Contact**: Contact paper authors with automated follow-up
 - **🔍 Advanced Search**: MongoDB Atlas search with relevance scoring
@@ -94,7 +94,7 @@ Papers-2-code/
 - **MongoDB**: Document database with Atlas Search
 - **Pydantic**: Data validation and serialization
 - **JWT**: Secure authentication tokens
-- **GitHub OAuth**: Social authentication
+- **OAuth 2.0**: GitHub and Google authentication
 
 ### Frontend  
 - **React 18**: Modern UI framework
@@ -106,7 +106,7 @@ Papers-2-code/
 ### Infrastructure
 - **Render**: Full-stack hosting (recommended)
 - **MongoDB Atlas**: Managed database service
-- **GitHub OAuth**: Social authentication
+- **OAuth Providers**: GitHub and Google authentication
 
 ## 📖 API Documentation
 
@@ -119,9 +119,11 @@ When running locally, visit:
 
 ```
 Authentication:
-POST   /api/auth/github/login     # GitHub OAuth login
+GET    /api/auth/github/login     # GitHub OAuth login
+GET    /api/auth/google/login     # Google OAuth login
 POST   /api/auth/logout           # User logout
-GET    /api/auth/user             # Current user info
+GET    /api/auth/me               # Current user info
+GET    /api/auth/csrf-token       # Get CSRF token
 
 Papers:
 GET    /api/papers                # List papers with search/filter
@@ -146,7 +148,7 @@ GET    /api/admin/users           # Admin: list users
 - **Python 3.12+** with uv
 - **Node.js 16+** with npm
 - **MongoDB** (local or Atlas)
-- **GitHub OAuth App** (for authentication)
+- **OAuth Apps** (GitHub and/or Google for authentication)
 
 ### Environment Setup
 
@@ -157,8 +159,14 @@ MONGO_CONNECTION_STRING=mongodb://localhost:27017/papers2code
 
 # Authentication  
 FLASK_SECRET_KEY=your-secret-key-here
+
+# GitHub OAuth (optional)
 GITHUB_CLIENT_ID=your-github-oauth-id  
 GITHUB_CLIENT_SECRET=your-github-oauth-secret
+
+# Google OAuth (optional)
+GOOGLE_CLIENT_ID=your-google-client-id.apps.googleusercontent.com
+GOOGLE_CLIENT_SECRET=your-google-client-secret
 
 # Email (for author outreach - manual sending)
 OUTREACH_EMAIL_ADDRESS=your-email@example.com
@@ -168,6 +176,8 @@ ENV_TYPE=DEV
 FRONTEND_URL=http://localhost:5173
 APP_LOG_LEVEL=INFO
 ```
+
+**Note**: See [GOOGLE_OAUTH_SETUP.md](docs/GOOGLE_OAUTH_SETUP.md) for detailed Google OAuth configuration.
 
 ### Backend Development
 ```bash
