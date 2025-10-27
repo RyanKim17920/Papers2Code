@@ -71,6 +71,9 @@ class GoogleOAuthService:
         )
 
         response = RedirectResponse(url=auth_url)
+        # Set OAuth state cookie with security flags
+        # Note: secure=False in DEV is intentional for localhost (http) development
+        # In production, secure=True enforces HTTPS-only cookies
         response.set_cookie(
             key=OAUTH_STATE_COOKIE_NAME,
             value=state_jwt,
@@ -275,6 +278,9 @@ class GoogleOAuthService:
             refresh_token_payload = {"sub": user_id_str}
             refresh_token = create_refresh_token(data=refresh_token_payload, expires_delta=timedelta(minutes=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES))
 
+            # Set authentication cookies with proper security flags
+            # secure=False in DEV allows cookies over HTTP for localhost development
+            # secure=True in production enforces HTTPS-only cookies for security
             redirect_response.set_cookie(
                 key=ACCESS_TOKEN_COOKIE_NAME,
                 value=access_token,
@@ -298,7 +304,7 @@ class GoogleOAuthService:
             redirect_response.set_cookie(
                 key=CSRF_TOKEN_COOKIE_NAME,
                 value=csrf_token,
-                httponly=False,
+                httponly=False,  # CSRF token needs to be readable by JavaScript
                 samesite="lax",
                 max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 path="/",
