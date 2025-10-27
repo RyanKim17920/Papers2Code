@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight, Tags } from 'lucide-react';
+import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight, Tags, Briefcase } from 'lucide-react';
 import { usePaperList, SortPreference } from '@/shared/hooks/usePaperList';
 import { LoadingSpinner } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
@@ -9,8 +9,10 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { Separator } from '@/shared/ui/separator';
 import { Badge } from '@/shared/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Checkbox } from '@/shared/ui/checkbox';
 import { MultiSelect } from '@/shared/ui/multi-select';
 import { fetchTagsFromApi } from '@/shared/services/api';
+import type { UserProfile } from '@/shared/types/user';
 import ModernPaperCard from '@/features/paper-list/ModernPaperCard';
 import ModernPaginationControls from '@/features/paper-list/ModernPaginationControls';
 import PaperListSkeleton from '@/features/paper-list/PaperListSkeleton';
@@ -18,9 +20,10 @@ import PaginationSkeleton from '@/features/paper-list/PaginationSkeleton';
 
 interface PaperListPageProps {
   authLoading: boolean;
+  currentUser: UserProfile | null;
 }
 
-const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
+const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser }) => {
   const [showSidebar, setShowSidebar] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('paperListShowSidebar');
@@ -326,6 +329,28 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                   onSearch={handleTagsSearch}
                 />
               </div>
+
+              {/* My Papers Filter - Only shown when logged in */}
+              {currentUser && (
+                <div className="space-y-2">
+                  <div className="flex items-center space-x-2">
+                    <Checkbox
+                      id="myPapers"
+                      checked={advancedFilters.contributorId === currentUser.id}
+                      onCheckedChange={(checked) => {
+                        handleAdvancedFilterChange('contributorId', checked ? currentUser.id : '')
+                      }}
+                    />
+                    <Label
+                      htmlFor="myPapers"
+                      className="text-xs font-medium text-muted-foreground flex items-center gap-2 cursor-pointer"
+                    >
+                      <Briefcase className="w-3 h-3" />
+                      Papers I've worked on
+                    </Label>
+                  </div>
+                </div>
+              )}
 
               {/* Filter Actions */}
               <div className="flex gap-2 pt-2">
