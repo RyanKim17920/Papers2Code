@@ -53,6 +53,24 @@ class GitHubOAuthSettings(BaseSettings):
             self.CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
         logger.info(f"DEBUG: After __init__, TEMPLATE_REPO is: '{self.TEMPLATE_REPO}'")
 
+class GoogleOAuthSettings(BaseSettings):
+    CLIENT_ID: Optional[str] = Field(None, env="GOOGLE_CLIENT_ID")
+    CLIENT_SECRET: Optional[str] = Field(None, env="GOOGLE_CLIENT_SECRET")
+    AUTHORIZE_URL: str = Field("https://accounts.google.com/o/oauth2/v2/auth", env="GOOGLE_AUTHORIZE_URL")
+    ACCESS_TOKEN_URL: str = Field("https://oauth2.googleapis.com/token", env="GOOGLE_ACCESS_TOKEN_URL")
+    API_USER_URL: str = Field("https://www.googleapis.com/oauth2/v2/userinfo", env="GOOGLE_API_USER_URL")
+    SCOPE: str = Field("openid email profile", env="GOOGLE_SCOPE")
+    model_config = SettingsConfigDict(
+        extra="ignore",
+        case_sensitive=False
+    )
+    def __init__(self, **data: Any):
+        super().__init__(**data)
+        if self.CLIENT_ID is None:
+            self.CLIENT_ID = os.getenv("GOOGLE_CLIENT_ID")
+        if self.CLIENT_SECRET is None:
+            self.CLIENT_SECRET = os.getenv("GOOGLE_CLIENT_SECRET")
+
 class VotingThresholdSettings(BaseSettings):
     NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD: int = Field(3, env="NOT_IMPLEMENTABLE_CONFIRM_THRESHOLD")
     IMPLEMENTABLE_CONFIRM_THRESHOLD: int = Field(2, env="IMPLEMENTABLE_CONFIRM_THRESHOLD")
@@ -98,6 +116,7 @@ class AppSettings(BaseSettings):    # Core settings
 
     # Nested settings groups
     GITHUB: GitHubOAuthSettings = Field(default_factory=GitHubOAuthSettings)
+    GOOGLE: GoogleOAuthSettings = Field(default_factory=GoogleOAuthSettings)
     VOTING: VotingThresholdSettings = Field(default_factory=VotingThresholdSettings)
 
     model_config = SettingsConfigDict(

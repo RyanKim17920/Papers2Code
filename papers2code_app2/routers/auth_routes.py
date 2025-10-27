@@ -13,6 +13,7 @@ from ..shared import config_settings
 from ..auth import get_current_user # SECRET_KEY, ALGORITHM, create_refresh_token are used by service
 from ..services.auth_service import AuthService
 from ..services.github_oauth_service import GitHubOAuthService
+from ..services.google_oauth_service import GoogleOAuthService
 from ..constants import OAUTH_STATE_COOKIE_NAME, CSRF_TOKEN_COOKIE_NAME
 from ..services.exceptions import (
     InvalidTokenException,
@@ -30,6 +31,7 @@ router = APIRouter(
 
 auth_service = AuthService()
 github_oauth_service = GitHubOAuthService()
+google_oauth_service = GoogleOAuthService()
 
 @router.get("/csrf-token", response_model=CsrfToken)
 async def get_csrf_token(request: Request, response: Response):
@@ -86,6 +88,38 @@ async def github_callback(code: str, state: str, request: Request): # Removed re
             httponly=True, 
             samesite="lax", 
             path="/api/auth/github/callback", # Path where it was set
+            secure=True if config_settings.ENV_TYPE == "production" else False
+        )
+        return error_redirect
+
+
+@router.get("/google/login")
+async def google_login(request: Request):
+    try:
+        return google_oauth_service.prepare_google_login_redirect(request)
+    except OAuthException as e:
+        logger.error(f"OAuth login preparation failed: {e.message}")
+        frontend_url = config_settings.FRONTEND_URL
+        return RedirectResponse(f"{frontend_url}/?login_error=oauth_prepare_failed&detail={e.message}", status_code=307)
+    except Exception as e:
+        logger.error(f"Unexpected error during Google login initiation: {e}", exc_info=True)
+        frontend_url = config_settings.FRONTEND_URL
+        return RedirectResponse(f"{frontend_url}/?login_error=oauth_prepare_unexpected", status_code=307)
+
+
+@router.get("/google/callback", name="google_callback_endpoint")
+async def google_callback(code: str, state: str, request: Request):
+    try:
+        return await google_oauth_service.handle_google_callback(code, state, request)
+    except Exception as e:
+        logger.error(f"General unexpected error in Google callback router: {e}", exc_info=True)
+        frontend_url = config_settings.FRONTEND_URL
+        error_redirect = RedirectResponse(f"{frontend_url}/?login_error=callback_router_unexpected_error", status_code=307)
+        error_redirect.delete_cookie(
+            OAUTH_STATE_COOKIE_NAME, 
+            httponly=True, 
+            samesite="lax", 
+            path="/api/auth/google/callback",
             secure=True if config_settings.ENV_TYPE == "production" else False
         )
         return error_redirect

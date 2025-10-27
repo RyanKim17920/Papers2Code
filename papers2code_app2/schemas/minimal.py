@@ -10,8 +10,10 @@ from .papers import camel_case_config, camel_case_config_with_datetime
 class UserSchema(BaseModel): # Model returned by get_current_user
     """Schema for representing the currently authenticated user, often returned by endpoints like get_current_user."""
     id: Optional[PyObjectId] = Field(None, alias='_id') 
-    github_id: int
+    github_id: Optional[int] = None  # Made optional to support Google OAuth
+    google_id: Optional[str] = None  # Added for Google OAuth
     username: str
+    email: Optional[str] = None  # Added for Google OAuth users
     name: Optional[str] = None
     avatar_url: Optional[str] = None  # Changed to str for flexible URL handling
     bio: Optional[str] = None
