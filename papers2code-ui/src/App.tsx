@@ -5,23 +5,21 @@ import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import React, { Suspense, lazy } from 'react';
-const LandingPage = lazy(() => import('@/pages/LandingPage'));
-const PaperListPage = lazy(() => import('@/pages/PaperListPage'));
-const PaperDetailPage = lazy(() => import('@/pages/PaperDetailPage'));
-const DashboardPage = lazy(() => import('@/pages/DashboardPage'));
-import { checkCurrentUser, logoutUser, fetchAndStoreCsrfToken } from '@/common/services/auth';
-import type { UserProfile } from '@/common/types/user';
-import AuthInitializer from '@/common/components/AuthInitializer';
-import { ModalProvider } from '@/common/context/ModalContext';
-import LoginPromptModal from '@/common/components/LoginPromptModal';
-import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from '@/common/components/ErrorBoundary';
-import { AuthenticationError } from '@/common/services/api';
-import GlobalHeader from '@/components/common/GlobalHeader';
+const LandingPage = lazy(() => import('@/features/landing/LandingPage'));
+const PaperListPage = lazy(() => import('@/features/paper-list/PaperListPage'));
+const PaperDetailPage = lazy(() => import('@/features/paper-detail/PaperDetailPage'));
+const Dashboard = lazy(() => import('@/features/dashboard/DashboardPage'));
+const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
+const NotFoundPage = lazy(() => import('@/features/auth/NotFoundPage'));
 
-const Dashboard = lazy(() => import('@/pages/Dashboard'));
-const ProfilePage = lazy(() => import('@/pages/ProfilePage'));
-const SettingsPage = lazy(() => import('@/pages/SettingsPage'));
-const NotFoundPage = lazy(() => import('@/pages/NotFoundPage'));
+import { checkCurrentUser, logoutUser, fetchAndStoreCsrfToken } from '@/shared/services/auth';
+import type { UserProfile } from '@/shared/types/user';
+import AuthInitializer from '@/shared/components/AuthInitializer';
+import { ModalProvider } from '@/shared/contexts/ModalContext';
+import LoginPromptModal from '@/shared/components/LoginPromptModal';
+import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from '@/shared/components/ErrorBoundary';
+import { AuthenticationError } from '@/shared/services/api';
+import GlobalHeader from '@/shared/components/GlobalHeader';
 
 // 2. Create a new instance of the QueryClient
 // This is done outside the component to prevent it from being recreated on every render.
@@ -102,7 +100,6 @@ function App() {
                   />              
                   <Route path="/dashboard" element={<Dashboard />} />
                   <Route path="/user/:github_username" element={<ProfilePage />} />
-                  <Route path="/settings" element={<SettingsPage />} />
                   <Route path="*" element={<NotFoundPage />} />
                 </Routes>
                 </Suspense>

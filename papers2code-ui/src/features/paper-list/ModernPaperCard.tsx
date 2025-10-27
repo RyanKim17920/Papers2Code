@@ -1,0 +1,191 @@
+import React, { useState } from 'react';
+import { Link } from 'react-router-dom';
+import { ThumbsUp, ExternalLink, FileDown, Code } from 'lucide-react';
+import { Paper } from '@/shared/types/paper';
+import { Card, CardContent } from '@/shared/ui/card';
+import { Badge } from '@/shared/ui/badge';
+import { Button } from '@/shared/ui/button';
+import { getStatusClass } from '@/shared/utils/statusUtils';
+import { StatusBadge } from '@/shared/components/StatusBadge';
+import { getPaperDescription } from '@/shared/utils/descriptionUtils';
+
+interface ModernPaperCardProps {
+  paper: Paper;
+  onVote: (paperId: string, voteType: 'up' | 'none') => Promise<void>;
+  className?: string; // allow external styling overrides
+}
+
+const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, className = '' }) => {
+  const [isVoting, setIsVoting] = useState(false);
+  const [voteError, setVoteError] = useState<string | null>(null);
+
+  const handleVoteClick = async (e: React.MouseEvent) => {
+    e.preventDefault();
+    if (isVoting) return;
+
+    setIsVoting(true);
+    setVoteError(null);
+    const nextVoteType = paper.currentUserVote === 'up' ? 'none' : 'up';
+
+    try {
+      await onVote(paper.id, nextVoteType);
+    } catch (error) {
+      console.error("Voting failed:", error);
+      setVoteError(error instanceof Error ? error.message : "Vote failed");
+      setTimeout(() => setVoteError(null), 3000);
+    } finally {
+      setIsVoting(false);
+    }
+  };
+
+  const formatDate = (dateString: string) => {
+    if (!dateString) return 'Unknown date';
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleDateString('en-US', { 
+        year: 'numeric', 
+        month: 'short', 
+        day: 'numeric' 
+      });
+    } catch {
+      return 'Invalid date';
+    }
+  };
+
+  // Replaced local truncate with shared getPaperDescription utility.
+
+  // Removed local color mapping in favor of unified StatusBadge component.
+
+  // Format authors for compact display
+  const formatAuthors = (authors: string[] | undefined): string => {
+    if (!authors || authors.length === 0) return 'Unknown authors';
+    if (authors.length === 1) return authors[0];
+    if (authors.length <= 3) return authors.join(', ');
+    return `${authors[0]}, et al.`;
+  };
+
+    // Generate more descriptive domain tags
+  const getDomainTags = (paper: Paper): string[] => {
+    const tags: string[] = [];
+    const text = `${paper.title} ${paper.abstract || ''}`.toLowerCase();
+    
+    if (text.includes('vision') || text.includes('image') || text.includes('visual') || text.includes('computer vision')) {
+      tags.push('CV');
+    }
+    if (text.includes('nlp') || text.includes('language') || text.includes('text') || text.includes('natural language')) {
+      tags.push('NLP');
+    }
+    if (text.includes('learning') || text.includes('neural') || text.includes('network') || text.includes('machine learning')) {
+      tags.push('ML');
+    }
+    if (text.includes('transformer') || text.includes('attention')) {
+      tags.push('Transformers');
+    }
+    if (text.includes('generative') || text.includes('diffusion') || text.includes('gan')) {
+      tags.push('Generative AI');
+    }
+    
+    return tags.slice(0, 2);
+  };
+
+  const domainTags = getDomainTags(paper);
+  const formattedAuthors = formatAuthors(paper.authors);
+
+  return (
+    <Link to={`/paper/${paper.id}`} className="block h-full group">
+      <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col ${className}`.trim()}>
+        <CardContent className="px-3 py-3 sm:px-4 sm:py-4 h-full flex flex-col">
+          {/* Title - Responsive height */}
+          <h3 className="text-[13px] sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-1 sm:mb-2" style={{ minHeight: 'calc(1.2em * 2.2)' }}>
+            {paper.title}
+          </h3>
+          
+          {/* Authors • Venue • Date */}
+          <div className="text-[10px] sm:text-xs mb-2 flex-shrink-0">
+            <span className="font-medium text-muted-foreground">{formattedAuthors}</span>
+            {paper.proceeding && (
+              <>
+                <span className="mx-1 text-muted-foreground/60">·</span>
+                <span className="font-medium text-primary/80">{paper.proceeding}</span>
+              </>
+            )}
+            <span className="mx-1 text-muted-foreground/60">·</span>
+            <span className="text-muted-foreground font-normal">{formatDate(paper.publicationDate)}</span>
+          </div>
+
+          {/* Abstract - Responsive height */}
+          <div className="text-[11px] sm:text-sm text-muted-foreground leading-relaxed line-clamp-2 mb-2.5 sm:mb-4 flex-1 font-normal" style={{ minHeight: 'calc(1.35em * 2.2)' }}>
+            {getPaperDescription(paper, 140)}
+          </div>
+
+          {/* Footer: Domain Tags + Status + Actions - Fixed at bottom */}
+          <div className="flex items-center justify-between gap-2 mt-auto flex-wrap">
+            <div className="flex items-center gap-1 sm:gap-2 min-w-0 flex-1">
+              {/* Domain Tags */}
+              {domainTags.map((tag, index) => (
+                <Badge key={index} variant="default" className="text-[9px] sm:text-xs px-1.5 sm:px-2 py-0.5 h-5 sm:h-6 font-medium whitespace-nowrap">
+                  {tag}
+                </Badge>
+              ))}
+              
+              {/* Status Badge */}
+              <StatusBadge paper={paper} className="text-[10px] sm:text-xs px-1.5 sm:px-2 py-1 h-5 sm:h-6" />
+            </div>
+            
+            <div className="flex items-center gap-0.5 sm:gap-1 flex-shrink-0">
+              {/* Code Button - Only show if official code exists */}
+              {paper.urlGithub && (
+                <a
+                  href={paper.urlGithub}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 sm:p-1.5 rounded hover:bg-emerald-500/10 transition-colors text-emerald-600 dark:text-emerald-400 hover:text-emerald-700 dark:hover:text-emerald-300"
+                  title="View Official Code"
+                >
+                  <Code className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </a>
+              )}
+              
+              {/* PDF Button - Links to PDF or Abstract */}
+              {(paper.urlPdf || paper.urlAbs) && (
+                <a
+                  href={paper.urlPdf || paper.urlAbs}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  onClick={(e) => e.stopPropagation()}
+                  className="p-1 sm:p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                  title={paper.urlPdf ? "Download PDF" : "View Abstract"}
+                >
+                  <FileDown className="w-3.5 h-3.5 sm:w-4 sm:h-4" />
+                </a>
+              )}
+              
+              {/* Like Button */}
+              <button
+                onClick={handleVoteClick}
+                disabled={isVoting}
+                className="flex items-center gap-0.5 sm:gap-1 p-1 sm:p-1.5 rounded hover:bg-muted transition-colors text-muted-foreground hover:text-foreground"
+                title="Save to Library"
+              >
+                <ThumbsUp 
+                  className={`w-3.5 h-3.5 sm:w-4 sm:h-4 ${paper.currentUserVote === 'up' ? 'fill-current text-primary' : ''}`} 
+                />
+                <span className="text-[9px] sm:text-xs font-medium">{paper.upvoteCount || 0}</span>
+              </button>
+            </div>
+          </div>
+
+          {/* Vote Error */}
+          {voteError && (
+            <div className="text-xs text-destructive bg-destructive/10 p-2 rounded mt-2">
+              {voteError}
+            </div>
+          )}
+        </CardContent>
+      </Card>
+    </Link>
+  );
+};
+
+export default ModernPaperCard;

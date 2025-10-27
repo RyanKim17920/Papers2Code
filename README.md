@@ -2,7 +2,7 @@
 
 A web application for organizing research papers and tracking their implementation progress with community voting, author contact, and progress tracking.
 
-> **🔓 Open Source & Secure**: This codebase is designed to be 100% public while maintaining production-grade security. See [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) to learn how we achieve security through design, not obscurity.
+> **🔓 Open Source & Secure**: This codebase is designed to be 100% public while maintaining production-grade security. See [OPENSOURCE_SECURITY.md](docs/security/OPENSOURCE_SECURITY.md) to learn how we achieve security through design, not obscurity.
 
 ## 🚀 Quick Start
 
@@ -21,7 +21,7 @@ npm run dev
 Visit `http://localhost:5173` for the frontend and `http://localhost:5000` for the API.
 
 ### Production Deployment
-See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment instructions.
+See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed production deployment instructions.
 
 **Quick Deploy**: Use the automated Render deployment script:
 ```bash
@@ -29,10 +29,10 @@ See [DEPLOYMENT.md](DEPLOYMENT.md) for detailed production deployment instructio
 ```
 
 **🔒 Security Documentation**: 
-- **🚀 Quick Start**: [SECURITY_QUICK_START.md](SECURITY_QUICK_START.md) - Fast setup guide
-- **📖 Full Guide**: [SECURITY.md](SECURITY.md) - Complete security documentation
-- **🔓 Open Source**: [OPENSOURCE_SECURITY.md](OPENSOURCE_SECURITY.md) - How public code stays secure
-- **🏗️ Architecture**: [SECURITY_ARCHITECTURE.md](SECURITY_ARCHITECTURE.md) - Technical security design
+- **🚀 Quick Start**: [SECURITY_QUICK_START.md](docs/security/SECURITY_QUICK_START.md) - Fast setup guide
+- **📖 Full Guide**: [SECURITY.md](docs/security/SECURITY.md) - Complete security documentation
+- **🔓 Open Source**: [OPENSOURCE_SECURITY.md](docs/security/OPENSOURCE_SECURITY.md) - How public code stays secure
+- **🏗️ Architecture**: [SECURITY_ARCHITECTURE.md](docs/security/SECURITY_ARCHITECTURE.md) - Technical security design
 - **⚙️ Configuration**: [.env.example](.env.example) - All environment variables explained
 - **🛡️ Policy**: [.github/SECURITY_POLICY.md](.github/SECURITY_POLICY.md) - Vulnerability reporting
 
@@ -52,15 +52,16 @@ Papers-2-code/
 │   │   ├── pages/           # Page-level components
 │   │   ├── common/          # Shared utilities & services
 │   │   └── assets/          # Static assets
-├── scripts/                 # Utility scripts & deployment
-│   ├── deploy_render.sh     # Render deployment script
-│   └── *.py                 # Database utilities
-├── pyproject.toml           # Python dependencies & project config
-├── uv.lock                  # Locked dependency versions
-├── render.yaml              # Render deployment blueprint
-├── DEPLOYMENT.md            # Production deployment guide
-├── SECURITY.md              # Security best practices
-└── README.md                # This file
+├── docs/                     # Documentation
+│   ├── security/             # Security documentation
+│   └── deployment/           # Deployment guides
+├── scripts/                  # Utility scripts & deployment
+│   ├── deploy_render.sh      # Render deployment script
+│   └── *.py                  # Database utilities
+├── pyproject.toml            # Python dependencies & project config
+├── uv.lock                   # Locked dependency versions
+├── render.yaml               # Render deployment blueprint
+└── README.md                 # This file
 ```
 
 ## ✨ Features
