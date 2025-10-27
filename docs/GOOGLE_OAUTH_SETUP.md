@@ -28,13 +28,7 @@ Papers2Code now supports Google OAuth authentication in addition to GitHub OAuth
 3. Enter a project name (e.g., "Papers2Code")
 4. Click "Create"
 
-### 2. Enable Google+ API (Optional but recommended)
-
-1. In the Google Cloud Console, navigate to "APIs & Services" > "Library"
-2. Search for "Google+ API"
-3. Click on it and then click "Enable"
-
-### 3. Configure OAuth Consent Screen
+### 2. Configure OAuth Consent Screen
 
 1. Navigate to "APIs & Services" > "OAuth consent screen"
 2. Choose "External" user type (unless you have a Google Workspace organization)
@@ -50,7 +44,7 @@ Papers2Code now supports Google OAuth authentication in addition to GitHub OAuth
 9. Click "Save and Continue"
 10. Review your settings and click "Back to Dashboard"
 
-### 4. Create OAuth 2.0 Credentials
+### 3. Create OAuth 2.0 Credentials
 
 1. Navigate to "APIs & Services" > "Credentials"
 2. Click "Create Credentials" > "OAuth client ID"
@@ -66,7 +60,7 @@ Papers2Code now supports Google OAuth authentication in addition to GitHub OAuth
 5. Click "Create"
 6. You'll see a dialog with your Client ID and Client Secret - **save these securely**
 
-### 5. Configure Environment Variables
+### 4. Configure Environment Variables
 
 Add the following to your `.env` file:
 
@@ -82,7 +76,7 @@ GOOGLE_CLIENT_SECRET=your-client-secret
 # GOOGLE_SCOPE=openid email profile
 ```
 
-### 6. Restart Your Application
+### 5. Restart Your Application
 
 After configuring the environment variables, restart your backend:
 
@@ -199,8 +193,9 @@ This error occurs when the client ID or secret is incorrect.
 Some Google accounts may not have a public email address.
 
 **Solution**:
-- The implementation handles this by creating a username from the Google ID
-- Consider requesting email scope explicitly if needed
+- The implementation extracts the username from the email (the part before @)
+- If email is unavailable, it creates a username like `user_{google_id}`
+- Username collisions are handled by appending numbers (john1, john2, etc.)
 
 ### Account Linking Not Working
 
