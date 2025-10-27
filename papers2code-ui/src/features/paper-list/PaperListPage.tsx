@@ -129,9 +129,9 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
       )}
       
       <div className="flex max-w-7xl mx-auto">
-        {/* Left Sidebar - Filters */}
+        {/* Left Sidebar - Filters - Extended width for new filters */}
         {showSidebar && (
-          <div className="w-80 lg:w-80 md:w-72 sm:w-64 border-r border-border bg-card hidden sm:block">
+          <div className="w-96 lg:w-96 md:w-80 sm:w-72 border-r border-border bg-card hidden sm:block">
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -263,6 +263,26 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                   value={advancedFilters.searchAuthors || ''}
                   onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
                 />
+              </div>
+
+              {/* Has Code Filter */}
+              <div className="space-y-2">
+                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                  Code Availability
+                </Label>
+                <Select
+                  value={advancedFilters.hasCode === undefined ? 'all' : advancedFilters.hasCode ? 'true' : 'false'}
+                  onValueChange={(value) => handleAdvancedFilterChange('hasCode', value === 'all' ? undefined : value === 'true')}
+                >
+                  <SelectTrigger>
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="all">All Papers</SelectItem>
+                    <SelectItem value="true">With Code</SelectItem>
+                    <SelectItem value="false">Without Code</SelectItem>
+                  </SelectContent>
+                </Select>
               </div>
 
               {/* Filter Actions */}

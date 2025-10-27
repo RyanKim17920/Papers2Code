@@ -18,6 +18,9 @@ const initialAdvancedFilters: AdvancedPaperFilters = {
   mainStatus: '',
   implStatus: '',
   hasOfficialImpl: undefined,
+  hasCode: undefined,
+  contributorId: '',
+  tags: [],
 };
 
 export function usePaperList(authLoading?: boolean) {
@@ -45,6 +48,9 @@ export function usePaperList(authLoading?: boolean) {
     mainStatus: searchParams.get('mainStatus') || '',
     implStatus: searchParams.get('implStatus') || '',
     hasOfficialImpl: searchParams.get('hasOfficialImpl') ? searchParams.get('hasOfficialImpl') === 'true' : undefined,
+    hasCode: searchParams.get('hasCode') ? searchParams.get('hasCode') === 'true' : undefined,
+    contributorId: searchParams.get('contributorId') || '',
+    tags: searchParams.getAll('tags') || [],
   }));
   const [showAdvancedSearch, setShowAdvancedSearch] = useState<boolean>(false);
   const [appliedAdvancedFilters, setAppliedAdvancedFilters] = useState<AdvancedPaperFilters>(() => ({
@@ -54,6 +60,9 @@ export function usePaperList(authLoading?: boolean) {
     mainStatus: searchParams.get('mainStatus') || '',
     implStatus: searchParams.get('implStatus') || '',
     hasOfficialImpl: searchParams.get('hasOfficialImpl') ? searchParams.get('hasOfficialImpl') === 'true' : undefined,
+    hasCode: searchParams.get('hasCode') ? searchParams.get('hasCode') === 'true' : undefined,
+    contributorId: searchParams.get('contributorId') || '',
+    tags: searchParams.getAll('tags') || [],
   }));
 
   // New state to control data loading based on auth status
@@ -101,6 +110,9 @@ export function usePaperList(authLoading?: boolean) {
           mainStatus: mainStatusFromUrl,
           implStatus: implStatusFromUrl,
           hasOfficialImpl: searchParams.get('hasOfficialImpl') ? searchParams.get('hasOfficialImpl') === 'true' : undefined,
+          hasCode: searchParams.get('hasCode') ? searchParams.get('hasCode') === 'true' : undefined,
+          contributorId: searchParams.get('contributorId') || '',
+          tags: searchParams.getAll('tags') || [],
         };
         
         // Only update filters if they're actually different to avoid triggering the reset effect
