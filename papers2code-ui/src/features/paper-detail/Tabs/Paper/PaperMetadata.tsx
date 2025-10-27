@@ -3,7 +3,7 @@ import { Paper } from '@/shared/types/paper';
 import { StatusBadge } from '@/shared/components/StatusBadge';
 import { Button } from '@/shared/ui/button';
 import { Badge } from '@/shared/ui/badge';
-import { Heart, Github, ExternalLink, Calendar, Users, FileText, Tag } from 'lucide-react';
+import { ThumbsUp, Github, ExternalLink, Calendar, Users, FileText, Tag } from 'lucide-react';
 import { UpvotersPopover } from '../../UpvotersModal';
 import type { PaperActionUsers } from '@/shared/services/api';
 import type { UserProfile } from '@/shared/types/user';
@@ -98,12 +98,12 @@ const PaperMetadata: React.FC<PaperMetadataProps> = ({
                             disabled={isVoting}
                             className="gap-2"
                         >
-                            <Heart className={`h-4 w-4 ${paper.currentUserVote === 'up' ? 'fill-current' : ''}`} />
+                            <ThumbsUp className={`h-4 w-4 ${paper.currentUserVote === 'up' ? 'fill-current' : ''}`} />
                             {paper.upvoteCount}
                         </Button>
                     ) : (
                         <Badge variant="secondary" className="gap-2">
-                            <Heart className="h-4 w-4" />
+                            <ThumbsUp className="h-4 w-4" />
                             {paper.upvoteCount}
                         </Badge>
                     )}

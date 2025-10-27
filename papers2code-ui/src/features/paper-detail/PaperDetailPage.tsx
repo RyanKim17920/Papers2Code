@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link, useLocation } from 'react-router-dom';
-import { ArrowLeft, Rocket, Users, ExternalLink, FileText, Code, Vote, Settings, Github, CheckCircle2 } from 'lucide-react';
+import { ArrowLeft, Rocket, Users, ExternalLink, FileText, Code, Vote, Settings, Github, CheckCircle2, ThumbsUp } from 'lucide-react';
 
 import { usePaperDetail } from '@/shared/hooks/usePaperDetail';
 import { useActivityTracking } from '@/shared/hooks/useActivityTracking';
@@ -196,34 +196,12 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                                                 disabled={isVoting}
                                                 className="gap-1.5 h-8 px-3 shrink-0"
                                             >
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill={paper.currentUserVote === 'up' ? "currentColor" : "none"}
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    className="w-4 h-4"
-                                                >
-                                                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                                                </svg>
+                                                <ThumbsUp className={`w-4 h-4 ${paper.currentUserVote === 'up' ? 'fill-current' : ''}`} />
                                                 <span className="text-sm font-semibold">{paper.upvoteCount || 0}</span>
                                             </Button>
                                         ) : (
                                             <Badge variant="secondary" className="gap-1.5 h-8 px-3">
-                                                <svg
-                                                    xmlns="http://www.w3.org/2000/svg"
-                                                    viewBox="0 0 24 24"
-                                                    fill="none"
-                                                    stroke="currentColor"
-                                                    strokeWidth="2"
-                                                    strokeLinecap="round"
-                                                    strokeLinejoin="round"
-                                                    className="w-4 h-4"
-                                                >
-                                                    <path d="M19 14c1.49-1.46 3-3.21 3-5.5A5.5 5.5 0 0 0 16.5 3c-1.76 0-3 .5-4.5 2-1.5-1.5-2.74-2-4.5-2A5.5 5.5 0 0 0 2 8.5c0 2.3 1.5 4.05 3 5.5l7 7Z" />
-                                                </svg>
+                                                <ThumbsUp className="w-4 h-4" />
                                                 <span className="text-sm font-semibold">{paper.upvoteCount || 0}</span>
                                             </Badge>
                                         )}
