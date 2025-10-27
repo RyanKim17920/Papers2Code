@@ -267,6 +267,7 @@ async def ensure_db_indexes_async():
                 ([("status", ASCENDING), ("upvoteCount", DESCENDING)], {"name": "status_1_upvoteCount_-1_papers_async", "sparse": True}),
                 ([("title", ASCENDING)], {"name": "title_1_papers_async", "collation": {"locale": "en", "strength": 5}, "sparse": True}), # strength:5 for case-insensitivity
                 ([("implementabilityStatus", ASCENDING)], {"name": "implementabilityStatus_1_papers_async"}),
+                ([("hasCode", ASCENDING)], {"name": "hasCode_1_papers_async", "sparse": True}),  # NEW: Index for has_code filter
                 # Performance-optimized compound indexes for common query patterns
                 ([("status", ASCENDING), ("implementabilityStatus", ASCENDING), ("publicationDate", DESCENDING)], {"name": "status_1_impl_1_pubDate_-1_papers_async"}),
                 ([("implementabilityStatus", ASCENDING), ("publicationDate", DESCENDING)], {"name": "impl_1_pubDate_-1_papers_async"}),
@@ -274,6 +275,7 @@ async def ensure_db_indexes_async():
                 ([("proceeding", ASCENDING), ("publicationDate", DESCENDING)], {"name": "proceeding_1_pubDate_-1_papers_async"}),
                 ([("tasks", ASCENDING), ("publicationDate", DESCENDING)], {"name": "tasks_1_pubDate_-1_papers_async"}),
                 ([("status", ASCENDING), ("tasks", ASCENDING), ("publicationDate", DESCENDING)], {"name": "status_1_tasks_1_pubDate_-1_papers_async"}),
+                ([("hasCode", ASCENDING), ("publicationDate", DESCENDING)], {"name": "hasCode_1_pubDate_-1_papers_async"}),  # NEW: Compound index for hasCode filtering
             ]),
             (collections_to_check["users"], [
                 ([("githubId", ASCENDING)], {"name": "githubId_1_users_async", "unique": True, "sparse": True}),
@@ -308,6 +310,7 @@ async def ensure_db_indexes_async():
                 ([("status", ASCENDING)], {"name": "status_1_impl_progress_async"}),
                 ([("initiatedBy", ASCENDING)], {"name": "initiatedBy_1_impl_progress_async"}),
                 ([("emailStatus", ASCENDING)], {"name": "emailStatus_1_impl_progress_async"}),
+                ([("contributors", ASCENDING)], {"name": "contributors_1_impl_progress_async"}),  # NEW: Index for contributor filtering
             ]),
             (collections_to_check["popular_papers_recent"], [
                 ([("paperId", ASCENDING)], {"name": "paperId_1_popular_papers_recent_async", "unique": True}),

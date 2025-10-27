@@ -37,6 +37,8 @@ async def list_papers(
     search_query: Optional[str] = Query(default=None, alias="searchQuery", min_length=3, description="Search query for title, abstract"), # ADDED alias
     tags: Optional[List[str]] = Query(default=None, description="Filter by tags (comma-separated or multiple query params)"), # Tags are often sent as multiple params, alias might not be strictly needed if FastAPI handles it.
     has_official_impl: Optional[bool] = Query(default=None, alias="hasOfficialImpl", description="Filter by presence of official implementation"), # ADDED alias
+    has_code: Optional[bool] = Query(default=None, alias="hasCode", description="Filter by presence of any code (official or community)"),
+    contributor_id: Optional[str] = Query(default=None, alias="contributorId", description="Filter papers by contributor user ID (shows papers user has worked on)"),
     venue: Optional[str] = Query(default=None, description="Filter by publication venue (e.g., CVPR, NeurIPS)"),
     author: Optional[str] = Query(default=None, alias="searchAuthors", description="Filter by author name (searches author list)"), # Corrected alias to searchAuthors
     start_date: Optional[str] = Query(default=None, alias="startDate", description="Filter by publication start date (ISO format YYYY-MM-DD)"), # ADDED alias
@@ -61,6 +63,8 @@ async def list_papers(
         main_status=main_status, impl_status=impl_status,
         search_query=search_query, tags=tags,
         has_official_impl=has_official_impl,
+        has_code=has_code,
+        contributor_id=contributor_id,
         venue=venue, author=author,
         start_date=start_date, end_date=end_date
     )
@@ -171,11 +175,12 @@ async def get_papers_by_arxiv_ids_route(
 @router.get("/meta/distinct_tags/", response_model=List[str])
 @handle_service_errors
 async def get_distinct_tags_route(
+    query: Optional[str] = Query(default=None, description="Optional search term to filter tags"),
     service: PaperViewService = Depends(get_paper_view_service)
 ):
     #logger.info("Router: Getting distinct tags.")
     try:
-        tags = await service.get_distinct_tags()
+        tags = await service.get_distinct_tags(search_query=query)
     except DatabaseOperationException as e:
         logger.error(f"Router: Database error fetching distinct tags: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

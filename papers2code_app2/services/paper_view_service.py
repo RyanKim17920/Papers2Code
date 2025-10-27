@@ -115,6 +115,8 @@ class PaperViewService:
         impl_status: Optional[str] = None,
         tags: Optional[List[str]] = None,
         has_official_impl: Optional[bool] = None,
+        has_code: Optional[bool] = None,
+        contributor_id: Optional[str] = None,
         venue: Optional[str] = None
     ) -> Tuple[List[Dict[str, Any]], int]:
         service_start_time = time.time()
@@ -134,6 +136,8 @@ class PaperViewService:
             "impl_status": impl_status,
             "tags": sorted(tags) if tags else None,  # Sort for consistent caching
             "has_official_impl": has_official_impl,
+            "has_code": has_code,
+            "contributor_id": contributor_id,
             "venue": venue
         }
         
@@ -150,13 +154,13 @@ class PaperViewService:
             # TWO-PHASE APPROACH FOR ATLAS SEARCH
             papers, total_count = await self._get_papers_list_atlas_two_phase(
                 skip, limit, sort_by, sort_order, user_id, search_query, author,
-                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
             )
         else:
             # STANDARD MONGODB QUERY (unchanged)
             papers, total_count = await self._get_papers_list_standard(
                 skip, limit, sort_by, sort_order, user_id, search_query, author,
-                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
             )
         
         # Cache the result for future requests
@@ -174,7 +178,8 @@ class PaperViewService:
         skip: int, limit: int, sort_by: str, sort_order: str, user_id: Optional[str],
         search_query: Optional[str], author: Optional[str], start_date: Optional[str],
         end_date: Optional[str], main_status: Optional[str], impl_status: Optional[str],
-        tags: Optional[List[str]], has_official_impl: Optional[bool], venue: Optional[str]
+        tags: Optional[List[str]], has_official_impl: Optional[bool], has_code: Optional[bool], 
+        contributor_id: Optional[str], venue: Optional[str]
     ) -> Tuple[List[Dict[str, Any]], int]:
         """Two-phase Atlas Search: Get IDs first, then fetch full documents only for displayed items"""
         
@@ -250,6 +255,21 @@ class PaperViewService:
                     }
                 })
 
+        # Has code filter (checks hasCode field)
+        if has_code is not None:
+            if has_code:
+                atlas_compound_filter.append({"term": {"query": True, "path": "hasCode"}})
+            else:
+                atlas_compound_filter.append({
+                    "compound": {
+                        "should": [
+                            {"term": {"query": False, "path": "hasCode"}},
+                            {"bool": {"mustNot": [{"exists": {"path": "hasCode"}}]}}
+                        ],
+                        "minimumShouldMatch": 1
+                    }
+                })
+
         # Build Atlas search stage
         search_stage_compound: Dict[str, Any] = {}
         if atlas_compound_must:
@@ -263,7 +283,7 @@ class PaperViewService:
             self.logger.warning("Atlas Search compound is empty, falling back to standard query")
             return await self._get_papers_list_standard(
                 skip, limit, sort_by, sort_order, user_id, search_query, author,
-                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
             )
 
         # Phase 1 pipeline: Get IDs only
@@ -323,7 +343,7 @@ class PaperViewService:
                 self.logger.warning("Atlas Search returned no results, falling back to standard query")
                 return await self._get_papers_list_standard(
                     skip, limit, sort_by, sort_order, user_id, search_query, author,
-                    start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                    start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
                 )
                 
             paginated_results = agg_results[0].get('paginatedResults', [])
@@ -335,7 +355,7 @@ class PaperViewService:
                     self.logger.info("Atlas Search found no matches, falling back to standard query")
                     return await self._get_papers_list_standard(
                         skip, limit, sort_by, sort_order, user_id, search_query, author,
-                        start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                        start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
                     )
                 return [], total_papers
             
@@ -370,7 +390,7 @@ class PaperViewService:
             self.logger.info("Falling back to standard query")
             return await self._get_papers_list_standard(
                 skip, limit, sort_by, sort_order, user_id, search_query, author,
-                start_date, end_date, main_status, impl_status, tags, has_official_impl, venue
+                start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
             )
 
     async def _get_papers_list_standard(
@@ -378,7 +398,8 @@ class PaperViewService:
         skip: int, limit: int, sort_by: str, sort_order: str, user_id: Optional[str],
         search_query: Optional[str], author: Optional[str], start_date: Optional[str],
         end_date: Optional[str], main_status: Optional[str], impl_status: Optional[str],
-        tags: Optional[List[str]], has_official_impl: Optional[bool], venue: Optional[str]
+        tags: Optional[List[str]], has_official_impl: Optional[bool], has_code: Optional[bool],
+        contributor_id: Optional[str], venue: Optional[str]
     ) -> Tuple[List[Dict[str, Any]], int]:
         """Standard MongoDB find query (no Atlas Search)"""
         
@@ -438,6 +459,37 @@ class PaperViewService:
                 mongo_filter_conditions.append({
                     "$or": [{"pwc_url": {"$exists": False}}, {"pwc_url": ""}, {"pwc_url": None}]
                 })
+
+        # Has code filter
+        if has_code is not None:
+            if has_code:
+                mongo_filter_conditions.append({"hasCode": True})
+            else:
+                mongo_filter_conditions.append({
+                    "$or": [{"hasCode": False}, {"hasCode": {"$exists": False}}]
+                })
+
+        # Contributor filter - requires lookup in implementation_progress collection
+        if contributor_id:
+            try:
+                contributor_obj_id = ObjectId(contributor_id)
+                implementation_progress_collection = await get_implementation_progress_collection_async()
+                # Find all papers where the user is a contributor
+                progress_docs = await implementation_progress_collection.find(
+                    {"contributors": contributor_obj_id}
+                ).to_list(length=None)
+                
+                if progress_docs:
+                    # Extract paper IDs from implementation progress docs
+                    paper_ids = [doc["_id"] for doc in progress_docs]
+                    mongo_filter_conditions.append({"_id": {"$in": paper_ids}})
+                else:
+                    # No papers found for this contributor, return empty result
+                    self.logger.info(f"No papers found for contributor: {contributor_id}")
+                    return [], 0
+            except Exception as e:
+                self.logger.warning(f"Invalid contributor ID format: {e}")
+                return [], 0
 
         # Build final query
         final_query = {"$and": mongo_filter_conditions} if mongo_filter_conditions else {}
@@ -535,5 +587,89 @@ class PaperViewService:
         except Exception as e:
             self.logger.error(f"Unexpected error in standard query: {e}", exc_info=True)
             raise ServiceException(f"An unexpected error occurred: {e}")
+
+    async def get_distinct_tags(self, search_query: Optional[str] = None) -> List[str]:
+        """
+        Retrieves a list of distinct tags from the papers collection.
+        Optionally filters tags by a search query.
+        """
+        try:
+            papers_collection = await get_papers_collection_async()
+            # Get all unique tags from the tasks field
+            all_tags = await papers_collection.distinct("tasks")
+            
+            # Filter tags if search query is provided
+            if search_query and search_query.strip():
+                search_lower = search_query.strip().lower()
+                filtered_tags = [tag for tag in all_tags if search_lower in tag.lower()]
+                return sorted(filtered_tags)
+            
+            return sorted(all_tags)
+        except PyMongoError as e:
+            self.logger.error(f"Database error fetching distinct tags: {e}", exc_info=True)
+            raise DatabaseOperationException(f"Error fetching distinct tags: {e}")
+
+    async def get_distinct_venues(self) -> List[str]:
+        """
+        Retrieves a list of distinct venues from the papers collection.
+        """
+        try:
+            papers_collection = await get_papers_collection_async()
+            venues = await papers_collection.distinct("proceeding")
+            return sorted([v for v in venues if v])  # Filter out empty strings
+        except PyMongoError as e:
+            self.logger.error(f"Database error fetching distinct venues: {e}", exc_info=True)
+            raise DatabaseOperationException(f"Error fetching distinct venues: {e}")
+
+    async def get_distinct_authors(self) -> List[str]:
+        """
+        Retrieves a list of distinct authors from the papers collection.
+        Note: This flattens the authors array.
+        """
+        try:
+            papers_collection = await get_papers_collection_async()
+            # Use aggregation to unwind authors array and get distinct values
+            pipeline = [
+                {"$unwind": "$authors"},
+                {"$group": {"_id": "$authors"}},
+                {"$sort": {"_id": 1}},
+                {"$limit": 1000}  # Limit to prevent huge result sets
+            ]
+            result = await papers_collection.aggregate(pipeline).to_list(length=1000)
+            authors = [doc["_id"] for doc in result if doc.get("_id")]
+            return authors
+        except PyMongoError as e:
+            self.logger.error(f"Database error fetching distinct authors: {e}", exc_info=True)
+            raise DatabaseOperationException(f"Error fetching distinct authors: {e}")
+
+    async def get_paper_count_by_status(self) -> Dict[str, int]:
+        """
+        Returns a count of papers grouped by their implementation status.
+        """
+        try:
+            papers_collection = await get_papers_collection_async()
+            pipeline = [
+                {"$group": {"_id": "$status", "count": {"$sum": 1}}},
+                {"$sort": {"_id": 1}}
+            ]
+            result = await papers_collection.aggregate(pipeline).to_list(length=None)
+            counts = {doc["_id"]: doc["count"] for doc in result}
+            return counts
+        except PyMongoError as e:
+            self.logger.error(f"Database error fetching status counts: {e}", exc_info=True)
+            raise DatabaseOperationException(f"Error fetching status counts: {e}")
+
+    async def get_papers_by_arxiv_ids(self, arxiv_ids: List[str]) -> List[Dict[str, Any]]:
+        """
+        Retrieves papers by a list of arXiv IDs.
+        """
+        try:
+            papers_collection = await get_papers_collection_async()
+            papers = await papers_collection.find({"arxivId": {"$in": arxiv_ids}}).to_list(length=len(arxiv_ids))
+            return papers
+        except PyMongoError as e:
+            self.logger.error(f"Database error fetching papers by arXiv IDs: {e}", exc_info=True)
+            raise DatabaseOperationException(f"Error fetching papers by arXiv IDs: {e}")
+
 
     # ... any other methods ...
