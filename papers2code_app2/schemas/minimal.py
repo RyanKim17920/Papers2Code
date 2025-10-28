@@ -27,6 +27,10 @@ class UserSchema(BaseModel): # Model returned by get_current_user
     created_at: Optional[datetime] = None
     last_login_at: Optional[datetime] = None
     profile_updated_at: Optional[datetime] = None
+    # Privacy settings
+    show_email: Optional[bool] = True  # Whether to publicly display email
+    show_github: Optional[bool] = True  # Whether to publicly display GitHub profile link
+    show_social_links: Optional[bool] = True  # Whether to publicly display social media links
 
     model_config = camel_case_config_with_datetime
 
@@ -39,6 +43,10 @@ class UserUpdateProfile(BaseModel):
     linkedin_profile_url: Optional[str] = None  # Changed to str to allow usernames
     bluesky_username: Optional[str] = None # New
     huggingface_username: Optional[str] = None # New
+    # Privacy settings
+    show_email: Optional[bool] = None
+    show_github: Optional[bool] = None
+    show_social_links: Optional[bool] = None
     
     @field_validator('name', 'bio', 'website_url', 'twitter_profile_url', 'linkedin_profile_url', 'bluesky_username', 'huggingface_username', mode='before')
     @classmethod

@@ -45,6 +45,34 @@ class UserService:
             raise UserNotFoundException(f"User with username '{username}' not found.")
 
         user_id = user_doc["_id"]
+        
+        # Check if requesting user is viewing their own profile
+        is_own_profile = (requesting_user and requesting_user.id and 
+                         str(requesting_user.id) == str(user_id))
+        
+        # Apply privacy settings for public viewing
+        if not is_own_profile:
+            # Get privacy settings (default to True/visible if not set)
+            show_email = user_doc.get("showEmail", True)
+            show_github = user_doc.get("showGithub", True)
+            show_social_links = user_doc.get("showSocialLinks", True)
+            
+            # Hide email if privacy setting is False
+            if not show_email and "email" in user_doc:
+                user_doc["email"] = None
+            
+            # Hide GitHub info if privacy setting is False
+            if not show_github and "github_id" in user_doc:
+                user_doc["github_id"] = None
+            
+            # Hide social links if privacy setting is False
+            if not show_social_links:
+                user_doc["twitterProfileUrl"] = None
+                user_doc["linkedinProfileUrl"] = None
+                user_doc["blueskyUsername"] = None
+                user_doc["huggingfaceUsername"] = None
+                user_doc["websiteUrl"] = None
+        
         user_details = UserSchema(**user_doc)
 
         requesting_user_id_str = str(requesting_user.id) if requesting_user and requesting_user.id else None
