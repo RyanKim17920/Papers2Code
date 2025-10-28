@@ -10,6 +10,7 @@ const PaperListPage = lazy(() => import('@/features/paper-list/PaperListPage'));
 const PaperDetailPage = lazy(() => import('@/features/paper-detail/PaperDetailPage'));
 const Dashboard = lazy(() => import('@/features/dashboard/DashboardPage'));
 const ProfilePage = lazy(() => import('@/features/profile/ProfilePage'));
+const LoginPage = lazy(() => import('@/features/auth/LoginPage'));
 const NotFoundPage = lazy(() => import('@/features/auth/NotFoundPage'));
 
 import { checkCurrentUser, logoutUser, fetchAndStoreCsrfToken } from '@/shared/services/auth';
@@ -82,6 +83,7 @@ function App() {
                 <Suspense fallback={null}>
                 <Routes>
                   <Route path="/" element={<LandingPage />} />
+                  <Route path="/login" element={<LoginPage />} />
                   <Route 
                     path="/papers" 
                     element={

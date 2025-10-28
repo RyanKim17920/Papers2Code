@@ -1,8 +1,9 @@
 import React from 'react';
-import { redirectToGitHubLogin } from '../services/auth';
+import { useNavigate } from 'react-router-dom';
 import { useModal } from '@/shared/contexts/ModalContext';
 
 const LoginPromptModal: React.FC = () => {
+    const navigate = useNavigate();
     // MODIFIED: Use correct properties from useModal hook
     const { isLoginPromptOpen, loginPromptMessage, hideLoginPrompt } = useModal();
 
@@ -11,7 +12,8 @@ const LoginPromptModal: React.FC = () => {
     }
 
     const handleConfirmLogin = () => {
-        redirectToGitHubLogin();
+        // Navigate to login page instead of direct GitHub OAuth
+        navigate('/login');
         hideLoginPrompt(); // Use hideLoginPrompt from context
     };
 
@@ -26,14 +28,14 @@ const LoginPromptModal: React.FC = () => {
                 <h2>Login Required</h2>
                 <div className="modal-body">
                     {/* MODIFIED: Use loginPromptMessage from context */}
-                    <p>{loginPromptMessage || "Please connect with GitHub to perform this action."}</p>
+                    <p>{loginPromptMessage || "Please sign in to perform this action."}</p>
                 </div>
                 <div className="modal-actions">
                     <button
                         className="btn btn-primary"
                         onClick={handleConfirmLogin}
                     >
-                        Connect with GitHub
+                        Sign In
                     </button>
                     <button
                         className="btn btn-secondary"

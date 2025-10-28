@@ -20,6 +20,13 @@ export interface UserProfile {
     createdAt?: string;
     lastLoginAt?: string;
     profileUpdatedAt?: string;
+    // Privacy settings
+    showEmail?: boolean;
+    showGithub?: boolean;
+    showSocialLinks?: boolean;
+    email?: string | null;
+    githubId?: number | null;
+    googleId?: string | null;
 }
 
 export interface PaperActionUserProfile {

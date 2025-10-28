@@ -4,11 +4,18 @@ import { API_BASE_URL, AUTH_API_PREFIX, CSRF_API_ENDPOINT } from './config';
 import type { UserProfile } from '../types/user';
 import { useState, useEffect } from 'react';
 
-// Function to initiate login - simply redirect to backend endpoint
+// Function to initiate GitHub login - simply redirect to backend endpoint
 export const redirectToGitHubLogin = () => {
     // Always redirect to /dashboard after login
     const next = encodeURIComponent("/dashboard");
     window.location.href = `${API_BASE_URL}${AUTH_API_PREFIX}/github/login?next=${next}`;
+};
+
+// Function to initiate Google login - simply redirect to backend endpoint
+export const redirectToGoogleLogin = () => {
+    // Always redirect to /dashboard after login
+    const next = encodeURIComponent("/dashboard");
+    window.location.href = `${API_BASE_URL}${AUTH_API_PREFIX}/google/login?next=${next}`;
 };
 
 // Function to check current user status

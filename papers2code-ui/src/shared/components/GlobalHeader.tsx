@@ -157,14 +157,14 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                   <Link to="/papers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                     Papers
                   </Link>
-                  <Button
-                    onClick={redirectToGitHubLogin}
-                    variant="default"
-                    className="h-9 px-3 gap-2"
-                  >
-                    <Github className="h-4 w-4" />
-                    <span className="text-sm">Sign in with GitHub</span>
-                  </Button>
+                  <Link to="/login">
+                    <Button
+                      variant="default"
+                      className="h-9 px-3"
+                    >
+                      <span className="text-sm">Sign in</span>
+                    </Button>
+                  </Link>
                 </div>
               )
             )}
