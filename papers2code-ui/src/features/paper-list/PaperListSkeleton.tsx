@@ -9,7 +9,7 @@ interface PaperListSkeletonProps {
 }
 
 const PaperListSkeleton: React.FC<PaperListSkeletonProps> = ({ count = 12, measuredHeight }) => {
-  const cardStyle = measuredHeight ? { height: `${measuredHeight}px` } : { minHeight: '160px' };
+  const cardStyle = measuredHeight ? { height: `${measuredHeight}px` } : {};
 
   return (
     <>
@@ -33,11 +33,11 @@ const PaperListSkeleton: React.FC<PaperListSkeletonProps> = ({ count = 12, measu
 
                 <Separator className="mb-3" />
 
-                {/* TL;DR section */}
+                {/* Abstract/TL;DR section */}
                 <div className="mb-3">
                   <Skeleton className="h-[14px] sm:h-4 w-12 mb-2" />
-                  <Skeleton className="h-[10px] sm:h-3 w-full mb-1" />
-                  <Skeleton className="h-[10px] sm:h-3 w-5/6" />
+                  {/* Single abstract line (reduced) */}
+                  <Skeleton className="h-[10px] sm:h-3 w-full" />
                 </div>
 
                 <Separator className="mb-3" />

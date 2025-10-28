@@ -81,7 +81,7 @@ export function MultiSelect({
           {selected.map((item) => (
             <Badge
               key={item}
-              variant="secondary"
+              variant="outline"
               className="px-2 py-1 text-xs"
             >
               {item}

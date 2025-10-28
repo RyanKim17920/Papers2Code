@@ -11,6 +11,7 @@ from datetime import datetime
 from ..database import (
     get_papers_collection_async,
     get_implementation_progress_collection_async,
+    get_user_actions_collection_async,
 )
 from .exceptions import PaperNotFoundException, DatabaseOperationException, ServiceException
 from ..cache import paper_cache
@@ -469,22 +470,38 @@ class PaperViewService:
                     "$or": [{"hasCode": False}, {"hasCode": {"$exists": False}}]
                 })
 
-        # Contributor filter - requires lookup in implementation_progress collection
+        # Contributor filter - find all papers where user has performed ANY action
         if contributor_id:
             try:
                 contributor_obj_id = ObjectId(contributor_id)
-                implementation_progress_collection = await get_implementation_progress_collection_async()
-                # Find all papers where the user is a contributor
-                progress_docs = await implementation_progress_collection.find(
-                    {"contributors": contributor_obj_id}
-                ).to_list(length=None)
+                user_actions_collection = await get_user_actions_collection_async()
                 
-                if progress_docs:
-                    # Extract paper IDs from implementation progress docs
-                    paper_ids = [doc["_id"] for doc in progress_docs]
-                    mongo_filter_conditions.append({"_id": {"$in": paper_ids}})
+                # Find all distinct paper IDs where this user has performed any action
+                paper_ids_with_actions = await user_actions_collection.distinct(
+                    "paperId",
+                    {"userId": contributor_obj_id}
+                )
+                
+                if paper_ids_with_actions:
+                    # Convert paper IDs to ObjectId if they're strings
+                    paper_obj_ids = []
+                    for pid in paper_ids_with_actions:
+                        try:
+                            if isinstance(pid, str):
+                                paper_obj_ids.append(ObjectId(pid))
+                            else:
+                                paper_obj_ids.append(pid)
+                        except Exception:
+                            continue
+                    
+                    if paper_obj_ids:
+                        mongo_filter_conditions.append({"_id": {"$in": paper_obj_ids}})
+                    else:
+                        # No valid paper IDs found
+                        self.logger.info(f"No papers found for contributor: {contributor_id}")
+                        return [], 0
                 else:
-                    # No papers found for this contributor, return empty result
+                    # No actions found for this contributor, return empty result
                     self.logger.info(f"No papers found for contributor: {contributor_id}")
                     return [], 0
             except Exception as e:
@@ -597,6 +614,9 @@ class PaperViewService:
             papers_collection = await get_papers_collection_async()
             # Get all unique tags from the tasks field
             all_tags = await papers_collection.distinct("tasks")
+            
+            # Filter out None values
+            all_tags = [tag for tag in all_tags if tag is not None]
             
             # Filter tags if search query is provided
             if search_query and search_query.strip():

@@ -309,8 +309,14 @@ export function usePaperList(authLoading?: boolean) {
     setShowAdvancedSearch(prev => !prev);
   };
 
-  const handleAdvancedFilterChange = (filterName: keyof AdvancedPaperFilters, value: string) => {
-    setAdvancedFilters(prev => ({ ...prev, [filterName]: value }));
+  const handleAdvancedFilterChange = (
+    filterName: keyof AdvancedPaperFilters, 
+    value: string | string[] | boolean | undefined
+  ) => {
+    const updatedFilters = { ...advancedFilters, [filterName]: value };
+    setAdvancedFilters(updatedFilters);
+    // Auto-apply filters immediately
+    setAppliedAdvancedFilters(updatedFilters);
   };
 
   const handleApplyAdvancedFilters = () => {
