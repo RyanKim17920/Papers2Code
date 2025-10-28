@@ -15,7 +15,10 @@ class UserSchema(BaseModel): # Model returned by get_current_user
     username: str
     email: Optional[str] = None  # Added for Google OAuth users
     name: Optional[str] = None
-    avatar_url: Optional[str] = None  # Changed to str for flexible URL handling
+    avatar_url: Optional[str] = None  # Primary avatar URL (computed based on preference)
+    github_avatar_url: Optional[str] = None  # GitHub-specific avatar
+    google_avatar_url: Optional[str] = None  # Google-specific avatar
+    preferred_avatar_source: Optional[str] = "github"  # "github" or "google"
     bio: Optional[str] = None
     website_url: Optional[str] = None  # Changed to str for flexible URL handling
     twitter_profile_url: Optional[str] = None  # Changed to str for flexible URL handling
@@ -45,6 +48,8 @@ class UserUpdateProfile(BaseModel):
     # Privacy settings
     show_email: Optional[bool] = None
     show_github: Optional[bool] = None
+    # Avatar preference
+    preferred_avatar_source: Optional[str] = None  # "github" or "google"
     
     @field_validator('name', 'bio', 'website_url', 'twitter_profile_url', 'linkedin_profile_url', 'bluesky_username', 'huggingface_username', mode='before')
     @classmethod

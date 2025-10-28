@@ -8,6 +8,9 @@ export interface UserProfile {
     id: string;
     username: string;
     avatarUrl?: string | null;
+    githubAvatarUrl?: string | null;
+    googleAvatarUrl?: string | null;
+    preferredAvatarSource?: string;
     name?: string | null;
     bio?: string | null;
     websiteUrl?: string | null;

@@ -211,8 +211,18 @@ class GoogleOAuthService:
             if existing_user and existing_user.get("github_id") and not existing_user.get("google_id"):
                 # User exists via GitHub, now linking Google account
                 logger.info(f"Linking Google account to existing GitHub user: {existing_user.get('username')}")
+                
+                # Compute avatar_url based on preference
+                preferred_source = existing_user.get("preferredAvatarSource", "github")
+                if preferred_source == "google":
+                    computed_avatar = avatar_url
+                else:
+                    computed_avatar = existing_user.get("github_avatar_url") or avatar_url
+                
                 update_payload = {
                     "google_id": google_user_id,
+                    "google_avatar_url": avatar_url,  # Store Google avatar separately
+                    "avatarUrl": computed_avatar,  # Update primary avatar based on preference
                     "email": email,
                     "updatedAt": current_time,
                     "lastLoginAt": current_time,
@@ -234,7 +244,7 @@ class GoogleOAuthService:
                     
                     set_payload = {
                         "name": name,
-                        "avatarUrl": avatar_url,
+                        "google_avatar_url": avatar_url,  # Store Google avatar separately
                         "email": email,
                         "google_id": google_user_id,
                         "updatedAt": current_time,
@@ -248,6 +258,7 @@ class GoogleOAuthService:
                         # Set default privacy settings for new users
                         "showEmail": True,
                         "showGithub": True,
+                        "preferredAvatarSource": "google",  # Default to Google avatar for Google-only users
                     }
 
                     user_document = await self.users_collection.find_one_and_update(
@@ -259,6 +270,22 @@ class GoogleOAuthService:
                         upsert=True,
                         return_document=ReturnDocument.AFTER
                     )
+                    
+                    # Compute primary avatar_url based on preference
+                    preferred_source = user_document.get("preferredAvatarSource", "google")
+                    if preferred_source == "github" and user_document.get("github_avatar_url"):
+                        computed_avatar = user_document.get("github_avatar_url")
+                    else:
+                        computed_avatar = user_document.get("google_avatar_url")
+                    
+                    # Update with computed avatar_url
+                    if computed_avatar:
+                        await self.users_collection.update_one(
+                            {"_id": user_document["_id"]},
+                            {"$set": {"avatarUrl": computed_avatar}}
+                        )
+                        user_document["avatarUrl"] = computed_avatar
+                    
                     if not user_document:
                         logger.error("GoogleOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
                         return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)

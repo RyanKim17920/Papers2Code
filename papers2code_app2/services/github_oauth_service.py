@@ -191,7 +191,7 @@ class GitHubOAuthService:
             try:
                 set_payload = {
                     "name": name,
-                    "avatarUrl": avatar_url,
+                    "github_avatar_url": avatar_url,  # Store GitHub avatar separately
                     "email": email,
                     "github_id": github_user_id,
                     "githubAccessToken": github_token,  # Store the token for API calls
@@ -206,6 +206,7 @@ class GitHubOAuthService:
                     # Set default privacy settings for new users
                     "showEmail": True,
                     "showGithub": True,
+                    "preferredAvatarSource": "github",  # Default to GitHub avatar
                 }
 
                 user_document = await self.users_collection.find_one_and_update(
@@ -217,6 +218,22 @@ class GitHubOAuthService:
                     upsert=True,
                     return_document=ReturnDocument.AFTER
                 )
+                
+                # Compute primary avatar_url based on preference
+                preferred_source = user_document.get("preferredAvatarSource", "github")
+                if preferred_source == "google" and user_document.get("google_avatar_url"):
+                    computed_avatar = user_document.get("google_avatar_url")
+                else:
+                    computed_avatar = user_document.get("github_avatar_url")
+                
+                # Update with computed avatar_url
+                if computed_avatar:
+                    await self.users_collection.update_one(
+                        {"_id": user_document["_id"]},
+                        {"$set": {"avatarUrl": computed_avatar}}
+                    )
+                    user_document["avatarUrl"] = computed_avatar
+                
                 if not user_document:
                     logger.error("GitHubOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)

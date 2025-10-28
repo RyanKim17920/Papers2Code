@@ -339,6 +339,20 @@ class UserService:
         # Add profile update timestamp
         clean_update_data["profile_updated_at"] = datetime.utcnow()
         
+        # If preferred_avatar_source is being updated, recompute the primary avatarUrl
+        if "preferred_avatar_source" in clean_update_data:
+            user_doc = await self.users_collection.find_one({"_id": user_id})
+            if user_doc:
+                preferred_source = clean_update_data["preferred_avatar_source"]
+                if preferred_source == "github" and user_doc.get("github_avatar_url"):
+                    clean_update_data["avatar_url"] = user_doc.get("github_avatar_url")
+                elif preferred_source == "google" and user_doc.get("google_avatar_url"):
+                    clean_update_data["avatar_url"] = user_doc.get("google_avatar_url")
+                # If preferred source doesn't have an avatar, keep the current one
+                elif user_doc.get("avatar_url"):
+                    # Don't change it
+                    pass
+        
         # Log the final data being sent to MongoDB
         logger.debug(f"Final update_data: {clean_update_data}")
         logger.debug(f"Final types: {[(k, type(v)) for k, v in clean_update_data.items()]}")
