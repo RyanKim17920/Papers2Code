@@ -31,7 +31,6 @@ interface UserProfileFormData {
   huggingfaceUsername: string;
   showEmail?: boolean;
   showGithub?: boolean;
-  showSocialLinks?: boolean;
 }
 
 interface FieldValidation {
@@ -52,7 +51,6 @@ interface ProfileSettingsTabProps {
     huggingfaceUsername?: string | null;
     showEmail?: boolean;
     showGithub?: boolean;
-    showSocialLinks?: boolean;
     email?: string | null;
     githubId?: number | null;
     googleId?: string | null;
@@ -78,7 +76,6 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
     huggingfaceUsername: normalizeHuggingFaceUsername(currentUser.huggingfaceUsername || '').displayValue,
     showEmail: currentUser.showEmail ?? true,
     showGithub: currentUser.showGithub ?? true,
-    showSocialLinks: currentUser.showSocialLinks ?? true,
   });
 
   const [fieldValidation, setFieldValidation] = useState<Record<string, FieldValidation>>({});
@@ -461,42 +458,6 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
                 </div>
               </div>
             )}
-
-            {/* Social Links Visibility */}
-            <div className="flex items-center justify-between py-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 mb-1">
-                  <Label htmlFor="showSocialLinks" className="text-sm font-medium cursor-pointer">
-                    Show Social Media Links
-                  </Label>
-                </div>
-                <p className="text-xs text-muted-foreground">
-                  Display your Twitter, LinkedIn, Bluesky, and other social links on your public profile
-                </p>
-              </div>
-              <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="ghost"
-                  size="sm"
-                  className="h-8 px-2"
-                  onClick={() => setFormData(prev => ({ ...prev, showSocialLinks: !prev.showSocialLinks }))}
-                >
-                  {formData.showSocialLinks ? (
-                    <Eye size={16} className="text-green-600" />
-                  ) : (
-                    <EyeOff size={16} className="text-muted-foreground" />
-                  )}
-                </Button>
-                <input
-                  id="showSocialLinks"
-                  type="checkbox"
-                  checked={formData.showSocialLinks}
-                  onChange={(e) => setFormData(prev => ({ ...prev, showSocialLinks: e.target.checked }))}
-                  className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
-                />
-              </div>
-            </div>
 
             <Button type="submit" disabled={saving} className="w-full md:w-auto">
               {saving ? 'Saving...' : 'Save Privacy Settings'}

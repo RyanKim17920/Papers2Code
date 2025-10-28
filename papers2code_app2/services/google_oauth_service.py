@@ -248,7 +248,6 @@ class GoogleOAuthService:
                         # Set default privacy settings for new users
                         "showEmail": True,
                         "showGithub": True,
-                        "showSocialLinks": True,
                     }
 
                     user_document = await self.users_collection.find_one_and_update(

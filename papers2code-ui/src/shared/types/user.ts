@@ -23,7 +23,6 @@ export interface UserProfile {
     // Privacy settings
     showEmail?: boolean;
     showGithub?: boolean;
-    showSocialLinks?: boolean;
     email?: string | null;
     githubId?: number | null;
     googleId?: string | null;
