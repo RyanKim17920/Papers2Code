@@ -344,6 +344,9 @@ export const updateUserProfile = async (profileData: {
   linkedinProfileUrl?: string;
   blueskyUsername?: string;
   huggingfaceUsername?: string;
+  showEmail?: boolean;
+  showGithub?: boolean;
+  preferredAvatarSource?: string;
 }): Promise<UserProfile> => {
   const url = `${API_BASE_URL}/api/users/profile`;
 
