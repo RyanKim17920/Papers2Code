@@ -210,19 +210,20 @@ class GoogleOAuthService:
                 # Check if there's a GitHub account with the same email
                 github_account = await self.users_collection.find_one({"email": email, "githubId": {"$exists": True}})
                 if github_account:
-                    # Create pending link token
+                    # Create pending link token with snake_case field names to match frontend expectations
                     pending_link_data = {
-                        "existingUserId": str(github_account["_id"]),
-                        "newProvider": "google",
-                        "googleId": google_user_id,
-                        "googleUsername": google_username,
-                        "googleAvatarUrl": avatar_url,
-                        "email": email,
-                        "name": name,
+                        "existing_user_id": str(github_account["_id"]),
+                        "existing_username": github_account.get("username", ""),
+                        "existing_avatar": github_account.get("githubAvatarUrl", ""),
+                        "google_id": google_user_id,
+                        "google_email": email,
+                        "google_avatar": avatar_url,
+                        "google_username": google_username,
+                        "google_name": name,
                         "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
                     }
                     pending_link_token = create_access_token(data=pending_link_data)
-                    logger.info(f"Email match found. Redirecting to account linking modal.")
+                    logger.info(f"Email match found between Google and GitHub accounts. Redirecting to account linking modal.")
                     return RedirectResponse(
                         url=f"{frontend_url}/?pending_link={pending_link_token}",
                         status_code=307

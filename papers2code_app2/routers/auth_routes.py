@@ -244,9 +244,9 @@ async def link_accounts(request: Request, response: Response):
         current_time = datetime.now(timezone.utc)
         
         # Determine which account is being linked
-        if "googleId" in pending_data:
+        if "google_id" in pending_data:
             # Linking Google to existing GitHub account
-            google_id = pending_data["googleId"]
+            google_id = pending_data["google_id"]
             google_avatar = pending_data["google_avatar"]
             google_email = pending_data["google_email"]
             
@@ -278,7 +278,7 @@ async def link_accounts(request: Request, response: Response):
             }
         else:
             # Linking GitHub to existing Google account
-            github_id = pending_data["githubId"]
+            github_id = pending_data["github_id"]
             github_avatar = pending_data["github_avatar"]
             github_username = pending_data["github_username"]
             github_token = pending_data["github_token"]

@@ -174,7 +174,7 @@ class GitHubOAuthService:
 
             username = github_user_data.get("login")
             name = github_user_data.get("name") or username
-            avatar_url = github_user_data.get("avatarUrl")
+            avatar_url = github_user_data.get("avatar_url")  # GitHub API uses snake_case
             email = github_user_data.get("email")
             github_user_id = github_user_data.get("id")
 
@@ -189,7 +189,34 @@ class GitHubOAuthService:
 
             current_time = datetime.now(timezone.utc)
             
-            # No automatic account linking by email - users must manually link via settings
+            # Check if user already exists by github_id
+            existing_user = await self.users_collection.find_one({"githubId": github_user_id})
+            
+            # If no existing GitHub user, check for email match with different provider
+            if not existing_user and email:
+                # Check if there's a Google account with the same email
+                google_account = await self.users_collection.find_one({"email": email, "googleId": {"$exists": True}})
+                if google_account:
+                    # Create pending link token with snake_case field names to match frontend expectations
+                    pending_link_data = {
+                        "existing_user_id": str(google_account["_id"]),
+                        "existing_username": google_account.get("username", ""),
+                        "existing_avatar": google_account.get("googleAvatarUrl", ""),
+                        "github_id": github_user_id,
+                        "github_username": username,
+                        "github_avatar": avatar_url,
+                        "github_token": github_token,
+                        "github_email": email,
+                        "github_name": name,
+                        "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
+                    }
+                    pending_link_token = create_access_token(data=pending_link_data)
+                    logger.info(f"Email match found between GitHub and Google accounts. Redirecting to account linking modal.")
+                    return RedirectResponse(
+                        url=f"{frontend_url}/?pending_link={pending_link_token}",
+                        status_code=307
+                    )
+            
             # Normal GitHub user creation/update
             try:
                 # Ensure username uniqueness by checking and appending numbers if needed
