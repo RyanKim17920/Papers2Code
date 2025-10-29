@@ -13,6 +13,8 @@ class UserSchema(BaseModel): # Model returned by get_current_user
     github_id: Optional[int] = Field(None, alias='githubId')  # Made optional to support Google OAuth
     google_id: Optional[str] = Field(None, alias='googleId')  # Added for Google OAuth
     username: str
+    github_username: Optional[str] = Field(None, alias='githubUsername')  # Provider-specific username
+    google_username: Optional[str] = Field(None, alias='googleUsername')  # Provider-specific username
     email: Optional[str] = None  # Added for Google OAuth users
     name: Optional[str] = None
     avatar_url: Optional[str] = Field(None, alias='avatarUrl')  # Primary avatar URL (computed based on preference)

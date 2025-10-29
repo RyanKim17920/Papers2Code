@@ -187,8 +187,9 @@ class GoogleOAuthService:
             
             logger.info(f"Google OAuth: Received user data - ID: {google_user_id}, Email: {email}, Name: {name}, Avatar URL: {avatar_url}")
             
-            # Create username from email (before @ symbol)
-            username = email.split("@")[0] if email else f"user_{google_user_id}"
+            # For Google users, don't create a username from email to avoid conflicts with GitHub usernames
+            # Use a unique identifier based on Google ID instead
+            google_username = email.split("@")[0] if email else f"google_user_{google_user_id}"
 
             if google_user_id is None or email is None:
                 logger.error(
@@ -201,104 +202,73 @@ class GoogleOAuthService:
 
             current_time = datetime.now(timezone.utc)
             
-            # Check if user already exists by google_id or email
-            existing_user = await self.users_collection.find_one({
-                "$or": [
-                    {"googleId": google_user_id},
-                    {"email": email}
-                ]
-            })
+            # Check if user already exists by google_id only (not by email)
+            # Email matching removed - users must manually link accounts via settings
+            existing_user = await self.users_collection.find_one({"googleId": google_user_id})
             
-            # If user exists with a different provider, we need to handle this
-            if existing_user and existing_user.get("githubId") and not existing_user.get("googleId"):
-                # User exists via GitHub, potential account linking scenario
-                logger.info(f"Found existing GitHub user with matching email: {existing_user.get('username')}")
+            # Create new user or update existing Google user
+            try:
+                # Ensure username uniqueness by checking and appending numbers if needed
+                base_username = google_username
+                counter = 1
+                while await self.users_collection.find_one({"username": google_username, "googleId": {"$ne": google_user_id}}):
+                    google_username = f"{base_username}{counter}"
+                    counter += 1
                 
-                # Store pending linking data in a temporary JWT token
-                import base64
-                import json
-                
-                pending_data = {
-                    "existing_user_id": str(existing_user["_id"]),
-                    "existing_username": existing_user.get("username"),
-                    "existing_avatar": existing_user.get("githubAvatarUrl"),
+                set_payload = {
+                    "name": name,
+                    "googleAvatarUrl": avatar_url,  # Store Google avatar separately
+                    "email": email,
                     "googleId": google_user_id,
-                    "google_email": email,
-                    "google_name": name,
-                    "google_avatar": avatar_url,
-                    "exp": (datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp()
+                    "googleUsername": google_username,  # Store provider-specific username
+                    "updatedAt": current_time,
+                    "lastLoginAt": current_time,
                 }
-                
-                pending_token = jwt.encode(pending_data, config_settings.FLASK_SECRET_KEY, algorithm=config_settings.ALGORITHM)
-                
-                # Redirect to frontend with pending_link query parameter
-                frontend_url = f"{frontend_url}?pending_link={pending_token}"
-                
-                redirect_response = RedirectResponse(url=frontend_url)
-                return redirect_response
-            else:
-                # Create new user or update existing Google user
-                try:
-                    # Ensure username uniqueness by checking and appending numbers if needed
-                    base_username = username
-                    counter = 1
-                    while await self.users_collection.find_one({"username": username, "googleId": {"$ne": google_user_id}}):
-                        username = f"{base_username}{counter}"
-                        counter += 1
-                    
-                    set_payload = {
-                        "name": name,
-                        "googleAvatarUrl": avatar_url,  # Store Google avatar separately
-                        "email": email,
-                        "googleId": google_user_id,
-                        "updatedAt": current_time,
-                        "lastLoginAt": current_time,
-                    }
 
-                    set_on_insert_payload = {
-                        "username": username,
-                        "createdAt": current_time,
-                        "isAdmin": False,
-                        # Set default privacy settings for new users
-                        "showEmail": True,
-                        "showGithub": True,
-                        "preferredAvatarSource": "google",  # Default to Google avatar for Google-only users
-                    }
+                set_on_insert_payload = {
+                    "username": google_username,  # Only set on first creation
+                    "createdAt": current_time,
+                    "isAdmin": False,
+                    # Set default privacy settings for new users
+                    "showEmail": True,
+                    "showGithub": True,
+                    "preferredAvatarSource": "google",  # Default to Google avatar for Google-only users
+                }
 
-                    user_document = await self.users_collection.find_one_and_update(
-                        {"googleId": google_user_id},
-                        {
-                            "$set": set_payload,
-                            "$setOnInsert": set_on_insert_payload
-                        },
-                        upsert=True,
-                        return_document=ReturnDocument.AFTER
+                user_document = await self.users_collection.find_one_and_update(
+                    {"googleId": google_user_id},
+                    {
+                        "$set": set_payload,
+                        "$setOnInsert": set_on_insert_payload
+                    },
+                    upsert=True,
+                    return_document=ReturnDocument.AFTER
+                )
+                
+                # Compute primary avatar_url based on preference
+                preferred_source = user_document.get("preferredAvatarSource", "google")
+                if preferred_source == "github" and user_document.get("githubAvatarUrl"):
+                    computed_avatar = user_document.get("githubAvatarUrl")
+                else:
+                    computed_avatar = user_document.get("googleAvatarUrl")
+                
+                # Update with computed avatar_url
+                if computed_avatar:
+                    await self.users_collection.update_one(
+                        {"_id": user_document["_id"]},
+                        {"$set": {"avatarUrl": computed_avatar}}
                     )
-                    
-                    # Compute primary avatar_url based on preference
-                    preferred_source = user_document.get("preferredAvatarSource", "google")
-                    if preferred_source == "github" and user_document.get("githubAvatarUrl"):
-                        computed_avatar = user_document.get("githubAvatarUrl")
-                    else:
-                        computed_avatar = user_document.get("googleAvatarUrl")
-                    
-                    # Update with computed avatar_url
-                    if computed_avatar:
-                        await self.users_collection.update_one(
-                            {"_id": user_document["_id"]},
-                            {"$set": {"avatarUrl": computed_avatar}}
-                        )
-                        user_document["avatarUrl"] = computed_avatar
-                    
-                    if not user_document:
-                        logger.error("GoogleOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
-                        return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)
-                    
-                    logger.info(f"GoogleOAuthService: User {username} (DB ID: {user_document['_id']}, Google ID: {user_document.get('google_id')}) upserted successfully.")
+                    user_document["avatarUrl"] = computed_avatar
+                
+                if not user_document:
+                    logger.error("GoogleOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
+                    return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)
+                
+                logger.info(f"GoogleOAuthService: User {user_document.get('username')} (DB ID: {user_document['_id']}, Google ID: {user_document.get('googleId')}) upserted successfully.")
 
-                except Exception as db_exc:
-                    logger.error(f"Database operation error during user upsert: {db_exc}")
-                    return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_generic_error", status_code=307)
+            except Exception as db_exc:
+                logger.error(f"Database operation error during user upsert: {db_exc}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_generic_error", status_code=307)
 
             user_id_str = str(user_document["_id"])
             username = user_document["username"]

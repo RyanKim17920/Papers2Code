@@ -29,6 +29,8 @@ export interface UserProfile {
     email?: string | null;
     githubId?: number | null;
     googleId?: string | null;
+    githubUsername?: string | null;
+    googleUsername?: string | null;
 }
 
 export interface PaperActionUserProfile {

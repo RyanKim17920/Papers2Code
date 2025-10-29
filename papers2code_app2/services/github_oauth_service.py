@@ -189,105 +189,79 @@ class GitHubOAuthService:
 
             current_time = datetime.now(timezone.utc)
             
-            # Check if user already exists by email (for account linking)
-            existing_user_by_email = None
-            if email:
-                existing_user_by_email = await self.users_collection.find_one({
+            # No automatic account linking by email - users must manually link via settings
+            # Normal GitHub user creation/update
+            try:
+                # Ensure username uniqueness by checking and appending numbers if needed
+                # This prevents conflicts when a Google user already has this username
+                base_username = username
+                counter = 1
+                while await self.users_collection.find_one({"username": username, "githubId": {"$ne": github_user_id}}):
+                    username = f"{base_username}{counter}"
+                    counter += 1
+                
+                set_payload = {
+                    "name": name,
+                    "githubAvatarUrl": avatar_url,  # Store GitHub avatar separately
                     "email": email,
-                    "googleId": {"$exists": True},
-                    "githubId": {"$exists": False}
-                })
-            
-            if existing_user_by_email:
-                # User exists via Google, potential account linking scenario
-                logger.info(f"Found existing Google user with matching email: {email}")
-                
-                # Store pending linking data in a temporary JWT token
-                import base64
-                import json
-                
-                pending_data = {
-                    "existing_user_id": str(existing_user_by_email["_id"]),
-                    "existing_username": existing_user_by_email.get("username"),
-                    "existing_avatar": existing_user_by_email.get("googleAvatarUrl"),
                     "githubId": github_user_id,
-                    "github_username": username,
-                    "github_name": name,
-                    "github_email": email,
-                    "github_avatar": avatar_url,
-                    "github_token": github_token,
-                    "exp": (datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp()
+                    "githubUsername": username,  # Store provider-specific username
+                    "githubAccessToken": github_token,  # Store the token for API calls
+                    "updatedAt": current_time,
+                    "lastLoginAt": current_time,
                 }
-                
-                pending_token = jwt.encode(pending_data, config_settings.FLASK_SECRET_KEY, algorithm=config_settings.ALGORITHM)
-                
-                # Redirect to frontend with pending_link query parameter
-                frontend_url = f"{frontend_url}?pending_link={pending_token}"
-                
-                redirect_response = RedirectResponse(url=frontend_url)
-                return redirect_response
-            else:
-                # Normal GitHub user creation/update
-                try:
-                    set_payload = {
-                        "name": name,
-                        "githubAvatarUrl": avatar_url,  # Store GitHub avatar separately
-                        "email": email,
-                        "githubId": github_user_id,
-                        "githubAccessToken": github_token,  # Store the token for API calls
-                        "updatedAt": current_time,
-                        "lastLoginAt": current_time,
-                    }
 
-                    set_on_insert_payload = {
-                        "username": username,
-                        "createdAt": current_time,
-                        "isAdmin": False,
-                        # Set default privacy settings for new users
-                        "showEmail": True,
-                        "showGithub": True,
-                        "preferredAvatarSource": "github",  # Default to GitHub avatar
-                    }
+                set_on_insert_payload = {
+                    "username": username,
+                    "createdAt": current_time,
+                    "isAdmin": False,
+                    # Set default privacy settings for new users
+                    "showEmail": True,
+                    "showGithub": True,
+                    "preferredAvatarSource": "github",  # Default to GitHub avatar
+                }
 
-                    user_document = await self.users_collection.find_one_and_update(
-                        {"username": username},
-                        {
-                            "$set": set_payload,
-                            "$setOnInsert": set_on_insert_payload
-                        },
-                        upsert=True,
-                        return_document=ReturnDocument.AFTER
+                # Match by githubId ONLY to prevent automatic account merging
+                user_document = await self.users_collection.find_one_and_update(
+                    {"githubId": github_user_id},
+                    {
+                        "$set": set_payload,
+                        "$setOnInsert": set_on_insert_payload
+                    },
+                    upsert=True,
+                    return_document=ReturnDocument.AFTER
+                )
+                
+                # Compute primary avatar_url based on preference
+                preferred_source = user_document.get("preferredAvatarSource", "github")
+                if preferred_source == "google" and user_document.get("googleAvatarUrl"):
+                    computed_avatar = user_document.get("googleAvatarUrl")
+                else:
+                    computed_avatar = user_document.get("githubAvatarUrl")
+                
+                # Update with computed avatar_url
+                if computed_avatar:
+                    await self.users_collection.update_one(
+                        {"_id": user_document["_id"]},
+                        {"$set": {"avatarUrl": computed_avatar}}
                     )
-                    
-                    # Compute primary avatar_url based on preference
-                    preferred_source = user_document.get("preferredAvatarSource", "github")
-                    if preferred_source == "google" and user_document.get("googleAvatarUrl"):
-                        computed_avatar = user_document.get("googleAvatarUrl")
-                    else:
-                        computed_avatar = user_document.get("githubAvatarUrl")
-                    
-                    # Update with computed avatar_url
-                    if computed_avatar:
-                        await self.users_collection.update_one(
-                            {"_id": user_document["_id"]},
-                            {"$set": {"avatarUrl": computed_avatar}}
-                        )
-                        user_document["avatarUrl"] = computed_avatar
-                    
-                    if not user_document:
-                        logger.error("GitHubOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
-                        return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)
-                    
-                    logger.info(f"GitHubOAuthService: User {username} (DB ID: {user_document['_id']}, GitHub ID: {user_document.get('github_id')}) upserted successfully.")
+                    user_document["avatarUrl"] = computed_avatar
+                
+                if not user_document:
+                    logger.error("GitHubOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
+                    return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)
+                
+                logger.info(f"GitHubOAuthService: User {user_document.get('username')} (DB ID: {user_document['_id']}, GitHub ID: {user_document.get('githubId')}) upserted successfully.")
 
-                except Exception as db_exc:
-                    logger.error(f"Database operation error during user upsert: {db_exc}")
-                    return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_generic_error", status_code=307)
+            except Exception as db_exc:
+                logger.error(f"Database operation error during user upsert: {db_exc}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_generic_error", status_code=307)
 
             user_id_str = str(user_document["_id"])
+            username_from_db = user_document["username"]
             access_token_payload = {
                 "sub": user_id_str,
-                "username": username,
+                "username": username_from_db,
                 "githubId": github_user_id,
             }
             access_token = create_access_token(data=access_token_payload)
@@ -324,5 +298,5 @@ class GitHubOAuthService:
                 path="/",
                 secure=True if config_settings.ENV_TYPE == "production" else False
             )
-            logger.info(f"Successfully authenticated user {username}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
+            logger.info(f"Successfully authenticated user {username_from_db}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
             return redirect_response
