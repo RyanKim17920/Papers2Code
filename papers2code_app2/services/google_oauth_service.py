@@ -202,9 +202,31 @@ class GoogleOAuthService:
 
             current_time = datetime.now(timezone.utc)
             
-            # Check if user already exists by google_id only (not by email)
-            # Email matching removed - users must manually link accounts via settings
+            # Check if user already exists by google_id
             existing_user = await self.users_collection.find_one({"googleId": google_user_id})
+            
+            # If no existing Google user, check for email match with different provider
+            if not existing_user and email:
+                # Check if there's a GitHub account with the same email
+                github_account = await self.users_collection.find_one({"email": email, "githubId": {"$exists": True}})
+                if github_account:
+                    # Create pending link token
+                    pending_link_data = {
+                        "existingUserId": str(github_account["_id"]),
+                        "newProvider": "google",
+                        "googleId": google_user_id,
+                        "googleUsername": google_username,
+                        "googleAvatarUrl": avatar_url,
+                        "email": email,
+                        "name": name,
+                        "exp": datetime.now(timezone.utc) + timedelta(minutes=10)
+                    }
+                    pending_link_token = create_access_token(data=pending_link_data)
+                    logger.info(f"Email match found. Redirecting to account linking modal.")
+                    return RedirectResponse(
+                        url=f"{frontend_url}/?pending_link={pending_link_token}",
+                        status_code=307
+                    )
             
             # Create new user or update existing Google user
             try:

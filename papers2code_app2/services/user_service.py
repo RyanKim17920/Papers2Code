@@ -61,8 +61,11 @@ class UserService:
                 user_doc["email"] = None
             
             # Hide GitHub info if privacy setting is False
-            if not show_github and "githubId" in user_doc:
-                user_doc["githubId"] = None
+            if not show_github:
+                if "githubId" in user_doc:
+                    user_doc["githubId"] = None
+                if "githubUsername" in user_doc:
+                    user_doc["githubUsername"] = None
         
         user_details = UserSchema(**user_doc)
 
