@@ -244,19 +244,19 @@ async def link_accounts(request: Request, response: Response):
         current_time = datetime.now(timezone.utc)
         
         # Determine which account is being linked
-        if "google_id" in pending_data:
+        if "googleId" in pending_data:
             # Linking Google to existing GitHub account
-            google_id = pending_data["google_id"]
+            google_id = pending_data["googleId"]
             google_avatar = pending_data["google_avatar"]
             google_email = pending_data["google_email"]
             
             # Get existing user's avatar
             existing_user = await users_collection.find_one({"_id": existing_user_id})
-            github_avatar = existing_user.get("github_avatar_url")
+            github_avatar = existing_user.get("githubAvatarUrl")
             
             update_payload = {
-                "google_id": google_id,
-                "google_avatar_url": google_avatar,
+                "googleId": google_id,
+                "googleAvatarUrl": google_avatar,
                 "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
                 "preferredAvatarSource": "github",
                 "email": google_email,
@@ -274,11 +274,11 @@ async def link_accounts(request: Request, response: Response):
             access_token_payload = {
                 "sub": str(user_document["_id"]),
                 "username": user_document["username"],
-                "google_id": google_id,
+                "googleId": google_id,
             }
         else:
             # Linking GitHub to existing Google account
-            github_id = pending_data["github_id"]
+            github_id = pending_data["githubId"]
             github_avatar = pending_data["github_avatar"]
             github_username = pending_data["github_username"]
             github_token = pending_data["github_token"]
@@ -287,11 +287,11 @@ async def link_accounts(request: Request, response: Response):
             
             # Get existing user's avatar
             existing_user = await users_collection.find_one({"_id": existing_user_id})
-            google_avatar = existing_user.get("google_avatar_url")
+            google_avatar = existing_user.get("googleAvatarUrl")
             
             update_payload = {
-                "github_id": github_id,
-                "github_avatar_url": github_avatar,
+                "githubId": github_id,
+                "githubAvatarUrl": github_avatar,
                 "githubAccessToken": github_token,
                 "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
                 "preferredAvatarSource": "github",
@@ -312,7 +312,7 @@ async def link_accounts(request: Request, response: Response):
             access_token_payload = {
                 "sub": str(user_document["_id"]),
                 "username": user_document["username"],
-                "github_id": github_id,
+                "githubId": github_id,
             }
         
         access_token = create_access_token(data=access_token_payload)

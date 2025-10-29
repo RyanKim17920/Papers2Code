@@ -204,13 +204,13 @@ class GoogleOAuthService:
             # Check if user already exists by google_id or email
             existing_user = await self.users_collection.find_one({
                 "$or": [
-                    {"google_id": google_user_id},
+                    {"googleId": google_user_id},
                     {"email": email}
                 ]
             })
             
             # If user exists with a different provider, we need to handle this
-            if existing_user and existing_user.get("github_id") and not existing_user.get("google_id"):
+            if existing_user and existing_user.get("githubId") and not existing_user.get("googleId"):
                 # User exists via GitHub, potential account linking scenario
                 logger.info(f"Found existing GitHub user with matching email: {existing_user.get('username')}")
                 
@@ -221,8 +221,8 @@ class GoogleOAuthService:
                 pending_data = {
                     "existing_user_id": str(existing_user["_id"]),
                     "existing_username": existing_user.get("username"),
-                    "existing_avatar": existing_user.get("github_avatar_url"),
-                    "google_id": google_user_id,
+                    "existing_avatar": existing_user.get("githubAvatarUrl"),
+                    "googleId": google_user_id,
                     "google_email": email,
                     "google_name": name,
                     "google_avatar": avatar_url,
@@ -242,15 +242,15 @@ class GoogleOAuthService:
                     # Ensure username uniqueness by checking and appending numbers if needed
                     base_username = username
                     counter = 1
-                    while await self.users_collection.find_one({"username": username, "google_id": {"$ne": google_user_id}}):
+                    while await self.users_collection.find_one({"username": username, "googleId": {"$ne": google_user_id}}):
                         username = f"{base_username}{counter}"
                         counter += 1
                     
                     set_payload = {
                         "name": name,
-                        "google_avatar_url": avatar_url,  # Store Google avatar separately
+                        "googleAvatarUrl": avatar_url,  # Store Google avatar separately
                         "email": email,
-                        "google_id": google_user_id,
+                        "googleId": google_user_id,
                         "updatedAt": current_time,
                         "lastLoginAt": current_time,
                     }
@@ -258,7 +258,7 @@ class GoogleOAuthService:
                     set_on_insert_payload = {
                         "username": username,
                         "createdAt": current_time,
-                        "is_admin": False,
+                        "isAdmin": False,
                         # Set default privacy settings for new users
                         "showEmail": True,
                         "showGithub": True,
@@ -266,7 +266,7 @@ class GoogleOAuthService:
                     }
 
                     user_document = await self.users_collection.find_one_and_update(
-                        {"google_id": google_user_id},
+                        {"googleId": google_user_id},
                         {
                             "$set": set_payload,
                             "$setOnInsert": set_on_insert_payload
@@ -277,10 +277,10 @@ class GoogleOAuthService:
                     
                     # Compute primary avatar_url based on preference
                     preferred_source = user_document.get("preferredAvatarSource", "google")
-                    if preferred_source == "github" and user_document.get("github_avatar_url"):
-                        computed_avatar = user_document.get("github_avatar_url")
+                    if preferred_source == "github" and user_document.get("githubAvatarUrl"):
+                        computed_avatar = user_document.get("githubAvatarUrl")
                     else:
-                        computed_avatar = user_document.get("google_avatar_url")
+                        computed_avatar = user_document.get("googleAvatarUrl")
                     
                     # Update with computed avatar_url
                     if computed_avatar:
@@ -305,7 +305,7 @@ class GoogleOAuthService:
             access_token_payload = {
                 "sub": user_id_str,
                 "username": username,
-                "google_id": google_user_id,
+                "googleId": google_user_id,
             }
             access_token = create_access_token(data=access_token_payload)
             

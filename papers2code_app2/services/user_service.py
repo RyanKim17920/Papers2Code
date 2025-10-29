@@ -61,8 +61,8 @@ class UserService:
                 user_doc["email"] = None
             
             # Hide GitHub info if privacy setting is False
-            if not show_github and "github_id" in user_doc:
-                user_doc["github_id"] = None
+            if not show_github and "githubId" in user_doc:
+                user_doc["githubId"] = None
         
         user_details = UserSchema(**user_doc)
 
@@ -340,16 +340,16 @@ class UserService:
         clean_update_data["profile_updated_at"] = datetime.utcnow()
         
         # If preferred_avatar_source is being updated, recompute the primary avatarUrl
-        if "preferred_avatar_source" in clean_update_data:
+        if "preferredAvatarSource" in clean_update_data:
             user_doc = await self.users_collection.find_one({"_id": user_id})
             if user_doc:
-                preferred_source = clean_update_data["preferred_avatar_source"]
-                if preferred_source == "github" and user_doc.get("github_avatar_url"):
-                    clean_update_data["avatar_url"] = user_doc.get("github_avatar_url")
-                elif preferred_source == "google" and user_doc.get("google_avatar_url"):
-                    clean_update_data["avatar_url"] = user_doc.get("google_avatar_url")
+                preferred_source = clean_update_data["preferredAvatarSource"]
+                if preferred_source == "github" and user_doc.get("githubAvatarUrl"):
+                    clean_update_data["avatarUrl"] = user_doc.get("githubAvatarUrl")
+                elif preferred_source == "google" and user_doc.get("googleAvatarUrl"):
+                    clean_update_data["avatarUrl"] = user_doc.get("googleAvatarUrl")
                 # If preferred source doesn't have an avatar, keep the current one
-                elif user_doc.get("avatar_url"):
+                elif user_doc.get("avatarUrl"):
                     # Don't change it
                     pass
         

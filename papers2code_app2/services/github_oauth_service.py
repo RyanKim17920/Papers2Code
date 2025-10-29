@@ -174,7 +174,7 @@ class GitHubOAuthService:
 
             username = github_user_data.get("login")
             name = github_user_data.get("name") or username
-            avatar_url = github_user_data.get("avatar_url")
+            avatar_url = github_user_data.get("avatarUrl")
             email = github_user_data.get("email")
             github_user_id = github_user_data.get("id")
 
@@ -194,8 +194,8 @@ class GitHubOAuthService:
             if email:
                 existing_user_by_email = await self.users_collection.find_one({
                     "email": email,
-                    "google_id": {"$exists": True},
-                    "github_id": {"$exists": False}
+                    "googleId": {"$exists": True},
+                    "githubId": {"$exists": False}
                 })
             
             if existing_user_by_email:
@@ -209,8 +209,8 @@ class GitHubOAuthService:
                 pending_data = {
                     "existing_user_id": str(existing_user_by_email["_id"]),
                     "existing_username": existing_user_by_email.get("username"),
-                    "existing_avatar": existing_user_by_email.get("google_avatar_url"),
-                    "github_id": github_user_id,
+                    "existing_avatar": existing_user_by_email.get("googleAvatarUrl"),
+                    "githubId": github_user_id,
                     "github_username": username,
                     "github_name": name,
                     "github_email": email,
@@ -231,9 +231,9 @@ class GitHubOAuthService:
                 try:
                     set_payload = {
                         "name": name,
-                        "github_avatar_url": avatar_url,  # Store GitHub avatar separately
+                        "githubAvatarUrl": avatar_url,  # Store GitHub avatar separately
                         "email": email,
-                        "github_id": github_user_id,
+                        "githubId": github_user_id,
                         "githubAccessToken": github_token,  # Store the token for API calls
                         "updatedAt": current_time,
                         "lastLoginAt": current_time,
@@ -242,7 +242,7 @@ class GitHubOAuthService:
                     set_on_insert_payload = {
                         "username": username,
                         "createdAt": current_time,
-                        "is_admin": False,
+                        "isAdmin": False,
                         # Set default privacy settings for new users
                         "showEmail": True,
                         "showGithub": True,
@@ -261,10 +261,10 @@ class GitHubOAuthService:
                     
                     # Compute primary avatar_url based on preference
                     preferred_source = user_document.get("preferredAvatarSource", "github")
-                    if preferred_source == "google" and user_document.get("google_avatar_url"):
-                        computed_avatar = user_document.get("google_avatar_url")
+                    if preferred_source == "google" and user_document.get("googleAvatarUrl"):
+                        computed_avatar = user_document.get("googleAvatarUrl")
                     else:
-                        computed_avatar = user_document.get("github_avatar_url")
+                        computed_avatar = user_document.get("githubAvatarUrl")
                     
                     # Update with computed avatar_url
                     if computed_avatar:
@@ -288,7 +288,7 @@ class GitHubOAuthService:
             access_token_payload = {
                 "sub": user_id_str,
                 "username": username,
-                "github_id": github_user_id,
+                "githubId": github_user_id,
             }
             access_token = create_access_token(data=access_token_payload)
             

@@ -30,7 +30,7 @@ async def require_github_account(current_user: UserInDBMinimalSchema):
     Check if the user has a linked GitHub account.
     Raises HTTPException if no GitHub account is linked.
     """
-    if not current_user.github_id:
+    if not current_user.githubId:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="GitHub account required for implementation features. Please link your GitHub account to access this feature."
