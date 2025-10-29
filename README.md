@@ -21,12 +21,22 @@ npm run dev
 Visit `http://localhost:5173` for the frontend and `http://localhost:5000` for the API.
 
 ### Production Deployment
-See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed production deployment instructions.
 
-**Quick Deploy**: Use the automated Render deployment script:
-```bash
-./scripts/deploy_render.sh
-```
+**Deployment Options**:
+
+1. **Vercel + Render** (Recommended for production):
+   - Frontend on Vercel (optimal for React/Vite)
+   - Backend on Render/Railway (optimal for FastAPI)
+   - Quick Start: [DEPLOY_VERCEL.md](DEPLOY_VERCEL.md)
+   - Full Guide: [VERCEL_DEPLOYMENT.md](docs/deployment/VERCEL_DEPLOYMENT.md)
+
+2. **Render (All-in-One)**:
+   - Both frontend and backend on Render
+   - Guide: [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md)
+   - Quick Deploy Script:
+     ```bash
+     ./scripts/deploy_render.sh
+     ```
 
 **🔒 Security Documentation**: 
 - **🚀 Quick Start**: [SECURITY_QUICK_START.md](docs/security/SECURITY_QUICK_START.md) - Fast setup guide
@@ -104,7 +114,8 @@ Papers-2-code/
 - **React Query**: Server state management
 
 ### Infrastructure
-- **Render**: Full-stack hosting (recommended)
+- **Vercel**: Frontend hosting (recommended for production)
+- **Render/Railway**: Backend hosting (recommended for FastAPI)
 - **MongoDB Atlas**: Managed database service
 - **OAuth Providers**: GitHub and Google authentication
 

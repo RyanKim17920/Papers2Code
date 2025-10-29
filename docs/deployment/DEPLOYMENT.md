@@ -1,6 +1,23 @@
 # Deployment Guide
 
-## Platform: Render.com
+## Deployment Options
+
+Papers2Code can be deployed on multiple platforms:
+
+### 1. Vercel + Render/Railway (Recommended for Production)
+- **Frontend**: Vercel (optimal for React/Vite)
+- **Backend**: Render or Railway (optimal for FastAPI)
+- **Guide**: See [VERCEL_DEPLOYMENT.md](./VERCEL_DEPLOYMENT.md)
+- **Cost**: Free to $27/month
+
+### 2. Render.com (All-in-One)
+- **Full-stack**: Both frontend and backend on Render
+- **Guide**: See below
+- **Cost**: Free tier available (backend sleeps after 15 mins) or $7/month (always-on)
+
+---
+
+## Option 1: Render.com (All-in-One)
 
 **Architecture**: Full-stack deployment with FastAPI backend and React frontend
 **Database**: MongoDB Atlas

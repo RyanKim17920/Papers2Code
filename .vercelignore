@@ -1,0 +1,51 @@
+# Python backend (deployed separately)
+papers2code_app2/
+tests/
+scripts/
+*.py
+pyproject.toml
+uv.lock
+
+# Documentation
+docs/
+NOTES.md
+TODO.md
+ARCHITECTURE.md
+
+# Git and GitHub
+.git/
+.github/
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Dependencies
+node_modules/
+__pycache__/
+*.pyc
+.pytest_cache/
+
+# Build artifacts
+*.egg-info/
+dist/
+build/
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Render config
+render.yaml
+
+# Logs
+*.log
+logs/
