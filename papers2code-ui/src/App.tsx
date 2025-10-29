@@ -20,10 +20,9 @@ import { ModalProvider } from '@/shared/contexts/ModalContext';
 import LoginPromptModal from '@/shared/components/LoginPromptModal';
 import { ErrorBoundary, PaperListErrorBoundary, PaperDetailErrorBoundary } from '@/shared/components/ErrorBoundary';
 import { AuthenticationError } from '@/shared/services/api';
-import GlobalHeader from '@/shared/components/GlobalHeader';
-import { useToast } from '@/shared/hooks/use-toast';
-import { Toaster } from '@/shared/ui/toaster';
-import { AccountLinkModal } from '@/features/auth/AccountLinkModal';
+import GlobalHeader from "@/shared/components/GlobalHeader";
+import { useToast } from "@/shared/hooks/use-toast";
+import { AccountLinkModal } from "@/features/auth/AccountLinkModal";
 
 // 2. Create a new instance of the QueryClient
 // This is done outside the component to prevent it from being recreated on every render.
@@ -241,7 +240,6 @@ function App() {
             <footer className="bg-[rgba(241,243,245,0.8)] text-[var(--text-muted-color)] text-center py-4 text-sm border-t border-[var(--border-color-light)]"> 
             </footer>
           </div>
-          <Toaster />
       </ModalProvider>
     </QueryClientProvider>
   );

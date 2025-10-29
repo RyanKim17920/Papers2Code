@@ -5,11 +5,11 @@ import {
   DialogDescription,
   DialogHeader,
   DialogTitle,
-} from '@/shared/components/ui/dialog';
-import { Button } from '@/shared/components/ui/button';
-import { Avatar, AvatarImage, AvatarFallback } from '@/shared/components/ui/avatar';
+} from '@/shared/ui/dialog';
+import { Button } from '@/shared/ui/button';
+import { Avatar, AvatarImage, AvatarFallback } from '@/shared/ui/avatar';
 import { Github, Mail, AlertCircle } from 'lucide-react';
-import { Alert, AlertDescription } from '@/shared/components/ui/alert';
+import { Alert, AlertDescription } from '@/shared/ui/alert';
 
 interface AccountData {
   username: string;
