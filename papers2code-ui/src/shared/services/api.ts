@@ -52,6 +52,9 @@ export interface AdvancedPaperFilters {
   mainStatus?: string; // Implementation status filter
   implStatus?: string; // Implementability status filter
   hasOfficialImpl?: boolean; // Filter by presence of official implementation
+  hasCode?: boolean; // Filter by presence of any code
+  contributorId?: string; // Filter by contributor user ID
+  tags?: string[]; // Filter by specific tags
 }
 
 // --- Type for the response from the /actions endpoint ---
@@ -104,6 +107,15 @@ export const fetchPapersFromApi = async (
     }
     if (advancedFilters.hasOfficialImpl !== undefined) {
       params.append('hasOfficialImpl', String(advancedFilters.hasOfficialImpl));
+    }
+    if (advancedFilters.hasCode !== undefined) {
+      params.append('hasCode', String(advancedFilters.hasCode));
+    }
+    if (advancedFilters.contributorId) {
+      params.append('contributorId', advancedFilters.contributorId);
+    }
+    if (advancedFilters.tags && advancedFilters.tags.length > 0) {
+      advancedFilters.tags.forEach(tag => params.append('tags', tag));
     }
   }
   const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/?${params.toString()}`;
@@ -507,6 +519,30 @@ async function handleApiResponse<T>(response: AxiosResponse, isPublicEndpoint: b
   }
   return data;
 }
+
+// --- NEW: Meta endpoints for autocomplete and filtering ---
+export const fetchTagsFromApi = async (searchQuery?: string): Promise<string[]> => {
+  const params = new URLSearchParams();
+  if (searchQuery && searchQuery.trim()) {
+    params.append('query', searchQuery.trim());
+  }
+  const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/meta/distinct_tags/?${params.toString()}`;
+  const response = await api.get(url);
+  return await handleApiResponse<string[]>(response, true);
+};
+
+export const fetchVenuesFromApi = async (): Promise<string[]> => {
+  const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/meta/distinct_venues/`;
+  const response = await api.get(url);
+  return await handleApiResponse<string[]>(response, true);
+};
+
+export const fetchAuthorsFromApi = async (): Promise<string[]> => {
+  const url = `${API_BASE_URL}${PAPERS_API_PREFIX}/papers/meta/distinct_authors/`;
+  const response = await api.get(url);
+  return await handleApiResponse<string[]>(response, true);
+};
+// --- End NEW ---
 
 export const api = axios.create({
   baseURL: import.meta.env.VITE_API_BASE_URL || API_BASE_URL,

@@ -1,6 +1,5 @@
 from fastapi import APIRouter, Depends, HTTPException, Query, Path, Request, BackgroundTasks
 from typing import List, Optional, Dict
-import asyncio # Add asyncio import
 
 from ..schemas.papers import PaperResponse, PaginatedPaperResponse
 from ..schemas.minimal import UserSchema as User  # Using UserSchema as User for type hinting
@@ -10,8 +9,7 @@ from ..dependencies import get_paper_view_service, get_activity_tracking_service
 from ..services.exceptions import DatabaseOperationException
 from ..error_handlers import handle_service_errors
 from ..auth import get_current_user_optional # Changed from get_current_user
-from ..utils import transform_paper_async
-from ..shared import config_settings
+from ..utils import transform_paper_async, transform_papers_batch
 import logging
 import time # Add time import for performance logging
 
@@ -37,6 +35,8 @@ async def list_papers(
     search_query: Optional[str] = Query(default=None, alias="searchQuery", min_length=3, description="Search query for title, abstract"), # ADDED alias
     tags: Optional[List[str]] = Query(default=None, description="Filter by tags (comma-separated or multiple query params)"), # Tags are often sent as multiple params, alias might not be strictly needed if FastAPI handles it.
     has_official_impl: Optional[bool] = Query(default=None, alias="hasOfficialImpl", description="Filter by presence of official implementation"), # ADDED alias
+    has_code: Optional[bool] = Query(default=None, alias="hasCode", description="Filter by presence of any code (official or community)"),
+    contributor_id: Optional[str] = Query(default=None, alias="contributorId", description="Filter papers by contributor user ID (shows papers user has worked on)"),
     venue: Optional[str] = Query(default=None, description="Filter by publication venue (e.g., CVPR, NeurIPS)"),
     author: Optional[str] = Query(default=None, alias="searchAuthors", description="Filter by author name (searches author list)"), # Corrected alias to searchAuthors
     start_date: Optional[str] = Query(default=None, alias="startDate", description="Filter by publication start date (ISO format YYYY-MM-DD)"), # ADDED alias
@@ -61,6 +61,8 @@ async def list_papers(
         main_status=main_status, impl_status=impl_status,
         search_query=search_query, tags=tags,
         has_official_impl=has_official_impl,
+        has_code=has_code,
+        contributor_id=contributor_id,
         venue=venue, author=author,
         start_date=start_date, end_date=end_date
     )
@@ -68,27 +70,13 @@ async def list_papers(
     logger.info(f"PERF: service.get_papers_list took {end_time_service - start_time_service:.4f} seconds.")
 
     start_time_transform = time.time()
-    # transformed_papers = []
-    # for paper_doc in papers_cursor:
-    #     transformed_paper = await transform_paper_async(paper_doc, current_user_id_str) # CORRECTED: removed detail_level
-    #     if transformed_paper:
-    #         transformed_papers.append(transformed_paper)
-
-    # Parallelize the transformation with configurable batching for better performance
-    batch_size = config_settings.PAPER_TRANSFORM_BATCH_SIZE  # Configurable batch size
-    transformed_papers = []
     
-    for i in range(0, len(papers_cursor), batch_size):
-        batch = papers_cursor[i:i + batch_size]
-        transform_tasks = [
-            transform_paper_async(paper_doc, current_user_id_str)
-            for paper_doc in batch
-        ]
-        batch_results = await asyncio.gather(*transform_tasks)
-        transformed_papers.extend([paper for paper in batch_results if paper is not None])
+    # OPTIMIZATION: Use batch transformation instead of individual transformations
+    # This reduces DB queries from N to 2 (one for user data, one for vote counts)
+    transformed_papers = await transform_papers_batch(papers_cursor, current_user_id_str, detail_level="full")
     
     end_time_transform = time.time()
-    logger.info(f"PERF: Transforming {len(transformed_papers)} papers took {end_time_transform - start_time_transform:.4f} seconds.")
+    logger.info(f"PERF: Batch transforming {len(transformed_papers)} papers took {end_time_transform - start_time_transform:.4f} seconds.")
 
     #logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
     final_response = {
@@ -157,13 +145,13 @@ async def get_papers_by_arxiv_ids_route(
         logger.error(f"Router: Unexpected error fetching by arXiv IDs: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail="An unexpected error occurred.")
 
-    response_papers = []
-    for paper_db in papers_db:
-        try:
-            paper_response = await transform_paper_async(paper_db, user_id_str)
-            response_papers.append(paper_response)
-        except Exception as e:
-            logger.error(f"Router: Error transforming paper {paper_db.get('_id')} for arXiv ID list: {e}", exc_info=True)
+    # OPTIMIZATION: Use batch transformation
+    try:
+        transformed_papers = await transform_papers_batch(papers_db, user_id_str, detail_level="full")
+        response_papers = transformed_papers
+    except Exception as e:
+        logger.error(f"Router: Error batch transforming papers for arXiv ID list: {e}", exc_info=True)
+        response_papers = []
     
     #logger.info(f"Router: Successfully fetched {len(response_papers)} papers by arXiv IDs.")
     return response_papers
@@ -171,11 +159,12 @@ async def get_papers_by_arxiv_ids_route(
 @router.get("/meta/distinct_tags/", response_model=List[str])
 @handle_service_errors
 async def get_distinct_tags_route(
+    query: Optional[str] = Query(default=None, description="Optional search term to filter tags"),
     service: PaperViewService = Depends(get_paper_view_service)
 ):
     #logger.info("Router: Getting distinct tags.")
     try:
-        tags = await service.get_distinct_tags()
+        tags = await service.get_distinct_tags(search_query=query)
     except DatabaseOperationException as e:
         logger.error(f"Router: Database error fetching distinct tags: {e}", exc_info=True)
         raise HTTPException(status_code=500, detail=str(e))

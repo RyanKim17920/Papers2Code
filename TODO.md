@@ -51,11 +51,11 @@
 * [X] Saved/Thumbs/Loved doesn't display any papers in dashboard (works in profile though, UNIFY if it's upvoted or saved, let's stick with upvoted first) but it does work in user profile
 * [ ] In user profile, upvoted papers should already be highlighted for the thumbs up instead of being not fille
 3. FUTURE CHANGES (mixed) [DO NOT IMPLEMENT RIGHT NOW]:
- * [ ] Search works for all cases
+ * [X] Search works for all cases
  * [ ] Improve tagging and tags
- * [ ] Improve search in general 
- * [ ] more papers in the dashboard for implementation 
- * [ ] for both profile's Updated/Contrbuting and the dashboard cards should be identical, and have ability to go directly to paper link, or github link, along with showing the abstract rather than repeating the title twice
+ * [X] Improve search in general 
+ * [X] more papers in the dashboard for implementation 
+ * [X] for both profile's Updated/Contrbuting and the dashboard cards should be identical, and have ability to go directly to paper link, or github link, along with showing the abstract rather than repeating the title twice
 * [ ] Date of publishing for papers in dashbaord not time ago 
 * [X] Condense all the various careds into some similar method instead of having so many different ones of the same hting
 * [ ] If user has too many contributed to or upvoted have a pagination but vertical on the right side in the white space of the area.
@@ -63,5 +63,7 @@
 * [X] implementaiton tracking becomes a timeline not just random information texted 
 * [ ] works for MOBILE (especially dashboard right now is broken)
 * [x] everything to tailwind (100% COMPLETE! 🎉 - All 26 CSS files converted to Tailwind CSS)
-* [ ] Inconsistent taggint form paperList and other papers??
+* [X] Inconsistent taggint form paperList and other papers??
 * [ ] DARK MODE
+
+* [ ] Deal with the old isOwner isAdmine stuff...

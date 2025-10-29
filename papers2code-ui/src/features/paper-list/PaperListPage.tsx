@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight, Tags, Briefcase } from 'lucide-react';
 import { usePaperList, SortPreference } from '@/shared/hooks/usePaperList';
 import { LoadingSpinner } from '@/shared/components';
 import { Button } from '@/shared/ui/button';
@@ -9,6 +9,11 @@ import { Card, CardContent } from '@/shared/ui/card';
 import { Separator } from '@/shared/ui/separator';
 import { Badge } from '@/shared/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
+import { Checkbox } from '@/shared/ui/checkbox';
+import { MultiSelect } from '@/shared/ui/multi-select';
+import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs';
+import { fetchTagsFromApi } from '@/shared/services/api';
+import type { UserProfile } from '@/shared/types/user';
 import ModernPaperCard from '@/features/paper-list/ModernPaperCard';
 import ModernPaginationControls from '@/features/paper-list/ModernPaginationControls';
 import PaperListSkeleton from '@/features/paper-list/PaperListSkeleton';
@@ -16,9 +21,10 @@ import PaginationSkeleton from '@/features/paper-list/PaginationSkeleton';
 
 interface PaperListPageProps {
   authLoading: boolean;
+  currentUser: UserProfile | null;
 }
 
-const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
+const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser }) => {
   const [showSidebar, setShowSidebar] = useState<boolean>(() => {
     try {
       const saved = localStorage.getItem('paperListShowSidebar');
@@ -62,6 +68,30 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
     isSearchActive,
   } = usePaperList(authLoading);
 
+  const [availableTags, setAvailableTags] = useState<string[]>([]);
+
+  // Fetch all tags on mount
+  useEffect(() => {
+    const loadTags = async () => {
+      try {
+        const tags = await fetchTagsFromApi();
+        setAvailableTags(tags);
+      } catch (error) {
+        console.error('Failed to load tags:', error);
+      }
+    };
+    loadTags();
+  }, []);
+
+  const handleTagsSearch = async (query: string) => {
+    try {
+      const tags = await fetchTagsFromApi(query);
+      setAvailableTags(tags);
+    } catch (error) {
+      console.error('Failed to search tags:', error);
+    }
+  };
+
   const handleDateChange = (field: 'startDate' | 'endDate', value: string) => {
     handleAdvancedFilterChange(field, value);
   };
@@ -99,27 +129,44 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
               {/* Active Filters Display */}
               <div className="flex items-center gap-2 flex-wrap">
                 {debouncedSearchTerm && (
-                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
                     <Search className="w-3 h-3" />
                     "{debouncedSearchTerm.length > 20 ? debouncedSearchTerm.substring(0, 20) + '...' : debouncedSearchTerm}"
                   </Badge>
                 )}
                 {advancedFilters.startDate && (
-                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     From: {advancedFilters.startDate}
                   </Badge>
                 )}
                 {advancedFilters.endDate && (
-                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
                     <Calendar className="w-3 h-3" />
                     To: {advancedFilters.endDate}
                   </Badge>
                 )}
                 {advancedFilters.searchAuthors && (
-                  <Badge variant="secondary" className="text-xs flex items-center gap-1">
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
                     <User className="w-3 h-3" />
                     {advancedFilters.searchAuthors}
+                  </Badge>
+                )}
+                {advancedFilters.tags && advancedFilters.tags.length > 0 && advancedFilters.tags.map((tag, index) => (
+                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1">
+                    <Tags className="w-3 h-3" />
+                    {tag}
+                  </Badge>
+                ))}
+                {advancedFilters.hasCode !== undefined && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    {advancedFilters.hasCode ? 'With Code' : 'Without Code'}
+                  </Badge>
+                )}
+                {advancedFilters.contributorId && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Briefcase className="w-3 h-3" />
+                    My Papers
                   </Badge>
                 )}
               </div>
@@ -128,10 +175,10 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
         </div>
       )}
       
-      <div className="flex max-w-7xl mx-auto">
-        {/* Left Sidebar - Filters */}
+      <div className="flex">
+        {/* Left Sidebar - Filters - Fixed position */}
         {showSidebar && (
-          <div className="w-80 lg:w-80 md:w-72 sm:w-64 border-r border-border bg-card hidden sm:block">
+          <div className="w-96 lg:w-96 md:w-80 sm:w-72 border-r border-border bg-card hidden sm:block fixed left-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto z-10">
             <div className="p-6">
               {/* Header */}
               <div className="flex items-center justify-between mb-6">
@@ -146,13 +193,14 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                   size="sm"
                   onClick={() => setShowSidebar(false)}
                   className="p-1"
+                  aria-label="Hide filters"
                 >
                   <ChevronLeft className="w-4 h-4" />
                 </Button>
               </div>
 
               {/* Search */}
-              <div className="space-y-2 mb-6">
+              <div className="space-y-2 mb-3">
                 <Label className="text-sm font-medium">Search Papers</Label>
                 <div className="relative">
                   <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
@@ -182,10 +230,10 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                 )}
               </div>
 
-              <Separator className="mb-6" />
+              <Separator className="mb-3" />
 
               {/* Sort */}
-              <div className="space-y-2 mb-6">
+              <div className="space-y-2 mb-3">
                 <Label className="text-sm font-medium">Sort by</Label>
                 <Select 
                   value={activeSortDisplay} 
@@ -210,73 +258,152 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                 </Select>
               </div>
 
-              <Separator className="mb-6" />
-            </div>
+              <Separator className="mb-3" />
 
-            {/* Advanced Filters - Sticky */}
-            <div className="sticky top-16 z-10 bg-card p-6 pt-0 space-y-4">
-              <div className="flex items-center justify-between">
+              {/* Advanced Filters */}
+              <div className="flex items-center justify-between mb-3">
                 <Label className="text-sm font-medium">Advanced Filters</Label>
-                {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors) && (
-                  <Badge variant="secondary" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">
+                {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
+                  <Badge variant="outline" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">
                     !
                   </Badge>
                 )}
               </div>
 
-              {/* Date Range */}
-              <div className="space-y-3">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                  <Calendar className="w-3 h-3" />
-                  Publication Date
-                </Label>
-                <div className="space-y-2">
-                  <div>
-                    <Label className="text-xs text-muted-foreground">From</Label>
-                    <Input
-                      type="date"
-                      value={formatDateForInput(advancedFilters.startDate)}
-                      onChange={(e) => handleDateChange('startDate', e.target.value)}
-                      className="mt-1"
+              <Tabs defaultValue="content" className="w-full">
+                <TabsList className="grid w-full grid-cols-3 mb-4">
+                  <TabsTrigger value="content" className="text-xs">
+                    <Tags className="w-3 h-3 mr-1" />
+                    Content
+                  </TabsTrigger>
+                  <TabsTrigger value="publication" className="text-xs">
+                    <Calendar className="w-3 h-3 mr-1" />
+                    Publication
+                  </TabsTrigger>
+                  <TabsTrigger value="options" className="text-xs">
+                    <Filter className="w-3 h-3 mr-1" />
+                    Filters
+                  </TabsTrigger>
+                </TabsList>
+
+                {/* Content Tab: Tags */}
+                <TabsContent value="content" className="space-y-4">
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                      <Tags className="w-3 h-3" />
+                      Tags
+                    </Label>
+                    <MultiSelect
+                      options={availableTags}
+                      selected={advancedFilters.tags || []}
+                      onChange={(tags) => handleAdvancedFilterChange('tags', tags)}
+                      placeholder="Type to search tags..."
+                      emptyMessage="No tags found"
+                      onSearch={handleTagsSearch}
                     />
                   </div>
-                  <div>
-                    <Label className="text-xs text-muted-foreground">To</Label>
+                </TabsContent>
+
+                {/* Publication Tab: Date Range, Authors */}
+                <TabsContent value="publication" className="space-y-4">
+                  {/* Date Range */}
+                  <div className="space-y-3">
+                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                      <Calendar className="w-3 h-3" />
+                      Publication Date
+                    </Label>
+                    <div className="space-y-2">
+                      <div>
+                        <Label className="text-xs text-muted-foreground">From</Label>
+                        <Input
+                          type="date"
+                          value={formatDateForInput(advancedFilters.startDate)}
+                          onChange={(e) => handleDateChange('startDate', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                      <div>
+                        <Label className="text-xs text-muted-foreground">To</Label>
+                        <Input
+                          type="date"
+                          value={formatDateForInput(advancedFilters.endDate)}
+                          onChange={(e) => handleDateChange('endDate', e.target.value)}
+                          className="mt-1"
+                        />
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Authors */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                      <User className="w-3 h-3" />
+                      Authors
+                    </Label>
                     <Input
-                      type="date"
-                      value={formatDateForInput(advancedFilters.endDate)}
-                      onChange={(e) => handleDateChange('endDate', e.target.value)}
-                      className="mt-1"
+                      placeholder="e.g., Hinton, LeCun"
+                      value={advancedFilters.searchAuthors || ''}
+                      onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
                     />
                   </div>
-                </div>
-              </div>
+                </TabsContent>
 
-              {/* Authors */}
-              <div className="space-y-2">
-                <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
-                  <User className="w-3 h-3" />
-                  Authors
-                </Label>
-                <Input
-                  placeholder="e.g., Hinton, LeCun"
-                  value={advancedFilters.searchAuthors || ''}
-                  onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
-                />
-              </div>
+                {/* Filter Options Tab: Code Availability, My Papers */}
+                <TabsContent value="options" className="space-y-4">
+                  {/* Has Code Filter */}
+                  <div className="space-y-2">
+                    <Label className="text-xs font-medium text-muted-foreground">
+                      Code Availability
+                    </Label>
+                    <Select
+                      value={advancedFilters.hasCode === undefined ? 'all' : advancedFilters.hasCode ? 'true' : 'false'}
+                      onValueChange={(value) => handleAdvancedFilterChange('hasCode', value === 'all' ? undefined : value === 'true')}
+                    >
+                      <SelectTrigger>
+                        <SelectValue />
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value="all">All Papers</SelectItem>
+                        <SelectItem value="true">With Code</SelectItem>
+                        <SelectItem value="false">Without Code</SelectItem>
+                      </SelectContent>
+                    </Select>
+                  </div>
 
-              {/* Filter Actions */}
-              <div className="flex gap-2 pt-2">
-                <Button onClick={handleApplyAdvancedFilters} size="sm" className="flex-1">
-                  Apply
-                </Button>
+                  {/* My Papers Filter - Only shown when logged in */}
+                  {currentUser && (
+                    <div className="space-y-2">
+                      <div className="flex items-center space-x-2">
+                        <Checkbox
+                          id="myPapers"
+                          checked={advancedFilters.contributorId === currentUser.id}
+                          onCheckedChange={(checked) => {
+                            handleAdvancedFilterChange('contributorId', checked ? currentUser.id : '')
+                          }}
+                        />
+                        <Label
+                          htmlFor="myPapers"
+                          className="text-xs font-medium text-muted-foreground flex items-center gap-2 cursor-pointer"
+                        >
+                          <Briefcase className="w-3 h-3" />
+                          Papers I've worked on
+                        </Label>
+                      </div>
+                    </div>
+                  )}
+                </TabsContent>
+              </Tabs>
+
+              {/* Clear Filters Button */}
+              <div className="flex gap-2 pt-3">
                 <Button 
                   variant="outline" 
                   size="sm"
                   onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-1"
+                  className="flex items-center gap-1 w-full"
                 >
                   <RotateCcw className="w-3 h-3" />
+                  Clear Filters
                 </Button>
               </div>
             </div>
@@ -365,68 +492,149 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                 <Separator />
 
                 {/* Advanced Filters */}
-                <div className="space-y-4">
-                  <div className="flex items-center justify-between">
+                <div>
+                  <div className="flex items-center justify-between mb-3">
                     <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Advanced Filters</Label>
-                    {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors) && (
-                      <Badge variant="secondary" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">!</Badge>
+                    {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
+                      <Badge variant="outline" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">!</Badge>
                     )}
                   </div>
 
-                  {/* Date Range */}
-                  <div className="space-y-3">
-                    <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
-                      <Calendar className="w-3 h-3" />
-                      Publication Date
-                    </Label>
-                    <div className="space-y-2">
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">From</Label>
-                        <Input
-                          type="date"
-                          value={formatDateForInput(advancedFilters.startDate)}
-                          onChange={(e) => handleDateChange('startDate', e.target.value)}
-                          className="mt-1"
+                  <Tabs defaultValue="content" className="w-full">
+                    <TabsList className="grid w-full grid-cols-3 mb-3">
+                      <TabsTrigger value="content" className="text-[10px]">
+                        <Tags className="w-3 h-3 mr-1" />
+                        Content
+                      </TabsTrigger>
+                      <TabsTrigger value="publication" className="text-[10px]">
+                        <Calendar className="w-3 h-3 mr-1" />
+                        Publication
+                      </TabsTrigger>
+                      <TabsTrigger value="options" className="text-[10px]">
+                        <Filter className="w-3 h-3 mr-1" />
+                        Filters
+                      </TabsTrigger>
+                    </TabsList>
+
+                    {/* Content Tab: Tags */}
+                    <TabsContent value="content" className="space-y-4">
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+                          <Tags className="w-3 h-3" />
+                          Tags
+                        </Label>
+                        <MultiSelect
+                          options={availableTags}
+                          selected={advancedFilters.tags || []}
+                          onChange={(tags) => handleAdvancedFilterChange('tags', tags)}
+                          placeholder="Type to search tags..."
+                          emptyMessage="No tags found"
+                          onSearch={handleTagsSearch}
                         />
                       </div>
-                      <div>
-                        <Label className="text-[10px] text-muted-foreground">To</Label>
+                    </TabsContent>
+
+                    {/* Publication Tab: Date Range, Authors */}
+                    <TabsContent value="publication" className="space-y-4">
+                      {/* Date Range */}
+                      <div className="space-y-3">
+                        <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+                          <Calendar className="w-3 h-3" />
+                          Publication Date
+                        </Label>
+                        <div className="space-y-2">
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">From</Label>
+                            <Input
+                              type="date"
+                              value={formatDateForInput(advancedFilters.startDate)}
+                              onChange={(e) => handleDateChange('startDate', e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                          <div>
+                            <Label className="text-[10px] text-muted-foreground">To</Label>
+                            <Input
+                              type="date"
+                              value={formatDateForInput(advancedFilters.endDate)}
+                              onChange={(e) => handleDateChange('endDate', e.target.value)}
+                              className="mt-1"
+                            />
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Authors */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+                          <User className="w-3 h-3" />
+                          Authors
+                        </Label>
                         <Input
-                          type="date"
-                          value={formatDateForInput(advancedFilters.endDate)}
-                          onChange={(e) => handleDateChange('endDate', e.target.value)}
-                          className="mt-1"
+                          placeholder="e.g., Hinton, LeCun"
+                          value={advancedFilters.searchAuthors || ''}
+                          onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
                         />
                       </div>
-                    </div>
-                  </div>
+                    </TabsContent>
 
-                  {/* Authors */}
-                  <div className="space-y-2">
-                    <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
-                      <User className="w-3 h-3" />
-                      Authors
-                    </Label>
-                    <Input
-                      placeholder="e.g., Hinton, LeCun"
-                      value={advancedFilters.searchAuthors || ''}
-                      onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
-                    />
-                  </div>
+                    {/* Filter Options Tab: Code Availability, My Papers */}
+                    <TabsContent value="options" className="space-y-4">
+                      {/* Has Code Filter */}
+                      <div className="space-y-2">
+                        <Label className="text-[11px] font-medium text-muted-foreground">
+                          Code Availability
+                        </Label>
+                        <Select
+                          value={advancedFilters.hasCode === undefined ? 'all' : advancedFilters.hasCode ? 'true' : 'false'}
+                          onValueChange={(value) => handleAdvancedFilterChange('hasCode', value === 'all' ? undefined : value === 'true')}
+                        >
+                          <SelectTrigger>
+                            <SelectValue />
+                          </SelectTrigger>
+                          <SelectContent>
+                            <SelectItem value="all">All Papers</SelectItem>
+                            <SelectItem value="true">With Code</SelectItem>
+                            <SelectItem value="false">Without Code</SelectItem>
+                          </SelectContent>
+                        </Select>
+                      </div>
 
-                  {/* Filter Actions */}
-                  <div className="flex gap-2 pt-2">
-                    <Button onClick={handleApplyAdvancedFilters} size="sm" className="flex-1">
-                      Apply
-                    </Button>
+                      {/* My Papers Filter - Only shown when logged in */}
+                      {currentUser && (
+                        <div className="space-y-2">
+                          <div className="flex items-center space-x-2">
+                            <Checkbox
+                              id="myPapersMobile"
+                              checked={advancedFilters.contributorId === currentUser.id}
+                              onCheckedChange={(checked) => {
+                                handleAdvancedFilterChange('contributorId', checked ? currentUser.id : '')
+                              }}
+                            />
+                            <Label
+                              htmlFor="myPapersMobile"
+                              className="text-[11px] font-medium text-muted-foreground flex items-center gap-2 cursor-pointer"
+                            >
+                              <Briefcase className="w-3 h-3" />
+                              Papers I've worked on
+                            </Label>
+                          </div>
+                        </div>
+                      )}
+                    </TabsContent>
+                  </Tabs>
+
+                  {/* Clear Filters Button */}
+                  <div className="flex gap-2 pt-3">
                     <Button 
                       variant="outline" 
                       size="sm"
                       onClick={handleClearAdvancedFilters}
-                      className="flex items-center gap-1"
+                      className="flex items-center gap-1 w-full"
                       aria-label="Clear filters"
                     >
                       <RotateCcw className="w-3 h-3" />
+                      Clear Filters
                     </Button>
                   </div>
                 </div>
@@ -441,7 +649,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
         )}
 
         {/* Right Content Area */}
-        <div className={`${showSidebar ? 'flex-1' : 'w-full'} px-4 py-3 sm:p-6`}>
+        <div className={`${showSidebar ? 'ml-96 lg:ml-96 md:ml-80 sm:ml-72 flex-1' : 'w-full'} px-4 py-3 sm:p-6 max-w-[1600px]`}>
           {/* Unified top spacing & section header */}
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full">
@@ -455,39 +663,73 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
                 >
                   <Filter className="w-3.5 h-3.5" />
                   <span>Filters</span>
-                  {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors) && (
+                  {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
                     <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
                   )}
                 </Button>
               </div>
+              
+              {/* Active Filters Display */}
+              <div className="flex items-center gap-2 flex-wrap flex-1">
+                {debouncedSearchTerm && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Search className="w-3 h-3" />
+                    "{debouncedSearchTerm.length > 20 ? debouncedSearchTerm.substring(0, 20) + '...' : debouncedSearchTerm}"
+                  </Badge>
+                )}
+                {advancedFilters.startDate && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    From: {advancedFilters.startDate}
+                  </Badge>
+                )}
+                {advancedFilters.endDate && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Calendar className="w-3 h-3" />
+                    To: {advancedFilters.endDate}
+                  </Badge>
+                )}
+                {advancedFilters.searchAuthors && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <User className="w-3 h-3" />
+                    {advancedFilters.searchAuthors}
+                  </Badge>
+                )}
+                {advancedFilters.tags && advancedFilters.tags.length > 0 && advancedFilters.tags.map((tag, index) => (
+                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1">
+                    <Tags className="w-3 h-3" />
+                    {tag}
+                  </Badge>
+                ))}
+                {advancedFilters.hasCode !== undefined && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    {advancedFilters.hasCode ? 'With Code' : 'Without Code'}
+                  </Badge>
+                )}
+                {advancedFilters.contributorId && (
+                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                    <Briefcase className="w-3 h-3" />
+                    My Papers
+                  </Badge>
+                )}
+              </div>
+              
               <div
                 className={
                   `hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-md border text-sm font-medium ${showSidebar ? 'bg-primary/5 border-primary/20 text-primary' : 'bg-muted/50 border-border text-muted-foreground'}`
                 }
               >
                 <span>Filters</span>
-                {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors) && (
-                  <Badge variant="secondary" className="h-5 px-1.5 text-[10px] font-semibold rounded-full">•</Badge>
+                {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
+                  <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold rounded-full">•</Badge>
                 )}
               </div>
             </div>
-            {/* Toggle button when sidebar visible (desktop) */}
-            {showSidebar && (
-              <Button
-                variant="ghost"
-                size="sm"
-                onClick={() => setShowSidebar(false)}
-                className="hidden sm:flex px-2"
-                aria-label="Hide filters"
-              >
-                <ChevronLeft className="w-4 h-4" />
-              </Button>
-            )}
           </div>
           {isLoading ? (
             <>
-              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3'}`}>
-                <PaperListSkeleton count={showSidebar ? 8 : 12} />
+              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+                <PaperListSkeleton count={showSidebar ? 9 : 12} />
               </div>
               <div className="mt-6 sm:mt-8">
                 <PaginationSkeleton />
@@ -499,7 +741,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading }) => {
             </div>
           ) : papers.length > 0 ? (
             <>
-              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-2 xl:grid-cols-3'}`}>
+              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
                 {papers.map((paper) => (
                   <ModernPaperCard
                     key={paper.id}

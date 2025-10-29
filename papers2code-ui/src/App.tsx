@@ -86,7 +86,7 @@ function App() {
                     path="/papers" 
                     element={
                       <PaperListErrorBoundary>
-                        <PaperListPage authLoading={authLoading} />
+                        <PaperListPage authLoading={authLoading} currentUser={currentUser} />
                       </PaperListErrorBoundary>
                     } 
                   />
