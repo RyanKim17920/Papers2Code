@@ -236,27 +236,29 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* GitHub info */}
-          <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
-            <p className="text-xs font-medium mb-1">GitHub Account (Managed externally)</p>
-            <p className="text-xs text-muted-foreground mb-2">
-              <strong>Username:</strong> {currentUser.username}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="h-7 text-xs"
-            >
-              <a 
-                href="https://github.com/settings/profile"
-                target="_blank"
-                rel="noopener noreferrer"
+          {/* GitHub info - only show if user has GitHub account linked */}
+          {currentUser.githubId && (
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs font-medium mb-1">GitHub Account (Managed externally)</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                <strong>Username:</strong> {currentUser.username}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="h-7 text-xs"
               >
-                Edit Username & Avatar on GitHub
-              </a>
-            </Button>
-          </div>
+                <a 
+                  href="https://github.com/settings/profile"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Edit Username & Avatar on GitHub
+                </a>
+              </Button>
+            </div>
+          )}
 
           {/* Avatar Selection - Show only if user has both GitHub and Google accounts */}
           {currentUser.githubId && currentUser.googleId && currentUser.githubAvatarUrl && currentUser.googleAvatarUrl && (
