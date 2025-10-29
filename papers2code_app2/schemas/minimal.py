@@ -28,6 +28,7 @@ class UserSchema(BaseModel): # Model returned by get_current_user
     is_admin: Optional[bool] = Field(False, alias='isAdmin')
     is_owner: Optional[bool] = Field(False, alias='isOwner')
     created_at: Optional[datetime] = Field(None, alias='createdAt')
+    updated_at: Optional[datetime] = Field(None, alias='updatedAt')
     last_login_at: Optional[datetime] = Field(None, alias='lastLoginAt')
     profile_updated_at: Optional[datetime] = Field(None, alias='profileUpdatedAt')
     # Privacy settings
