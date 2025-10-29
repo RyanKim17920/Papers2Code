@@ -69,6 +69,8 @@ function App() {
     await logoutUser();
     setCurrentUser(null);
     localStorage.removeItem('csrfToken');
+    // Reload page to reflect logout state across UI
+    window.location.reload();
   };
 
   // 3. Wrap your existing providers and components with QueryClientProvider
