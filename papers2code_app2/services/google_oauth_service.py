@@ -209,32 +209,31 @@ class GoogleOAuthService:
             
             # If user exists with a different provider, we need to handle this
             if existing_user and existing_user.get("github_id") and not existing_user.get("google_id"):
-                # User exists via GitHub, now linking Google account
-                logger.info(f"Linking Google account to existing GitHub user: {existing_user.get('username')}")
+                # User exists via GitHub, potential account linking scenario
+                logger.info(f"Found existing GitHub user with matching email: {existing_user.get('username')}")
                 
-                # When linking, default to GitHub avatar (user's GitHub identity takes precedence)
-                preferred_source = existing_user.get("preferredAvatarSource", "github")
-                if preferred_source == "google":
-                    computed_avatar = avatar_url
-                else:
-                    computed_avatar = existing_user.get("github_avatar_url") or avatar_url
+                # Store pending linking data in a temporary JWT token
+                import base64
+                import json
                 
-                update_payload = {
+                pending_data = {
+                    "existing_user_id": str(existing_user["_id"]),
+                    "existing_username": existing_user.get("username"),
+                    "existing_avatar": existing_user.get("github_avatar_url"),
                     "google_id": google_user_id,
-                    "google_avatar_url": avatar_url,  # Store Google avatar separately
-                    "avatarUrl": computed_avatar,  # Update primary avatar based on preference (defaults to GitHub)
-                    "email": email,
-                    "updatedAt": current_time,
-                    "lastLoginAt": current_time,
+                    "google_email": email,
+                    "google_name": name,
+                    "google_avatar": avatar_url,
+                    "exp": (datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp()
                 }
-                user_document = await self.users_collection.find_one_and_update(
-                    {"_id": existing_user["_id"]},
-                    {"$set": update_payload},
-                    return_document=ReturnDocument.AFTER
-                )
                 
-                # Add account_linked flag to redirect URL so frontend can show notification
-                frontend_url = f"{frontend_url}?account_linked=true"
+                pending_token = jwt.encode(pending_data, config_settings.FLASK_SECRET_KEY, algorithm=config_settings.ALGORITHM)
+                
+                # Redirect to frontend with pending_link query parameter
+                frontend_url = f"{frontend_url}?pending_link={pending_token}"
+                
+                redirect_response = RedirectResponse(url=frontend_url)
+                return redirect_response
             else:
                 # Create new user or update existing Google user
                 try:

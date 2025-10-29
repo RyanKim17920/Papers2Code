@@ -199,32 +199,33 @@ class GitHubOAuthService:
                 })
             
             if existing_user_by_email:
-                # User exists via Google, now linking GitHub account
-                logger.info(f"Linking GitHub account to existing Google user with email: {email}")
+                # User exists via Google, potential account linking scenario
+                logger.info(f"Found existing Google user with matching email: {email}")
                 
-                # Update existing user with GitHub info
-                # Default to GitHub avatar when linking (GitHub identity takes precedence for code features)
-                update_payload = {
+                # Store pending linking data in a temporary JWT token
+                import base64
+                import json
+                
+                pending_data = {
+                    "existing_user_id": str(existing_user_by_email["_id"]),
+                    "existing_username": existing_user_by_email.get("username"),
+                    "existing_avatar": existing_user_by_email.get("google_avatar_url"),
                     "github_id": github_user_id,
-                    "github_avatar_url": avatar_url,
-                    "githubAccessToken": github_token,
-                    "avatarUrl": avatar_url,  # Use GitHub avatar by default when linking
-                    "preferredAvatarSource": "github",  # Set preference to GitHub
-                    "username": username,  # Update username to GitHub username
-                    "name": name,
-                    "email": email,
-                    "updatedAt": current_time,
-                    "lastLoginAt": current_time,
+                    "github_username": username,
+                    "github_name": name,
+                    "github_email": email,
+                    "github_avatar": avatar_url,
+                    "github_token": github_token,
+                    "exp": (datetime.now(timezone.utc) + timedelta(minutes=10)).timestamp()
                 }
                 
-                user_document = await self.users_collection.find_one_and_update(
-                    {"_id": existing_user_by_email["_id"]},
-                    {"$set": update_payload},
-                    return_document=ReturnDocument.AFTER
-                )
+                pending_token = jwt.encode(pending_data, config_settings.FLASK_SECRET_KEY, algorithm=config_settings.ALGORITHM)
                 
-                # Add account_linked flag to redirect URL so frontend can show notification
-                frontend_url = f"{frontend_url}?account_linked=true"
+                # Redirect to frontend with pending_link query parameter
+                frontend_url = f"{frontend_url}?pending_link={pending_token}"
+                
+                redirect_response = RedirectResponse(url=frontend_url)
+                return redirect_response
             else:
                 # Normal GitHub user creation/update
                 try:

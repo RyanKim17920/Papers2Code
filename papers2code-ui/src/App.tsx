@@ -23,6 +23,7 @@ import { AuthenticationError } from '@/shared/services/api';
 import GlobalHeader from '@/shared/components/GlobalHeader';
 import { useToast } from '@/shared/hooks/use-toast';
 import { Toaster } from '@/shared/ui/toaster';
+import { AccountLinkModal } from '@/features/auth/AccountLinkModal';
 
 // 2. Create a new instance of the QueryClient
 // This is done outside the component to prevent it from being recreated on every render.
@@ -31,28 +32,121 @@ const queryClient = new QueryClient();
 function App() {
   const [currentUser, setCurrentUser] = useState<UserProfile | null>(null);
   const [authLoading, setAuthLoading] = useState<boolean>(true);
+  const [showLinkModal, setShowLinkModal] = useState(false);
+  const [linkModalData, setLinkModalData] = useState<any>(null);
   // Removed local auth dropdown UI; header handles signed-out UI
   const location = useLocation();
   const navigate = useNavigate();
   const { toast } = useToast();
-  const accountLinkedShownRef = useRef(false);
 
-  // Check for account_linked query parameter and show notification
+  // Check for pending_link query parameter and show modal
   useEffect(() => {
     const params = new URLSearchParams(location.search);
-    if (params.get('account_linked') === 'true' && !accountLinkedShownRef.current) {
-      accountLinkedShownRef.current = true;
+    const pendingToken = params.get('pending_link');
+    
+    if (pendingToken) {
+      // Decode the JWT token to get account information
+      try {
+        const payload = JSON.parse(atob(pendingToken.split('.')[1]));
+        
+        // Determine which provider is which
+        let existingAccount, newAccount;
+        
+        if (payload.google_id) {
+          // Google is the new account, GitHub is existing
+          existingAccount = {
+            username: payload.existing_username,
+            avatar: payload.existing_avatar,
+            provider: 'github' as const,
+          };
+          newAccount = {
+            username: payload.google_email?.split('@')[0] || 'Google User',
+            avatar: payload.google_avatar,
+            provider: 'google' as const,
+          };
+        } else {
+          // GitHub is the new account, Google is existing
+          existingAccount = {
+            username: payload.existing_username,
+            avatar: payload.existing_avatar,
+            provider: 'google' as const,
+          };
+          newAccount = {
+            username: payload.github_username,
+            avatar: payload.github_avatar,
+            provider: 'github' as const,
+          };
+        }
+        
+        setLinkModalData({
+          pendingToken,
+          existingAccount,
+          newAccount,
+        });
+        setShowLinkModal(true);
+        
+        // Clean up URL
+        params.delete('pending_link');
+        const newSearch = params.toString();
+        navigate(location.pathname + (newSearch ? `?${newSearch}` : ''), { replace: true });
+      } catch (error) {
+        console.error('Error parsing pending link token:', error);
+        toast({
+          title: "Error",
+          description: "Invalid account linking request. Please try logging in again.",
+          variant: "destructive",
+        });
+      }
+    }
+  }, [location.search, location.pathname, navigate, toast]);
+
+  const handleLinkAccounts = async () => {
+    try {
+      const response = await fetch('/api/auth/link-accounts', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          pending_token: linkModalData.pendingToken,
+        }),
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to link accounts');
+      }
+
+      setShowLinkModal(false);
       toast({
         title: "Accounts Linked Successfully",
         description: "Your GitHub and Google accounts have been linked. You now have full access to all features.",
         duration: 6000,
       });
-      // Clean up URL
-      params.delete('account_linked');
-      const newSearch = params.toString();
-      navigate(location.pathname + (newSearch ? `?${newSearch}` : ''), { replace: true });
+
+      // Refresh user data
+      const user = await checkCurrentUser();
+      setCurrentUser(user);
+    } catch (error) {
+      console.error('Error linking accounts:', error);
+      toast({
+        title: "Error",
+        description: "Failed to link accounts. Please try again.",
+        variant: "destructive",
+      });
     }
-  }, [location.search, location.pathname, navigate, toast]);
+  };
+
+  const handleKeepSeparate = () => {
+    setShowLinkModal(false);
+    toast({
+      title: "Accounts Not Linked",
+      description: "You can sign in with either account separately.",
+      duration: 4000,
+    });
+    // Redirect to login page
+    navigate('/login');
+  };
 
   // ... (rest of your existing useEffect and handler functions remain the same)
   useEffect(() => {
@@ -131,6 +225,18 @@ function App() {
               </ErrorBoundary>
             </main>          
             <LoginPromptModal />
+            
+            {/* Account Link Modal */}
+            {linkModalData && (
+              <AccountLinkModal
+                open={showLinkModal}
+                onClose={() => setShowLinkModal(false)}
+                existingAccount={linkModalData.existingAccount}
+                newAccount={linkModalData.newAccount}
+                onConfirm={handleLinkAccounts}
+                onCancel={handleKeepSeparate}
+              />
+            )}
 
             <footer className="bg-[rgba(241,243,245,0.8)] text-[var(--text-muted-color)] text-center py-4 text-sm border-t border-[var(--border-color-light)]"> 
             </footer>
