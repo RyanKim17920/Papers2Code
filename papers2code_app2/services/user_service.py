@@ -166,13 +166,13 @@ class UserService:
         """Update a user's profile information."""
         await self._init_collections()
         
-        # Convert the update data to a dict, excluding None values
-        # Use model_dump instead of dict for better Pydantic v2 compatibility
+        # Convert the update data to a dict, using aliases (camelCase) for MongoDB field names
+        # Use model_dump with by_alias=True to get camelCase field names
         try:
-            update_data = profile_update.model_dump(exclude_unset=True, exclude_none=False)  # Include None values to clear fields
+            update_data = profile_update.model_dump(exclude_unset=True, exclude_none=False, by_alias=True)  # Include None values to clear fields
         except AttributeError:
             # Fallback for older Pydantic versions
-            update_data = profile_update.dict(exclude_unset=True, exclude_none=False)
+            update_data = profile_update.dict(exclude_unset=True, exclude_none=False, by_alias=True)
         
         if not update_data:
             # No updates provided, just return the current user
@@ -190,7 +190,7 @@ class UserService:
         for key, value in update_data.items():
             if value is None:
                 clean_update_data[key] = value
-            elif key == 'linkedin_profile_url':
+            elif key == 'linkedinProfileUrl':
                 if not value:  # Handle empty/None values
                     clean_update_data[key] = None
                 else:
@@ -222,7 +222,7 @@ class UserService:
                         else:
                             raise ValueError(f"Invalid LinkedIn username. Use only letters, numbers, and dashes (e.g., 'john-smith-123').")
             
-            elif key == 'twitter_profile_url':
+            elif key == 'twitterProfileUrl':
                 if not value:  # Handle empty/None values
                     clean_update_data[key] = None
                 else:
@@ -257,7 +257,7 @@ class UserService:
                         else:
                             raise ValueError(f"Invalid Twitter username. Use only letters, numbers, and underscores (e.g., 'username_123').")
             
-            elif key == 'bluesky_username':
+            elif key == 'blueskyUsername':
                 if not value:  # Handle empty/None values
                     clean_update_data[key] = None
                 else:
@@ -290,7 +290,7 @@ class UserService:
                         else:
                             raise ValueError(f"Invalid Bluesky username. Use only letters, numbers, and dashes (e.g., 'username').")
             
-            elif key == 'huggingface_username':
+            elif key == 'huggingfaceUsername':
                 if not value:  # Handle empty/None values
                     clean_update_data[key] = None
                 else:
@@ -320,7 +320,7 @@ class UserService:
                         else:
                             raise ValueError(f"Invalid Hugging Face username. Use only letters, numbers, dashes, and underscores (e.g., 'username_123').")
             
-            elif key == 'website_url':
+            elif key == 'websiteUrl':
                 if not value:  # Handle empty/None values
                     clean_update_data[key] = None
                 else:
@@ -339,7 +339,7 @@ class UserService:
                 clean_update_data[key] = value
         
         # Add profile update timestamp
-        clean_update_data["profile_updated_at"] = datetime.utcnow()
+        clean_update_data["profileUpdatedAt"] = datetime.utcnow()
         
         # If preferred_avatar_source is being updated, recompute the primary avatarUrl
         if "preferredAvatarSource" in clean_update_data:
