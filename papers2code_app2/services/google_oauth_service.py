@@ -185,6 +185,8 @@ class GoogleOAuthService:
             name = google_user_data.get("name")
             avatar_url = google_user_data.get("picture")
             
+            logger.info(f"Google OAuth: Received user data - ID: {google_user_id}, Email: {email}, Name: {name}, Avatar URL: {avatar_url}")
+            
             # Create username from email (before @ symbol)
             username = email.split("@")[0] if email else f"user_{google_user_id}"
 
