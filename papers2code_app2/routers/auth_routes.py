@@ -13,6 +13,7 @@ from ..shared import config_settings
 from ..auth import get_current_user # SECRET_KEY, ALGORITHM, create_refresh_token are used by service
 from ..services.auth_service import AuthService
 from ..services.github_oauth_service import GitHubOAuthService
+from ..services.google_oauth_service import GoogleOAuthService
 from ..constants import OAUTH_STATE_COOKIE_NAME, CSRF_TOKEN_COOKIE_NAME
 from ..services.exceptions import (
     InvalidTokenException,
@@ -30,6 +31,7 @@ router = APIRouter(
 
 auth_service = AuthService()
 github_oauth_service = GitHubOAuthService()
+google_oauth_service = GoogleOAuthService()
 
 @router.get("/csrf-token", response_model=CsrfToken)
 async def get_csrf_token(request: Request, response: Response):
@@ -86,6 +88,38 @@ async def github_callback(code: str, state: str, request: Request): # Removed re
             httponly=True, 
             samesite="lax", 
             path="/api/auth/github/callback", # Path where it was set
+            secure=True if config_settings.ENV_TYPE == "production" else False
+        )
+        return error_redirect
+
+
+@router.get("/google/login")
+async def google_login(request: Request):
+    try:
+        return google_oauth_service.prepare_google_login_redirect(request)
+    except OAuthException as e:
+        logger.error(f"OAuth login preparation failed: {e.message}")
+        frontend_url = config_settings.FRONTEND_URL
+        return RedirectResponse(f"{frontend_url}/?login_error=oauth_prepare_failed&detail={e.message}", status_code=307)
+    except Exception as e:
+        logger.error(f"Unexpected error during Google login initiation: {e}", exc_info=True)
+        frontend_url = config_settings.FRONTEND_URL
+        return RedirectResponse(f"{frontend_url}/?login_error=oauth_prepare_unexpected", status_code=307)
+
+
+@router.get("/google/callback", name="google_callback_endpoint")
+async def google_callback(code: str, state: str, request: Request):
+    try:
+        return await google_oauth_service.handle_google_callback(code, state, request)
+    except Exception as e:
+        logger.error(f"General unexpected error in Google callback router: {e}", exc_info=True)
+        frontend_url = config_settings.FRONTEND_URL
+        error_redirect = RedirectResponse(f"{frontend_url}/?login_error=callback_router_unexpected_error", status_code=307)
+        error_redirect.delete_cookie(
+            OAUTH_STATE_COOKIE_NAME, 
+            httponly=True, 
+            samesite="lax", 
+            path="/api/auth/google/callback",
             secure=True if config_settings.ENV_TYPE == "production" else False
         )
         return error_redirect
@@ -162,6 +196,159 @@ async def refresh_access_token_route(request: Request, response: Response): # re
         )
         auth_service.clear_auth_cookies(error_response)
         return error_response
+
+@router.post("/link-accounts")
+async def link_accounts(request: Request, response: Response):
+    """
+    Links two accounts (GitHub and Google) when user confirms the merge.
+    Expects pending_token in the request body.
+    """
+    try:
+        body = await request.json()
+        pending_token = body.get("pending_token")
+        
+        if not pending_token:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": "Missing pending_token"}
+            )
+        
+        # Decode the pending token
+        try:
+            from jose import jwt, JWTError
+            from datetime import datetime, timezone
+            pending_data = jwt.decode(pending_token, config_settings.FLASK_SECRET_KEY, algorithms=[config_settings.ALGORITHM])
+            
+            # Check expiration
+            if pending_data.get("exp") and datetime.now(timezone.utc).timestamp() > pending_data.get("exp"):
+                return JSONResponse(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    content={"detail": "Link token expired. Please log in again."}
+                )
+        except JWTError:
+            return JSONResponse(
+                status_code=status.HTTP_400_BAD_REQUEST,
+                content={"detail": "Invalid link token"}
+            )
+        
+        # Perform the account linking based on which provider initiated
+        from ..database import get_users_collection_async
+        from bson import ObjectId
+        from ..auth.token_utils import create_access_token, create_refresh_token
+        from ..constants import ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME
+        from datetime import timedelta
+        from pymongo import ReturnDocument
+        
+        users_collection = await get_users_collection_async()
+        existing_user_id = ObjectId(pending_data["existing_user_id"])
+        current_time = datetime.now(timezone.utc)
+        
+        # Determine which account is being linked
+        if "googleId" in pending_data:
+            # Linking Google to existing GitHub account
+            google_id = pending_data["googleId"]
+            google_avatar = pending_data["google_avatar"]
+            google_email = pending_data["google_email"]
+            
+            # Get existing user's avatar
+            existing_user = await users_collection.find_one({"_id": existing_user_id})
+            github_avatar = existing_user.get("githubAvatarUrl")
+            
+            update_payload = {
+                "googleId": google_id,
+                "googleAvatarUrl": google_avatar,
+                "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
+                "preferredAvatarSource": "github",
+                "email": google_email,
+                "updatedAt": current_time,
+                "lastLoginAt": current_time,
+            }
+            
+            user_document = await users_collection.find_one_and_update(
+                {"_id": existing_user_id},
+                {"$set": update_payload},
+                return_document=ReturnDocument.AFTER
+            )
+            
+            # Create tokens
+            access_token_payload = {
+                "sub": str(user_document["_id"]),
+                "username": user_document["username"],
+                "googleId": google_id,
+            }
+        else:
+            # Linking GitHub to existing Google account
+            github_id = pending_data["githubId"]
+            github_avatar = pending_data["github_avatar"]
+            github_username = pending_data["github_username"]
+            github_token = pending_data["github_token"]
+            github_email = pending_data["github_email"]
+            github_name = pending_data["github_name"]
+            
+            # Get existing user's avatar
+            existing_user = await users_collection.find_one({"_id": existing_user_id})
+            google_avatar = existing_user.get("googleAvatarUrl")
+            
+            update_payload = {
+                "githubId": github_id,
+                "githubAvatarUrl": github_avatar,
+                "githubAccessToken": github_token,
+                "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
+                "preferredAvatarSource": "github",
+                "username": github_username,  # Update to GitHub username
+                "name": github_name,
+                "email": github_email,
+                "updatedAt": current_time,
+                "lastLoginAt": current_time,
+            }
+            
+            user_document = await users_collection.find_one_and_update(
+                {"_id": existing_user_id},
+                {"$set": update_payload},
+                return_document=ReturnDocument.AFTER
+            )
+            
+            # Create tokens
+            access_token_payload = {
+                "sub": str(user_document["_id"]),
+                "username": user_document["username"],
+                "githubId": github_id,
+            }
+        
+        access_token = create_access_token(data=access_token_payload)
+        refresh_token_payload = {"sub": str(user_document["_id"])}
+        refresh_token = create_refresh_token(data=refresh_token_payload, expires_delta=timedelta(minutes=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES))
+        
+        # Set cookies
+        json_response = JSONResponse(content={"detail": "Accounts linked successfully"})
+        json_response.set_cookie(
+            key=ACCESS_TOKEN_COOKIE_NAME,
+            value=access_token,
+            httponly=True,
+            samesite="lax",
+            secure=True if config_settings.ENV_TYPE == "production" else False,
+            path="/",
+            max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+        json_response.set_cookie(
+            key=REFRESH_TOKEN_COOKIE_NAME,
+            value=refresh_token,
+            httponly=True,
+            samesite="lax",
+            secure=True if config_settings.ENV_TYPE == "production" else False,
+            path="/",
+            max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+        )
+        
+        return json_response
+        
+    except Exception as e:
+        logger.error(f"Error linking accounts: {e}", exc_info=True)
+        return JSONResponse(
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR,
+            content={"detail": "Failed to link accounts"}
+        )
+
 
 @router.post("/logout")
 async def logout_user_route(request: Request, response: Response): # response needed to clear cookies

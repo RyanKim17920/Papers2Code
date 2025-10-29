@@ -28,7 +28,7 @@ from ..constants import (
 
 logger = logging.getLogger(__name__)
 
-class GitHubOAuthService:
+class GoogleOAuthService:
     def __init__(self):
         self.users_collection = None
 
@@ -36,57 +36,63 @@ class GitHubOAuthService:
         if self.users_collection is None:
             self.users_collection = await get_users_collection_async()
 
-    def prepare_github_login_redirect(self, request: Request) -> RedirectResponse:
-        """Prepares the GitHub authorization URL, state JWT, and returns a RedirectResponse with the state cookie set."""
+    def prepare_google_login_redirect(self, request: Request) -> RedirectResponse:
+        """Prepares the Google authorization URL, state JWT, and returns a RedirectResponse with the state cookie set."""
         state_value = str(uuid.uuid4())
         state_token_payload = {"state_val": state_value, "sub": "oauth_state_marker", "exp": datetime.now(timezone.utc) + timedelta(minutes=10)}
         state_jwt = jwt.encode(state_token_payload, config_settings.FLASK_SECRET_KEY, algorithm=config_settings.ALGORITHM)
 
-        github_authorize_url = config_settings.GITHUB.AUTHORIZE_URL
-        github_client_id = config_settings.GITHUB.CLIENT_ID
-        github_scope = config_settings.GITHUB.SCOPE
+        google_authorize_url = config_settings.GOOGLE.AUTHORIZE_URL
+        google_client_id = config_settings.GOOGLE.CLIENT_ID
+        google_scope = config_settings.GOOGLE.SCOPE
 
-        if not github_client_id:
-            logger.error("GITHUB.CLIENT_ID is not configured.")
-            raise OAuthException(detail="Authentication service is misconfigured (GitHub Client ID not set).")
+        if not google_client_id:
+            logger.error("GOOGLE.CLIENT_ID is not configured.")
+            raise OAuthException(detail="Authentication service is misconfigured (Google Client ID not set).")
 
         try:
-            redirect_uri = str(request.url_for('github_callback_endpoint'))
+            redirect_uri = str(request.url_for('google_callback_endpoint'))
             if not redirect_uri.startswith("http"):
                 base_url = str(request.base_url).rstrip('/')
-                redirect_uri = f"{base_url}/auth/github/callback"
+                redirect_uri = f"{base_url}/auth/google/callback"
         except Exception as e:
-            logger.error(f"Error constructing redirect_uri for GitHub OAuth: {e}")
-            raise OAuthException(detail="Error preparing authentication request to GitHub.")
+            logger.error(f"Error constructing redirect_uri for Google OAuth: {e}")
+            raise OAuthException(detail="Error preparing authentication request to Google.")
 
         auth_url = (
-            f"{github_authorize_url}?"
-            f"client_id={github_client_id}&"
+            f"{google_authorize_url}?"
+            f"client_id={google_client_id}&"
             f"redirect_uri={redirect_uri}&"
-            f"scope={github_scope}&"
-            f"state={state_value}"
+            f"response_type=code&"
+            f"scope={google_scope}&"
+            f"state={state_value}&"
+            f"access_type=offline&"
+            f"prompt=consent"
         )
 
         response = RedirectResponse(url=auth_url)
+        # Set OAuth state cookie with security flags
+        # Note: secure=False in DEV is intentional for localhost (http) development
+        # In production, secure=True enforces HTTPS-only cookies
         response.set_cookie(
             key=OAUTH_STATE_COOKIE_NAME,
             value=state_jwt,
             httponly=True,
             samesite="lax",
             secure=True if config_settings.ENV_TYPE == "production" else False,
-            path="/api/auth/github/callback",
+            path="/api/auth/google/callback",
             max_age=10 * 60
         )
         return response
 
-    async def handle_github_callback(
+    async def handle_google_callback(
         self, code: str, state_from_query: str, request: Request
     ) -> RedirectResponse:
-        """Handles the GitHub OAuth callback, exchanges code for token, fetches user, creates/updates user, sets cookies, and returns a RedirectResponse."""
+        """Handles the Google OAuth callback, exchanges code for token, fetches user, creates/updates user, sets cookies, and returns a RedirectResponse."""
         await self._init_collections()
         state_jwt_from_cookie = request.cookies.get(OAUTH_STATE_COOKIE_NAME)
         frontend_url = config_settings.FRONTEND_URL
-        oauth_state_cookie_delete_path = "/api/auth/github/callback"
+        oauth_state_cookie_delete_path = "/api/auth/google/callback"
 
         redirect_response = RedirectResponse(url=frontend_url)
 
@@ -109,121 +115,128 @@ class GitHubOAuthService:
         
         redirect_response.delete_cookie(OAUTH_STATE_COOKIE_NAME, path=oauth_state_cookie_delete_path, secure=True if config_settings.ENV_TYPE == "production" else False, httponly=True, samesite="lax")
 
-        github_access_token_url = config_settings.GITHUB.ACCESS_TOKEN_URL
-        github_client_id = config_settings.GITHUB.CLIENT_ID
-        github_client_secret = config_settings.GITHUB.CLIENT_SECRET
-        github_api_user_url = config_settings.GITHUB.API_USER_URL
+        google_access_token_url = config_settings.GOOGLE.ACCESS_TOKEN_URL
+        google_client_id = config_settings.GOOGLE.CLIENT_ID
+        google_client_secret = config_settings.GOOGLE.CLIENT_SECRET
+        google_api_user_url = config_settings.GOOGLE.API_USER_URL
 
-        if not github_client_id or not github_client_secret:
-            logger.error("GitHub client ID or secret not configured for callback.")
+        if not google_client_id or not google_client_secret:
+            logger.error("Google client ID or secret not configured for callback.")
             return RedirectResponse(url=f"{frontend_url}/?login_error=auth_misconfigured", status_code=307)
 
         if not code:
-            logger.warning("No authorization code received from GitHub.")
-            return RedirectResponse(url=f"{frontend_url}/?login_error=github_no_code", status_code=307)
+            logger.warning("No authorization code received from Google.")
+            return RedirectResponse(url=f"{frontend_url}/?login_error=google_no_code", status_code=307)
 
         try:
-            actual_redirect_uri = str(request.url_for('github_callback_endpoint'))
+            actual_redirect_uri = str(request.url_for('google_callback_endpoint'))
             if not actual_redirect_uri.startswith("http"):
                  base_url = str(request.base_url).rstrip('/')
                  actual_redirect_uri = f"{base_url}{request.url.path}"
         except Exception:
              base_url = str(request.base_url).rstrip('/')
-             actual_redirect_uri = f"{base_url}/api/auth/github/callback"
+             actual_redirect_uri = f"{base_url}/api/auth/google/callback"
 
         async with httpx.AsyncClient() as client:
-            token_exchange_params = {
-                "client_id": github_client_id,
-                "client_secret": github_client_secret,
+            token_exchange_data = {
+                "client_id": google_client_id,
+                "client_secret": google_client_secret,
                 "code": code,
                 "redirect_uri": actual_redirect_uri,
+                "grant_type": "authorization_code"
             }
-            headers = {"Accept": "application/json"}
+            headers = {"Content-Type": "application/x-www-form-urlencoded"}
             try:
-                token_response = await client.post(github_access_token_url, params=token_exchange_params, headers=headers)
+                token_response = await client.post(google_access_token_url, data=token_exchange_data, headers=headers)
                 token_response.raise_for_status()
                 token_data = token_response.json()
-                github_token = token_data.get("access_token")
-                if not github_token:
-                    logger.error(f"Failed to retrieve access_token from GitHub. Response: {token_data}")
-                    return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_failed", status_code=307)
+                google_token = token_data.get("access_token")
+                if not google_token:
+                    logger.error(f"Failed to retrieve access_token from Google. Response: {token_data}")
+                    return RedirectResponse(url=f"{frontend_url}/?login_error=google_token_exchange_failed", status_code=307)
             except httpx.HTTPStatusError as http_err:
-                logger.error(f"GitHub token exchange HTTP error: {http_err.response.status_code} - {http_err.response.text}")
-                return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_http_error", status_code=307)
+                logger.error(f"Google token exchange HTTP error: {http_err.response.status_code} - {http_err.response.text}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=google_token_exchange_http_error", status_code=307)
             except httpx.RequestError as req_exc:
-                logger.error(f"GitHub token exchange request error: {req_exc}")
-                return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_request_error", status_code=307)
+                logger.error(f"Google token exchange request error: {req_exc}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=google_token_exchange_request_error", status_code=307)
             except Exception as e:
-                logger.error(f"GitHub token exchange unexpected error: {e}")
-                return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_unexpected_error", status_code=307)
+                logger.error(f"Google token exchange unexpected error: {e}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=google_token_exchange_unexpected_error", status_code=307)
 
-            user_headers = {"Authorization": f"token {github_token}", "Accept": "application/vnd.github.v3+json"}
+            user_headers = {"Authorization": f"Bearer {google_token}"}
             try:
-                user_api_response = await client.get(github_api_user_url, headers=user_headers)
+                user_api_response = await client.get(google_api_user_url, headers=user_headers)
                 user_api_response.raise_for_status()
-                github_user_data = user_api_response.json()
+                google_user_data = user_api_response.json()
             except httpx.HTTPStatusError as http_err:
-                logger.error(f"GitHub user data fetch HTTP error: {http_err.response.status_code} - {http_err.response.text}")
-                return RedirectResponse(url=f"{frontend_url}/?login_error=github_user_data_http_error", status_code=307)
+                logger.error(f"Google user data fetch HTTP error: {http_err.response.status_code} - {http_err.response.text}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=google_user_data_http_error", status_code=307)
             except httpx.RequestError as req_exc:
-                logger.error(f"GitHub user data fetch request error: {req_exc}")
-                return RedirectResponse(url=f"{frontend_url}/?login_error=github_user_data_request_error", status_code=307)
+                logger.error(f"Google user data fetch request error: {req_exc}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=google_user_data_request_error", status_code=307)
             except Exception as e:
-                logger.error(f"GitHub user data fetch unexpected error: {e}")
-                return RedirectResponse(url=f"{frontend_url}/?login_error=github_user_data_unexpected_error", status_code=307)
+                logger.error(f"Google user data fetch unexpected error: {e}")
+                return RedirectResponse(url=f"{frontend_url}/?login_error=google_user_data_unexpected_error", status_code=307)
 
-            username = github_user_data.get("login")
-            name = github_user_data.get("name") or username
-            avatar_url = github_user_data.get("avatarUrl")
-            email = github_user_data.get("email")
-            github_user_id = github_user_data.get("id")
+            # Extract user information from Google response
+            google_user_id = google_user_data.get("id")
+            email = google_user_data.get("email")
+            name = google_user_data.get("name")
+            avatar_url = google_user_data.get("picture")
+            
+            logger.info(f"Google OAuth: Received user data - ID: {google_user_id}, Email: {email}, Name: {name}, Avatar URL: {avatar_url}")
+            
+            # For Google users, don't create a username from email to avoid conflicts with GitHub usernames
+            # Use a unique identifier based on Google ID instead
+            google_username = email.split("@")[0] if email else f"google_user_{google_user_id}"
 
-            if github_user_id is None or username is None:
+            if google_user_id is None or email is None:
                 logger.error(
-                    f"Essential user data (ID or login) missing from GitHub response: {github_user_data}"
+                    f"Essential user data (ID or email) missing from Google response: {google_user_data}"
                 )
                 return RedirectResponse(
-                    url=f"{frontend_url}/?login_error=github_missing_essential_data",
+                    url=f"{frontend_url}/?login_error=google_missing_essential_data",
                     status_code=307,
                 )
 
             current_time = datetime.now(timezone.utc)
             
-            # No automatic account linking by email - users must manually link via settings
-            # Normal GitHub user creation/update
+            # Check if user already exists by google_id only (not by email)
+            # Email matching removed - users must manually link accounts via settings
+            existing_user = await self.users_collection.find_one({"googleId": google_user_id})
+            
+            # Create new user or update existing Google user
             try:
                 # Ensure username uniqueness by checking and appending numbers if needed
-                # This prevents conflicts when a Google user already has this username
-                base_username = username
+                base_username = google_username
                 counter = 1
-                while await self.users_collection.find_one({"username": username, "githubId": {"$ne": github_user_id}}):
-                    username = f"{base_username}{counter}"
+                while await self.users_collection.find_one({"username": google_username, "googleId": {"$ne": google_user_id}}):
+                    google_username = f"{base_username}{counter}"
                     counter += 1
                 
                 set_payload = {
                     "name": name,
-                    "githubAvatarUrl": avatar_url,  # Store GitHub avatar separately
+                    "googleAvatarUrl": avatar_url,  # Store Google avatar separately
                     "email": email,
-                    "githubId": github_user_id,
-                    "githubUsername": username,  # Store provider-specific username
-                    "githubAccessToken": github_token,  # Store the token for API calls
+                    "googleId": google_user_id,
+                    "googleUsername": google_username,  # Store provider-specific username
                     "updatedAt": current_time,
                     "lastLoginAt": current_time,
                 }
 
                 set_on_insert_payload = {
-                    "username": username,
+                    "username": google_username,  # Only set on first creation
                     "createdAt": current_time,
                     "isAdmin": False,
                     # Set default privacy settings for new users
                     "showEmail": True,
                     "showGithub": True,
-                    "preferredAvatarSource": "github",  # Default to GitHub avatar
+                    "preferredAvatarSource": "google",  # Default to Google avatar for Google-only users
                 }
 
-                # Match by githubId ONLY to prevent automatic account merging
                 user_document = await self.users_collection.find_one_and_update(
-                    {"githubId": github_user_id},
+                    {"googleId": google_user_id},
                     {
                         "$set": set_payload,
                         "$setOnInsert": set_on_insert_payload
@@ -233,11 +246,11 @@ class GitHubOAuthService:
                 )
                 
                 # Compute primary avatar_url based on preference
-                preferred_source = user_document.get("preferredAvatarSource", "github")
-                if preferred_source == "google" and user_document.get("googleAvatarUrl"):
-                    computed_avatar = user_document.get("googleAvatarUrl")
-                else:
+                preferred_source = user_document.get("preferredAvatarSource", "google")
+                if preferred_source == "github" and user_document.get("githubAvatarUrl"):
                     computed_avatar = user_document.get("githubAvatarUrl")
+                else:
+                    computed_avatar = user_document.get("googleAvatarUrl")
                 
                 # Update with computed avatar_url
                 if computed_avatar:
@@ -248,27 +261,30 @@ class GitHubOAuthService:
                     user_document["avatarUrl"] = computed_avatar
                 
                 if not user_document:
-                    logger.error("GitHubOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
+                    logger.error("GoogleOAuthService: Failed to upsert user document, find_one_and_update returned None unexpectedly.")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_failed", status_code=307)
                 
-                logger.info(f"GitHubOAuthService: User {user_document.get('username')} (DB ID: {user_document['_id']}, GitHub ID: {user_document.get('githubId')}) upserted successfully.")
+                logger.info(f"GoogleOAuthService: User {user_document.get('username')} (DB ID: {user_document['_id']}, Google ID: {user_document.get('googleId')}) upserted successfully.")
 
             except Exception as db_exc:
                 logger.error(f"Database operation error during user upsert: {db_exc}")
                 return RedirectResponse(url=f"{frontend_url}/?login_error=database_user_op_generic_error", status_code=307)
 
             user_id_str = str(user_document["_id"])
-            username_from_db = user_document["username"]
+            username = user_document["username"]
             access_token_payload = {
                 "sub": user_id_str,
-                "username": username_from_db,
-                "githubId": github_user_id,
+                "username": username,
+                "googleId": google_user_id,
             }
             access_token = create_access_token(data=access_token_payload)
             
             refresh_token_payload = {"sub": user_id_str}
             refresh_token = create_refresh_token(data=refresh_token_payload, expires_delta=timedelta(minutes=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES))
 
+            # Set authentication cookies with proper security flags
+            # secure=False in DEV allows cookies over HTTP for localhost development
+            # secure=True in production enforces HTTPS-only cookies for security
             redirect_response.set_cookie(
                 key=ACCESS_TOKEN_COOKIE_NAME,
                 value=access_token,
@@ -292,11 +308,11 @@ class GitHubOAuthService:
             redirect_response.set_cookie(
                 key=CSRF_TOKEN_COOKIE_NAME,
                 value=csrf_token,
-                httponly=False,
+                httponly=False,  # CSRF token needs to be readable by JavaScript
                 samesite="lax",
                 max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 path="/",
                 secure=True if config_settings.ENV_TYPE == "production" else False
             )
-            logger.info(f"Successfully authenticated user {username_from_db}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
+            logger.info(f"Successfully authenticated user {username}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
             return redirect_response

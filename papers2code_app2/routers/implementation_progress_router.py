@@ -25,6 +25,18 @@ router = APIRouter(
 )
 
 
+async def require_github_account(current_user: UserInDBMinimalSchema):
+    """
+    Check if the user has a linked GitHub account.
+    Raises HTTPException if no GitHub account is linked.
+    """
+    if not current_user.githubId:
+        raise HTTPException(
+            status_code=status.HTTP_403_FORBIDDEN,
+            detail="GitHub account required for implementation features. Please link your GitHub account to access this feature."
+        )
+
+
 @router.post("/paper/{paper_id}/join", response_model=ImplementationProgress, status_code=status.HTTP_200_OK)
 @handle_service_errors
 async def join_or_create_implementation_progress(
@@ -32,7 +44,9 @@ async def join_or_create_implementation_progress(
     current_user: UserInDBMinimalSchema = Depends(get_current_user),
     service: ImplementationProgressService = Depends(get_implementation_progress_service)
 ):
-    """Join or create implementation progress for a paper."""
+    """Join or create implementation progress for a paper. Requires GitHub account."""
+    await require_github_account(current_user)
+    
     try:
         progress = await service.join_or_create_progress(paper_id, str(current_user.id))
         return progress
@@ -82,7 +96,9 @@ async def update_implementation_progress_by_paper_id(
     current_user: UserInDBMinimalSchema = Depends(get_current_user),
     service: ImplementationProgressService = Depends(get_implementation_progress_service)
 ):
-    """Update implementation progress (status and/or GitHub repo) by paper ID."""
+    """Update implementation progress (status and/or GitHub repo) by paper ID. Requires GitHub account."""
+    await require_github_account(current_user)
+    
     try:
         progress = await service.update_progress_by_paper_id(paper_id, str(current_user.id), update_data)
         return progress
@@ -127,9 +143,12 @@ async def create_github_repository_for_paper(
     """
     Automatically create a GitHub repository from template for the paper and link it to implementation progress.
     The repository will be named after the paper title and pre-filled with paper metadata.
+    Requires GitHub account.
     """
     if not current_user:
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
+    
+    await require_github_account(current_user)
     
     try:
         # Get user's GitHub access token from database

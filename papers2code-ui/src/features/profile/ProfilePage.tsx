@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
-import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings, Github, Cloud } from 'lucide-react';
+import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings, Github, Cloud, FileText } from 'lucide-react';
 import { UserAvatar, LoadingSpinner } from '@/shared/components';
 import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi, getUserProfileSettings } from '@/shared/services/api';
 import { Paper } from '@/shared/types/paper';
@@ -195,8 +195,8 @@ const ProfilePage: React.FC = () => {
                       </div>
                     ))}
                     {upvotedPapers.length === 0 && (
-                      <p className="text-muted-foreground text-sm italic text-center py-4">No papers upvoted yet</p>
-                    )}
+                          <p className="text-muted-foreground text-sm italic text-center py-4">No papers upvoted yet</p>
+                        )}
                   </div>
                 </div>
                 
@@ -249,7 +249,9 @@ const ProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 bg-card border border-border rounded-lg">
-                <div className="text-4xl mb-4">📄</div>
+                    <div className="mb-4">
+                      <FileText size={48} className="text-muted-foreground" />
+                    </div>
                 <h3 className="text-lg font-medium mb-2">No papers upvoted yet</h3>
                 <p className="text-muted-foreground mb-4">Upvoted papers will appear here</p>
                 <Link
@@ -283,7 +285,9 @@ const ProfilePage: React.FC = () => {
               </div>
             ) : (
               <div className="flex flex-col items-center justify-center py-16 bg-card border border-border rounded-lg">
-                <div className="text-4xl mb-4">🚀</div>
+                    <div className="mb-4">
+                      <Rocket size={48} className="text-muted-foreground" />
+                    </div>
                 <h3 className="text-lg font-medium mb-2">No active contributions</h3>
                 <p className="text-muted-foreground mb-4">Projects you're contributing to will appear here</p>
                 <Link
@@ -364,7 +368,7 @@ const ProfilePage: React.FC = () => {
               </div>
               
               {/* Social Links */}
-              {(userDetails.websiteUrl || userDetails.twitterProfileUrl || userDetails.linkedinProfileUrl || userDetails.blueskyUsername || userDetails.huggingfaceUsername || userDetails.username) && (
+              {(userDetails.websiteUrl || userDetails.twitterProfileUrl || userDetails.linkedinProfileUrl || userDetails.blueskyUsername || userDetails.huggingfaceUsername || userDetails.githubId) && (
                 <div className="flex gap-3 justify-center md:justify-start">
                   {userDetails.websiteUrl && (
                     <a 
@@ -377,9 +381,9 @@ const ProfilePage: React.FC = () => {
                       <Globe size={16} />
                     </a>
                   )}
-                  {userDetails.username && (
+                  {userDetails.githubId && userDetails.githubUsername && (
                     <a 
-                      href={`https://github.com/${userDetails.username}`}
+                      href={`https://github.com/${userDetails.githubUsername}`}
                       target="_blank" 
                       rel="noopener noreferrer"
                       className="p-2 bg-muted hover:bg-muted/80 rounded-md transition-colors"

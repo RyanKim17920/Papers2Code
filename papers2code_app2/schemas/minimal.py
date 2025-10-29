@@ -10,21 +10,32 @@ from .papers import camel_case_config, camel_case_config_with_datetime
 class UserSchema(BaseModel): # Model returned by get_current_user
     """Schema for representing the currently authenticated user, often returned by endpoints like get_current_user."""
     id: Optional[PyObjectId] = Field(None, alias='_id') 
-    github_id: int
+    github_id: Optional[int] = Field(None, alias='githubId')  # Made optional to support Google OAuth
+    google_id: Optional[str] = Field(None, alias='googleId')  # Added for Google OAuth
     username: str
+    github_username: Optional[str] = Field(None, alias='githubUsername')  # Provider-specific username
+    google_username: Optional[str] = Field(None, alias='googleUsername')  # Provider-specific username
+    email: Optional[str] = None  # Added for Google OAuth users
     name: Optional[str] = None
-    avatar_url: Optional[str] = None  # Changed to str for flexible URL handling
+    avatar_url: Optional[str] = Field(None, alias='avatarUrl')  # Primary avatar URL (computed based on preference)
+    github_avatar_url: Optional[str] = Field(None, alias='githubAvatarUrl')  # GitHub-specific avatar
+    google_avatar_url: Optional[str] = Field(None, alias='googleAvatarUrl')  # Google-specific avatar
+    preferred_avatar_source: Optional[str] = Field("github", alias='preferredAvatarSource')  # "github" or "google"
     bio: Optional[str] = None
-    website_url: Optional[str] = None  # Changed to str for flexible URL handling
-    twitter_profile_url: Optional[str] = None  # Changed to str for flexible URL handling
-    linkedin_profile_url: Optional[str] = None  # Changed to str for flexible URL handling
-    bluesky_username: Optional[str] = None  
-    huggingface_username: Optional[str] = None  
-    is_admin: Optional[bool] = False
-    is_owner: Optional[bool] = False
-    created_at: Optional[datetime] = None
-    last_login_at: Optional[datetime] = None
-    profile_updated_at: Optional[datetime] = None
+    website_url: Optional[str] = Field(None, alias='websiteUrl')  # Changed to str for flexible URL handling
+    twitter_profile_url: Optional[str] = Field(None, alias='twitterProfileUrl')  # Changed to str for flexible URL handling
+    linkedin_profile_url: Optional[str] = Field(None, alias='linkedinProfileUrl')  # Changed to str for flexible URL handling
+    bluesky_username: Optional[str] = Field(None, alias='blueskyUsername')
+    huggingface_username: Optional[str] = Field(None, alias='huggingfaceUsername')
+    is_admin: Optional[bool] = Field(False, alias='isAdmin')
+    is_owner: Optional[bool] = Field(False, alias='isOwner')
+    created_at: Optional[datetime] = Field(None, alias='createdAt')
+    updated_at: Optional[datetime] = Field(None, alias='updatedAt')
+    last_login_at: Optional[datetime] = Field(None, alias='lastLoginAt')
+    profile_updated_at: Optional[datetime] = Field(None, alias='profileUpdatedAt')
+    # Privacy settings
+    show_email: Optional[bool] = Field(True, alias='showEmail')  # Whether to publicly display email
+    show_github: Optional[bool] = Field(True, alias='showGithub')  # Whether to publicly display GitHub profile link
 
     model_config = camel_case_config_with_datetime
 
@@ -32,11 +43,16 @@ class UserUpdateProfile(BaseModel):
     """Schema for updating user profile information."""
     name: Optional[str] = None
     bio: Optional[str] = None
-    website_url: Optional[str] = None  # Changed to str for flexible URL handling
-    twitter_profile_url: Optional[str] = None  # Changed to str for flexible URL handling
-    linkedin_profile_url: Optional[str] = None  # Changed to str to allow usernames
-    bluesky_username: Optional[str] = None # New
-    huggingface_username: Optional[str] = None # New
+    website_url: Optional[str] = Field(None, alias='websiteUrl')  # Changed to str for flexible URL handling
+    twitter_profile_url: Optional[str] = Field(None, alias='twitterProfileUrl')  # Changed to str for flexible URL handling
+    linkedin_profile_url: Optional[str] = Field(None, alias='linkedinProfileUrl')  # Changed to str to allow usernames
+    bluesky_username: Optional[str] = Field(None, alias='blueskyUsername') # New
+    huggingface_username: Optional[str] = Field(None, alias='huggingfaceUsername') # New
+    # Privacy settings
+    show_email: Optional[bool] = Field(None, alias='showEmail')
+    show_github: Optional[bool] = Field(None, alias='showGithub')
+    # Avatar preference
+    preferred_avatar_source: Optional[str] = Field(None, alias='preferredAvatarSource')  # "github" or "google"
     
     @field_validator('name', 'bio', 'website_url', 'twitter_profile_url', 'linkedin_profile_url', 'bluesky_username', 'huggingface_username', mode='before')
     @classmethod
@@ -53,9 +69,9 @@ class UserMinimal(BaseModel): # Response model for /me endpoint
     id: Optional[PyObjectId] = None 
     username: str
     name: Optional[str] = None
-    avatar_url: Optional[str] = None
-    is_owner: Optional[bool] = None
-    is_admin: Optional[bool] = None
+    avatar_url: Optional[str] = Field(None, alias='avatarUrl')
+    is_owner: Optional[bool] = Field(None, alias='isOwner')
+    is_admin: Optional[bool] = Field(None, alias='isAdmin')
 
     model_config = camel_case_config
 

@@ -45,6 +45,25 @@ class UserService:
             raise UserNotFoundException(f"User with username '{username}' not found.")
 
         user_id = user_doc["_id"]
+        
+        # Check if requesting user is viewing their own profile
+        is_own_profile = (requesting_user and requesting_user.id and 
+                         str(requesting_user.id) == str(user_id))
+        
+        # Apply privacy settings for public viewing
+        if not is_own_profile:
+            # Get privacy settings (default to True/visible if not set)
+            show_email = user_doc.get("showEmail", True)
+            show_github = user_doc.get("showGithub", True)
+            
+            # Hide email if privacy setting is False
+            if not show_email and "email" in user_doc:
+                user_doc["email"] = None
+            
+            # Hide GitHub info if privacy setting is False
+            if not show_github and "githubId" in user_doc:
+                user_doc["githubId"] = None
+        
         user_details = UserSchema(**user_doc)
 
         requesting_user_id_str = str(requesting_user.id) if requesting_user and requesting_user.id else None
@@ -318,6 +337,20 @@ class UserService:
         
         # Add profile update timestamp
         clean_update_data["profile_updated_at"] = datetime.utcnow()
+        
+        # If preferred_avatar_source is being updated, recompute the primary avatarUrl
+        if "preferredAvatarSource" in clean_update_data:
+            user_doc = await self.users_collection.find_one({"_id": user_id})
+            if user_doc:
+                preferred_source = clean_update_data["preferredAvatarSource"]
+                if preferred_source == "github" and user_doc.get("githubAvatarUrl"):
+                    clean_update_data["avatarUrl"] = user_doc.get("githubAvatarUrl")
+                elif preferred_source == "google" and user_doc.get("googleAvatarUrl"):
+                    clean_update_data["avatarUrl"] = user_doc.get("googleAvatarUrl")
+                # If preferred source doesn't have an avatar, keep the current one
+                elif user_doc.get("avatarUrl"):
+                    # Don't change it
+                    pass
         
         # Log the final data being sent to MongoDB
         logger.debug(f"Final update_data: {clean_update_data}")

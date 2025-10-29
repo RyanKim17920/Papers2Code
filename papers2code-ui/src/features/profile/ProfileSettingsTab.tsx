@@ -1,6 +1,6 @@
 import React, { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Settings, LogOut, Trash2, Globe, Twitter, Linkedin, User, FileText, Bell } from 'lucide-react';
+import { Settings, LogOut, Trash2, Globe, Twitter, Linkedin, User, FileText, Bell, Lock, Eye, EyeOff, Github, Mail } from 'lucide-react';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Textarea } from '@/shared/ui/textarea';
@@ -29,6 +29,9 @@ interface UserProfileFormData {
   linkedinProfileUrl: string;
   blueskyUsername: string;
   huggingfaceUsername: string;
+  showEmail?: boolean;
+  showGithub?: boolean;
+  preferredAvatarSource?: string;
 }
 
 interface FieldValidation {
@@ -47,6 +50,14 @@ interface ProfileSettingsTabProps {
     linkedinProfileUrl?: string | null;
     blueskyUsername?: string | null;
     huggingfaceUsername?: string | null;
+    showEmail?: boolean;
+    showGithub?: boolean;
+    email?: string | null;
+    githubId?: number | null;
+    googleId?: string | null;
+    githubAvatarUrl?: string | null;
+    googleAvatarUrl?: string | null;
+    preferredAvatarSource?: string;
   };
   onProfileUpdate?: () => void;
 }
@@ -67,6 +78,9 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
     linkedinProfileUrl: normalizeLinkedInUrl(currentUser.linkedinProfileUrl || '').displayValue,
     blueskyUsername: normalizeBlueskyHandle(currentUser.blueskyUsername || '').displayValue,
     huggingfaceUsername: normalizeHuggingFaceUsername(currentUser.huggingfaceUsername || '').displayValue,
+    showEmail: currentUser.showEmail ?? true,
+    showGithub: currentUser.showGithub ?? true,
+    preferredAvatarSource: currentUser.preferredAvatarSource || 'github',
   });
 
   const [fieldValidation, setFieldValidation] = useState<Record<string, FieldValidation>>({});
@@ -222,27 +236,67 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
           </CardDescription>
         </CardHeader>
         <CardContent>
-          {/* GitHub info */}
-          <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
-            <p className="text-xs font-medium mb-1">GitHub Account (Managed externally)</p>
-            <p className="text-xs text-muted-foreground mb-2">
-              <strong>Username:</strong> {currentUser.username}
-            </p>
-            <Button
-              variant="outline"
-              size="sm"
-              asChild
-              className="h-7 text-xs"
-            >
-              <a 
-                href="https://github.com/settings/profile"
-                target="_blank"
-                rel="noopener noreferrer"
+          {/* GitHub info - only show if user has GitHub account linked */}
+          {currentUser.githubId && (
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs font-medium mb-1">GitHub Account (Managed externally)</p>
+              <p className="text-xs text-muted-foreground mb-2">
+                <strong>Username:</strong> {currentUser.username}
+              </p>
+              <Button
+                variant="outline"
+                size="sm"
+                asChild
+                className="h-7 text-xs"
               >
-                Edit Username & Avatar on GitHub
-              </a>
-            </Button>
-          </div>
+                <a 
+                  href="https://github.com/settings/profile"
+                  target="_blank"
+                  rel="noopener noreferrer"
+                >
+                  Edit Username & Avatar on GitHub
+                </a>
+              </Button>
+            </div>
+          )}
+
+          {/* Avatar Selection - Show only if user has both GitHub and Google accounts */}
+          {currentUser.githubId && currentUser.googleId && currentUser.githubAvatarUrl && currentUser.googleAvatarUrl && (
+            <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
+              <p className="text-xs font-medium mb-2">Avatar / Profile Icon</p>
+              <p className="text-xs text-muted-foreground mb-3">
+                Choose which avatar to display on your profile
+              </p>
+              <div className="flex gap-3">
+                <Button
+                  type="button"
+                  variant={formData.preferredAvatarSource === 'github' ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1 h-auto py-2 flex flex-col items-center gap-2"
+                  onClick={() => setFormData(prev => ({ ...prev, preferredAvatarSource: 'github' }))}
+                >
+                  <Github className="h-5 w-5" />
+                  <span className="text-xs">GitHub Avatar</span>
+                  {currentUser.githubAvatarUrl && (
+                    <img src={currentUser.githubAvatarUrl} alt="GitHub" className="w-12 h-12 rounded-full" />
+                  )}
+                </Button>
+                <Button
+                  type="button"
+                  variant={formData.preferredAvatarSource === 'google' ? 'default' : 'outline'}
+                  size="sm"
+                  className="flex-1 h-auto py-2 flex flex-col items-center gap-2"
+                  onClick={() => setFormData(prev => ({ ...prev, preferredAvatarSource: 'google' }))}
+                >
+                  <Mail className="h-5 w-5" />
+                  <span className="text-xs">Google Avatar</span>
+                  {currentUser.googleAvatarUrl && (
+                    <img src={currentUser.googleAvatarUrl} alt="Google" className="w-12 h-12 rounded-full" />
+                  )}
+                </Button>
+              </div>
+            </div>
+          )}
 
           <form onSubmit={handleSaveProfile} className="space-y-3">
             <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
@@ -356,6 +410,102 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
 
             <Button type="submit" disabled={saving} className="w-full md:w-auto">
               {saving ? 'Saving...' : 'Save Profile'}
+            </Button>
+          </form>
+        </CardContent>
+      </Card>
+
+      {/* Privacy Settings */}
+      <Card>
+        <CardHeader className="pb-3">
+          <CardTitle className="flex items-center gap-2 text-lg">
+            <Lock size={18} />
+            Privacy Settings
+          </CardTitle>
+          <CardDescription className="text-xs">
+            Control who can see your personal information on your public profile
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <form onSubmit={handleSaveProfile} className="space-y-4">
+            {/* Email Visibility */}
+            {currentUser.email && (
+              <div className="flex items-center justify-between py-3 border-b">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Label htmlFor="showEmail" className="text-sm font-medium cursor-pointer">
+                      Show Email Address
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Display your email ({currentUser.email}) on your public profile
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setFormData(prev => ({ ...prev, showEmail: !prev.showEmail }))}
+                  >
+                    {formData.showEmail ? (
+                      <Eye size={16} className="text-green-600" />
+                    ) : (
+                      <EyeOff size={16} className="text-muted-foreground" />
+                    )}
+                  </Button>
+                  <input
+                    id="showEmail"
+                    type="checkbox"
+                    checked={formData.showEmail}
+                    onChange={(e) => setFormData(prev => ({ ...prev, showEmail: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
+
+            {/* GitHub Visibility */}
+            {currentUser.githubId && (
+              <div className="flex items-center justify-between py-3 border-b">
+                <div className="flex-1">
+                  <div className="flex items-center gap-2 mb-1">
+                    <Label htmlFor="showGithub" className="text-sm font-medium cursor-pointer">
+                      Show GitHub Profile Link
+                    </Label>
+                  </div>
+                  <p className="text-xs text-muted-foreground">
+                    Display a link to your GitHub profile on your public profile
+                  </p>
+                </div>
+                <div className="flex items-center gap-2">
+                  <Button
+                    type="button"
+                    variant="ghost"
+                    size="sm"
+                    className="h-8 px-2"
+                    onClick={() => setFormData(prev => ({ ...prev, showGithub: !prev.showGithub }))}
+                  >
+                    {formData.showGithub ? (
+                      <Eye size={16} className="text-green-600" />
+                    ) : (
+                      <EyeOff size={16} className="text-muted-foreground" />
+                    )}
+                  </Button>
+                  <input
+                    id="showGithub"
+                    type="checkbox"
+                    checked={formData.showGithub}
+                    onChange={(e) => setFormData(prev => ({ ...prev, showGithub: e.target.checked }))}
+                    className="h-4 w-4 rounded border-gray-300 text-primary focus:ring-primary cursor-pointer"
+                  />
+                </div>
+              </div>
+            )}
+
+            <Button type="submit" disabled={saving} className="w-full md:w-auto">
+              {saving ? 'Saving...' : 'Save Privacy Settings'}
             </Button>
           </form>
         </CardContent>

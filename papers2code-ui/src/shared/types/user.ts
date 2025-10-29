@@ -8,6 +8,9 @@ export interface UserProfile {
     id: string;
     username: string;
     avatarUrl?: string | null;
+    githubAvatarUrl?: string | null;
+    googleAvatarUrl?: string | null;
+    preferredAvatarSource?: string;
     name?: string | null;
     bio?: string | null;
     websiteUrl?: string | null;
@@ -20,6 +23,14 @@ export interface UserProfile {
     createdAt?: string;
     lastLoginAt?: string;
     profileUpdatedAt?: string;
+    // Privacy settings
+    showEmail?: boolean;
+    showGithub?: boolean;
+    email?: string | null;
+    githubId?: number | null;
+    googleId?: string | null;
+    githubUsername?: string | null;
+    googleUsername?: string | null;
 }
 
 export interface PaperActionUserProfile {
