@@ -7,7 +7,7 @@ from ..schemas.papers import (
     PaperResponse, SetImplementabilityRequest
 )
 from ..schemas.minimal import UserSchema
-from ..utils import transform_paper_async
+from ..utils import transform_papers_batch
 from ..auth import get_current_user, get_current_owner
 from ..services.paper_moderation_service import PaperModerationService
 from ..error_handlers import handle_service_errors
@@ -41,7 +41,9 @@ async def flag_paper_implementability(
             user_id=user_id_str,
             action=action,
         )
-        return await transform_paper_async(updated_paper_doc, user_id_str, detail_level="full")
+        # Use batch transformation for consistency
+        transformed_papers = await transform_papers_batch([updated_paper_doc], user_id_str, detail_level="full")
+        return transformed_papers[0] if transformed_papers else updated_paper_doc
 
     except InvalidId:  # This might still be raised by ObjectId conversion if not caught in service for some reason
         logger.warning(f"Router: InvalidId encountered for paper {paper_id} or user {user_id_str}.")
@@ -77,7 +79,9 @@ async def set_paper_implementability(
             admin_user_id=admin_user_id_str,
             status_to_set_by_admin=payload.status_to_set,
         )
-        return await transform_paper_async(updated_paper_doc, admin_user_id_str, detail_level="full")
+        # Use batch transformation for consistency
+        transformed_papers = await transform_papers_batch([updated_paper_doc], admin_user_id_str, detail_level="full")
+        return transformed_papers[0] if transformed_papers else updated_paper_doc
 
     except InvalidId:  # Should be caught by service, but as a fallback
         logger.warning(f"Router: InvalidId encountered for set_implementability paper {paper_id}.")

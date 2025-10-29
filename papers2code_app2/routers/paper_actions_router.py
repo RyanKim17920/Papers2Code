@@ -7,7 +7,7 @@ from ..dependencies import limiter, get_paper_action_service
 
 from ..schemas.papers import PaperResponse, PaperActionsSummaryResponse
 from ..schemas.minimal import UserSchema
-from ..utils import transform_paper_async
+from ..utils import transform_papers_batch
 from ..auth import get_current_user
 from ..services.paper_action_service import PaperActionService, ACTION_PROJECT_STARTED, ACTION_PROJECT_JOINED # Added action types
 from ..services.paper_view_service import PaperViewService
@@ -57,7 +57,9 @@ async def vote_on_paper(
         paper_view_service = PaperViewService()
         complete_paper_doc = await paper_view_service.get_paper_by_id(paper_id, user_id_str)
 
-        return await transform_paper_async(complete_paper_doc, user_id_str, detail_level="full")
+        # Use batch transformation for consistency and efficiency
+        transformed_papers = await transform_papers_batch([complete_paper_doc], user_id_str, detail_level="full")
+        return transformed_papers[0] if transformed_papers else complete_paper_doc
 
     except InvalidId:
         raise HTTPException(status_code=status.HTTP_400_BAD_REQUEST, detail="Invalid paper or user ID format")

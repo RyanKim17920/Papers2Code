@@ -16,7 +16,7 @@ from ..schemas.papers import PaperResponse
 from ..schemas.minimal import UserSchema, UserUpdateProfile
 from ..services.exceptions import UserNotFoundException
 from ..shared import IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
-from ..utils import transform_paper_async, transform_papers_batch # Assuming this can transform a raw paper doc to UserProfilePaper compatible dict
+from ..utils import transform_papers_batch
 
 logger = logging.getLogger(__name__)
 

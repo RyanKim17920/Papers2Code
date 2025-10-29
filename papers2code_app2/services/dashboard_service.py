@@ -12,7 +12,7 @@ from ..database import (
     get_user_actions_collection_async,
 )
 from ..schemas.papers import PaperResponse
-from ..utils import transform_paper_async, transform_papers_batch
+from ..utils import transform_papers_batch
 
 logger = logging.getLogger(__name__)
 

@@ -9,7 +9,7 @@ from ..dependencies import get_paper_view_service, get_activity_tracking_service
 from ..services.exceptions import DatabaseOperationException
 from ..error_handlers import handle_service_errors
 from ..auth import get_current_user_optional # Changed from get_current_user
-from ..utils import transform_paper_async, transform_papers_batch
+from ..utils import transform_papers_batch
 import logging
 import time # Add time import for performance logging
 
@@ -106,7 +106,12 @@ async def get_paper(
 
     try:
         paper_doc = await service.get_paper_by_id(paper_id, user_id_str)
-        paper_response = await transform_paper_async(paper_doc, user_id_str)
+        # Use batch transformation even for single paper (efficient implementation)
+        transformed_papers = await transform_papers_batch([paper_doc], user_id_str, detail_level="full")
+        paper_response = transformed_papers[0] if transformed_papers else None
+        
+        if not paper_response:
+            raise HTTPException(status_code=404, detail="Paper not found or transformation failed")
         
         # Track paper view using background task for better performance
         background_tasks.add_task(
