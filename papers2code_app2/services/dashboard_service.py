@@ -12,7 +12,7 @@ from ..database import (
     get_user_actions_collection_async,
 )
 from ..schemas.papers import PaperResponse
-from ..utils import transform_paper_async
+from ..utils import transform_paper_async, transform_papers_batch
 
 logger = logging.getLogger(__name__)
 
@@ -86,11 +86,9 @@ class DashboardService:
             # Sort by recent upvotes desc
             papers_list.sort(key=lambda p: p.get("recent_upvote_count", 0), reverse=True)
 
-            # Transform for response
-            response: List[PaperResponse] = []
-            for paper_doc in papers_list:
-                transformed_paper = await transform_paper_async(paper_doc, None, detail_level="summary")
-                response.append(PaperResponse(**transformed_paper))
+            # OPTIMIZATION: Use batch transformation
+            transformed_papers = await transform_papers_batch(papers_list, None, detail_level="summary")
+            response = [PaperResponse(**paper) for paper in transformed_papers]
                 
             logger.info("Successfully retrieved and sorted trending papers based on upvotes.")
             return response
@@ -136,10 +134,11 @@ class DashboardService:
             papers_cursor = papers_coll.find({"_id": {"$in": paper_ids_list}}, summary_projection)
             papers_list = await papers_cursor.to_list(length=len(paper_ids_list))
             logger.info(f"Fetched {len(papers_list)} paper details for contributions.")
-            response = []
-            for paper_doc in papers_list:
-                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="summary")
-                response.append(PaperResponse(**transformed_paper))
+            
+            # OPTIMIZATION: Use batch transformation
+            transformed_papers = await transform_papers_batch(papers_list, user_id, detail_level="summary")
+            response = [PaperResponse(**paper) for paper in transformed_papers]
+            
             logger.info(f"Successfully retrieved {len(response)} user contributions.")
             return response
         except Exception as e:
@@ -192,10 +191,10 @@ class DashboardService:
             ordered_papers = [papers_map[pid] for pid in paper_ids if pid in papers_map]
             
             logger.info(f"Ordered {len(ordered_papers)} papers based on recency.")
-            response = []
-            for paper_doc in ordered_papers:
-                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="summary")
-                response.append(PaperResponse(**transformed_paper))
+            
+            # OPTIMIZATION: Use batch transformation
+            transformed_papers = await transform_papers_batch(ordered_papers, user_id, detail_level="summary")
+            response = [PaperResponse(**paper) for paper in transformed_papers]
                 
             logger.info(f"Successfully retrieved {len(response)} recently viewed papers.")
             return response
@@ -243,10 +242,9 @@ class DashboardService:
             # Order papers based on upvote recency
             ordered_papers = [papers_map[pid] for pid in paper_ids if pid in papers_map]
             
-            response = []
-            for paper_doc in ordered_papers:
-                transformed_paper = await transform_paper_async(paper_doc, user_id, detail_level="summary")
-                response.append(PaperResponse(**transformed_paper))
+            # OPTIMIZATION: Use batch transformation
+            transformed_papers = await transform_papers_batch(ordered_papers, user_id, detail_level="summary")
+            response = [PaperResponse(**paper) for paper in transformed_papers]
                 
             logger.info(f"Successfully retrieved {len(response)} upvoted papers.")
             return response

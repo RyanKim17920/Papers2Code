@@ -295,6 +295,8 @@ async def ensure_db_indexes_async():
                 # NEW: indexes for user profile aggregations
                 ([("userId", ASCENDING), ("actionType", ASCENDING)], {"name": "userId_1_actionType_1_user_actions_async"}),
                 ([("actionType", ASCENDING), ("userId", ASCENDING)], {"name": "actionType_1_userId_1_user_actions_async"}),
+                # OPTIMIZATION: Compound index for batch user-specific data lookup
+                ([("userId", ASCENDING), ("paperId", ASCENDING), ("timestamp", DESCENDING)], {"name": "userId_1_paperId_1_timestamp_-1_user_actions_async"}),
             ]),
             (collections_to_check["paper_views"], [
                 ([("timestamp", DESCENDING)], {"name": "timestamp_-1_paper_views"}),

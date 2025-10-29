@@ -367,9 +367,30 @@ class PaperViewService:
             # Extract IDs in the correct order
             paper_ids = [result["_id"] for result in paginated_results]
             
-            # Fetch full documents maintaining order
+            # OPTIMIZATION: Project only needed fields for list view (reduces network transfer)
+            list_view_projection = {
+                "_id": 1,
+                "title": 1,
+                "authors": 1,
+                "publicationDate": 1,
+                "upvoteCount": 1,
+                "status": 1,
+                "urlGithub": 1,
+                "urlAbs": 1,
+                "urlPdf": 1,
+                "hasCode": 1,
+                "abstract": 1,
+                "venue": 1,
+                "tasks": 1,
+                "implementabilityStatus": 1,
+                "pwcUrl": 1,
+                "arxivId": 1
+            }
+            
+            # Fetch documents with projection maintaining order
             full_papers = await papers_collection.find(
-                {"_id": {"$in": paper_ids}}
+                {"_id": {"$in": paper_ids}},
+                list_view_projection
             ).to_list(length=None)
             
             # Create a mapping for quick lookup
@@ -535,8 +556,28 @@ class PaperViewService:
 
             find_call_start_time = time.time()
             
+            # OPTIMIZATION: Project only needed fields for list view
+            list_view_projection = {
+                "_id": 1,
+                "title": 1,
+                "authors": 1,
+                "publicationDate": 1,
+                "upvoteCount": 1,
+                "status": 1,
+                "urlGithub": 1,
+                "urlAbs": 1,
+                "urlPdf": 1,
+                "hasCode": 1,
+                "abstract": 1,
+                "venue": 1,
+                "tasks": 1,
+                "implementabilityStatus": 1,
+                "pwcUrl": 1,
+                "arxivId": 1
+            }
+            
             # Add query hints for better index usage
-            cursor = papers_collection.find(final_query)
+            cursor = papers_collection.find(final_query, list_view_projection)
             
             # Apply index hints based on query and sort criteria (if enabled)
             if config_settings.ENABLE_QUERY_HINTS and sort_criteria:

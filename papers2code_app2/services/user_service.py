@@ -16,7 +16,7 @@ from ..schemas.papers import PaperResponse
 from ..schemas.minimal import UserSchema, UserUpdateProfile
 from ..services.exceptions import UserNotFoundException
 from ..shared import IMPL_STATUS_COMMUNITY_IMPLEMENTABLE, IMPL_STATUS_COMMUNITY_NOT_IMPLEMENTABLE
-from ..utils import transform_paper_async # Assuming this can transform a raw paper doc to UserProfilePaper compatible dict
+from ..utils import transform_paper_async, transform_papers_batch # Assuming this can transform a raw paper doc to UserProfilePaper compatible dict
 
 logger = logging.getLogger(__name__)
 
@@ -62,12 +62,11 @@ class UserService:
         upvoted_papers_list = []
         if upvoted_paper_ids:
             cursor = self.papers_collection.find({"_id": {"$in": list(upvoted_paper_ids)}})
-            async for paper_doc in cursor:
-                # Pass requesting_user_id_str so that currentUserVote is correctly set
-                transformed_paper_dict = await transform_paper_async(paper_doc, requesting_user_id_str, detail_level="summary")
-                if transformed_paper_dict:
-                    paper_response = PaperResponse(**transformed_paper_dict)
-                    upvoted_papers_list.append(paper_response)
+            paper_docs = await cursor.to_list(length=None)
+            
+            # OPTIMIZATION: Use batch transformation
+            transformed_papers = await transform_papers_batch(paper_docs, requesting_user_id_str, detail_level="summary")
+            upvoted_papers_list = [PaperResponse(**paper) for paper in transformed_papers]
 
         # --- Contributed Papers ---
         contributed_paper_ids = set()
@@ -87,11 +86,11 @@ class UserService:
         contributed_papers_list = []
         if contributed_paper_ids:
             cursor = self.papers_collection.find({"_id": {"$in": list(contributed_paper_ids)}})
-            async for paper_doc in cursor:
-                transformed_paper_dict = await transform_paper_async(paper_doc, requesting_user_id_str, detail_level="summary")
-                if transformed_paper_dict:
-                    paper_response = PaperResponse(**transformed_paper_dict)
-                    contributed_papers_list.append(paper_response)
+            paper_docs = await cursor.to_list(length=None)
+            
+            # OPTIMIZATION: Use batch transformation
+            transformed_papers = await transform_papers_batch(paper_docs, requesting_user_id_str, detail_level="summary")
+            contributed_papers_list = [PaperResponse(**paper) for paper in transformed_papers]
 
         return UserProfileResponse(
             user_details=user_details,
