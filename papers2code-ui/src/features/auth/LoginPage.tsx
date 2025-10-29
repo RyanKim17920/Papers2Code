@@ -18,48 +18,41 @@ const LoginPage: React.FC = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-      <div className="w-full max-w-md p-8">
+      <div className="w-full max-w-sm px-4">
         {/* Logo and Title */}
-        <div className="text-center mb-8">
-          <div className="flex justify-center mb-4">
+        <div className="text-center mb-6">
+          <div className="flex justify-center mb-3">
             <img 
               src={logo} 
               alt="Papers2Code" 
-              className="h-16 w-auto" 
+              className="h-12 w-auto" 
             />
           </div>
-          <h1 className="text-3xl font-bold mb-2">Welcome to Papers2Code</h1>
-          <p className="text-muted-foreground">
-            Sign in to explore, vote on, and implement research papers
+          <h1 className="text-2xl font-bold mb-1">Welcome Back</h1>
+          <p className="text-sm text-muted-foreground">
+            Sign in to continue
           </p>
         </div>
 
         {/* Login Options Card */}
-        <div className="bg-card border rounded-lg shadow-lg p-8 space-y-4">
-          <div className="text-center mb-6">
-            <h2 className="text-xl font-semibold mb-2">Sign in to your account</h2>
-            <p className="text-sm text-muted-foreground">
-              Choose your preferred sign-in method
-            </p>
-          </div>
-
+        <div className="bg-card border rounded-lg shadow-sm p-6 space-y-3">
           {/* GitHub Login Button */}
           <Button
             onClick={handleGitHubLogin}
             variant="default"
-            className="w-full h-12 text-base gap-3"
+            className="w-full h-10 gap-2"
           >
-            <Github className="h-5 w-5" />
+            <Github className="h-4 w-4" />
             <span>Continue with GitHub</span>
           </Button>
 
           {/* Divider */}
-          <div className="relative my-6">
+          <div className="relative my-3">
             <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t border-muted"></div>
+              <div className="w-full border-t"></div>
             </div>
-            <div className="relative flex justify-center text-sm">
-              <span className="bg-card px-4 text-muted-foreground">or</span>
+            <div className="relative flex justify-center text-xs">
+              <span className="bg-card px-2 text-muted-foreground">or</span>
             </div>
           </div>
 
@@ -67,30 +60,26 @@ const LoginPage: React.FC = () => {
           <Button
             onClick={handleGoogleLogin}
             variant="outline"
-            className="w-full h-12 text-base gap-3"
+            className="w-full h-10 gap-2"
           >
-            <Mail className="h-5 w-5" />
+            <Mail className="h-4 w-4" />
             <span>Continue with Google</span>
           </Button>
 
           {/* Feature Access Info */}
-          <div className="mt-6 pt-6 border-t">
-            <div className="text-xs text-muted-foreground space-y-2">
-              <p className="font-medium text-foreground">Account Features:</p>
-              <ul className="list-disc list-inside space-y-1">
-                <li>GitHub: Full access including code implementations</li>
-                <li>Google: Community features (voting, viewing, profiles)</li>
-                <li>Link both accounts for complete access</li>
-              </ul>
-            </div>
+          <div className="mt-4 pt-4 border-t">
+            <p className="text-xs text-muted-foreground text-center">
+              GitHub accounts have full access. Google accounts can vote and view papers.
+              Link both for complete features.
+            </p>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="mt-8 text-center">
+        <div className="mt-6 text-center">
           <button
             onClick={() => navigate('/')}
-            className="text-sm text-muted-foreground hover:text-foreground transition-colors"
+            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
           >
             ← Back to home
           </button>

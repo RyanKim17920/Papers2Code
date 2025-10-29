@@ -212,7 +212,7 @@ class GoogleOAuthService:
                 # User exists via GitHub, now linking Google account
                 logger.info(f"Linking Google account to existing GitHub user: {existing_user.get('username')}")
                 
-                # Compute avatar_url based on preference
+                # When linking, default to GitHub avatar (user's GitHub identity takes precedence)
                 preferred_source = existing_user.get("preferredAvatarSource", "github")
                 if preferred_source == "google":
                     computed_avatar = avatar_url
@@ -222,7 +222,7 @@ class GoogleOAuthService:
                 update_payload = {
                     "google_id": google_user_id,
                     "google_avatar_url": avatar_url,  # Store Google avatar separately
-                    "avatarUrl": computed_avatar,  # Update primary avatar based on preference
+                    "avatarUrl": computed_avatar,  # Update primary avatar based on preference (defaults to GitHub)
                     "email": email,
                     "updatedAt": current_time,
                     "lastLoginAt": current_time,
@@ -232,6 +232,9 @@ class GoogleOAuthService:
                     {"$set": update_payload},
                     return_document=ReturnDocument.AFTER
                 )
+                
+                # Add account_linked flag to redirect URL so frontend can show notification
+                frontend_url = f"{frontend_url}?account_linked=true"
             else:
                 # Create new user or update existing Google user
                 try:
