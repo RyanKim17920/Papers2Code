@@ -1,0 +1,22 @@
+[build]
+builder = "NIXPACKS"
+buildCommand = "pip install uv && uv sync"
+
+[deploy]
+startCommand = "uv run run_app2.py"
+restartPolicyType = "ON_FAILURE"
+restartPolicyMaxRetries = 10
+
+[env]
+# These should be set in Railway dashboard
+# MONGO_CONNECTION_STRING = required
+# GITHUB_CLIENT_ID = required
+# GITHUB_CLIENT_SECRET = required
+# FLASK_SECRET_KEY = auto-generated or set manually
+# TOKEN_ENCRYPTION_KEY = required
+# FRONTEND_URL = set to Vercel URL
+# ENV_TYPE = production
+# PORT = 5000
+# OWNER_GITHUB_USERNAME = optional
+# GOOGLE_CLIENT_ID = optional
+# GOOGLE_CLIENT_SECRET = optional

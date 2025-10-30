@@ -1,0 +1,51 @@
+{
+  "version": 2,
+  "name": "papers2code-frontend",
+  "buildCommand": "cd papers2code-ui && npm install && npm run build",
+  "outputDirectory": "papers2code-ui/dist",
+  "framework": null,
+  "installCommand": "npm install --prefix papers2code-ui",
+  "devCommand": "cd papers2code-ui && npm run dev",
+  "env": {
+    "VITE_API_BASE_URL": ""
+  },
+  "build": {
+    "env": {
+      "VITE_API_BASE_URL": "@vite_api_base_url"
+    }
+  },
+  "rewrites": [
+    {
+      "source": "/(.*)",
+      "destination": "/index.html"
+    }
+  ],
+  "headers": [
+    {
+      "source": "/(.*)",
+      "headers": [
+        {
+          "key": "X-Content-Type-Options",
+          "value": "nosniff"
+        },
+        {
+          "key": "X-Frame-Options",
+          "value": "DENY"
+        },
+        {
+          "key": "X-XSS-Protection",
+          "value": "1; mode=block"
+        }
+      ]
+    },
+    {
+      "source": "/assets/(.*)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
+    }
+  ]
+}

@@ -3,8 +3,11 @@ services:
   - type: web
     name: papers2code-api
     env: python
+    region: oregon
+    plan: free  # Change to 'starter' for always-on ($7/month)
     buildCommand: pip install uv && uv sync
     startCommand: uv run run_app2.py
+    healthCheckPath: /health
     envVars:
       - key: ENV_TYPE
         value: production
@@ -14,22 +17,56 @@ services:
         sync: false  # Set manually in dashboard
       - key: FLASK_SECRET_KEY
         generateValue: true
+      - key: TOKEN_ENCRYPTION_KEY
+        sync: false  # Set manually in dashboard - REQUIRED for security
       - key: GITHUB_CLIENT_ID
         sync: false  # Set manually in dashboard
       - key: GITHUB_CLIENT_SECRET
         sync: false  # Set manually in dashboard
+      - key: OWNER_GITHUB_USERNAME
+        sync: false  # Set manually in dashboard - your GitHub username
       - key: FRONTEND_URL
         fromService:
           type: web
           name: papers2code-frontend
           property: url
+      - key: APP_LOG_LEVEL
+        value: INFO
+      - key: MONGO_MAX_POOL_SIZE
+        value: 50
+      - key: MONGO_MIN_POOL_SIZE
+        value: 5
+      # Optional: Google OAuth (uncomment if you want Google login)
+      # - key: GOOGLE_CLIENT_ID
+      #   sync: false
+      # - key: GOOGLE_CLIENT_SECRET
+      #   sync: false
 
   # Frontend Static Site
   - type: web
     name: papers2code-frontend
     env: static
+    region: oregon
     buildCommand: cd papers2code-ui && npm install && npm run build
     staticPublishPath: ./papers2code-ui/dist
+    pullRequestPreviewsEnabled: true
+    headers:
+      - path: /*
+        name: X-Frame-Options
+        value: DENY
+      - path: /*
+        name: X-Content-Type-Options
+        value: nosniff
+      - path: /*
+        name: X-XSS-Protection
+        value: 1; mode=block
+      - path: /assets/*
+        name: Cache-Control
+        value: public, max-age=31536000, immutable
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
     envVars:
       - key: VITE_API_BASE_URL
         fromService:

@@ -21,9 +21,19 @@ npm run dev
 Visit `http://localhost:5173` for the frontend and `http://localhost:5000` for the API.
 
 ### Production Deployment
-See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed production deployment instructions.
 
-**Quick Deploy**: Use the automated Render deployment script:
+**🚀 Complete Deployment Guide**: [RENDER_COMPLETE_GUIDE.md](docs/deployment/RENDER_COMPLETE_GUIDE.md)
+
+Deploy your own instance to **Render** in 15-20 minutes:
+- ✅ Free tier available (backend sleeps after 15 min)
+- ✅ $7/month for always-on production backend
+- ✅ Frontend always free
+- ✅ One-platform solution for frontend + backend
+- ✅ Automatic deployments from Git
+
+**Quick overview**: See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md)
+
+**Automated script**: Run the interactive deployment helper:
 ```bash
 ./scripts/deploy_render.sh
 ```

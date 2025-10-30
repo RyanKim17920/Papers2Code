@@ -1,10 +1,24 @@
 # Deployment Guide
 
-## Platform: Render.com
+> **📖 For the complete, step-by-step deployment guide, see [RENDER_COMPLETE_GUIDE.md](./RENDER_COMPLETE_GUIDE.md)**
+
+## Platform: Render.com (Recommended)
 
 **Architecture**: Full-stack deployment with FastAPI backend and React frontend
-**Database**: MongoDB Atlas
+**Database**: MongoDB Atlas (free tier)
 **Cost**: Free tier available (backend sleeps after 15 mins) or $7/month (always-on)
+
+### Why Render?
+
+✅ **One Platform**: Deploy both frontend and backend in one place  
+✅ **Blueprint Support**: Automatic setup using `render.yaml`  
+✅ **Auto-Linking**: Services automatically connect to each other  
+✅ **Free Tier**: Start for free with 750 hours/month  
+✅ **Git Integration**: Auto-deploys on every push  
+
+## Quick Start (5 Minutes)
+
+For detailed instructions, see [RENDER_COMPLETE_GUIDE.md](./RENDER_COMPLETE_GUIDE.md)
 
 ## Prerequisites
 
