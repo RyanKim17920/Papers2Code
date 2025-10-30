@@ -1,19 +1,4 @@
 {
-  "version": 2,
-  "name": "papers2code-frontend",
-  "buildCommand": "cd papers2code-ui && pnpm install && pnpm run build",
-  "outputDirectory": "papers2code-ui/dist",
-  "framework": null,
-  "installCommand": "pnpm install --dir papers2code-ui",
-  "devCommand": "cd papers2code-ui && pnpm run dev",
-  "env": {
-    "VITE_API_BASE_URL": ""
-  },
-  "build": {
-    "env": {
-      "VITE_API_BASE_URL": "@vite_api_base_url"
-    }
-  },
   "rewrites": [
     {
       "source": "/(.*)",

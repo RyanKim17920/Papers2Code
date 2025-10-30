@@ -1,8 +1,6 @@
 services:
-  # Backend API Service
   - type: web
-    name: papers2code-api
     env: python
-    buildCommand: pip install uv && uv sync
+    buildCommand: uv sync --frozen && uv cache prune --ci
     startCommand: uv run run.py
 
