@@ -21,9 +21,30 @@ npm run dev
 Visit `http://localhost:5173` for the frontend and `http://localhost:5000` for the API.
 
 ### Production Deployment
-See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed production deployment instructions.
 
-**Quick Deploy**: Use the automated Render deployment script:
+**🚀 Deployment Options**:
+
+**Option 1: Vercel + Render** ⭐ [VERCEL_RENDER_DEPLOYMENT.md](docs/deployment/VERCEL_RENDER_DEPLOYMENT.md)
+- Best if your domain is on Vercel
+- Vercel's CDN (40+ edge locations, unlimited bandwidth)
+- Render's Python backend ($7/month always-on)
+- Setup: 20-25 minutes
+
+**Option 2: Both on Render** [RENDER_COMPLETE_GUIDE.md](docs/deployment/RENDER_COMPLETE_GUIDE.md)
+- Simplest setup (one platform)
+- Auto-linking between services
+- Free tier or $7/month always-on
+- Setup: 15-20 minutes
+
+**All deployments include:**
+- ✅ Free MongoDB Atlas database
+- ✅ GitHub OAuth authentication
+- ✅ HTTPS included
+- ✅ Automatic deployments from Git
+
+**Quick overview**: See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) or [START_HERE.md](START_HERE.md)
+
+**Automated script**: Run the interactive deployment helper:
 ```bash
 ./scripts/deploy_render.sh
 ```

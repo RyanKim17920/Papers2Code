@@ -1,0 +1,70 @@
+# Git
+.git/
+.gitignore
+.github/
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+venv/
+env/
+.venv/
+*.egg-info/
+dist/
+build/
+.pytest_cache/
+.coverage
+htmlcov/
+
+# Frontend
+papers2code-ui/
+node_modules/
+*.log
+
+# Environment files
+.env
+.env.*
+!.env.example
+
+# Documentation
+docs/
+*.md
+!README.md
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Tests
+tests/
+*.test.py
+
+# Scripts (not needed in production)
+scripts/
+verify_implementation.py
+
+# Deployment configs
+render.yaml
+railway.toml
+fly.toml
+vercel.json
+.vercelignore
+
+# Temporary files
+tmp/
+temp/
+*.tmp
+
+# Logs
+logs/
+*.log
