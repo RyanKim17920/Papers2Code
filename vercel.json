@@ -1,8 +1,6 @@
 {
-  "buildCommand": "cd papers2code-ui && corepack enable && corepack prepare pnpm@9.12.3 --activate && pnpm install --frozen-lockfile && pnpm run build",
+  "buildCommand": "cd papers2code-ui && pnpm install --no-frozen-lockfile && pnpm run build",
   "outputDirectory": "papers2code-ui/dist",
-  "installCommand": "echo 'Skipping default install'",
-  "framework": null,
   "rewrites": [
     {
       "source": "/(.*)",
