@@ -111,7 +111,8 @@ const Dashboard: React.FC = () => {
       await logoutUser();
       setCurrentUser(null);
       localStorage.removeItem('csrfToken');
-      // Reload page to reflect logout state across UI
+      // Redirect to landing page after logout
+      navigate('/');
       window.location.reload();
     } catch (logoutErr) {
       console.error('Logout failed:', logoutErr);

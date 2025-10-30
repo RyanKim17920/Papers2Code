@@ -1,8 +1,9 @@
 import React from 'react';
 import { useNavigate } from 'react-router-dom';
-import { Github, Mail } from 'lucide-react';
+import { Github } from 'lucide-react';
 import { redirectToGitHubLogin, redirectToGoogleLogin } from '@/shared/services/auth';
 import { Button } from '@/shared/ui/button';
+import { GoogleIcon } from '@/shared/components/GoogleIcon';
 import logo from '../../assets/images/papers2codelogo.png';
 
 const LoginPage: React.FC = () => {
@@ -62,7 +63,7 @@ const LoginPage: React.FC = () => {
             variant="outline"
             className="w-full h-10 gap-2"
           >
-            <Mail className="h-4 w-4" />
+            <GoogleIcon size={16} />
             <span>Continue with Google</span>
           </Button>
 
