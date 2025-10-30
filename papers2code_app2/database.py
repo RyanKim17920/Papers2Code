@@ -35,28 +35,31 @@ db_popular_papers_recent_async: Optional[AsyncCollection] = None
 
 
 def get_mongo_uri_and_db_name() -> Tuple[str, str]:
-    env_type = config_settings.ENV_TYPE.upper()
+    # ENV_TYPE is already normalized to lowercase in shared.py (e.g., "production", "dev", etc.)
+    env_type = config_settings.ENV_TYPE.lower()
     uri: Optional[str] = None
     db_name = "papers2code" # Default DB name
 
     #logger.info(f"Determining MongoDB URI for ENV_TYPE: {env_type}, DB Name: {db_name}")
 
-    if env_type == "PROD":
-        uri = config_settings.MONGO_URI_PROD
-    elif env_type == "PROD_TEST":
+    # Match normalized lowercase values
+    if env_type == "production":
+        # Use MONGO_URI_PROD_TEST for production (as requested by user)
+        uri = config_settings.MONGO_URI_PROD_TEST or config_settings.MONGO_URI_PROD
+    elif env_type == "prod_test":
         uri = config_settings.MONGO_URI_PROD_TEST
-    elif env_type == "DEV" or env_type == "DEVELOPMENT":
+    elif env_type in ("dev", "development"):
         uri = getattr(config_settings, 'MONGO_URI_DEV', None) or getattr(config_settings, 'MONGO_URI_DEVELOPMENT', None)
     else:
         logger.warning(f"Unknown ENV_TYPE: '{config_settings.ENV_TYPE}'. Defaulting to DEV URI if available.")
         uri = getattr(config_settings, 'MONGO_URI_DEV', None) or getattr(config_settings, 'MONGO_URI_DEVELOPMENT', None)
 
     if not uri:
-        logger.critical(f"CRITICAL: MongoDB URI for ENV_TYPE '{env_type}' is not set. Check .env file for MONGO_URI_{env_type} or MONGO_URI_DEV.")
+        logger.critical(f"CRITICAL: MongoDB URI for ENV_TYPE '{env_type}' is not set. Check .env file for MONGO_URI_PROD_TEST, MONGO_URI_PROD, or MONGO_URI_DEV.")
         raise ValueError(f"MongoDB URI for ENV_TYPE '{env_type}' is not configured.")
     
     #logger.info(f"Using MongoDB URI for ENV_TYPE: {env_type}") # URI value itself is sensitive, not logged.
-    #logger.info(f"Using Database Name: {db_name} for ENV_TYPE: {env_type}")
+    logger.info(f"Using Database Name: {db_name} for ENV_TYPE: {env_type}")
     return uri, db_name
 
 async def initialize_async_db():

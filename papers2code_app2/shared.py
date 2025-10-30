@@ -128,3 +128,17 @@ class AppSettings(BaseSettings):    # Core settings
 config_settings = AppSettings()
 logger.info(f"DEBUG: config_settings.GITHUB.TEMPLATE_REPO after initialization: '{config_settings.GITHUB.TEMPLATE_REPO}'")
 
+# Normalize ENV_TYPE to a canonical value so other modules can reliably check for production
+# Accept common variants like 'prod' or 'production' set in environment files.
+try:
+    env_val = getattr(config_settings, "ENV_TYPE", "").strip().lower()
+    if env_val in ("prod", "production"):
+        config_settings.ENV_TYPE = "production"
+    else:
+        # Keep the original value but normalize casing for consistency
+        config_settings.ENV_TYPE = env_val or config_settings.ENV_TYPE
+    logger.info(f"DEBUG: Normalized ENV_TYPE -> '{config_settings.ENV_TYPE}'")
+except Exception:
+    # If normalization fails for any reason, leave settings untouched but log
+    logger.exception("Failed to normalize ENV_TYPE; leaving as-is.")
+

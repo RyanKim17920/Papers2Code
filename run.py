@@ -16,7 +16,8 @@ os.environ["APP_LOG_LEVEL"] = "INFO"
 
 
 # Determine if we're in production early for fail-safe behavior (matches run_app2.py logic)
-IS_PRODUCTION = os.getenv("ENV_TYPE", "").lower() == "production-broken-rn"
+# Accept common env var values like 'prod' and 'production'
+IS_PRODUCTION = os.getenv("ENV_TYPE", "").strip().lower() in ("production", "prod")
 
 try:
     import uvicorn
