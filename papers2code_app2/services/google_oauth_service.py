@@ -74,12 +74,14 @@ class GoogleOAuthService:
         # Set OAuth state cookie with security flags
         # Note: secure=False in DEV is intentional for localhost (http) development
         # In production, secure=True enforces HTTPS-only cookies
+        # Use SameSite=None in production for cross-domain (Vercel + Render)
+        is_production = config_settings.ENV_TYPE == "production"
         response.set_cookie(
             key=OAUTH_STATE_COOKIE_NAME,
             value=state_jwt,
             httponly=True,
-            samesite="lax",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
+            samesite="none" if is_production else "lax",
+            secure=True if is_production else False,
             path="/api/auth/google/callback",
             max_age=10 * 60
         )
@@ -308,23 +310,28 @@ class GoogleOAuthService:
             # Set authentication cookies with proper security flags
             # secure=False in DEV allows cookies over HTTP for localhost development
             # secure=True in production enforces HTTPS-only cookies for security
+            # Cookie settings: Use SameSite=None in production for cross-domain (Vercel + Render)
+            # Use SameSite=Lax in development for same-origin (localhost)
+            is_production = config_settings.ENV_TYPE == "production"
+            samesite_setting = "none" if is_production else "lax"
+            
             redirect_response.set_cookie(
                 key=ACCESS_TOKEN_COOKIE_NAME,
                 value=access_token,
                 httponly=True,
-                samesite="lax",
+                samesite=samesite_setting,
                 max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 path="/",
-                secure=True if config_settings.ENV_TYPE == "production" else False
+                secure=True if is_production else False
             )
             redirect_response.set_cookie(
                 key=REFRESH_TOKEN_COOKIE_NAME,
                 value=refresh_token,
                 httponly=True,
-                samesite="lax",
+                samesite=samesite_setting,
                 max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
                 path="/api/auth",
-                secure=True if config_settings.ENV_TYPE == "production" else False
+                secure=True if is_production else False
             )
             
             csrf_token = secrets.token_hex(16)
@@ -332,10 +339,10 @@ class GoogleOAuthService:
                 key=CSRF_TOKEN_COOKIE_NAME,
                 value=csrf_token,
                 httponly=False,  # CSRF token needs to be readable by JavaScript
-                samesite="lax",
+                samesite=samesite_setting,
                 max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 path="/",
-                secure=True if config_settings.ENV_TYPE == "production" else False
+                secure=True if is_production else False
             )
             logger.info(f"Successfully authenticated user {username}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
             return redirect_response

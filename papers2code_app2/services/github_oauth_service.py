@@ -68,12 +68,13 @@ class GitHubOAuthService:
         )
 
         response = RedirectResponse(url=auth_url)
+        is_production = config_settings.ENV_TYPE == "production"
         response.set_cookie(
             key=OAUTH_STATE_COOKIE_NAME,
             value=state_jwt,
             httponly=True,
-            samesite="lax",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
+            samesite="none" if is_production else "lax",
+            secure=True if is_production else False,
             path="/api/auth/github/callback",
             max_age=10 * 60
         )
@@ -296,23 +297,28 @@ class GitHubOAuthService:
             refresh_token_payload = {"sub": user_id_str}
             refresh_token = create_refresh_token(data=refresh_token_payload, expires_delta=timedelta(minutes=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES))
 
+            # Cookie settings: Use SameSite=None in production for cross-domain (Vercel + Render)
+            # Use SameSite=Lax in development for same-origin (localhost)
+            is_production = config_settings.ENV_TYPE == "production"
+            samesite_setting = "none" if is_production else "lax"
+            
             redirect_response.set_cookie(
                 key=ACCESS_TOKEN_COOKIE_NAME,
                 value=access_token,
                 httponly=True,
-                samesite="lax",
+                samesite=samesite_setting,
                 max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 path="/",
-                secure=True if config_settings.ENV_TYPE == "production" else False
+                secure=True if is_production else False
             )
             redirect_response.set_cookie(
                 key=REFRESH_TOKEN_COOKIE_NAME,
                 value=refresh_token,
                 httponly=True,
-                samesite="lax",
+                samesite=samesite_setting,
                 max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60,
                 path="/api/auth",
-                secure=True if config_settings.ENV_TYPE == "production" else False
+                secure=True if is_production else False
             )
             
             csrf_token = secrets.token_hex(16)
@@ -320,10 +326,10 @@ class GitHubOAuthService:
                 key=CSRF_TOKEN_COOKIE_NAME,
                 value=csrf_token,
                 httponly=False,
-                samesite="lax",
+                samesite=samesite_setting,
                 max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 path="/",
-                secure=True if config_settings.ENV_TYPE == "production" else False
+                secure=True if is_production else False
             )
             logger.info(f"Successfully authenticated user {username_from_db}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
             return redirect_response

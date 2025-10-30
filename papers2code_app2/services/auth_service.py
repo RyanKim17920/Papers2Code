@@ -81,14 +81,15 @@ class AuthService:
             }
             new_access_token = create_access_token(data=new_access_token_payload)
             
+            is_production = config_settings.ENV_TYPE == "production"
             response.set_cookie(
                 key=ACCESS_TOKEN_COOKIE_NAME,
                 value=new_access_token,
                 httponly=True,
-                samesite="lax",
+                samesite="none" if is_production else "lax",
                 max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
                 path="/",
-                secure=True if config_settings.ENV_TYPE == "production" else False
+                secure=True if is_production else False
             )
             return {"access_token": new_access_token, "token_type": "bearer"} # Corresponds to TokenResponse
 
@@ -99,8 +100,9 @@ class AuthService:
 
     def clear_auth_cookies(self, response: Response):
         """Clears all authentication-related cookies."""
-        cookie_secure_flag = True if config_settings.ENV_TYPE == "production" else False
-        cookie_samesite_policy = "lax" # Match the samesite policy used when setting
+        is_production = config_settings.ENV_TYPE == "production"
+        cookie_secure_flag = True if is_production else False
+        cookie_samesite_policy = "none" if is_production else "lax" # Match the samesite policy used when setting
 
         response.delete_cookie(
             ACCESS_TOKEN_COOKIE_NAME, 

@@ -38,12 +38,13 @@ async def get_csrf_token(request: Request, response: Response):
     csrf_token_value = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
     if not csrf_token_value:
         csrf_token_value = auth_service.generate_csrf_token() # generate_csrf_token should be a method in AuthService
+        is_production = config_settings.ENV_TYPE == "production"
         response.set_cookie(
             key=CSRF_TOKEN_COOKIE_NAME,
             value=csrf_token_value,
             httponly=False, 
-            samesite="lax",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
+            samesite="none" if is_production else "lax",
+            secure=True if is_production else False,
             path="/",
             max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 # Match access token lifetime or a reasonable session duration
         )
@@ -166,12 +167,13 @@ async def refresh_access_token_route(request: Request, response: Response): # re
         csrf_token_value = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
         if not csrf_token_value: # Or if you want to always refresh it alongside access token
             csrf_token_value = auth_service.generate_csrf_token()
+        is_production = config_settings.ENV_TYPE == "production"
         response.set_cookie(
             key=CSRF_TOKEN_COOKIE_NAME,
             value=csrf_token_value,
             httponly=False,
-            samesite="lax",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
+            samesite="none" if is_production else "lax",
+            secure=True if is_production else False,
             path="/",
             max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
@@ -320,13 +322,15 @@ async def link_accounts(request: Request, response: Response):
         refresh_token = create_refresh_token(data=refresh_token_payload, expires_delta=timedelta(minutes=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES))
         
         # Set cookies
+        is_production = config_settings.ENV_TYPE == "production"
+        samesite_setting = "none" if is_production else "lax"
         json_response = JSONResponse(content={"detail": "Accounts linked successfully"})
         json_response.set_cookie(
             key=ACCESS_TOKEN_COOKIE_NAME,
             value=access_token,
             httponly=True,
-            samesite="lax",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
+            samesite=samesite_setting,
+            secure=True if is_production else False,
             path="/",
             max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
         )
@@ -334,8 +338,8 @@ async def link_accounts(request: Request, response: Response):
             key=REFRESH_TOKEN_COOKIE_NAME,
             value=refresh_token,
             httponly=True,
-            samesite="lax",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
+            samesite=samesite_setting,
+            secure=True if is_production else False,
             path="/",
             max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
         )
@@ -362,12 +366,13 @@ async def logout_user_route(request: Request, response: Response): # response ne
         
         # Set the new CSRF token cookie on the same response object.
         # Starlette should handle multiple Set-Cookie headers, including delete and then set for the same cookie name if necessary.
+        is_production = config_settings.ENV_TYPE == "production"
         response.set_cookie(
             key=CSRF_TOKEN_COOKIE_NAME,
             value=new_csrf_token_value,
             httponly=False, 
-            samesite="lax",
-            secure=True if config_settings.ENV_TYPE == "production" else False,
+            samesite="none" if is_production else "lax",
+            secure=True if is_production else False,
             path="/", # Ensure path is consistent with where it's used/expected
             max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 # Or a suitable duration for a 'logged-out' token
         )
