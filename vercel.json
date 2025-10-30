@@ -3,7 +3,7 @@
   "outputDirectory": "papers2code-ui/dist",
   "rewrites": [
     {
-      "source": "/(.*)",
+      "source": "/((?!.*\\.).+)",
       "destination": "/index.html"
     }
   ],
