@@ -1,7 +1,4 @@
 {
-  "buildCommand": "cd papers2code-ui && pnpm run build",
-  "outputDirectory": "papers2code-ui/dist",
-  "installCommand": "cd papers2code-ui && pnpm install --frozen-lockfile",
   "rewrites": [
     {
       "source": "/(.*)",
