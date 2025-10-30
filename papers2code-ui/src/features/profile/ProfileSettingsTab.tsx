@@ -20,6 +20,7 @@ import {
   type NormalizedUrlResult
 } from '@/shared/utils/urlNormalization';
 import ConfirmationModal from '@/shared/components/ConfirmationModal';
+import { ThemeSettings } from '@/shared/components/ThemeSettings';
 
 interface UserProfileFormData {
   name: string;
@@ -218,6 +219,9 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto">
+      {/* Theme Settings */}
+      <ThemeSettings />
+
       {/* Profile Information */}
       <Card className="border-none shadow-lg">
         <CardHeader className="pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">

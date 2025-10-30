@@ -243,41 +243,72 @@ All colors MUST be HSL.
   }
 
   .dark {
-    --background: 222.2 84% 4.9%;
+    /* Dark mode - sleek and modern with better contrast */
+    --background: 222 47% 11%;
     --foreground: 210 40% 98%;
 
-    --card: 222.2 84% 4.9%;
+    --card: 222 47% 14%;
     --card-foreground: 210 40% 98%;
 
-    --popover: 222.2 84% 4.9%;
+    --popover: 222 47% 14%;
     --popover-foreground: 210 40% 98%;
 
-    --primary: 210 40% 98%;
-    --primary-foreground: 222.2 47.4% 11.2%;
+    --primary: 197 87% 45%;
+    --primary-foreground: 0 0% 100%;
 
-    --secondary: 217.2 32.6% 17.5%;
+    --secondary: 217 33% 20%;
     --secondary-foreground: 210 40% 98%;
 
-    --muted: 217.2 32.6% 17.5%;
-    --muted-foreground: 215 20.2% 65.1%;
+    --muted: 217 33% 17%;
+    --muted-foreground: 215 20% 70%;
 
-    --accent: 217.2 32.6% 17.5%;
-    --accent-foreground: 210 40% 98%;
+    --accent: 197 60% 25%;
+    --accent-foreground: 197 87% 85%;
 
-    --destructive: 0 62.8% 30.6%;
-    --destructive-foreground: 210 40% 98%;
+    --destructive: 0 84% 60%;
+    --destructive-foreground: 0 0% 98%;
 
-    --border: 217.2 32.6% 17.5%;
-    --input: 217.2 32.6% 17.5%;
-    --ring: 212.7 26.8% 83.9%;
-    --sidebar-background: 240 5.9% 10%;
-    --sidebar-foreground: 240 4.8% 95.9%;
-    --sidebar-primary: 224.3 76.3% 48%;
+    --border: 217 33% 20%;
+    --input: 217 33% 20%;
+    --ring: 197 87% 45%;
+    
+    /* Dark Mode Custom Variables */
+    --gradient-start: 222 47% 13%;
+    --gradient-end: 222 47% 9%;
+    --success: 142 76% 45%;
+    --success-foreground: 0 0% 98%;
+    --warning: 38 92% 60%;
+    --warning-foreground: 0 0% 98%;
+    --info: 197 87% 45%;
+    --info-foreground: 0 0% 98%;
+    
+    /* Enhanced Shadows for Dark Mode */
+    --shadow-soft: 0 1px 3px 0 rgb(0 0 0 / 0.3), 0 1px 2px -1px rgb(0 0 0 / 0.3);
+    --shadow-medium: 0 4px 6px -1px rgb(0 0 0 / 0.3), 0 2px 4px -2px rgb(0 0 0 / 0.3);
+    --shadow-large: 0 10px 15px -3px rgb(0 0 0 / 0.4), 0 4px 6px -4px rgb(0 0 0 / 0.3);
+    --shadow-elevated: 0 20px 25px -5px rgb(0 0 0 / 0.5), 0 10px 10px -5px rgb(0 0 0 / 0.2);
+    --shadow-glow: 0 0 20px -5px hsl(var(--primary) / 0.3);
+    --shadow-inner: inset 0 2px 4px 0 rgb(0 0 0 / 0.15);
+    
+    /* Dynamic Gradients for Dark Mode */
+    --gradient-primary: linear-gradient(135deg, hsl(var(--primary) / 0.1), hsl(var(--primary) / 0.05));
+    --gradient-card: linear-gradient(145deg, hsl(var(--card)), hsl(var(--muted) / 0.5));
+    --gradient-hover: linear-gradient(145deg, hsl(var(--accent) / 0.2), hsl(var(--primary) / 0.1));
+    --gradient-border: linear-gradient(145deg, hsl(var(--border)), hsl(var(--primary) / 0.2));
+    
+    /* Glass Effects for Dark Mode */
+    --glass-bg: rgba(255, 255, 255, 0.02);
+    --glass-border: rgba(255, 255, 255, 0.05);
+    --glass-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+    
+    --sidebar-background: 222 47% 9%;
+    --sidebar-foreground: 240 5% 96%;
+    --sidebar-primary: 197 87% 45%;
     --sidebar-primary-foreground: 0 0% 100%;
-    --sidebar-accent: 240 3.7% 15.9%;
-    --sidebar-accent-foreground: 240 4.8% 95.9%;
-    --sidebar-border: 240 3.7% 15.9%;
-    --sidebar-ring: 217.2 91.2% 59.8%;
+    --sidebar-accent: 217 33% 17%;
+    --sidebar-accent-foreground: 240 5% 96%;
+    --sidebar-border: 217 33% 17%;
+    --sidebar-ring: 197 87% 45%;
   }
 }
 
@@ -297,15 +328,13 @@ All colors MUST be HSL.
     width: 12px;
   }
   body::-webkit-scrollbar-track {
-    background: #f1f3f5;
+    @apply bg-muted;
   }
   body::-webkit-scrollbar-thumb {
-    background-color: var(--primary-color, #197c9a);
-    border-radius: 20px;
-    border: 3px solid #f1f3f5;
+    @apply bg-primary rounded-[20px] border-[3px] border-muted;
   }
   body::-webkit-scrollbar-thumb:hover {
-    background-color: var(--primary-dark-color, #0f4c6e);
+    @apply bg-primary/80;
   }
 }
 
@@ -323,7 +352,7 @@ All colors MUST be HSL.
     @apply overflow-hidden text-ellipsis;
   }
 
-  /* Status color variants */
+  /* Status color variants - Light mode */
   .status-default,
   .status-needs-code,
   .status-unknown {
@@ -360,6 +389,45 @@ All colors MUST be HSL.
 
   .status-not-started-disputed {
     @apply bg-[#fff59d] text-[#f57f17] border-[#f57f17];
+  }
+
+  /* Status color variants - Dark mode */
+  .dark .status-default,
+  .dark .status-needs-code,
+  .dark .status-unknown {
+    @apply bg-[#2a2e35] text-[#9ca3af] border-[#374151];
+  }
+
+  .dark .status-not-started {
+    @apply bg-[#2d3139] text-[#d1d5db] border-[#4b5563];
+  }
+
+  .dark .status-started {
+    @apply bg-[#1e3a47] text-[#67e8f9] border-[#164e63];
+  }
+
+  .dark .status-waiting-author {
+    @apply bg-[#463418] text-[#fbbf24] border-[#78350f];
+  }
+
+  .dark .status-in-progress {
+    @apply bg-[#1e3a8a] text-[#93c5fd] border-[#1e40af];
+  }
+
+  .dark .status-completed {
+    @apply bg-[#14532d] text-[#86efac] border-[#166534];
+  }
+
+  .dark .status-non-implementable {
+    @apply bg-[#450a0a] text-[#fca5a5] border-[#7f1d1d] font-semibold;
+  }
+
+  .dark .status-official-code {
+    @apply bg-[#14532d] text-[#4ade80];
+  }
+
+  .dark .status-not-started-disputed {
+    @apply bg-[#713f12] text-[#fbbf24] border-[#a16207];
   }
 }
 /* CSS Variables from App.css */

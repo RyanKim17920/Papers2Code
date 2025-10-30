@@ -15,6 +15,7 @@ import {
 } from '../ui/dropdown-menu';
 import { UserAvatar } from '@/shared/components';
 import { redirectToGitHubLogin } from '@/shared/services/auth';
+import { ThemeToggle } from './ThemeToggle';
 
 interface GlobalHeaderProps {
   showSearch?: boolean;
@@ -111,6 +112,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                 <Link to="/papers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                   Papers
                 </Link>
+                <ThemeToggle variant="ghost" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-2 h-9 px-3">
@@ -157,6 +159,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
                   <Link to="/papers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
                     Papers
                   </Link>
+                  <ThemeToggle variant="ghost" />
                   <Link to="/login">
                     <Button
                       variant="default"
