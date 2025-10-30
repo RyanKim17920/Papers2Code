@@ -112,35 +112,19 @@ const COMMUNITY_PATH_STEPS: JourneyStep[] = [
     path: 'community',
   },
   {
-    id: 'implementation_complete',
-    title: 'Implementation Complete',
-    description: 'Community implementation is complete.',
-    icon: CheckCircle,
-    order: 5,
-    path: 'community',
-  },
-  {
     id: 'peer_review_required',
     title: 'Peer Review Required',
-    description: 'Awaiting peer review from non-contributor.',
+    description: 'Implementation complete, awaiting peer review.',
     icon: Clock,
-    order: 6,
-    path: 'community',
-  },
-  {
-    id: 'peer_review_approved',
-    title: 'Peer Review Approved',
-    description: 'Implementation has been reviewed and approved.',
-    icon: ShieldCheck,
-    order: 7,
+    order: 5,
     path: 'community',
   },
   {
     id: 'code_completed',
     title: 'Official Code Posted',
-    description: 'Community implementation is verified and published.',
+    description: 'Community implementation reviewed and published.',
     icon: CheckCircle,
-    order: 8,
+    order: 6,
     path: 'community',
   },
 ];
@@ -155,6 +139,31 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     }
     
     // Check which path based on status
+    // Check for community path first (including community that reaches OFFICIAL_CODE_POSTED)
+    const hasCommunityPath = progress.updates.some(u => 
+      u.eventType === UpdateEventType.STATUS_CHANGED && 
+      u.details?.newStatus && 
+      (u.details.newStatus === ProgressStatus.REFUSED_TO_UPLOAD ||
+       u.details.newStatus === ProgressStatus.NO_RESPONSE ||
+       u.details.newStatus === ProgressStatus.GITHUB_CREATED ||
+       u.details.newStatus === ProgressStatus.PEER_REVIEW_REQUIRED ||
+       u.details.newStatus === ProgressStatus.PEER_REVIEW_IN_PROGRESS ||
+       u.details.newStatus === ProgressStatus.PEER_REVIEW_APPROVED)
+    );
+    
+    if (hasCommunityPath) {
+      return 'community';
+    }
+    
+    if (progress.status === ProgressStatus.REFUSED_TO_UPLOAD || 
+        progress.status === ProgressStatus.NO_RESPONSE ||
+        progress.status === ProgressStatus.GITHUB_CREATED ||
+        progress.status === ProgressStatus.PEER_REVIEW_REQUIRED ||
+        progress.status === ProgressStatus.PEER_REVIEW_IN_PROGRESS ||
+        progress.status === ProgressStatus.PEER_REVIEW_APPROVED) {
+      return 'community';
+    }
+    
     if (progress.status === ProgressStatus.OFFICIAL_CODE_POSTED || progress.status === ProgressStatus.CODE_UPLOADED) {
       // Check if we went through refactoring
       const hasRefactoring = progress.updates.some(u => 
@@ -177,16 +186,6 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
         progress.status === ProgressStatus.REFACTORING_FINISHED ||
         progress.status === ProgressStatus.VALIDATION_IN_PROGRESS) {
       return 'refactoring';
-    }
-    
-    if (progress.status === ProgressStatus.REFUSED_TO_UPLOAD || 
-        progress.status === ProgressStatus.NO_RESPONSE ||
-        progress.status === ProgressStatus.GITHUB_CREATED ||
-        progress.status === ProgressStatus.IMPLEMENTATION_COMPLETE ||
-        progress.status === ProgressStatus.PEER_REVIEW_REQUIRED ||
-        progress.status === ProgressStatus.PEER_REVIEW_IN_PROGRESS ||
-        progress.status === ProgressStatus.PEER_REVIEW_APPROVED) {
-      return 'community';
     }
     
     // Default to community path for future steps display
@@ -365,14 +364,8 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, currentStatus: Progr
         if (newStatus === ProgressStatus.GITHUB_CREATED) {
           return 'github_created';
         }
-        if (newStatus === ProgressStatus.IMPLEMENTATION_COMPLETE) {
-          return 'implementation_complete';
-        }
         if (newStatus === ProgressStatus.PEER_REVIEW_REQUIRED) {
           return 'peer_review_required';
-        }
-        if (newStatus === ProgressStatus.PEER_REVIEW_APPROVED) {
-          return 'peer_review_approved';
         }
       }
       return null;
@@ -382,10 +375,13 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, currentStatus: Progr
           currentStatus === ProgressStatus.REFACTORING_STARTED) {
         return 'code_needs_refactoring';
       }
-      if (currentStatus === ProgressStatus.GITHUB_CREATED) {
+      // For community path, linking a repo counts as github_created
+      if (currentStatus === ProgressStatus.GITHUB_CREATED ||
+          currentStatus === ProgressStatus.REFUSED_TO_UPLOAD ||
+          currentStatus === ProgressStatus.NO_RESPONSE) {
         return 'github_created';
       }
-      return null;
+      return 'github_created'; // Default to github_created for any repo linking
     default:
       return null;
   }

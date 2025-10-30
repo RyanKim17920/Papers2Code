@@ -217,91 +217,110 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
   };
 
   return (
-    <div className="space-y-4 max-w-4xl">
+    <div className="space-y-6 max-w-5xl mx-auto">
       {/* Profile Information */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <User size={18} />
-            Profile Information
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Update your public profile information and social links
-          </CardDescription>
+      <Card className="border-none shadow-lg">
+        <CardHeader className="pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <User size={20} className="text-primary" />
+            </div>
+            <div>
+              <CardTitle className="text-xl">Profile Information</CardTitle>
+              <CardDescription className="text-sm mt-0.5">
+                Update your public profile information and social links
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="pt-6">
           {/* GitHub info - only show if user has GitHub account linked */}
           {currentUser.githubId && (
-            <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
-              <p className="text-xs font-medium mb-1">GitHub Account (Managed externally)</p>
-              <p className="text-xs text-muted-foreground mb-2">
-                <strong>Username:</strong> {currentUser.username}
-              </p>
-              <Button
-                variant="outline"
-                size="sm"
-                asChild
-                className="h-7 text-xs"
-              >
-                <a 
-                  href="https://github.com/settings/profile"
-                  target="_blank"
-                  rel="noopener noreferrer"
+            <div className="mb-6 p-4 bg-gradient-to-br from-muted/80 to-muted/40 rounded-xl border border-border/50">
+              <div className="flex items-start justify-between">
+                <div className="flex items-center gap-3 flex-1">
+                  <Github className="h-5 w-5 text-muted-foreground" />
+                  <div>
+                    <p className="text-sm font-semibold mb-0.5">GitHub Account</p>
+                    <p className="text-xs text-muted-foreground">
+                      <span className="font-medium">@{currentUser.username}</span> • Managed externally
+                    </p>
+                  </div>
+                </div>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  asChild
+                  className="h-8 text-xs"
                 >
-                  Edit Username & Avatar on GitHub
-                </a>
-              </Button>
+                  <a 
+                    href="https://github.com/settings/profile"
+                    target="_blank"
+                    rel="noopener noreferrer"
+                  >
+                    Edit on GitHub
+                  </a>
+                </Button>
+              </div>
             </div>
           )}
 
           {/* Avatar Selection - Show only if user has both GitHub and Google accounts */}
           {currentUser.githubId && currentUser.googleId && currentUser.githubAvatarUrl && currentUser.googleAvatarUrl && (
-            <div className="mb-4 p-3 bg-muted/50 rounded-lg border border-border">
-              <p className="text-xs font-medium mb-2">Avatar / Profile Icon</p>
-              <p className="text-xs text-muted-foreground mb-3">
-                Choose which avatar to display on your profile
-              </p>
-              <div className="flex gap-3">
+            <div className="mb-6 p-5 bg-gradient-to-br from-primary/5 to-transparent rounded-xl border border-border/50">
+              <div className="mb-4">
+                <p className="text-sm font-semibold mb-1">Profile Avatar</p>
+                <p className="text-xs text-muted-foreground">
+                  Choose which avatar to display on your profile
+                </p>
+              </div>
+              <div className="grid grid-cols-2 gap-4">
                 <Button
                   type="button"
                   variant={formData.preferredAvatarSource === 'github' ? 'default' : 'outline'}
-                  size="sm"
-                  className="flex-1 h-auto py-2 flex flex-col items-center gap-2"
+                  size="lg"
+                  className="h-auto py-4 flex flex-col items-center gap-3 relative"
                   onClick={() => setFormData(prev => ({ ...prev, preferredAvatarSource: 'github' }))}
                 >
+                  {formData.preferredAvatarSource === 'github' && (
+                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  )}
                   <Github className="h-5 w-5" />
-                  <span className="text-xs">GitHub Avatar</span>
+                  <span className="text-sm font-medium">GitHub</span>
                   {currentUser.githubAvatarUrl && (
-                    <img src={currentUser.githubAvatarUrl} alt="GitHub" className="w-12 h-12 rounded-full" />
+                    <img src={currentUser.githubAvatarUrl} alt="GitHub" className="w-16 h-16 rounded-full border-2 border-border" />
                   )}
                 </Button>
                 <Button
                   type="button"
                   variant={formData.preferredAvatarSource === 'google' ? 'default' : 'outline'}
-                  size="sm"
-                  className="flex-1 h-auto py-2 flex flex-col items-center gap-2"
+                  size="lg"
+                  className="h-auto py-4 flex flex-col items-center gap-3 relative"
                   onClick={() => setFormData(prev => ({ ...prev, preferredAvatarSource: 'google' }))}
                 >
+                  {formData.preferredAvatarSource === 'google' && (
+                    <div className="absolute top-2 right-2 w-2 h-2 rounded-full bg-primary animate-pulse" />
+                  )}
                   <Mail className="h-5 w-5" />
-                  <span className="text-xs">Google Avatar</span>
+                  <span className="text-sm font-medium">Google</span>
                   {currentUser.googleAvatarUrl && (
-                    <img src={currentUser.googleAvatarUrl} alt="Google" className="w-12 h-12 rounded-full" />
+                    <img src={currentUser.googleAvatarUrl} alt="Google" className="w-16 h-16 rounded-full border-2 border-border" />
                   )}
                 </Button>
               </div>
             </div>
           )}
 
-          <form onSubmit={handleSaveProfile} className="space-y-3">
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-              <div className="space-y-1.5">
-                <Label htmlFor="name" className="text-sm">Display Name</Label>
+          <form onSubmit={handleSaveProfile} className="space-y-5">
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <div className="space-y-2">
+                <Label htmlFor="name" className="text-sm font-medium">Display Name</Label>
                 <Input
                   id="name"
                   value={formData.name}
                   onChange={(e) => handleInputChange('name', e.target.value)}
                   placeholder="Your display name"
-                  className="h-9"
+                  className="h-10"
                 />
                 {!fieldValidation.name?.isValid && (
                   <p className="text-xs text-muted-foreground">
@@ -310,21 +329,21 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
                 )}
               </div>
               
-              <div className="space-y-1.5 md:col-span-2">
-                <Label htmlFor="bio" className="text-sm">Bio</Label>
+              <div className="space-y-2 md:col-span-2">
+                <Label htmlFor="bio" className="text-sm font-medium">Bio</Label>
                 <Textarea
                   id="bio"
                   value={formData.bio}
                   onChange={(e) => handleInputChange('bio', e.target.value)}
                   placeholder="Tell us about yourself..."
-                  rows={2}
+                  rows={3}
                   className="resize-none"
                 />
               </div>
               
-              <div className="space-y-1.5">
-                <Label htmlFor="website" className="flex items-center gap-1.5 text-sm">
-                  <Globe size={13} />
+              <div className="space-y-2">
+                <Label htmlFor="website" className="flex items-center gap-2 text-sm font-medium">
+                  <Globe size={14} />
                   Website
                 </Label>
                 <Input
@@ -332,16 +351,16 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
                   value={formData.websiteUrl}
                   onChange={(e) => handleInputChange('websiteUrl', e.target.value)}
                   placeholder="example.com"
-                  className={`h-9 ${fieldValidation.websiteUrl?.isValid === false ? 'border-destructive' : ''}`}
+                  className={`h-10 ${fieldValidation.websiteUrl?.isValid === false ? 'border-destructive' : ''}`}
                 />
                 {fieldValidation.websiteUrl?.isValid === false && (
                   <p className="text-xs text-destructive">{fieldValidation.websiteUrl?.errorMessage}</p>
                 )}
               </div>
               
-              <div className="space-y-1.5">
-                <Label htmlFor="twitter" className="flex items-center gap-1.5 text-sm">
-                  <Twitter size={13} />
+              <div className="space-y-2">
+                <Label htmlFor="twitter" className="flex items-center gap-2 text-sm font-medium">
+                  <Twitter size={14} />
                   Twitter
                 </Label>
                 <Input
@@ -349,16 +368,16 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
                   value={formData.twitterProfileUrl}
                   onChange={(e) => handleInputChange('twitterProfileUrl', e.target.value)}
                   placeholder="username or URL"
-                  className={`h-9 ${fieldValidation.twitterProfileUrl?.isValid === false ? 'border-destructive' : ''}`}
+                  className={`h-10 ${fieldValidation.twitterProfileUrl?.isValid === false ? 'border-destructive' : ''}`}
                 />
                 {fieldValidation.twitterProfileUrl?.isValid === false && (
                   <p className="text-xs text-destructive">{fieldValidation.twitterProfileUrl?.errorMessage}</p>
                 )}
               </div>
               
-              <div className="space-y-1.5">
-                <Label htmlFor="linkedin" className="flex items-center gap-1.5 text-sm">
-                  <Linkedin size={13} />
+              <div className="space-y-2">
+                <Label htmlFor="linkedin" className="flex items-center gap-2 text-sm font-medium">
+                  <Linkedin size={14} />
                   LinkedIn
                 </Label>
                 <Input
@@ -366,35 +385,35 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
                   value={formData.linkedinProfileUrl}
                   onChange={(e) => handleInputChange('linkedinProfileUrl', e.target.value)}
                   placeholder="username or URL"
-                  className={`h-9 ${fieldValidation.linkedinProfileUrl?.isValid === false ? 'border-destructive' : ''}`}
+                  className={`h-10 ${fieldValidation.linkedinProfileUrl?.isValid === false ? 'border-destructive' : ''}`}
                 />
                 {fieldValidation.linkedinProfileUrl?.isValid === false && (
                   <p className="text-xs text-destructive">{fieldValidation.linkedinProfileUrl?.errorMessage}</p>
                 )}
               </div>
               
-              <div className="space-y-1.5">
-                <Label htmlFor="bluesky" className="text-sm">Bluesky</Label>
+              <div className="space-y-2">
+                <Label htmlFor="bluesky" className="text-sm font-medium">Bluesky</Label>
                 <Input
                   id="bluesky"
                   value={formData.blueskyUsername}
                   onChange={(e) => handleInputChange('blueskyUsername', e.target.value)}
                   placeholder="username.bsky.social"
-                  className={`h-9 ${fieldValidation.blueskyUsername?.isValid === false ? 'border-destructive' : ''}`}
+                  className={`h-10 ${fieldValidation.blueskyUsername?.isValid === false ? 'border-destructive' : ''}`}
                 />
                 {fieldValidation.blueskyUsername?.isValid === false && (
                   <p className="text-xs text-destructive">{fieldValidation.blueskyUsername?.errorMessage}</p>
                 )}
               </div>
               
-              <div className="space-y-1.5">
-                <Label htmlFor="huggingface" className="text-sm">Hugging Face</Label>
+              <div className="space-y-2">
+                <Label htmlFor="huggingface" className="text-sm font-medium">Hugging Face</Label>
                 <Input
                   id="huggingface"
                   value={formData.huggingfaceUsername}
                   onChange={(e) => handleInputChange('huggingfaceUsername', e.target.value)}
                   placeholder="username or URL"
-                  className={`h-9 ${fieldValidation.huggingfaceUsername?.isValid === false ? 'border-destructive' : ''}`}
+                  className={`h-10 ${fieldValidation.huggingfaceUsername?.isValid === false ? 'border-destructive' : ''}`}
                 />
                 {fieldValidation.huggingfaceUsername?.isValid === false && (
                   <p className="text-xs text-destructive">{fieldValidation.huggingfaceUsername?.errorMessage}</p>
@@ -402,9 +421,11 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
               </div>
             </div>
 
-            <Button type="submit" disabled={saving} className="w-full md:w-auto">
-              {saving ? 'Saving...' : 'Save Profile'}
-            </Button>
+            <div className="pt-2">
+              <Button type="submit" disabled={saving} size="lg" className="w-full md:w-auto px-8">
+                {saving ? 'Saving Changes...' : 'Save Profile'}
+              </Button>
+            </div>
           </form>
         </CardContent>
       </Card>
@@ -412,21 +433,28 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
 
 
       {/* Notifications */}
-      <Card>
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg">
-            <Bell size={18} />
-            Notification Preferences
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Manage your email and on-site notification preferences
-          </CardDescription>
-        </CardHeader>
-        <CardContent>
-          <div className="flex items-center justify-center py-4 text-center">
+      <Card className="border-none shadow-lg">
+        <CardHeader className="pb-4 border-b bg-gradient-to-r from-primary/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-primary/10">
+              <Bell size={20} className="text-primary" />
+            </div>
             <div>
-              <p className="text-sm text-muted-foreground mb-1.5">Notification settings will be available soon</p>
-              <span className="inline-block px-2.5 py-0.5 bg-muted text-muted-foreground text-xs rounded-full font-medium">
+              <CardTitle className="text-xl">Notification Preferences</CardTitle>
+              <CardDescription className="text-sm mt-0.5">
+                Manage your email and on-site notification preferences
+              </CardDescription>
+            </div>
+          </div>
+        </CardHeader>
+        <CardContent className="pt-6">
+          <div className="flex items-center justify-center py-8 text-center">
+            <div className="space-y-3">
+              <div className="w-16 h-16 mx-auto rounded-full bg-muted/50 flex items-center justify-center">
+                <Bell size={28} className="text-muted-foreground" />
+              </div>
+              <p className="text-sm text-muted-foreground">Notification settings will be available soon</p>
+              <span className="inline-block px-4 py-1.5 bg-primary/10 text-primary text-xs rounded-full font-semibold">
                 Coming Soon
               </span>
             </div>
@@ -435,37 +463,39 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
       </Card>
 
       {/* Account Actions */}
-      <Card className="border-destructive/50">
-        <CardHeader className="pb-3">
-          <CardTitle className="flex items-center gap-2 text-lg text-destructive">
-            <Settings size={18} />
-            Account Actions
-          </CardTitle>
-          <CardDescription className="text-xs">
-            Manage your account settings and security
-          </CardDescription>
+      <Card className="border-destructive/30 shadow-lg">
+        <CardHeader className="pb-4 border-b bg-gradient-to-r from-destructive/5 to-transparent">
+          <div className="flex items-center gap-3">
+            <div className="p-2 rounded-lg bg-destructive/10">
+              <Settings size={20} className="text-destructive" />
+            </div>
+            <div>
+              <CardTitle className="text-xl text-destructive">Account Actions</CardTitle>
+              <CardDescription className="text-sm mt-0.5">
+                Manage your account settings and security
+              </CardDescription>
+            </div>
+          </div>
         </CardHeader>
-        <CardContent className="space-y-3">
-          <Separator />
-          
-          <div className="flex flex-col sm:flex-row gap-2">
+        <CardContent className="pt-6">
+          <div className="flex flex-col sm:flex-row gap-3">
             <Button 
               variant="outline"
-              size="sm"
+              size="lg"
               onClick={handleLogout}
-              className="flex items-center gap-2 h-9"
+              className="flex items-center gap-2 h-11 flex-1"
             >
-              <LogOut size={14} />
+              <LogOut size={16} />
               Log Out
             </Button>
             
             <Button
               variant="destructive"
-              size="sm"
+              size="lg"
               onClick={handleDeleteAccount}
-              className="flex items-center gap-2 h-9"
+              className="flex items-center gap-2 h-11 flex-1"
             >
-              <Trash2 size={14} />
+              <Trash2 size={16} />
               Delete Account
             </Button>
           </div>

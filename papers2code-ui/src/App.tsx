@@ -187,59 +187,63 @@ function App() {
     window.location.reload();
   };
 
+  const isLoginPage = location.pathname === '/login';
+
   // 3. Wrap your existing providers and components with QueryClientProvider
   return (
     <QueryClientProvider client={queryClient}>
       <ModalProvider>
         <AuthInitializer />
-          <div className="flex flex-col min-h-screen w-full max-w-full box-border relative before:content-[''] before:fixed before:inset-0 before:w-full before:h-full before:pointer-events-none before:opacity-40 before:bg-[radial-gradient(var(--gradient-accent)_1px,transparent_1px),radial-gradient(var(--gradient-accent)_1px,transparent_1px)] before:bg-[length:40px_40px] before:bg-[0_0,20px_20px] before:z-[-1]">
-            <GlobalHeader currentUser={currentUser} handleLogout={handleLogout} />
-            <main className="flex-grow p-0 w-full box-border flex flex-col items-stretch justify-start relative overflow-y-auto overflow-x-hidden before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-[200px] before:bg-gradient-to-b before:from-[rgba(25,124,154,0.03)] before:to-transparent before:z-[-1] before:pointer-events-none">
-              <ErrorBoundary>
-                <Suspense fallback={null}>
-                <Routes>
-                  <Route path="/" element={<LandingPage />} />
-                  <Route path="/login" element={<LoginPage />} />
-                  <Route 
-                    path="/papers" 
-                    element={
-                      <PaperListErrorBoundary>
-                        <PaperListPage authLoading={authLoading} currentUser={currentUser} />
-                      </PaperListErrorBoundary>
-                    } 
-                  />
-                  <Route
-                    path="/paper/:paperId"
-                    element={
-                      <PaperDetailErrorBoundary>
-                        <PaperDetailPage currentUser={currentUser} />
-                      </PaperDetailErrorBoundary>
-                    }
-                  />              
-                  <Route path="/dashboard" element={<Dashboard />} />
-                  <Route path="/user/:github_username" element={<ProfilePage />} />
-                  <Route path="*" element={<NotFoundPage />} />
-                </Routes>
-                </Suspense>
-              </ErrorBoundary>
-            </main>          
-            <LoginPromptModal />
-            
-            {/* Account Link Modal */}
-            {linkModalData && (
-              <AccountLinkModal
-                open={showLinkModal}
-                onClose={() => setShowLinkModal(false)}
-                existingAccount={linkModalData.existingAccount}
-                newAccount={linkModalData.newAccount}
-                onConfirm={handleLinkAccounts}
-                onCancel={handleKeepSeparate}
-              />
-            )}
+        <div className={`flex flex-col w-full max-w-full box-border relative before:content-[''] before:fixed before:inset-0 before:w-full before:h-full before:pointer-events-none before:opacity-40 before:bg-[radial-gradient(var(--gradient-accent)_1px,transparent_1px),radial-gradient(var(--gradient-accent)_1px,transparent_1px)] before:bg-[length:40px_40px] before:bg-[0_0,20px_20px] before:z-[-1] ${isLoginPage ? 'h-screen overflow-hidden' : 'min-h-screen'}`}>
+          <GlobalHeader currentUser={currentUser} handleLogout={handleLogout} />
+          <main className={`flex-grow p-0 w-full box-border flex flex-col items-stretch justify-start relative ${isLoginPage ? 'overflow-hidden' : 'overflow-y-auto overflow-x-hidden'} before:content-[''] before:absolute before:top-0 before:left-0 before:w-full before:h-[200px] before:bg-gradient-to-b before:from-[rgba(25,124,154,0.03)] before:to-transparent before:z-[-1] before:pointer-events-none`}>
+            <ErrorBoundary>
+              <Suspense fallback={null}>
+              <Routes>
+                <Route path="/" element={<LandingPage />} />
+                <Route path="/login" element={<LoginPage />} />
+                <Route 
+                  path="/papers" 
+                  element={
+                    <PaperListErrorBoundary>
+                      <PaperListPage authLoading={authLoading} currentUser={currentUser} />
+                    </PaperListErrorBoundary>
+                  } 
+                />
+                <Route
+                  path="/paper/:paperId"
+                  element={
+                    <PaperDetailErrorBoundary>
+                      <PaperDetailPage currentUser={currentUser} />
+                    </PaperDetailErrorBoundary>
+                  }
+                />              
+                <Route path="/dashboard" element={<Dashboard />} />
+                <Route path="/user/:github_username" element={<ProfilePage />} />
+                <Route path="*" element={<NotFoundPage />} />
+              </Routes>
+              </Suspense>
+            </ErrorBoundary>
+          </main>          
+          <LoginPromptModal />
+          
+          {/* Account Link Modal */}
+          {linkModalData && (
+            <AccountLinkModal
+              open={showLinkModal}
+              onClose={() => setShowLinkModal(false)}
+              existingAccount={linkModalData.existingAccount}
+              newAccount={linkModalData.newAccount}
+              onConfirm={handleLinkAccounts}
+              onCancel={handleKeepSeparate}
+            />
+          )}
 
+          {!isLoginPage && (
             <footer className="bg-[rgba(241,243,245,0.8)] text-[var(--text-muted-color)] text-center py-4 text-sm border-t border-[var(--border-color-light)]"> 
             </footer>
-          </div>
+          )}
+        </div>
       </ModalProvider>
     </QueryClientProvider>
   );

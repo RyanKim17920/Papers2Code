@@ -18,72 +18,97 @@ const LoginPage: React.FC = () => {
   };
 
   return (
-    <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background to-muted/20">
-      <div className="w-full max-w-sm px-4">
-        {/* Logo and Title */}
-        <div className="text-center mb-6">
-          <div className="flex justify-center mb-3">
+    <div className="h-full w-full flex bg-background overflow-hidden">
+      {/* Left Side - Branding */}
+      <div className="hidden lg:flex lg:w-1/2 bg-gradient-to-br from-primary/10 via-primary/5 to-background relative overflow-hidden">
+        <div className="absolute inset-0 bg-grid-pattern opacity-[0.02]" />
+        <div className="relative z-10 flex flex-col items-center justify-center w-full px-12">
+          <img 
+            src={logo} 
+            alt="Papers2Code" 
+            className="h-20 w-auto mb-8" 
+          />
+          <p className="text-lg text-muted-foreground text-center max-w-md">
+            Bridging the gap between research papers and production-ready code
+          </p>
+        </div>
+      </div>
+
+      {/* Right Side - Login Form */}
+      <div className="flex-1 flex items-center justify-center px-4 sm:px-6 lg:px-8">
+        <div className="w-full max-w-md">
+          {/* Mobile Logo */}
+          <div className="lg:hidden flex justify-center mb-4">
             <img 
               src={logo} 
               alt="Papers2Code" 
-              className="h-12 w-auto" 
+              className="h-10 w-auto" 
             />
           </div>
-          <h1 className="text-2xl font-bold mb-1">Welcome Back</h1>
-          <p className="text-sm text-muted-foreground">
-            Sign in to continue
-          </p>
-        </div>
 
-        {/* Login Options Card */}
-        <div className="bg-card border rounded-lg shadow-sm p-6 space-y-3">
-          {/* GitHub Login Button */}
-          <Button
-            onClick={handleGitHubLogin}
-            variant="default"
-            className="w-full h-10 gap-2"
-          >
-            <Github className="h-4 w-4" />
-            <span>Continue with GitHub</span>
-          </Button>
-
-          {/* Divider */}
-          <div className="relative my-3">
-            <div className="absolute inset-0 flex items-center">
-              <div className="w-full border-t"></div>
-            </div>
-            <div className="relative flex justify-center text-xs">
-              <span className="bg-card px-2 text-muted-foreground">or</span>
-            </div>
-          </div>
-
-          {/* Google Login Button */}
-          <Button
-            onClick={handleGoogleLogin}
-            variant="outline"
-            className="w-full h-10 gap-2"
-          >
-            <GoogleIcon size={16} />
-            <span>Continue with Google</span>
-          </Button>
-
-          {/* Feature Access Info */}
-          <div className="mt-4 pt-4 border-t">
-            <p className="text-xs text-muted-foreground text-center">
-              GitHub accounts have full access. Google accounts can vote and view papers.
-              Link both for complete features.
+          {/* Title */}
+          <div className="text-center mb-4">
+            <h2 className="text-3xl font-bold mb-2">Welcome Back</h2>
+            <p className="text-muted-foreground text-sm">
+              Sign in to continue to Papers2Code
             </p>
           </div>
-        </div>
 
-        {/* Footer */}
-        <div className="mt-6 text-center">
-          <button
-            onClick={() => navigate('/')}
-            className="text-xs text-muted-foreground hover:text-foreground transition-colors"
-          >
-            ← Back to home
-          </button>
+          {/* Login Card */}
+          <div className="bg-card border rounded-xl shadow-lg p-6 space-y-4">
+            {/* GitHub Login Button */}
+            <Button
+              onClick={handleGitHubLogin}
+              variant="default"
+              size="lg"
+              className="w-full gap-3 h-12 text-base font-medium"
+            >
+              <Github className="h-5 w-5" />
+              <span>Continue with GitHub</span>
+            </Button>
+
+            {/* Divider */}
+            <div className="relative my-4">
+              <div className="absolute inset-0 flex items-center">
+                <div className="w-full border-t border-border"></div>
+              </div>
+              <div className="relative flex justify-center text-sm">
+                <span className="bg-card px-3 text-muted-foreground font-medium">or</span>
+              </div>
+            </div>
+
+            {/* Google Login Button */}
+            <Button
+              onClick={handleGoogleLogin}
+              variant="outline"
+              size="lg"
+              className="w-full gap-3 h-12 text-base font-medium"
+            >
+              <GoogleIcon size={20} />
+              <span>Continue with Google</span>
+            </Button>
+
+            {/* Feature Access Info */}
+            <div className="mt-4 pt-4 border-t border-border">
+              <div className="bg-muted/50 rounded-lg p-3">
+                <p className="text-xs text-muted-foreground leading-relaxed">
+                  <span className="font-semibold text-foreground">GitHub accounts</span> have full access. 
+                  <span className="font-semibold text-foreground"> Google accounts</span> can vote and view papers.
+                  Link both for complete features.
+                </p>
+              </div>
+            </div>
+          </div>
+
+          {/* Footer */}
+          <div className="mt-4 text-center">
+            <button
+              onClick={() => navigate('/')}
+              className="text-sm text-muted-foreground hover:text-foreground transition-colors inline-flex items-center gap-2"
+            >
+              ← Back to home
+            </button>
+          </div>
         </div>
       </div>
     </div>
