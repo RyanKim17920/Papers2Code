@@ -1,10 +1,18 @@
 {
   "buildCommand": "cd papers2code-ui && npm install && npm run build",
   "outputDirectory": "papers2code-ui/dist",
-  "rewrites": [
+  "routes": [
     {
-      "source": "/(.*)",
-      "destination": "/index.html"
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/(favicon|web-icon)\\.(png|svg|ico)",
+      "dest": "/$1.$2"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/index.html"
     }
   ],
   "headers": [
