@@ -6,7 +6,7 @@ This document summarizes the changes made to make Papers2Code production-ready f
 
 ### 1. Package Manager Migration (npm → pnpm)
 **Why?**
-- **2x faster** than npm
+- **Faster installation** - significant performance improvements over npm
 - **More efficient** disk usage with content-addressable storage
 - **Production-ready** - used by major companies
 - **Native support** on both Vercel and Render
@@ -154,7 +154,7 @@ These do not affect functionality and should be addressed separately.
 
 ## Key Benefits
 
-1. **Faster Builds**: pnpm reduces install time by ~50%
+1. **Faster Builds**: pnpm provides significantly faster installation times compared to npm
 2. **Better Security**: Backend API only accessible from your frontend
 3. **Production-Ready**: Both Vercel and Render natively support this setup
 4. **Cost Effective**: Vercel free tier + Render $7/month
@@ -163,7 +163,7 @@ These do not affect functionality and should be addressed separately.
 ## Support
 
 For deployment issues:
-- See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed guide
+- See [docs/deployment/DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed guide
 - Check Vercel build logs
 - Check Render deployment logs
 - Verify all environment variables are set correctly
