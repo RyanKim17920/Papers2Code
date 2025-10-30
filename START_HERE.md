@@ -55,30 +55,41 @@ Print this for quick lookups during deployment:
 
 ## 🤔 Which Platform Should I Choose?
 
-### Use Render (Recommended) ⭐
-**Best for:** Most users, full-stack apps, beginners
+### Use Vercel + Render ⭐ **NEW - Recommended if domain on Vercel**
+**Best for:** Users with domain on Vercel, want best CDN + Python backend
+
+**Why?**
+- Vercel's best-in-class CDN (40+ edge locations, unlimited bandwidth)
+- Render's native Python/uv support
+- Keep domain management on Vercel
+- Clean separation: frontend scales independently
+
+**Guide:** [docs/deployment/VERCEL_RENDER_DEPLOYMENT.md](./docs/deployment/VERCEL_RENDER_DEPLOYMENT.md)
+
+### Use Render (Both Services)
+**Best for:** Beginners, simplest setup, one platform
 
 **Why?**
 - One platform for both frontend and backend
 - Easiest setup (Blueprint deployment)
 - Free tier available
 - $7/month for production (always-on)
-- Native Python support
+- Auto-linking between services
 
 **Guide:** [docs/deployment/RENDER_COMPLETE_GUIDE.md](./docs/deployment/RENDER_COMPLETE_GUIDE.md)
 
 ### Use Vercel + Railway
-**Best for:** Splitting frontend and backend, more control
+**Best for:** Want always-on backend on free tier
 
 **Why?**
-- Vercel is optimized for frontend
-- Railway has better always-on free credits
+- Railway has $5/month free credits (no sleep)
+- Vercel frontend CDN
 - Good for scaling backend independently
 
 **Guide:** [docs/deployment/VERCEL_DEPLOYMENT.md](./docs/deployment/VERCEL_DEPLOYMENT.md)
 
 ### Use Vercel + Fly.io
-**Best for:** Global edge deployment, Docker users
+**Best for:** Global edge deployment, Docker control
 
 **Why?**
 - Fly.io runs on global edge network
@@ -93,9 +104,10 @@ Print this for quick lookups during deployment:
 
 | Platform | Free Tier | Production | Best For |
 |----------|-----------|------------|----------|
-| **Render** | $0 (sleeps) | $7/month | Most users |
-| **Vercel + Railway** | $5 credit/mo | $5-20/month | Split architecture |
-| **Vercel + Fly.io** | $0 | $8/month | Global deployment |
+| **Vercel + Render** | $0 (sleeps) | $7/month | Domain on Vercel |
+| **Render (Both)** | $0 (sleeps) | $7/month | Simplest setup |
+| **Vercel + Railway** | $5 credit/mo | $5-20/month | Always-on free |
+| **Vercel + Fly.io** | $0 | $8/month | Global edge |
 
 **All options include:**
 - Free MongoDB Atlas (512 MB)

@@ -27,10 +27,11 @@ This repository now has **complete, production-ready deployment configurations**
    - Points to the comprehensive guide
    - Legacy document updated with new links
 
-### 4. **Alternative Deployment Guides** (Optional)
+### 4. **Alternative Deployment Guides**
+   - **[VERCEL_RENDER_DEPLOYMENT.md](docs/deployment/VERCEL_RENDER_DEPLOYMENT.md)** ⭐ **NEW** - Frontend on Vercel, Backend on Render
    - **[VERCEL_DEPLOYMENT.md](docs/deployment/VERCEL_DEPLOYMENT.md)** - Frontend on Vercel, Backend on Railway
    - **[FLY_DEPLOYMENT.md](docs/deployment/FLY_DEPLOYMENT.md)** - Frontend on Vercel, Backend on Fly.io
-   - These are alternatives if you prefer different platforms
+   - Choose based on your domain location and scaling needs
 
 ---
 
@@ -58,17 +59,31 @@ This repository now has **complete, production-ready deployment configurations**
 
 ---
 
-## 🎯 Recommended Deployment Path
+## 🎯 Recommended Deployment Paths
 
-### **Use Render** (Easiest and Most Integrated)
+### **Option 1: Vercel + Render** ⭐ **Best if domain on Vercel**
+
+**Why this combo?**
+- ✅ **Vercel's CDN** (40+ edge locations, unlimited bandwidth)
+- ✅ **Render's Python support** (native uv, simple scaling)
+- ✅ **Keep domain on Vercel** (no DNS migration)
+- ✅ **Independent scaling** (frontend and backend separate)
+- ✅ **$0-7/month** total cost
+
+**How to Deploy:**
+1. Read **[VERCEL_RENDER_DEPLOYMENT.md](docs/deployment/VERCEL_RENDER_DEPLOYMENT.md)** (20-25 minutes)
+2. Deploy backend to Render first
+3. Deploy frontend to Vercel with your domain
+4. Your app will be live!
+
+### **Option 2: Both on Render** (Easiest Setup)
 
 **Why Render?**
 - ✅ **One platform** for both frontend and backend
 - ✅ **Automatic setup** using `render.yaml`
 - ✅ **Free tier** to start (backend sleeps after 15 min)
 - ✅ **$7/month** for always-on backend (production)
-- ✅ **Native Python/uv support** (no Docker needed)
-- ✅ **Git integration** (auto-deploys on push)
+- ✅ **Auto-linking** between services
 
 **How to Deploy:**
 1. Read **[RENDER_COMPLETE_GUIDE.md](docs/deployment/RENDER_COMPLETE_GUIDE.md)** (15-20 minutes)
@@ -80,18 +95,20 @@ This repository now has **complete, production-ready deployment configurations**
 
 ## 📊 Quick Comparison of Platforms
 
-| Feature | Render | Vercel + Railway | Vercel + Fly.io |
-|---------|--------|------------------|-----------------|
-| **Setup Complexity** | ⭐ Easy | ⭐⭐ Moderate | ⭐⭐⭐ Advanced |
-| **Platforms** | 1 (Render) | 2 (Vercel + Railway) | 2 (Vercel + Fly.io) |
-| **Cost (Free Tier)** | $0 | $5 credit/month | $0 |
-| **Cost (Production)** | $7/month | $5-20/month | $8/month |
-| **Backend Cold Starts** | Yes (free tier) | No | Minimal |
-| **Configuration Files** | `render.yaml` | `vercel.json`, `railway.toml` | `vercel.json`, `fly.toml`, `Dockerfile` |
-| **Deployment Method** | Git push (automatic) | Git push (automatic) | CLI or Git push |
-| **Best For** | Full-stack apps | Split frontend/backend | Global edge deployment |
+| Feature | Vercel + Render | Render (Both) | Vercel + Railway | Vercel + Fly.io |
+|---------|-----------------|---------------|------------------|-----------------|
+| **Setup Complexity** | ⭐⭐ Moderate | ⭐ Easy | ⭐⭐ Moderate | ⭐⭐⭐ Advanced |
+| **Platforms** | 2 | 1 | 2 | 2 |
+| **Frontend CDN** | ⭐ Best (Vercel) | Basic (Render) | ⭐ Best (Vercel) | ⭐ Best (Vercel) |
+| **Cost (Free)** | $0 | $0 | $5 credit/mo | $0 |
+| **Cost (Production)** | $7/month | $7/month | $5-20/month | $8/month |
+| **Backend Cold Starts** | Yes (free) | Yes (free) | No ($5 credit) | Minimal |
+| **Best For** | Domain on Vercel | Simplest setup | Always-on free | Global edge |
 
-**Recommendation**: **Use Render** for simplicity and integration.
+**Recommendations**: 
+- **Vercel + Render** if domain is on Vercel
+- **Render (Both)** for simplest setup
+- **Vercel + Railway** if you need always-on on free tier
 
 ---
 
