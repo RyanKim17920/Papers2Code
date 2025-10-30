@@ -238,11 +238,6 @@ function App() {
               onCancel={handleKeepSeparate}
             />
           )}
-
-          {!isLoginPage && (
-            <footer className="bg-[rgba(241,243,245,0.8)] text-[var(--text-muted-color)] text-center py-4 text-sm border-t border-[var(--border-color-light)]"> 
-            </footer>
-          )}
         </div>
       </ModalProvider>
     </QueryClientProvider>
