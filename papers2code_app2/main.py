@@ -114,13 +114,26 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
             "/api/auth/csrf-token",
             "/api/auth/github/login",
             "/api/auth/github/callback",
+            "/api/auth/google/login",
+            "/api/auth/google/callback",
             "/docs",
             "/openapi.json",
         ]
+        
+        # Exempt patterns (tracking endpoints, etc.)
+        exempt_patterns = [
+            "/api/activity/",
+            "/api/auth/",
+        ]
+        
+        # Check if path matches any exempt pattern
+        path_exempt = any(request.url.path.startswith(pattern) for pattern in exempt_patterns)
+        
         # Allow all /static/ paths for serving static files without CSRF
         if (
             request.url.path.startswith("/static/")
             or request.url.path in exempt_paths
+            or path_exempt
             or request.method in ("GET", "HEAD", "OPTIONS")
         ):
             # logger.debug(f"CSRF Middleware: Exempted path or method: {request.method} {request.url.path}")
