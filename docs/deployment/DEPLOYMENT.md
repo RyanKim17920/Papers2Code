@@ -1,6 +1,21 @@
 # Deployment Guide
 
-## Platform: Render.com
+This guide covers two deployment options:
+1. **Vercel (Frontend) + Render (Backend)** - Recommended for production
+2. **Render Full-Stack** - Simpler setup, single platform
+
+## Recommended: Vercel + Render
+
+**Architecture**: Vercel for frontend (React/Vite), Render for backend (FastAPI)
+**Database**: MongoDB Atlas
+**Cost**: Vercel free tier + Render $7/month backend
+
+### Why This Setup?
+- **Vercel**: Optimized for frontend, instant deployments, edge network
+- **Render**: Better for backend services with persistent connections
+- **Best performance**: Each platform optimized for its purpose
+
+## Alternative: Render Full-Stack
 
 **Architecture**: Full-stack deployment with FastAPI backend and React frontend
 **Database**: MongoDB Atlas
@@ -10,9 +25,66 @@
 
 1. **MongoDB Atlas Account**: Create free cluster at [mongodb.com/atlas](https://mongodb.com/atlas)
 2. **GitHub OAuth App**: Register at [github.com/settings/applications/new](https://github.com/settings/applications/new)
-3. **Render Account**: Sign up at [render.com](https://render.com) with GitHub
+3. **Vercel Account**: Sign up at [vercel.com](https://vercel.com) with GitHub
+4. **Render Account**: Sign up at [render.com](https://render.com) with GitHub
 
-## Deployment Steps
+## Vercel + Render Deployment (Recommended)
+
+### 1. MongoDB Setup
+- Create MongoDB Atlas cluster
+- Create database user with read/write permissions
+- Whitelist IP addresses (0.0.0.0/0 for development)
+- Copy connection string
+
+### 2. Deploy Backend to Render
+1. Go to [render.com](https://render.com)
+2. Click **New** → **Web Service**
+3. Connect GitHub and select repository
+4. Configure:
+   - **Name**: `papers2code-api`
+   - **Environment**: Python
+   - **Build Command**: `pip install uv && uv sync`
+   - **Start Command**: `uv run run_app2.py`
+   - **Instance Type**: Starter ($7/month) or Free (sleeps after 15 min)
+5. Add Environment Variables:
+   ```
+   ENV_TYPE=production
+   PORT=5000
+   MONGO_CONNECTION_STRING=mongodb+srv://...
+   GITHUB_CLIENT_ID=your-github-client-id
+   GITHUB_CLIENT_SECRET=your-github-oauth-secret
+   FLASK_SECRET_KEY=your-random-secret-key
+   FRONTEND_URL=https://your-app.vercel.app
+   ```
+6. Click **Create Web Service**
+7. Copy the backend URL (e.g., `https://papers2code-api.onrender.com`)
+
+### 3. Deploy Frontend to Vercel
+1. Go to [vercel.com](https://vercel.com)
+2. Click **Add New** → **Project**
+3. Import your GitHub repository
+4. Configure:
+   - **Framework Preset**: Vite
+   - **Root Directory**: `papers2code-ui`
+   - **Build Command**: `pnpm run build` (auto-detected)
+   - **Output Directory**: `dist` (auto-detected)
+5. Add Environment Variable:
+   ```
+   VITE_API_BASE_URL=https://papers2code-api.onrender.com
+   ```
+6. Click **Deploy**
+
+### 4. Configure GitHub OAuth
+- Application Name: `Papers2Code`
+- Homepage URL: `https://your-app.vercel.app`
+- Authorization Callback URL: `https://papers2code-api.onrender.com/api/auth/github/callback`
+- Update `GITHUB_CLIENT_ID` and `GITHUB_CLIENT_SECRET` in Render
+
+### 5. Update Backend FRONTEND_URL
+- In Render dashboard, update `FRONTEND_URL` to your Vercel URL
+- This ensures CORS and origin validation work correctly
+
+## Render Full-Stack Deployment
 
 ### 1. MongoDB Setup
 - Create MongoDB Atlas cluster
@@ -87,13 +159,31 @@ VITE_API_BASE_URL=auto-linked-to-backend
 | Backend | Sleeps after 15min inactivity | $7/month always-on |
 | Frontend | Always free | Always free |
 
+## Important Notes
+
+### Package Manager
+This project uses **pnpm** (not npm) for frontend package management:
+- **Faster**: 2x faster than npm
+- **More efficient**: Saves disk space with content-addressable storage
+- **Production-ready**: Used by major companies and projects
+
+Both Vercel and Render support pnpm natively.
+
+### Backend Security
+The backend includes origin validation middleware that:
+- **Restricts API access** to only allowed frontend origins in production
+- **Prevents abuse** and rate limiting from direct API access
+- **Validates** origin and referer headers for all API requests
+- Allows public access to: `/`, `/health`, `/docs`, `/redoc`, `/openapi.json`
+
 ## Troubleshooting
 
 ### Build Issues
 - Check build logs in Render dashboard
 - Verify Python version is 3.12+ and uv is properly installed
+- Verify pnpm is installed for frontend builds
 - Ensure all dependencies are in pyproject.toml
-- Check that uv.lock is up to date
+- Check that uv.lock and pnpm-lock.yaml are up to date
 
 ### Connection Issues
 - Verify MongoDB Atlas IP whitelist (0.0.0.0/0)

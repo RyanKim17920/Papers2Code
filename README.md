@@ -14,9 +14,11 @@ uv run run_app2.py
 
 # Frontend (React/Vite) - in another terminal
 cd papers2code-ui
-npm install
-npm run dev
+pnpm install
+pnpm run dev
 ```
+
+**Note**: This project uses `pnpm` for frontend package management (faster, more efficient than npm).
 
 Visit `http://localhost:5173` for the frontend and `http://localhost:5000` for the API.
 
@@ -196,16 +198,16 @@ uv run uvicorn papers2code_app2.main:app --reload --port 5000
 cd papers2code-ui
 
 # Install dependencies
-npm install
+pnpm install
 
 # Start development server
-npm run dev
+pnpm run dev
 
 # Build for production
-npm run build
+pnpm run build
 
 # Preview production build
-npm run preview
+pnpm run preview
 ```
 
 ### Database Setup
