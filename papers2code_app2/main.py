@@ -47,17 +47,36 @@ class OriginValidationMiddleware(BaseHTTPMiddleware):
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> StarletteResponse:
-        # Exempt paths that need to be publicly accessible
-        exempt_paths = ["/", "/health", "/docs", "/redoc", "/openapi.json"]
+        # Exempt paths that need to be publicly accessible or have external redirects
+        exempt_paths = [
+            "/", 
+            "/health", 
+            "/docs", 
+            "/redoc", 
+            "/openapi.json",
+        ]
 
         if request.url.path in exempt_paths:
             response = await call_next(request)
             return response
 
-        # For API endpoints, validate origin
+        # For API endpoints, use a more lenient validation approach
+        # Only validate origin for sensitive mutation endpoints (POST, PUT, DELETE, PATCH)
+        # GET requests and OAuth flows are allowed through
         if request.url.path.startswith("/api/"):
-            # In production, strictly validate origin
+            # In production, only validate origin for state-changing requests
             if config_settings.ENV_TYPE == "production":
+                # Allow all GET, HEAD, OPTIONS requests (read-only)
+                if request.method in ("GET", "HEAD", "OPTIONS"):
+                    response = await call_next(request)
+                    return response
+                
+                # Allow all OAuth-related endpoints (they have external redirects)
+                if "/auth/" in request.url.path:
+                    response = await call_next(request)
+                    return response
+                
+                # For mutation requests (POST, PUT, DELETE, PATCH), validate origin
                 origin = request.headers.get("origin")
                 referer = request.headers.get("referer")
 
@@ -73,8 +92,8 @@ class OriginValidationMiddleware(BaseHTTPMiddleware):
 
                 if not valid_origin:
                     logger.warning(
-                        f"Blocked API request from unauthorized origin. "
-                        f"Path: {request.url.path}, Origin: {origin}, Referer: {referer}"
+                        f"Blocked API mutation request from unauthorized origin. "
+                        f"Path: {request.url.path}, Method: {request.method}, Origin: {origin}, Referer: {referer}"
                     )
                     raise HTTPException(
                         status_code=status.HTTP_403_FORBIDDEN,

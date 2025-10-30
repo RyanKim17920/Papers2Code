@@ -132,8 +132,11 @@ logger.info(f"DEBUG: config_settings.GITHUB.TEMPLATE_REPO after initialization: 
 # Accept common variants like 'prod' or 'production' set in environment files.
 try:
     env_val = getattr(config_settings, "ENV_TYPE", "").strip().lower()
-    if env_val in ("prod", "production"):
+    if env_val in ("prod", "production", "prod_test"):
+        # Treat 'prod', 'production', and 'prod_test' all as production mode
         config_settings.ENV_TYPE = "production"
+    elif env_val in ("dev", "development"):
+        config_settings.ENV_TYPE = "development"
     else:
         # Keep the original value but normalize casing for consistency
         config_settings.ENV_TYPE = env_val or config_settings.ENV_TYPE
