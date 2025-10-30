@@ -4,35 +4,5 @@ services:
     name: papers2code-api
     env: python
     buildCommand: pip install uv && uv sync
-    startCommand: uv run run_app2.py
-    envVars:
-      - key: ENV_TYPE
-        value: production
-      - key: PORT
-        value: 5000
-      - key: MONGO_CONNECTION_STRING
-        sync: false  # Set manually in dashboard
-      - key: FLASK_SECRET_KEY
-        generateValue: true
-      - key: GITHUB_CLIENT_ID
-        sync: false  # Set manually in dashboard
-      - key: GITHUB_CLIENT_SECRET
-        sync: false  # Set manually in dashboard
-      - key: FRONTEND_URL
-        fromService:
-          type: web
-          name: papers2code-frontend
-          property: url
+    startCommand: uv run run.py
 
-  # Frontend Static Site
-  - type: web
-    name: papers2code-frontend
-    env: static
-    buildCommand: npm install -g pnpm && cd papers2code-ui && pnpm install && pnpm run build
-    staticPublishPath: ./papers2code-ui/dist
-    envVars:
-      - key: VITE_API_BASE_URL
-        fromService:
-          type: web
-          name: papers2code-api
-          property: url
