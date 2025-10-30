@@ -37,6 +37,10 @@ class ProgressStatus(str, Enum):
     REFACTORING_STARTED = "Refactoring Started"
     REFACTORING_FINISHED = "Refactoring Finished"
     VALIDATION_IN_PROGRESS = "Validation In Progress"
+    IMPLEMENTATION_COMPLETE = "Implementation Complete"  # New: Code is complete, awaiting peer review
+    PEER_REVIEW_REQUIRED = "Peer Review Required"  # New: Waiting for non-contributor to review
+    PEER_REVIEW_IN_PROGRESS = "Peer Review In Progress"  # New: Someone is reviewing
+    PEER_REVIEW_APPROVED = "Peer Review Approved"  # New: Review passed
     OFFICIAL_CODE_POSTED = "Official Code Posted"
     REFUSED_TO_UPLOAD = "Refused to Upload"
     NO_RESPONSE = "No Response"

@@ -520,7 +520,7 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                     <div className="flex gap-2 flex-wrap flex-shrink-0">
                       {progress.status === ProgressStatus.GITHUB_CREATED && (
                         <Button
-                          onClick={() => confirmStatusUpdate(ProgressStatus.CODE_UPLOADED)}
+                          onClick={() => confirmStatusUpdate(ProgressStatus.IMPLEMENTATION_COMPLETE)}
                           disabled={isUpdating}
                           variant="default"
                           size="sm"
@@ -528,6 +528,55 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
                           Mark Implementation Complete
                         </Button>
                       )}
+                      {progress.status === ProgressStatus.IMPLEMENTATION_COMPLETE && (
+                        <Button
+                          onClick={() => confirmStatusUpdate(ProgressStatus.PEER_REVIEW_REQUIRED)}
+                          disabled={isUpdating}
+                          variant="default"
+                          size="sm"
+                        >
+                          Request Peer Review
+                        </Button>
+                      )}
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Implementation Complete - Request Review */}
+            {progress.status === ProgressStatus.IMPLEMENTATION_COMPLETE && (
+              <Card className="border-2 border-green-500/40 bg-gradient-to-br from-green-500/5 to-green-400/5">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center gap-3">
+                    <CheckCircle className="w-5 h-5 text-green-600 flex-shrink-0" />
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Implementation Complete!
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Great work! Click "Request Peer Review" above to submit your implementation for review.
+                      </p>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            )}
+            
+            {/* Peer Review Required State */}
+            {progress.status === ProgressStatus.PEER_REVIEW_REQUIRED && (
+              <Card className="border-2 border-amber-500/40 bg-gradient-to-br from-amber-500/5 to-amber-400/5">
+                <CardContent className="pt-4 pb-4">
+                  <div className="flex items-center gap-3">
+                    <Clock className="w-5 h-5 text-amber-600 flex-shrink-0" />
+                    <div>
+                      <h3 className="text-sm font-semibold text-foreground">
+                        Peer Review Required
+                      </h3>
+                      <p className="text-xs text-muted-foreground mt-1">
+                        Implementation submitted! Waiting for a non-contributor to review the code before final approval.
+                        {isContributor && " As a contributor, you cannot review your own work."}
+                      </p>
                     </div>
                   </div>
                 </CardContent>

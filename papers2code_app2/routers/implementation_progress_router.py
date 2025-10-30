@@ -8,14 +8,17 @@ from ..schemas.implementation_progress import (
     ProgressUpdateRequest,
     ProgressStatus
 )
+from ..schemas.papers import PaperResponse
 from ..services.implementation_progress_service import ImplementationProgressService
 from ..services.github_repo_service import GitHubRepoService
+from ..services.paper_view_service import PaperViewService
 from ..dependencies import get_implementation_progress_service
 from ..error_handlers import handle_service_errors
 from ..services.exceptions import NotFoundException
 from ..auth import get_current_user 
 from ..schemas.minimal import UserSchema as UserInDBMinimalSchema
 from ..database import get_users_collection_async
+from ..utils import transform_papers_batch
 
 logger = logging.getLogger(__name__) 
 
@@ -30,14 +33,14 @@ async def require_github_account(current_user: UserInDBMinimalSchema):
     Check if the user has a linked GitHub account.
     Raises HTTPException if no GitHub account is linked.
     """
-    if not current_user.githubId:
+    if not current_user.github_id:
         raise HTTPException(
             status_code=status.HTTP_403_FORBIDDEN,
             detail="GitHub account required for implementation features. Please link your GitHub account to access this feature."
         )
 
 
-@router.post("/paper/{paper_id}/join", response_model=ImplementationProgress, status_code=status.HTTP_200_OK)
+@router.post("/paper/{paper_id}/join", response_model=PaperResponse, status_code=status.HTTP_200_OK)
 @handle_service_errors
 async def join_or_create_implementation_progress(
     paper_id: str,
@@ -48,11 +51,24 @@ async def join_or_create_implementation_progress(
     await require_github_account(current_user)
     
     try:
+        # Create/join the implementation progress
         progress = await service.join_or_create_progress(paper_id, str(current_user.id))
-        return progress
+        
+        # Get the full paper document with the updated implementation progress
+        paper_view_service = PaperViewService()
+        paper_doc = await paper_view_service.get_paper_by_id(paper_id, str(current_user.id))
+        
+        # Transform to PaperResponse using batch transformation
+        transformed_papers = await transform_papers_batch([paper_doc], str(current_user.id), detail_level="full")
+        if not transformed_papers or not transformed_papers[0]:
+            raise HTTPException(status_code=500, detail="Failed to transform paper after joining implementation")
+        
+        return PaperResponse(**transformed_papers[0])
+    except HTTPException:
+        raise
     except Exception as e:
         logger.error(f"Error in join_or_create_implementation_progress: {e}", exc_info=True)
-        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail="An unexpected error occurred.")
+        raise HTTPException(status_code=status.HTTP_500_INTERNAL_SERVER_ERROR, detail=f"An unexpected error occurred: {str(e)}")
 
 @router.get("/paper/{paper_id}", response_model=Optional[ImplementationProgress])
 @handle_service_errors

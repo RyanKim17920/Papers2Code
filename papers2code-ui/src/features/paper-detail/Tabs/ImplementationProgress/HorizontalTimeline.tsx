@@ -112,11 +112,35 @@ const COMMUNITY_PATH_STEPS: JourneyStep[] = [
     path: 'community',
   },
   {
-    id: 'code_completed',
+    id: 'implementation_complete',
     title: 'Implementation Complete',
-    description: 'Community implementation is complete and verified.',
+    description: 'Community implementation is complete.',
     icon: CheckCircle,
     order: 5,
+    path: 'community',
+  },
+  {
+    id: 'peer_review_required',
+    title: 'Peer Review Required',
+    description: 'Awaiting peer review from non-contributor.',
+    icon: Clock,
+    order: 6,
+    path: 'community',
+  },
+  {
+    id: 'peer_review_approved',
+    title: 'Peer Review Approved',
+    description: 'Implementation has been reviewed and approved.',
+    icon: ShieldCheck,
+    order: 7,
+    path: 'community',
+  },
+  {
+    id: 'code_completed',
+    title: 'Official Code Posted',
+    description: 'Community implementation is verified and published.',
+    icon: CheckCircle,
+    order: 8,
     path: 'community',
   },
 ];
@@ -157,7 +181,11 @@ export const HorizontalTimeline: React.FC<HorizontalTimelineProps> = ({ progress
     
     if (progress.status === ProgressStatus.REFUSED_TO_UPLOAD || 
         progress.status === ProgressStatus.NO_RESPONSE ||
-        progress.status === ProgressStatus.GITHUB_CREATED) {
+        progress.status === ProgressStatus.GITHUB_CREATED ||
+        progress.status === ProgressStatus.IMPLEMENTATION_COMPLETE ||
+        progress.status === ProgressStatus.PEER_REVIEW_REQUIRED ||
+        progress.status === ProgressStatus.PEER_REVIEW_IN_PROGRESS ||
+        progress.status === ProgressStatus.PEER_REVIEW_APPROVED) {
       return 'community';
     }
     
@@ -336,6 +364,15 @@ function mapUpdateToJourneyStep(eventType: UpdateEventType, currentStatus: Progr
         }
         if (newStatus === ProgressStatus.GITHUB_CREATED) {
           return 'github_created';
+        }
+        if (newStatus === ProgressStatus.IMPLEMENTATION_COMPLETE) {
+          return 'implementation_complete';
+        }
+        if (newStatus === ProgressStatus.PEER_REVIEW_REQUIRED) {
+          return 'peer_review_required';
+        }
+        if (newStatus === ProgressStatus.PEER_REVIEW_APPROVED) {
+          return 'peer_review_approved';
         }
       }
       return null;
