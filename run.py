@@ -142,54 +142,33 @@ class ApplicationRunner:
     def get_uvicorn_config(self) -> dict:
         """Get environment-specific uvicorn configuration with error handling."""
         try:
-            # Use the same environmental variables as run_app2.py for drop-in compatibility
+            # Simple configuration that always works on port 5000 for Render
             base_config = {
                 "app": app,
-                "host": "0.0.0.0",  # Matches run_app2.py
-                "port": 5000,         # Matches run_app2.py
-                "log_level": "info", # Matches run_app2.py
+                "host": "0.0.0.0",
+                "port": 5000,
+                "log_level": "info",
+                "access_log": True,
             }
 
             env_type = getattr(config_settings, 'ENV_TYPE', 'development').lower()
 
-            if env_type == "development":
+            if env_type == "development" or env_type == "dev":
                 base_config.update({
                     "reload": True,
                     "reload_dirs": ["papers2code_app2"],
                     "log_level": "debug",
                 })
                 self._log("info", "Using development configuration with hot reload")
-
-            elif env_type == "production":
-                # Production optimizations with safe defaults
-                workers = 1
-                try:
-                    workers = max(1, int(os.getenv("WORKERS", "1")))
-                except (ValueError, TypeError):
-                    self._log("warning", "Invalid WORKERS value, using default: 1")
-
-                base_config.update({
-                    "workers": workers,
-                    "access_log": True,
-                    "server_header": False,  # Security: hide server info
-                    "date_header": False,    # Security: hide date info
-                })
-
-                # Only use uvloop if available
-                try:
-                    import uvloop
-                    base_config["loop"] = "uvloop"
-                    self._log("info", "Using uvloop for better performance")
-                except ImportError:
-                    self._log("info", "uvloop not available, using default event loop")
-
-                self._log("info", f"Using production configuration with {workers} worker(s)")
+            else:
+                # Production or any other environment - simple single-worker setup
+                self._log("info", "Using production configuration on port 5000")
 
             return base_config
 
         except Exception as e:
             self._log("error", f"Failed to get uvicorn config: {e}")
-            # Return minimal safe configuration
+            # Return minimal safe configuration that will always work
             return {
                 "app": app,
                 "host": "0.0.0.0",
@@ -242,25 +221,11 @@ class ApplicationRunner:
             startup_duration = time.time() - self.startup_time
             self._log("info", f"Startup completed in {startup_duration:.2f} seconds")
             
-            # Create and run server with retry logic for production
-            max_retries = 3 if self.is_production else 1
-            
-            for attempt in range(max_retries):
-                try:
-                    self.server = uvicorn.Server(uvicorn.Config(**uvicorn_config))
-                    startup_successful = True
-                    self._log("info", f"Server started successfully (attempt {attempt + 1})")
-                    self.server.run()
-                    break
-                    
-                except Exception as e:
-                    self._log("error", f"Server start attempt {attempt + 1} failed: {e}")
-                    if attempt < max_retries - 1:
-                        wait_time = 2 ** attempt  # Exponential backoff
-                        self._log("info", f"Retrying in {wait_time} seconds...")
-                        time.sleep(wait_time)
-                    else:
-                        raise
+            # Create and run server - simple and reliable
+            self.server = uvicorn.Server(uvicorn.Config(**uvicorn_config))
+            startup_successful = True
+            self._log("info", "Server starting...")
+            self.server.run()
             
         except KeyboardInterrupt:
             self._log("info", "Received keyboard interrupt, shutting down...")
