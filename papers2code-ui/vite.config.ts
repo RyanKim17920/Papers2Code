@@ -7,6 +7,10 @@ export default defineConfig({
   plugins: [react(), tailwindcss()],
   build: {
     chunkSizeWarningLimit: 800,
+    // Optimize for production
+    sourcemap: false, // Disable source maps in production for smaller builds
+    minify: 'esbuild', // Faster than terser
+    target: 'es2015', // Better browser compatibility
     rollupOptions: {
       output: {
         manualChunks(id) {

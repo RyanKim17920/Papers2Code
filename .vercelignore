@@ -1,63 +1,28 @@
-# Dependencies
-node_modules/
-papers2code-ui/node_modules/
-
-# Python
-__pycache__/
-*.py[cod]
-*$py.class
-*.so
-.Python
-venv/
-env/
-.venv/
-.uv/
-
-# Build outputs
-papers2code-ui/dist/
-*.egg-info/
-dist/
-build/
-
-# Environment files
-.env
-.env.*
-!.env.example
-
-# IDE
-.vscode/
-.idea/
-*.swp
-*.swo
-*~
-
-# OS
-.DS_Store
-Thumbs.db
-
-# Logs
-*.log
-logs/
-
-# Test coverage
-.coverage
-htmlcov/
-.pytest_cache/
-
-# Git
-.git/
-.gitignore
-
-# Documentation (optional - remove if you want docs on Vercel)
-docs/
-
-# Backend code (not needed for frontend deployment)
+# Backend code (not needed for frontend)
 papers2code_app2/
-tests/
+api/
 scripts/
-run.py
-run_app2.py
+tests/
+
+# Python files
+*.py
 pyproject.toml
 uv.lock
 requirements.txt
 render.yaml
+
+# Environment
+.env
+.env.*
+!.env.example
+
+# Build artifacts
+__pycache__/
+*.egg-info/
+.pytest_cache/
+.coverage
+
+# IDE & OS
+.vscode/
+.idea/
+.DS_Store

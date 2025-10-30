@@ -1,4 +1,7 @@
 {
+  "buildCommand": "cd papers2code-ui && pnpm install && pnpm run build",
+  "outputDirectory": "papers2code-ui/dist",
+  "installCommand": "pnpm install --filter papers2code-ui",
   "rewrites": [
     {
       "source": "/(.*)",
@@ -31,6 +34,18 @@
           "value": "public, max-age=31536000, immutable"
         }
       ]
+    },
+    {
+      "source": "/(.*)\\.(jpg|jpeg|png|gif|svg|ico|webp)",
+      "headers": [
+        {
+          "key": "Cache-Control",
+          "value": "public, max-age=31536000, immutable"
+        }
+      ]
     }
-  ]
+  ],
+  "github": {
+    "silent": true
+  }
 }

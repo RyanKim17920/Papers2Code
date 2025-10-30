@@ -1,5 +1,8 @@
-# Environment variables
+# Environment variables - NEVER COMMIT THESE
 .env
+.env.*
+!.env.example
+*.env
 .env.local
 .env.production
 .env.test
