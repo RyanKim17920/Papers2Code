@@ -14,12 +14,19 @@
 * [ ] Fix peer reviewing so that other users can finalize code
 * [ ] Finish updates page
 * [ ] Mobile compatability
+* [ ] Fix Landing Page
+
 
 1.3 Very difficult fixes:
 
 * [ ] Combining Gmail and Github Accounts effectively (look over display name, etc. )
 * [ ] Improved tagging system
 * [ ] non implementable paper filtering
+* [ ] Migrate everything to designated papers2code emails, etc.
+
+1.4 Extremely difficult fix:
+* [ ] Learn how to have a dev server for testing purposes, fake githubs, etc. 
+
 
 2. Less Urgent needs
 
@@ -35,3 +42,4 @@
 3. Future Goals
 
 * [ ] Deal with the old code about isOwner, isAdmin, etc... probably flesh that out 
+* [ ] Company log ins?
