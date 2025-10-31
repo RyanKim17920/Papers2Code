@@ -46,35 +46,57 @@ export const logoutUser = async (): Promise<void> => {
     }
 };
 
-// --- NEW: Helper function to get CSRF token from cookie ---
+/**
+ * Get CSRF token from multiple sources (fallback chain for cross-domain compatibility)
+ * Priority:
+ * 1. localStorage (most reliable for cross-domain)
+ * 2. Cookie (for same-domain scenarios)
+ */
 export const getCsrfToken = (): string | null => {
-    // Read CSRF token from cookie instead of localStorage to match backend expectations
+    // First, try localStorage (most reliable for cross-domain)
+    const storedToken = localStorage.getItem('csrfToken');
+    if (storedToken) {
+        return storedToken;
+    }
+
+    // Fallback: Try reading from cookie (works for same-domain)
     const cookies = document.cookie.split(';');
     for (const cookie of cookies) {
         const [name, value] = cookie.trim().split('=');
         if (name === 'csrf_token_cookie') {
-            return decodeURIComponent(value);
+            const token = decodeURIComponent(value);
+            // Store in localStorage for future use
+            localStorage.setItem('csrfToken', token);
+            return token;
         }
     }
+    
     return null;
 };
 
-// Function to fetch CSRF token (it will be automatically set as a cookie by the backend)
+/**
+ * Fetch CSRF token from backend and store it locally.
+ * The backend sets it as a cookie AND returns it in the response body.
+ * We store it in localStorage for reliable cross-domain access.
+ */
 export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
     try {
         const response = await api.get<{ csrfToken: string }>(CSRF_API_ENDPOINT);
 
-        // The backend automatically sets the CSRF token as a cookie
-        // We just need to verify it was received correctly
         if (response.data && response.data.csrfToken) {
-            // The token should now be available in the cookie
-            return response.data.csrfToken;
+            const token = response.data.csrfToken;
+            
+            // Store in localStorage for reliable cross-domain access
+            localStorage.setItem('csrfToken', token);
+            
+            console.log('✅ CSRF token fetched and stored successfully');
+            return token;
         }
-        console.warn('CSRF token not found in response data from ' + CSRF_API_ENDPOINT + '. Actual response data:', response.data);
+        
+        console.warn('⚠️ CSRF token not found in response from', CSRF_API_ENDPOINT);
         return null;
     } catch (error: any) {
-        console.error('Error fetching CSRF token from ' + CSRF_API_ENDPOINT + ':', error);
-        // handleApiResponse will throw errors, so catch them here if specific error handling is needed
+        console.error('❌ Error fetching CSRF token:', error);
         return null;
     } 
 };

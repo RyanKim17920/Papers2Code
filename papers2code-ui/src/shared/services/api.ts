@@ -2,7 +2,7 @@
 import { Paper, AdminSettableImplementabilityStatus } from '../types/paper';
 import type { ImplementationProgress, ProgressUpdateRequest } from '../types/implementation';
 import type { PaperActionUserProfile, UserProfile } from '../types/user'; // Added UserProfile import
-import { getCsrfToken } from './auth';
+import { getCsrfToken, fetchAndStoreCsrfToken } from './auth';
 import { API_BASE_URL, PAPERS_API_PREFIX } from './config';
 import axios, { AxiosResponse } from 'axios';
 
@@ -557,9 +557,58 @@ export const api = axios.create({
 
 api.interceptors.request.use(async (config) => {
   const csrfToken = getCsrfToken();
-  if (csrfToken) {
-    config.headers['X-CSRFToken'] = csrfToken;
+  
+  // Always include CSRF token for state-changing requests
+  if (config.method && !['get', 'head', 'options'].includes(config.method.toLowerCase())) {
+    if (csrfToken) {
+      config.headers['X-CSRFToken'] = csrfToken;
+      console.debug(`🔒 CSRF token included in ${config.method?.toUpperCase()} ${config.url}`);
+    } else {
+      console.warn(
+        `⚠️ CSRF token missing for ${config.method?.toUpperCase()} ${config.url}. ` +
+        `This request may fail. Please refresh the page.`
+      );
+    }
   }
+  
   return config;
 });
+
+// Add response interceptor to handle CSRF errors
+api.interceptors.response.use(
+  (response) => response,
+  async (error) => {
+    const originalRequest = error.config;
+    
+    // If we get a 403 with CSRF error and haven't retried yet, try to refresh the token
+    if (
+      error.response?.status === 403 &&
+      error.response?.data?.detail?.includes('CSRF') &&
+      !originalRequest._retry
+    ) {
+      originalRequest._retry = true;
+      
+      console.log('CSRF token error detected, attempting to refresh token...');
+      
+      try {
+        // Fetch a fresh CSRF token
+        await fetchAndStoreCsrfToken();
+        
+        // Update the original request with the new token
+        const newToken = getCsrfToken();
+        if (newToken) {
+          originalRequest.headers['X-CSRFToken'] = newToken;
+          console.log('CSRF token refreshed, retrying request...');
+          return api(originalRequest);
+        }
+      } catch (refreshError) {
+        console.error('Failed to refresh CSRF token:', refreshError);
+      }
+    }
+    
+    return Promise.reject(error);
+  }
+);
+
+
 

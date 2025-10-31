@@ -35,19 +35,38 @@ google_oauth_service = GoogleOAuthService()
 
 @router.get("/csrf-token", response_model=CsrfToken)
 async def get_csrf_token(request: Request, response: Response):
+    """
+    Generate and return a CSRF token.
+    
+    The token is:
+    1. Set as a cookie (for double-submit validation)
+    2. Returned in response body (for frontend to store and send in headers)
+    
+    This dual approach ensures cross-domain compatibility while maintaining security.
+    """
     csrf_token_value = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
+    
+    # Always generate a fresh token if none exists
     if not csrf_token_value:
-        csrf_token_value = auth_service.generate_csrf_token() # generate_csrf_token should be a method in AuthService
-        is_production = config_settings.ENV_TYPE == "production"
-        response.set_cookie(
-            key=CSRF_TOKEN_COOKIE_NAME,
-            value=csrf_token_value,
-            httponly=False, 
-            samesite="none" if is_production else "lax",
-            secure=True if is_production else False,
-            path="/",
-            max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60 # Match access token lifetime or a reasonable session duration
-        )
+        csrf_token_value = auth_service.generate_csrf_token()
+        
+    is_production = config_settings.ENV_TYPE == "production"
+    
+    # Set cookie with proper cross-domain settings
+    response.set_cookie(
+        key=CSRF_TOKEN_COOKIE_NAME,
+        value=csrf_token_value,
+        httponly=False,  # Must be False so JavaScript can read it
+        samesite="none" if is_production else "lax",
+        secure=True if is_production else False,
+        path="/",
+        max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
+        domain=None  # Let browser handle domain automatically
+    )
+    
+    logger.info(f"CSRF token generated and set. Production mode: {is_production}")
+    
+    # Return token in response body for frontend to store
     return {"csrf_token": csrf_token_value}
 
 @router.get("/github/login")

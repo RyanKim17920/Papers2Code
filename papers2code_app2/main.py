@@ -106,69 +106,108 @@ class OriginValidationMiddleware(BaseHTTPMiddleware):
 
 # ADDED: CSRF Protection Middleware
 class CSRFProtectMiddleware(BaseHTTPMiddleware):
+    """
+    CSRF Protection using Double-Submit Cookie pattern.
+    
+    Security Model:
+    1. Token is set as a cookie by the backend
+    2. Frontend sends token in X-CSRFToken header  
+    3. Backend validates that cookie value matches header value
+    
+    This protects against CSRF attacks because:
+    - Attackers can't read cookies from other domains (Same-Origin Policy)
+    - Attackers can't set custom headers in simple requests
+    - The token must match in both places (double-submit)
+    
+    Combined with OriginValidationMiddleware, this provides robust CSRF protection.
+    """
+    
     async def dispatch(
         self, request: Request, call_next: RequestResponseEndpoint
     ) -> StarletteResponse:
         # Paths that do not require CSRF protection
         exempt_paths = [
+            "/",
+            "/health",
             "/api/auth/csrf-token",
             "/api/auth/github/login",
             "/api/auth/github/callback",
             "/api/auth/google/login",
             "/api/auth/google/callback",
             "/docs",
+            "/redoc",
             "/openapi.json",
         ]
         
-        # Exempt patterns (tracking endpoints, etc.)
+        # Exempt patterns for read-only or tracking endpoints
         exempt_patterns = [
-            "/api/activity/",
-            "/api/auth/",
+            "/api/activity/track",  # Activity tracking (analytics, read-only intent)
         ]
         
         # Check if path matches any exempt pattern
         path_exempt = any(request.url.path.startswith(pattern) for pattern in exempt_patterns)
         
-        # Allow all /static/ paths for serving static files without CSRF
+        # Allow GET, HEAD, OPTIONS (safe methods) and exempted paths
         if (
             request.url.path.startswith("/static/")
             or request.url.path in exempt_paths
             or path_exempt
             or request.method in ("GET", "HEAD", "OPTIONS")
         ):
-            # logger.debug(f"CSRF Middleware: Exempted path or method: {request.method} {request.url.path}")
             response = await call_next(request)
             return response
 
+        # For state-changing requests (POST, PUT, DELETE, PATCH), validate CSRF token
         csrf_token_cookie = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
         csrf_token_header = request.headers.get(CSRF_TOKEN_HEADER_NAME)
 
         logger.debug(
-            f"CSRF Middleware: Validating request: {request.method} {request.url.path}"
+            f"🔒 CSRF Validation: {request.method} {request.url.path}"
         )
         logger.debug(
-            f"CSRF Middleware: Cookie '{CSRF_TOKEN_COOKIE_NAME}': {csrf_token_cookie}"
+            f"   Cookie: {csrf_token_cookie[:10] + '...' if csrf_token_cookie else 'None'}"
         )
         logger.debug(
-            f"CSRF Middleware: Header '{CSRF_TOKEN_HEADER_NAME}': {csrf_token_header}"
+            f"   Header: {csrf_token_header[:10] + '...' if csrf_token_header else 'None'}"
         )
 
-        if (
-            not csrf_token_cookie
-            or not csrf_token_header
-            or csrf_token_cookie != csrf_token_header
-        ):
+        # Validate that both token sources exist and match
+        if not csrf_token_header:
             logger.warning(
-                f"CSRF token validation failed for {request.method} {request.url.path}. "
-                f"Cookie value: '{csrf_token_cookie}', Header value: '{csrf_token_header}'."
+                f"❌ CSRF validation failed: Missing header. "
+                f"Path: {request.method} {request.url.path}, "
+                f"Origin: {request.headers.get('origin', 'None')}"
             )
             raise HTTPException(
                 status_code=status.HTTP_403_FORBIDDEN,
-                detail="CSRF token mismatch or missing.",
+                detail="CSRF token missing in request header. Please refresh the page and try again.",
+            )
+            
+        if not csrf_token_cookie:
+            logger.warning(
+                f"❌ CSRF validation failed: Missing cookie. "
+                f"Path: {request.method} {request.url.path}, "
+                f"Origin: {request.headers.get('origin', 'None')}"
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="CSRF token missing in cookies. Please refresh the page and try again.",
+            )
+            
+        if csrf_token_cookie != csrf_token_header:
+            logger.warning(
+                f"❌ CSRF validation failed: Token mismatch. "
+                f"Path: {request.method} {request.url.path}, "
+                f"Cookie: {csrf_token_cookie[:10]}..., "
+                f"Header: {csrf_token_header[:10]}..."
+            )
+            raise HTTPException(
+                status_code=status.HTTP_403_FORBIDDEN,
+                detail="CSRF token mismatch. Please refresh the page and try again.",
             )
 
-        logger.info(
-            f"CSRF token validation successful for {request.method} {request.url.path}"
+        logger.debug(
+            f"✅ CSRF validation successful: {request.method} {request.url.path}"
         )
         response = await call_next(request)
         return response
