@@ -3,67 +3,35 @@
 
 # TODO: check boxes that are done
 
-1. Basic UI FIXES:
-* [X] Add border to search bar on top 
-* [X] Add animation when hiding filters in papers --> extend the cards to fill the full width 
-* [X] Add some more spacing on top of the cards along with the Search Papers (include a Filter title there too, slightly differing color scheme around filter) 
-* [X] Cards should always have the text aligned/same height (papers that have two lines of authors are have the tags, date, etc. lower than other cards which makes spacing uneven)
-* [X] Spacing issues are common for a lot of things such as within the papers, spacing above implementability, information above the info, community implementation progress spacing, etc.
-* [X] Make up to 3 cards in a row when filter is gone (already implemented - grid shows 1/2/2/3 columns on mobile/sm/lg/xl screens)
-* [X] Make updates page collapsable or just smaller (added collapsible functionality to SiteUpdates component)
-    * [X] Needs to be collapsable like actually collapsable (updates sidebar fully hides and feed expands to multi-column)
-    * [ ] Make updates pages a real thing in the backend, very basic information (do not implement right now, however edit the TODO to include ideas on how to incorporate an easy blog-like system to append new information on from the admin side)
-        * **Blog System Ideas for Admin Updates:**
-          - Create `/api/admin/updates` endpoint for creating/editing/deleting updates
-          - Add rich text editor for update content (markdown support)
-          - Include categories/tags for updates (e.g., "Feature", "Bug Fix", "Announcement")
-          - Timestamp and author tracking for each update
-          - Simple approval workflow for updates before publishing
-          - Admin dashboard section for managing updates
-          - Support for media attachments (images, links)
-          - SEO-friendly slugs for individual update pages
-          - RSS feed for updates
-          - Email notification system for major updates (Future)
-* [X] Increase information density of paper pages further
-* [X] Still needs fixing on space above title in the paper Detail and the Progress
-* [X] If authors is long enough, make it have a ... that can be expanded and re hidden. 
-* [X] Increase information density of the paper page further
-* [ ] Clicking on the user profiles in the upvotes should go to their profile
-* [X] Improve the 404 Page not found to be styled exquisitely
-* [X] 404 Page should occur for any error including 500 errors, etc. (perhaps it should be a seperate title for each so it matches the error and the other information found such as: Error loading paper: Request failed with status code 500 )
-* [X] Remove all links to papersWithCode to it
-* [X] Make all the hearts into likes, all saved into upvotes, and unify this text throughout everything
-* [X] Have links to website, twitter, linkedin, bluesky, huggingface if they exist in the user profile
-  * [ ] Github, huggingface, bluesky not working --> fix bluesky icon
-* [X] Timeline visualization
-* [X] Remove settings, old settings page from the profile dropbar, also delete the unnecessary tsx files
-* [X] If person is active right now it should be Last seen now not -1 days ago in profile
-* [ ] DOes display name actually work?? Also, add github link to the profile page
-* [X] Imrpove the css of buttons like when the login prompt or any prompt show up (ugly)
-* [X] Swap the recent with the my papers, the my papers should be the first in the feed, delete the for you as well
-* [X] top search is broken in papers
-2. BASIC BACKEND FIXES:
-* [X] logging out (sign out) goes directly to the papers if logged out from dashboard (in either case), otherwise just go to the page
-* [X] Make the "joined" date in the user profile accurate
-* [X] Make the "last seen" date in the user profile accurate
-* [ ?? ] Modify paper views to override any old views by the same userID to the same paper in order to not just spam data (no repeated paperId and userID essentially s) --> It seems that the paper views don't even have the user Id saved to it... neeeds to be fixed.
-* [X] Thumbs up/loving papers in dashboard does not change backend, connect it properly
-* [X] Saved/Thumbs/Loved doesn't display any papers in dashboard (works in profile though, UNIFY if it's upvoted or saved, let's stick with upvoted first) but it does work in user profile
-* [ ] In user profile, upvoted papers should already be highlighted for the thumbs up instead of being not fille
-3. FUTURE CHANGES (mixed) [DO NOT IMPLEMENT RIGHT NOW]:
- * [X] Search works for all cases
- * [ ] Improve tagging and tags
- * [X] Improve search in general 
- * [X] more papers in the dashboard for implementation 
- * [X] for both profile's Updated/Contrbuting and the dashboard cards should be identical, and have ability to go directly to paper link, or github link, along with showing the abstract rather than repeating the title twice
-* [ ] Date of publishing for papers in dashbaord not time ago 
-* [X] Condense all the various careds into some similar method instead of having so many different ones of the same hting
-* [ ] If user has too many contributed to or upvoted have a pagination but vertical on the right side in the white space of the area.
-* [X] integrate settings into profile as a tab or something, at least improve that UI significantly
-* [X] implementaiton tracking becomes a timeline not just random information texted 
-* [ ] works for MOBILE (especially dashboard right now is broken)
-* [x] everything to tailwind (100% COMPLETE! 🎉 - All 26 CSS files converted to Tailwind CSS)
-* [X] Inconsistent taggint form paperList and other papers??
-* [ ] DARK MODE
+1. Urgent needs
 
-* [ ] Deal with the old isOwner isAdmine stuff...
+1.1 Easier Fixes 
+* [ ] non implementability needs to be removed if implementation starts
+* [ ] Secondary confirmation modal if trying to say no code posted if less than 4 weeks (from ghost or they said no)
+
+
+1.2 More difficult Fixes 
+* [ ] Fix peer reviewing so that other users can finalize code
+* [ ] Finish updates page
+* [ ] Mobile compatability
+
+1.3 Very difficult fixes:
+
+* [ ] Combining Gmail and Github Accounts effectively (look over display name, etc. )
+* [ ] Improved tagging system
+* [ ] non implementable paper filtering
+
+2. Less Urgent needs
+
+2.1 Easier Fixes
+* [ ] CLicking user profiles should go there (from lists)
+* [ ] Somehow paper views works without tracking user ids... probably see how that works and fix it to use it
+* [ ] In user profile, upvoted papers should already be highlighted for the thumbs up instead of being not filled
+* [ ] If user has too many contributed to or upvoted have a pagination but vertical on the right side in the white space of the area.
+
+2.2 Medium Difficulty
+* [ ] Multiple data sources besides arXiv (like NeurIPS, ICML, etc.)
+
+3. Future Goals
+
+* [ ] Deal with the old code about isOwner, isAdmin, etc... probably flesh that out 
