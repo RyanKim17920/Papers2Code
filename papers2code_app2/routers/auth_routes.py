@@ -77,7 +77,8 @@ async def get_csrf_token(request: Request, response: Response):
     )
     
     # Return token in response body so frontend can send it in X-CSRFToken header
-    return {"csrf_token": csrf_token_value}
+    # Using CsrfToken model ensures proper camelCase conversion via alias_generator
+    return CsrfToken(csrf_token=csrf_token_value)
 
 @router.get("/github/login")
 async def github_login(request: Request): # Removed unused response: Response
