@@ -31,7 +31,11 @@ logger = logging.getLogger(__name__)
 
 class AuthService:
     def generate_csrf_token(self) -> str:
-        return secrets.token_hex(16)
+        """
+        Generate a cryptographically secure CSRF token.
+        Uses 32 bytes (256 bits) for enhanced security.
+        """
+        return secrets.token_hex(32)
 
     def get_user_details(self, current_user: UserSchema) -> UserMinimal:
         if not current_user:

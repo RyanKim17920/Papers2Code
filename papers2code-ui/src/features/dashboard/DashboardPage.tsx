@@ -110,7 +110,7 @@ const Dashboard: React.FC = () => {
     try {
       await logoutUser();
       setCurrentUser(null);
-      localStorage.removeItem('csrfToken');
+      // Note: CSRF token is stored in-memory and will be cleared on reload
       // Redirect to landing page after logout
       navigate('/');
       window.location.reload();

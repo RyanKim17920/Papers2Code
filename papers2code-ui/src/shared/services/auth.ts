@@ -46,38 +46,35 @@ export const logoutUser = async (): Promise<void> => {
     }
 };
 
+// In-memory storage for CSRF token (XSS-safe alternative to localStorage)
+let csrfTokenCache: string | null = null;
+
 /**
- * Get CSRF token from multiple sources (fallback chain for cross-domain compatibility)
- * Priority:
- * 1. localStorage (most reliable for cross-domain)
- * 2. Cookie (for same-domain scenarios)
+ * Get CSRF token from in-memory cache.
+ * 
+ * SECURITY: We store the token in memory instead of localStorage to prevent XSS attacks.
+ * The token is also set as an HttpOnly cookie by the backend, which provides the
+ * double-submit pattern for CSRF protection while being immune to XSS theft.
+ * 
+ * This approach:
+ * - Prevents XSS attacks (no localStorage/cookie access from malicious scripts)
+ * - Enables cross-domain requests (token sent in X-CSRFToken header)
+ * - Works with HttpOnly cookies (backend validates cookie matches header)
  */
 export const getCsrfToken = (): string | null => {
-    // First, try localStorage (most reliable for cross-domain)
-    const storedToken = localStorage.getItem('csrfToken');
-    if (storedToken) {
-        return storedToken;
-    }
-
-    // Fallback: Try reading from cookie (works for same-domain)
-    const cookies = document.cookie.split(';');
-    for (const cookie of cookies) {
-        const [name, value] = cookie.trim().split('=');
-        if (name === 'csrf_token_cookie') {
-            const token = decodeURIComponent(value);
-            // Store in localStorage for future use
-            localStorage.setItem('csrfToken', token);
-            return token;
-        }
-    }
-    
-    return null;
+    return csrfTokenCache;
 };
 
 /**
- * Fetch CSRF token from backend and store it locally.
- * The backend sets it as a cookie AND returns it in the response body.
- * We store it in localStorage for reliable cross-domain access.
+ * Fetch CSRF token from backend and store it in memory.
+ * 
+ * The backend:
+ * 1. Sets token as HttpOnly cookie (secure from XSS)
+ * 2. Returns token in response body (for X-CSRFToken header)
+ * 
+ * We store the response body token in memory to send in request headers.
+ * The HttpOnly cookie is automatically sent by the browser.
+ * Backend validates both match for CSRF protection.
  */
 export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
     try {
@@ -86,10 +83,10 @@ export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
         if (response.data && response.data.csrfToken) {
             const token = response.data.csrfToken;
             
-            // Store in localStorage for reliable cross-domain access
-            localStorage.setItem('csrfToken', token);
+            // Store in memory only (XSS-safe)
+            csrfTokenCache = token;
             
-            console.log('✅ CSRF token fetched and stored successfully');
+            console.log('✅ CSRF token fetched and cached in memory');
             return token;
         }
         

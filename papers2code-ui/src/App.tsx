@@ -182,7 +182,7 @@ function App() {
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
-    localStorage.removeItem('csrfToken');
+    // Note: CSRF token is stored in-memory and will be cleared on reload
     // Reload page to reflect logout state across UI
     window.location.reload();
   };

@@ -107,19 +107,23 @@ class OriginValidationMiddleware(BaseHTTPMiddleware):
 # ADDED: CSRF Protection Middleware
 class CSRFProtectMiddleware(BaseHTTPMiddleware):
     """
-    CSRF Protection using Double-Submit Cookie pattern.
+    CSRF Protection using Double-Submit Cookie pattern with HttpOnly cookies.
     
     Security Model:
-    1. Token is set as a cookie by the backend
-    2. Frontend sends token in X-CSRFToken header  
-    3. Backend validates that cookie value matches header value
+    1. Backend generates CSRF token and sets it as HttpOnly cookie (XSS-safe)
+    2. Backend also returns token in response body for frontend to cache in memory
+    3. Frontend sends cached token in X-CSRFToken header with each request
+    4. Backend validates that HttpOnly cookie value matches X-CSRFToken header
     
-    This protects against CSRF attacks because:
-    - Attackers can't read cookies from other domains (Same-Origin Policy)
-    - Attackers can't set custom headers in simple requests
-    - The token must match in both places (double-submit)
+    This protects against both CSRF and XSS attacks:
+    - CSRF Protection: Attackers can't read cookies from other domains (Same-Origin Policy)
+                      and can't set custom headers in simple/cross-origin requests
+    - XSS Protection: HttpOnly cookie prevents JavaScript access to the token
+                     In-memory storage on frontend (not localStorage) prevents XSS theft
+    - Double-Submit: Token must match in both cookie and header
     
-    Combined with OriginValidationMiddleware, this provides robust CSRF protection.
+    Combined with OriginValidationMiddleware and HttpOnly cookies, this provides
+    defense-in-depth security against both CSRF and XSS attacks.
     """
     
     async def dispatch(

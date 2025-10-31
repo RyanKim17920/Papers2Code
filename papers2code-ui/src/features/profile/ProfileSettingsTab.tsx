@@ -186,7 +186,7 @@ export const ProfileSettingsTab: React.FC<ProfileSettingsTabProps> = ({ currentU
 
   const handleLogout = async () => {
     await logoutUser();
-    localStorage.removeItem('csrfToken');
+    // Note: CSRF token is stored in-memory and will be cleared on reload
     navigate('/');
     window.location.reload();
   };

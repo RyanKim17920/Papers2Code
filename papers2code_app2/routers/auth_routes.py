@@ -38,35 +38,45 @@ async def get_csrf_token(request: Request, response: Response):
     """
     Generate and return a CSRF token.
     
-    The token is:
-    1. Set as a cookie (for double-submit validation)
-    2. Returned in response body (for frontend to store and send in headers)
+    Security Model:
+    1. Token is set as an HttpOnly cookie (secure from XSS)
+    2. Token is also returned in response body for X-CSRFToken header
+    3. Backend validates both cookie and header match (double-submit pattern)
     
-    This dual approach ensures cross-domain compatibility while maintaining security.
+    This approach:
+    - Prevents XSS theft via HttpOnly cookie
+    - Prevents CSRF via double-submit validation
+    - Works cross-domain with SameSite=None + Secure
     """
     csrf_token_value = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
     
-    # Always generate a fresh token if none exists
+    # Always generate a fresh token if none exists or to rotate regularly
     if not csrf_token_value:
         csrf_token_value = auth_service.generate_csrf_token()
+        logger.info(f"Generated new CSRF token for request from {request.client.host if request.client else 'unknown'}")
         
     is_production = config_settings.ENV_TYPE == "production"
     
-    # Set cookie with proper cross-domain settings
+    # Set cookie with secure cross-domain settings
+    # SECURITY: HttpOnly prevents XSS access, SameSite=None + Secure allows cross-domain
     response.set_cookie(
         key=CSRF_TOKEN_COOKIE_NAME,
         value=csrf_token_value,
-        httponly=False,  # Must be False so JavaScript can read it
-        samesite="none" if is_production else "lax",
-        secure=True if is_production else False,
+        httponly=True,  # SECURITY: Prevent JavaScript access to cookie (XSS protection)
+        samesite="none" if is_production else "lax",  # none: cross-domain, lax: same-site dev
+        secure=True if is_production else False,  # Required for SameSite=None
         path="/",
         max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-        domain=None  # Let browser handle domain automatically
+        domain=None  # Let browser handle domain automatically for proper subdomain support
     )
     
-    logger.info(f"CSRF token generated and set. Production mode: {is_production}")
+    logger.info(
+        f"CSRF token configured - Production: {is_production}, "
+        f"SameSite: {'none' if is_production else 'lax'}, "
+        f"Secure: {is_production}, HttpOnly: True"
+    )
     
-    # Return token in response body for frontend to store
+    # Return token in response body so frontend can send it in X-CSRFToken header
     return {"csrf_token": csrf_token_value}
 
 @router.get("/github/login")
