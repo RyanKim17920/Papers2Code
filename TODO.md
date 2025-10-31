@@ -8,7 +8,7 @@
 1.1 Easier Fixes 
 * [ ] non implementability needs to be removed if implementation starts
 * [ ] Secondary confirmation modal if trying to say no code posted if less than 4 weeks (from ghost or they said no)
-
+* [ ] Immediate redirect to landing page if on dashboard without logged in
 
 1.2 More difficult Fixes 
 * [ ] Fix peer reviewing so that other users can finalize code
