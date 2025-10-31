@@ -39,7 +39,13 @@ export const checkCurrentUser = async (): Promise<UserProfile | null> => {
 export const logoutUser = async (): Promise<void> => {
     try {
         // CSRF token is now handled by the Axios interceptor in api.ts
-        await api.post<{ message: string, csrfToken: string }>(`${AUTH_API_PREFIX}/logout`);
+        const response = await api.post<{ message: string, csrfToken: string }>(`${AUTH_API_PREFIX}/logout`);
+        
+        // Backend returns a new CSRF token after logout - store it in memory
+        if (response.data && response.data.csrfToken) {
+            csrfTokenCache = response.data.csrfToken;
+            console.log('✅ New CSRF token received after logout');
+        }
     } catch (error) {
         console.error("Logout failed:", error);
         throw error; // Re-throw the error
@@ -75,8 +81,12 @@ export const getCsrfToken = (): string | null => {
  * We store the response body token in memory to send in request headers.
  * The HttpOnly cookie is automatically sent by the browser.
  * Backend validates both match for CSRF protection.
+ * 
+ * This function will retry up to 3 times if it fails to ensure reliability.
  */
-export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
+export const fetchAndStoreCsrfToken = async (retryCount = 0): Promise<string | null> => {
+    const MAX_RETRIES = 3;
+    
     try {
         const response = await api.get<{ csrfToken: string }>(CSRF_API_ENDPOINT);
 
@@ -91,9 +101,25 @@ export const fetchAndStoreCsrfToken = async (): Promise<string | null> => {
         }
         
         console.warn('⚠️ CSRF token not found in response from', CSRF_API_ENDPOINT);
+        
+        // Retry if token not in response and we haven't exceeded retries
+        if (retryCount < MAX_RETRIES) {
+            console.log(`Retrying CSRF token fetch (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+            await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1))); // Exponential backoff
+            return fetchAndStoreCsrfToken(retryCount + 1);
+        }
+        
         return null;
     } catch (error: any) {
         console.error('❌ Error fetching CSRF token:', error);
+        
+        // Retry on network errors
+        if (retryCount < MAX_RETRIES) {
+            console.log(`Retrying CSRF token fetch after error (attempt ${retryCount + 1}/${MAX_RETRIES})...`);
+            await new Promise(resolve => setTimeout(resolve, 500 * (retryCount + 1))); // Exponential backoff
+            return fetchAndStoreCsrfToken(retryCount + 1);
+        }
+        
         return null;
     } 
 };

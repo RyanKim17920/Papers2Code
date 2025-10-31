@@ -201,7 +201,7 @@ async def refresh_access_token_route(request: Request, response: Response): # re
         response.set_cookie(
             key=CSRF_TOKEN_COOKIE_NAME,
             value=csrf_token_value,
-            httponly=False,
+            httponly=True,  # SECURITY: Prevent JavaScript access to cookie (XSS protection)
             samesite="none" if is_production else "lax",
             secure=True if is_production else False,
             path="/",
@@ -400,7 +400,7 @@ async def logout_user_route(request: Request, response: Response): # response ne
         response.set_cookie(
             key=CSRF_TOKEN_COOKIE_NAME,
             value=new_csrf_token_value,
-            httponly=False, 
+            httponly=True,  # SECURITY: Prevent JavaScript access to cookie (XSS protection)
             samesite="none" if is_production else "lax",
             secure=True if is_production else False,
             path="/", # Ensure path is consistent with where it's used/expected
