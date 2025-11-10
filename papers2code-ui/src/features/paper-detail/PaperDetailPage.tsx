@@ -157,6 +157,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             const structuredData = generatePaperStructuredData(paper);
             injectStructuredData(structuredData);
         }
+        
+        // Cleanup function to remove the structured data when component unmounts
+        return () => {
+            const dynamicScript = document.querySelector('script[type="application/ld+json"][data-dynamic="true"]');
+            if (dynamicScript) {
+                dynamicScript.remove();
+            }
+        };
     }, [paper]);
 
     // Prepare SEO data
