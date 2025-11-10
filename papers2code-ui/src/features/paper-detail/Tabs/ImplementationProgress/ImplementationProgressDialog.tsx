@@ -110,6 +110,45 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
     return `https://github.com/${repoId}`;
   };
 
+  // Helper function to check if 4 weeks have passed since email was sent
+  const hasReachedNoResponseTime = (): boolean => {
+    const hasEmailBeenSent = progress.updates.some(u => u.eventType === 'Email Sent');
+    
+    if (!hasEmailBeenSent || !progress.latestUpdate) return false;
+    
+    const sentDate = new Date(progress.latestUpdate);
+    const now = new Date();
+    const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
+    
+    return (now.getTime() - sentDate.getTime()) >= fourWeeksInMs;
+  };
+
+  // Helper function to get time remaining until no response period
+  const getTimeUntilNoResponse = (): string | null => {
+    const hasEmailBeenSent = progress.updates.some(u => u.eventType === 'Email Sent');
+    
+    if (!hasEmailBeenSent || !progress.latestUpdate || hasReachedNoResponseTime()) return null;
+    
+    const sentDate = new Date(progress.latestUpdate);
+    const now = new Date();
+    const fourWeeksInMs = 28 * 24 * 60 * 60 * 1000;
+    const timePassedMs = now.getTime() - sentDate.getTime();
+    const timeRemainingMs = fourWeeksInMs - timePassedMs;
+    
+    if (timeRemainingMs < 0) return null;
+    
+    const days = Math.floor(timeRemainingMs / (24 * 60 * 60 * 1000));
+    const hours = Math.floor((timeRemainingMs % (24 * 60 * 60 * 1000)) / (60 * 60 * 1000));
+    
+    if (days > 0) {
+      return `${days} day${days !== 1 ? 's' : ''} ${hours}h`;
+    } else if (hours > 0) {
+      return `${hours} hour${hours !== 1 ? 's' : ''}`;
+    }
+    
+    return 'Less than 1 hour';
+  };
+
   const handleStatusUpdate = async (newStatus: ProgressStatus) => {
     if (newStatus === ProgressStatus.RESPONSE_RECEIVED) {
       setShowResponseModal(true);
@@ -119,6 +158,25 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
   };
 
   const confirmStatusUpdate = async (status: ProgressStatus) => {
+    // Validate time for REFUSED_TO_UPLOAD - can be done anytime if authors explicitly refused
+    // Validate time for NO_RESPONSE - only after 4 weeks have passed
+    if (status === ProgressStatus.NO_RESPONSE) {
+      const hasEmailBeenSent = progress.updates.some(u => u.eventType === 'Email Sent');
+      
+      if (hasEmailBeenSent && progress.latestUpdate) {
+        const sentDate = new Date(progress.latestUpdate);
+        const now = new Date();
+        const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
+        const timePassedMs = now.getTime() - sentDate.getTime();
+        
+        if (timePassedMs < fourWeeksInMs) {
+          const daysRemaining = Math.ceil((fourWeeksInMs - timePassedMs) / (24 * 60 * 60 * 1000));
+          setError(`Cannot mark as "No Response" yet. Please wait ${daysRemaining} more day${daysRemaining !== 1 ? 's' : ''}. Authors have 4 weeks to respond. If they explicitly refused, use "Refused to Upload" instead.`);
+          return;
+        }
+      }
+    }
+    
     try {
       setIsUpdating(true);
       const updateData: any = { status };
@@ -658,16 +716,36 @@ export const ImplementationProgressDialog: React.FC<ImplementationProgressDialog
             </button>
 
             <button
-              className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-orange-500 hover:bg-orange-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => confirmStatusUpdate(ProgressStatus.REFUSED_TO_UPLOAD)}
               disabled={isUpdating}
               type="button"
             >
               <div className="flex items-start gap-3">
-                <Mail className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <Mail className="w-5 h-5 text-orange-600 flex-shrink-0 mt-0.5" />
                 <div>
-                  <div className="font-semibold text-foreground">Refused to Upload / No Response</div>
-                  <div className="text-xs text-muted-foreground">Authors declined to share or did not respond</div>
+                  <div className="font-semibold text-foreground">Refused to Upload</div>
+                  <div className="text-xs text-muted-foreground">Authors explicitly declined to share their code</div>
+                </div>
+              </div>
+            </button>
+
+            <button
+              className="w-full text-left p-4 rounded-lg border-2 border-border hover:border-red-500 hover:bg-red-500/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
+              onClick={() => confirmStatusUpdate(ProgressStatus.NO_RESPONSE)}
+              disabled={isUpdating || !hasReachedNoResponseTime()}
+              type="button"
+            >
+              <div className="flex items-start gap-3">
+                <Mail className="w-5 h-5 text-red-600 flex-shrink-0 mt-0.5" />
+                <div className="flex-1">
+                  <div className="font-semibold text-foreground">No Response</div>
+                  <div className="text-xs text-muted-foreground">Authors did not respond after 4 weeks</div>
+                  {!hasReachedNoResponseTime() && getTimeUntilNoResponse() && (
+                    <div className="mt-2 px-2 py-1 bg-yellow-100 text-yellow-800 text-xs rounded inline-block">
+                      ⏱️ Available in: {getTimeUntilNoResponse()}
+                    </div>
+                  )}
                 </div>
               </div>
             </button>
