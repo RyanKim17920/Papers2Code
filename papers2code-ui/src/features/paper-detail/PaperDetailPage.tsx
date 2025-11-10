@@ -9,6 +9,7 @@ import type { UserProfile } from '@/shared/types/user';
 import type { ImplementationProgress } from '@/shared/types/implementation';
 
 import { LoadingSpinner } from '@/shared/components';
+import { SEO, generatePaperStructuredData, injectStructuredData } from '@/shared/components/SEO';
 import ConfirmationModal from '@/shared/components/ConfirmationModal';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -149,8 +150,45 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         (contributorId) => contributorId === currentUser?.id
     );
 
+    // Generate SEO metadata and structured data
+    useEffect(() => {
+        if (paper) {
+            // Generate and inject structured data for the paper
+            const structuredData = generatePaperStructuredData(paper);
+            injectStructuredData(structuredData);
+        }
+    }, [paper]);
+
+    // Prepare SEO data
+    const paperAuthors = paper.authors?.filter(Boolean).join(', ') || 'Unknown authors';
+    const truncatedAbstract = paper.abstract 
+        ? paper.abstract.length > 160 
+            ? paper.abstract.substring(0, 157) + '...'
+            : paper.abstract
+        : `Research paper on ${paper.title}`;
+    
+    const paperKeywords = [
+        ...(paper.tasks || []),
+        'machine learning',
+        'AI research',
+        'research paper',
+        'code implementation',
+        ...(paper.authors?.slice(0, 3) || [])
+    ].join(', ');
+
     return (
         <div className="min-h-screen bg-background">
+            {/* Dynamic SEO for this paper */}
+            <SEO
+                title={paper.title || 'Research Paper'}
+                description={truncatedAbstract}
+                keywords={paperKeywords}
+                url={`https://papers2code.com/paper/${paper.id}`}
+                type="article"
+                author={paperAuthors}
+                publishedTime={paper.publicationDate}
+            />
+            
             {/* Compact Header - Reduced z-index to allow tooltips to appear above */}
             <div className="bg-card/40 backdrop-blur border-b border-border/60 sticky top-0 z-30">
                 <div className="max-w-7xl mx-auto px-6 py-2">

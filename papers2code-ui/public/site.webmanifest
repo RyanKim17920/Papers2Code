@@ -1,0 +1,41 @@
+{
+  "name": "Papers2Code",
+  "short_name": "Papers2Code",
+  "description": "Transform AI Research Papers into Production Code",
+  "start_url": "/",
+  "display": "standalone",
+  "background_color": "#ffffff",
+  "theme_color": "#3b82f6",
+  "orientation": "portrait-primary",
+  "icons": [
+    {
+      "src": "/web-icon.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "/web-icon.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ],
+  "categories": ["education", "developer tools", "productivity"],
+  "shortcuts": [
+    {
+      "name": "Browse Papers",
+      "short_name": "Papers",
+      "description": "Browse research papers",
+      "url": "/papers",
+      "icons": [{ "src": "/web-icon.png", "sizes": "96x96" }]
+    },
+    {
+      "name": "Dashboard",
+      "short_name": "Dashboard",
+      "description": "View your dashboard",
+      "url": "/dashboard",
+      "icons": [{ "src": "/web-icon.png", "sizes": "96x96" }]
+    }
+  ]
+}

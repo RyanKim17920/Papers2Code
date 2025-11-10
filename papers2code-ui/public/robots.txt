@@ -1,0 +1,31 @@
+# robots.txt for Papers2Code
+# Allow all crawlers to access all content
+
+User-agent: *
+Allow: /
+
+# Disallow authentication endpoints (if any private routes exist)
+Disallow: /api/auth/
+Disallow: /login/callback
+
+# Sitemap location
+Sitemap: https://papers2code.com/sitemap.xml
+
+# Crawl-delay for respectful crawling (optional)
+Crawl-delay: 1
+
+# Specific rules for major search engines
+User-agent: Googlebot
+Allow: /
+
+User-agent: Bingbot
+Allow: /
+
+User-agent: Slurp
+Allow: /
+
+# Block AI training bots if desired (optional - uncomment if needed)
+# User-agent: GPTBot
+# Disallow: /
+# User-agent: ChatGPT-User
+# Disallow: /

@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight, Tags, Briefcase } from 'lucide-react';
 import { usePaperList, SortPreference } from '@/shared/hooks/usePaperList';
 import { LoadingSpinner } from '@/shared/components';
+import { SEO } from '@/shared/components/SEO';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -105,8 +106,32 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
     handleSearchChange('');
   };
 
+  // Build dynamic SEO title and description based on filters
+  const buildSEOTitle = () => {
+    if (searchTerm) {
+      return `"${searchTerm}" Research Papers`;
+    }
+    
+    return 'Browse AI & ML Research Papers';
+  };
+
+  const buildSEODescription = () => {
+    if (searchTerm) {
+      return `Discover ${totalCount} AI and machine learning research papers related to "${searchTerm}". Find implementations, collaborate with researchers, and transform papers into production code.`;
+    }
+    
+    return `Browse ${totalCount} cutting-edge AI and machine learning research papers. Find implementations, track progress, and collaborate with the community to bring research to production.`;
+  };
+
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title={buildSEOTitle()}
+        description={buildSEODescription()}
+        keywords="AI research papers, machine learning papers, arXiv papers, research implementation, ML code, deep learning, computer vision, NLP, research collaboration"
+        url={`https://papers2code.com/papers${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`}
+      />
+      
       {/* Header when sidebar is closed */}
       {!showSidebar && (
   <div className="border-b border-border bg-card">

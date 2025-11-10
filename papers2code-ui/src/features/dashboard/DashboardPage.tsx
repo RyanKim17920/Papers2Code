@@ -38,15 +38,20 @@ const Dashboard: React.FC = () => {
           fetchDashboardDataFromApi(),
           checkCurrentUser(),
         ]);
+        
+        // If no user is authenticated, redirect immediately to landing page
+        if (!user) {
+          navigate('/');
+          return;
+        }
+        
         setData(dashboardData);
         setCurrentUser(user);
         setError(null);
       } catch (err) {
         if (err instanceof AuthenticationError) {
-          setError('Please log in to view your dashboard.');
-          setTimeout(() => {
-            navigate('/papers');
-          }, 2000);
+          // Redirect to landing page instead of showing error
+          navigate('/');
         } else {
           setError('Failed to load dashboard data. Please try refreshing the page.');
         }

@@ -6,9 +6,10 @@
 1. Urgent needs
 
 1.1 Easier Fixes 
-* [ ] non implementability needs to be removed if implementation starts
-* [ ] Secondary confirmation modal if trying to say no code posted if less than 4 weeks (from ghost or they said no)
-* [ ] Immediate redirect to landing page if on dashboard without logged in
+* [x] non implementability needs to be removed if implementation starts
+* [x] Secondary confirmation modal if trying to say no code posted if less than 4 weeks (from ghost or they said no)
+* [x] Immediate redirect to landing page if on dashboard without logged in
+* [x] Small SEO improvements like the metadata image when searching, etc.
 
 1.2 More difficult Fixes 
 * [ ] Fix peer reviewing so that other users can finalize code
@@ -20,11 +21,9 @@
 1.3 Very difficult fixes:
 
 * [ ] Combining Gmail and Github Accounts effectively (look over display name, etc. )
-* [ ] Improved tagging system
-* [ ] non implementable paper filtering
 * [ ] Migrate everything to designated papers2code emails, etc.
 
-1.4 Extremely difficult fix:
+1.4 Annoying and Time-consuming Fix:
 * [ ] Learn how to have a dev server for testing purposes, fake githubs, etc. 
 
 
@@ -39,7 +38,14 @@
 2.2 Medium Difficulty
 * [ ] Multiple data sources besides arXiv (like NeurIPS, ICML, etc.)
 
+2.3 Difficult Fixes:
+* [ ] Improved tagging system
+* [ ] non implementable paper filtering
+
 3. Future Goals
 
 * [ ] Deal with the old code about isOwner, isAdmin, etc... probably flesh that out 
 * [ ] Company log ins?
+
+3.1 Extremely very difficult fix:
+* [ ] automatic filtering to difficulty of implementing paper --> easier papers tailored more for beginners for example
