@@ -70,6 +70,26 @@ export const EmailStatusManager: React.FC<EmailStatusManagerProps> = ({
     
     console.log('pendingStatus', pendingStatus);
     
+    // Validate time only for NO_RESPONSE - REFUSED_TO_UPLOAD can be done anytime
+    if (pendingStatus === ProgressStatus.NO_RESPONSE) {
+      const hasEmailBeenSent = progress.updates.some(u => u.eventType === 'Email Sent');
+      
+      if (hasEmailBeenSent && progress.latestUpdate) {
+        const sentDate = new Date(progress.latestUpdate);
+        const now = new Date();
+        const fourWeeksInMs = 4 * 7 * 24 * 60 * 60 * 1000;
+        const timePassedMs = now.getTime() - sentDate.getTime();
+        
+        if (timePassedMs < fourWeeksInMs) {
+          const daysRemaining = Math.ceil((fourWeeksInMs - timePassedMs) / (24 * 60 * 60 * 1000));
+          onError(`Cannot mark as "No Response" yet. Please wait ${daysRemaining} more day${daysRemaining !== 1 ? 's' : ''}. Authors have 4 weeks to respond. If they explicitly refused, use "Refused to Upload" instead.`);
+          setShowConfirmModal(false);
+          setPendingStatus(null);
+          return;
+        }
+      }
+    }
+    
     try {
       onUpdatingChange(true);
       const updateRequest: ProgressUpdateRequest = {
