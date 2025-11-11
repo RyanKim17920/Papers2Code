@@ -3,6 +3,7 @@
 // 1. Import QueryClient and QueryClientProvider
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { SpeedInsights } from '@vercel/speed-insights/react';
+import { Analytics } from '@vercel/analytics/react';
 import { useState, useEffect, useRef } from 'react';
 import { Routes, Route, useLocation, useNavigate } from 'react-router-dom';
 import React, { Suspense, lazy } from 'react';
@@ -127,6 +128,9 @@ function App() {
       // Refresh user data
       const user = await checkCurrentUser();
       setCurrentUser(user);
+      if (user) {
+        localStorage.setItem('has_session', 'true');
+      }
     } catch (error) {
       console.error('Error linking accounts:', error);
       toast({
@@ -155,10 +159,17 @@ function App() {
       await fetchAndStoreCsrfToken();
       try {
         const user = await checkCurrentUser();
-        setCurrentUser(user);
+        if (user) {
+          setCurrentUser(user);
+          localStorage.setItem('has_session', 'true');
+        } else {
+          setCurrentUser(null);
+          localStorage.removeItem('has_session');
+        }
       } catch (error) {
         if (error instanceof AuthenticationError) {
           setCurrentUser(null);
+          localStorage.removeItem('has_session');
         } else {
           console.error("Error initializing app:", error);
         }
@@ -183,6 +194,7 @@ function App() {
   const handleLogout = async () => {
     await logoutUser();
     setCurrentUser(null);
+    localStorage.removeItem('has_session');
     // Note: CSRF token is stored in-memory and will be cleared on reload
     // Reload page to reflect logout state across UI
     window.location.reload();
@@ -242,6 +254,9 @@ function App() {
           
           {/* Vercel Speed Insights */}
           <SpeedInsights />
+          
+          {/* Vercel Analytics */}
+          <Analytics />
         </div>
       </ModalProvider>
     </QueryClientProvider>

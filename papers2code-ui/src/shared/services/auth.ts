@@ -20,17 +20,34 @@ export const redirectToGoogleLogin = () => {
 
 // Function to check current user status
 export const checkCurrentUser = async (): Promise<UserProfile | null> => {
+    // Check if user has ever logged in (localStorage flag)
+    const hasSession = localStorage.getItem('has_session') === 'true';
+    
+    // If no session flag exists, skip the API call to avoid 401 errors in console
+    if (!hasSession) {
+        return null;
+    }
+    
     try { 
         // The API will now return camelCase, so no transformation needed here
         const response = await api.get<UserProfile>(`${AUTH_API_PREFIX}/me`);
         const output = response.data;
-        return output.id ? output : null; // Directly return data as UserProfile
+        
+        if (output.id) {
+            // Ensure session flag is set
+            localStorage.setItem('has_session', 'true');
+            return output;
+        }
+        
+        return null;
     } catch (error: any) {
         if (error.response && error.response.status === 401) {
-            throw new AuthenticationError('User not authenticated or session expired.');
+            // User not authenticated - clear session flag and return null
+            localStorage.removeItem('has_session');
+            return null;
         }
         console.error("Error checking current user:", error);
-        throw error; // Re-throw other errors as well
+        throw error; // Re-throw other errors (network issues, etc.)
     }
 };
 

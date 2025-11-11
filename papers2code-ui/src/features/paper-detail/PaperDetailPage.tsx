@@ -72,15 +72,31 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     // Check if official code is posted (use status as primary indicator)
     const hasOfficialCode = paper?.status === 'Official Code Posted' || paper?.hasCode === true;
 
-    // Track paper view when component mounts or paper changes
+    // Track paper view when component mounts or paper changes (only for logged-in users)
     useEffect(() => {
-        if (paperId && paper) {
+        if (paperId && paper && currentUser) {
             trackPaperView({ 
                 paperId, 
                 cameFrom: location.state?.from || 'direct' 
             });
         }
-    }, [paperId, paper, trackPaperView, location.state]);
+    }, [paperId, paper, currentUser, trackPaperView, location.state]);
+
+    // Generate SEO metadata and structured data - MUST be before early returns
+    useEffect(() => {
+        if (paper) {
+            const structuredData = generatePaperStructuredData(paper);
+            injectStructuredData(structuredData);
+        }
+        
+        // Cleanup function to remove the structured data when component unmounts
+        return () => {
+            const dynamicScript = document.querySelector('script[type="application/ld+json"][data-dynamic="true"]');
+            if (dynamicScript) {
+                dynamicScript.remove();
+            }
+        };
+    }, [paper]);
 
     const handleSetActiveTab = (tab: string) => {
         setActiveTab(tab as ActiveTabType);
@@ -115,6 +131,7 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         await updateImplementationProgress(updatedProgress);
     };
  
+    // Early returns for loading/error states
     if (isLoading) {
         return <LoadingSpinner />; 
     }
@@ -149,23 +166,6 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const isCurrentUserContributor = paper.implementationProgress?.contributors?.some(
         (contributorId) => contributorId === currentUser?.id
     );
-
-    // Generate SEO metadata and structured data
-    useEffect(() => {
-        if (paper) {
-            // Generate and inject structured data for the paper
-            const structuredData = generatePaperStructuredData(paper);
-            injectStructuredData(structuredData);
-        }
-        
-        // Cleanup function to remove the structured data when component unmounts
-        return () => {
-            const dynamicScript = document.querySelector('script[type="application/ld+json"][data-dynamic="true"]');
-            if (dynamicScript) {
-                dynamicScript.remove();
-            }
-        };
-    }, [paper]);
 
     // Prepare SEO data
     const paperAuthors = paper.authors?.filter(Boolean).join(', ') || 'Unknown authors';

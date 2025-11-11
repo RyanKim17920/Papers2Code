@@ -394,9 +394,13 @@ export const trackPaperViewInApi = async (data: PaperViewData): Promise<void> =>
         cameFrom: data.cameFrom || 'direct',
       },
     });
-  } catch (error) {
+  } catch (error: any) {
+    // Silently ignore 401 errors (user not logged in) - activity tracking is optional
+    if (error.response && error.response.status === 401) {
+      return;
+    }
     console.error('Failed to track paper view:', error);
-    // Non-blocking
+    // Non-blocking - don't throw
   }
 }
 // --- End NEW ---
