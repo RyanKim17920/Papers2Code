@@ -46,7 +46,7 @@ const HeroHeader = () => {
             <p className="text-[clamp(1rem,2.2vw,1.25rem)] font-semibold opacity-95">
               The platform where the research community collaborates on reproducible machine learning
             </p>
-            <p className="text-[clamp(0.875rem,1.6vw,1rem)] text-muted-foreground max-w-[600px] mx-auto">
+            <p className="text-[clamp(0.875rem,1.6vw,1rem)] text-foreground/70 max-w-[600px] mx-auto">
               Find implementations, share code, and make research reproducible. Connect researchers and developers to bridge the gap between papers and working code.
             </p>
           </div>
@@ -83,11 +83,11 @@ const HeroHeader = () => {
         >
           <div className="text-center">
             <div className="text-4xl font-bold text-primary mb-2">500K+</div>
-            <div className="text-sm text-muted-foreground font-medium">Research Papers</div>
+            <div className="text-sm text-foreground/70 font-medium">Research Papers</div>
           </div>
           <div className="text-center">
             <div className="text-4xl font-bold text-primary mb-2">200K+</div>
-            <div className="text-sm text-muted-foreground font-medium">Implementations</div>
+            <div className="text-sm text-foreground/70 font-medium">Implementations</div>
           </div>
         </motion.div>
       </div>

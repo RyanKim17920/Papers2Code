@@ -297,15 +297,15 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
 
               <Tabs defaultValue="content" className="w-full">
                 <TabsList className="grid w-full grid-cols-3 mb-4">
-                  <TabsTrigger value="content" className="text-xs">
+                  <TabsTrigger value="content" className="text-sm">
                     <Tags className="w-3 h-3 mr-1" />
                     Content
                   </TabsTrigger>
-                  <TabsTrigger value="publication" className="text-xs">
+                  <TabsTrigger value="publication" className="text-sm">
                     <Calendar className="w-3 h-3 mr-1" />
                     Publication
                   </TabsTrigger>
-                  <TabsTrigger value="options" className="text-xs">
+                  <TabsTrigger value="options" className="text-sm">
                     <Filter className="w-3 h-3 mr-1" />
                     Filters
                   </TabsTrigger>
@@ -314,7 +314,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                 {/* Content Tab: Tags */}
                 <TabsContent value="content" className="space-y-4">
                   <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
                       <Tags className="w-3 h-3" />
                       Tags
                     </Label>
@@ -333,13 +333,13 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                 <TabsContent value="publication" className="space-y-4">
                   {/* Date Range */}
                   <div className="space-y-3">
-                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
                       <Calendar className="w-3 h-3" />
                       Publication Date
                     </Label>
                     <div className="space-y-2">
                       <div>
-                        <Label className="text-xs text-muted-foreground">From</Label>
+                        <Label className="text-sm text-foreground/80">From</Label>
                         <Input
                           type="date"
                           value={formatDateForInput(advancedFilters.startDate)}
@@ -348,7 +348,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                         />
                       </div>
                       <div>
-                        <Label className="text-xs text-muted-foreground">To</Label>
+                        <Label className="text-sm text-foreground/80">To</Label>
                         <Input
                           type="date"
                           value={formatDateForInput(advancedFilters.endDate)}
@@ -361,7 +361,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
 
                   {/* Authors */}
                   <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground flex items-center gap-2">
+                    <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
                       <User className="w-3 h-3" />
                       Authors
                     </Label>
@@ -377,7 +377,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                 <TabsContent value="options" className="space-y-4">
                   {/* Has Code Filter */}
                   <div className="space-y-2">
-                    <Label className="text-xs font-medium text-muted-foreground">
+                    <Label className="text-sm font-medium text-foreground/80">
                       Code Availability
                     </Label>
                     <Select
@@ -408,7 +408,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                         />
                         <Label
                           htmlFor="myPapers"
-                          className="text-xs font-medium text-muted-foreground flex items-center gap-2 cursor-pointer"
+                          className="text-sm font-medium text-foreground/80 flex items-center gap-2 cursor-pointer"
                         >
                           <Briefcase className="w-3 h-3" />
                           Papers I've worked on
@@ -456,7 +456,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
               <div className="flex-1 overflow-y-auto p-4 space-y-6">
                 {/* Search */}
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Search</Label>
+                  <Label className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Search</Label>
                   <div className="relative">
                     <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
                     <Input
@@ -490,7 +490,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
 
                 {/* Sort */}
                 <div className="space-y-2">
-                  <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Sort by</Label>
+                  <Label className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Sort by</Label>
                   <Select 
                     value={activeSortDisplay} 
                     onValueChange={(value) => handleSortChange({ target: { value } } as any)} 
@@ -519,7 +519,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                 {/* Advanced Filters */}
                 <div>
                   <div className="flex items-center justify-between mb-3">
-                    <Label className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Advanced Filters</Label>
+                    <Label className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Advanced Filters</Label>
                     {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
                       <Badge variant="outline" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">!</Badge>
                     )}
@@ -527,15 +527,15 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
 
                   <Tabs defaultValue="content" className="w-full">
                     <TabsList className="grid w-full grid-cols-3 mb-3">
-                      <TabsTrigger value="content" className="text-[10px]">
+                      <TabsTrigger value="content" className="text-xs">
                         <Tags className="w-3 h-3 mr-1" />
                         Content
                       </TabsTrigger>
-                      <TabsTrigger value="publication" className="text-[10px]">
+                      <TabsTrigger value="publication" className="text-xs">
                         <Calendar className="w-3 h-3 mr-1" />
                         Publication
                       </TabsTrigger>
-                      <TabsTrigger value="options" className="text-[10px]">
+                      <TabsTrigger value="options" className="text-xs">
                         <Filter className="w-3 h-3 mr-1" />
                         Filters
                       </TabsTrigger>
@@ -544,7 +544,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                     {/* Content Tab: Tags */}
                     <TabsContent value="content" className="space-y-4">
                       <div className="space-y-2">
-                        <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+                        <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
                           <Tags className="w-3 h-3" />
                           Tags
                         </Label>
@@ -563,13 +563,13 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                     <TabsContent value="publication" className="space-y-4">
                       {/* Date Range */}
                       <div className="space-y-3">
-                        <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+                        <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
                           <Calendar className="w-3 h-3" />
                           Publication Date
                         </Label>
                         <div className="space-y-2">
                           <div>
-                            <Label className="text-[10px] text-muted-foreground">From</Label>
+                            <Label className="text-sm text-foreground/80">From</Label>
                             <Input
                               type="date"
                               value={formatDateForInput(advancedFilters.startDate)}
@@ -578,7 +578,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                             />
                           </div>
                           <div>
-                            <Label className="text-[10px] text-muted-foreground">To</Label>
+                            <Label className="text-sm text-foreground/80">To</Label>
                             <Input
                               type="date"
                               value={formatDateForInput(advancedFilters.endDate)}
@@ -591,7 +591,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
 
                       {/* Authors */}
                       <div className="space-y-2">
-                        <Label className="text-[11px] font-medium text-muted-foreground flex items-center gap-2">
+                        <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
                           <User className="w-3 h-3" />
                           Authors
                         </Label>
@@ -607,7 +607,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                     <TabsContent value="options" className="space-y-4">
                       {/* Has Code Filter */}
                       <div className="space-y-2">
-                        <Label className="text-[11px] font-medium text-muted-foreground">
+                        <Label className="text-sm font-medium text-foreground/80">
                           Code Availability
                         </Label>
                         <Select
@@ -638,7 +638,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                             />
                             <Label
                               htmlFor="myPapersMobile"
-                              className="text-[11px] font-medium text-muted-foreground flex items-center gap-2 cursor-pointer"
+                              className="text-sm font-medium text-foreground/80 flex items-center gap-2 cursor-pointer"
                             >
                               <Briefcase className="w-3 h-3" />
                               Papers I've worked on
