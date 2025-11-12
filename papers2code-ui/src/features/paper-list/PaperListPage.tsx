@@ -674,7 +674,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
         )}
 
         {/* Right Content Area */}
-        <div className={`${showSidebar ? 'ml-96 lg:ml-96 md:ml-80 sm:ml-72 flex-1' : 'w-full'} px-4 py-3 sm:p-6 max-w-[1600px]`}>
+        <div className={`${showSidebar ? 'sm:ml-72 md:ml-80 lg:ml-96 flex-1' : 'w-full'} px-4 py-3 sm:p-6 max-w-[1600px]`}>
           {/* Unified top spacing & section header */}
           <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full">
