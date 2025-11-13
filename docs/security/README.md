@@ -1,53 +1,28 @@
 # Security Documentation
 
-This directory contains security-related documentation for Papers2Code.
+**Main Security Guide:** [SECURITY.md](./SECURITY.md)
 
-## Documents
+## Quick Reference
 
-### [CSRF Protection](./CSRF_PROTECTION.md)
-Comprehensive guide to the CSRF protection implementation, including:
-- Security model and guarantees
-- Implementation details (backend and frontend)
-- Cross-domain configuration
-- Testing and troubleshooting
-- Best practices
+**For Production Setup:**
+1. Set strong secrets in environment variables
+2. Enable HTTPS/TLS
+3. Configure CORS with specific origins
+4. Use token encryption for stored credentials
+
+**For Open Source Security:**
+See [OPENSOURCE_SECURITY.md](./OPENSOURCE_SECURITY.md) for how we maintain security with public code.
+
+**Quick Start:**
+See [SECURITY_QUICK_START.md](./SECURITY_QUICK_START.md) for fast setup.
 
 ## Security Features
 
-Papers2Code implements multiple layers of security:
-
-### 🔒 Authentication & Authorization
-- OAuth 2.0 with GitHub and Google
-- JWT tokens with refresh mechanism
-- HttpOnly cookies for token storage
-- Encrypted tokens at rest (Fernet encryption)
-
-### 🛡️ CSRF Protection
-- **Double-submit cookie pattern** with HttpOnly cookies
-- **256-bit cryptographically secure tokens**
-- **In-memory token storage** on frontend (no localStorage)
-- **Origin validation middleware**
-- Cross-domain support (Render + Vercel)
-
-### 🔐 XSS Protection
-- HttpOnly cookies prevent JavaScript access
-- Content Security Policy (CSP) headers
-- X-XSS-Protection header
-- Strict output encoding
-
-### 🌐 Transport Security
-- HTTPS enforced in production
-- HTTP Strict Transport Security (HSTS)
-- SameSite=None + Secure cookies for cross-domain
-- TLS 1.2+ only
-
-### 📊 Rate Limiting
-- Per-endpoint rate limits
-- IP-based throttling
-- Distributed rate limiting support (Redis)
-
-### 🔍 Security Headers
-- `X-Content-Type-Options: nosniff`
+- 🔒 OAuth 2.0 (GitHub/Google) + JWT tokens
+- 🛡️ CSRF protection with double-submit cookies
+- 🔐 HttpOnly cookies + token encryption
+- 🌐 HTTPS/HSTS + secure headers
+- 📊 Rate limiting
 - `X-Frame-Options: DENY`
 - `Referrer-Policy: strict-origin-when-cross-origin`
 - `Permissions-Policy` for feature control

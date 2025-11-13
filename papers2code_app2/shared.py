@@ -90,6 +90,12 @@ class AppSettings(BaseSettings):    # Core settings
     APP_LOG_LEVEL: str = "INFO"
     FRONTEND_URL: str = "http://localhost:5173"
     
+    # Dex OAuth Configuration (for development/testing)
+    USE_DEX_OAUTH: bool = Field(False, env="USE_DEX_OAUTH")
+    DEX_ISSUER_URL: Optional[str] = Field(None, env="DEX_ISSUER_URL")
+    DEX_CLIENT_ID: Optional[str] = Field(None, env="DEX_CLIENT_ID")
+    DEX_CLIENT_SECRET: Optional[str] = Field(None, env="DEX_CLIENT_SECRET")
+    
     ATLAS_SEARCH_INDEX_NAME: str = Field("papers_index", env="ATLAS_SEARCH_INDEX_NAME")
     ATLAS_SEARCH_SCORE_THRESHOLD: float = Field(0.5, env="ATLAS_SEARCH_SCORE_THRESHOLD")
     ATLAS_SEARCH_OVERALL_LIMIT: int = Field(100, env="ATLAS_SEARCH_OVERALL_LIMIT")
@@ -145,3 +151,46 @@ except Exception:
     # If normalization fails for any reason, leave settings untouched but log
     logger.exception("Failed to normalize ENV_TYPE; leaving as-is.")
 
+# Auto-configure USE_DEX_OAUTH based on ENV_TYPE if not explicitly set
+# DEV/DEVELOPMENT → Use Dex (mock OAuth)
+# PROD_TEST/PRODUCTION → Use real OAuth
+try:
+    # Only auto-configure if USE_DEX_OAUTH wasn't explicitly set in environment
+    if "USE_DEX_OAUTH" not in os.environ:
+        normalized_env = config_settings.ENV_TYPE.lower()
+        if normalized_env in ("dev", "development"):
+            config_settings.USE_DEX_OAUTH = True
+            logger.info("AUTO-CONFIG: USE_DEX_OAUTH=True (ENV_TYPE=DEV)")
+        else:
+            config_settings.USE_DEX_OAUTH = False
+            logger.info(f"AUTO-CONFIG: USE_DEX_OAUTH=False (ENV_TYPE={config_settings.ENV_TYPE})")
+    else:
+        logger.info(f"USE_DEX_OAUTH explicitly set to {config_settings.USE_DEX_OAUTH}")
+except Exception as e:
+    logger.exception(f"Failed to auto-configure USE_DEX_OAUTH: {e}")
+
+# Helper function to get MongoDB URI based on ENV_TYPE
+def get_mongo_uri() -> str:
+    """
+    Get MongoDB connection string based on ENV_TYPE.
+    Single source of truth - just change ENV_TYPE to switch environments.
+    """
+    env_type = config_settings.ENV_TYPE.lower()
+    
+    # Select URI based on environment type
+    if env_type in ("dev", "development"):
+        uri = config_settings.MONGO_URI_DEV or config_settings.MONGO_URI_DEVELOPMENT
+    elif env_type == "prod_test":
+        uri = config_settings.MONGO_URI_PROD_TEST
+    elif env_type == "production":
+        uri = config_settings.MONGO_URI_PROD
+    else:
+        uri = None
+    
+    if uri:
+        logger.info(f"Selected MongoDB URI for ENV_TYPE={env_type}")
+        return uri
+    
+    # Final fallback
+    logger.warning(f"No MongoDB URI found for ENV_TYPE={config_settings.ENV_TYPE}")
+    return "mongodb://localhost:27017/papers2code_dev"

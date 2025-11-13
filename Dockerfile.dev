@@ -1,0 +1,28 @@
+FROM python:3.11-slim
+
+WORKDIR /app
+
+# Install system dependencies
+RUN apt-get update && apt-get install -y \
+    gcc \
+    && rm -rf /var/lib/apt/lists/*
+
+# Install uv
+RUN pip install --no-cache-dir uv
+
+# Copy dependency files
+COPY pyproject.toml ./
+COPY papers2code_app2/requirements.txt ./papers2code_app2/
+
+# Install Python dependencies with uv
+RUN uv pip install --system -r papers2code_app2/requirements.txt
+
+# Copy application code
+COPY papers2code_app2 ./papers2code_app2
+COPY scripts ./scripts
+COPY run_app2.py ./
+
+EXPOSE 5000
+
+# Default command (can be overridden in docker-compose)
+CMD ["uvicorn", "papers2code_app2.main:app", "--host", "0.0.0.0", "--port", "5000", "--reload"]
