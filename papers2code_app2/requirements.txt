@@ -5,6 +5,8 @@ pymongo[srv,tls]>=4.0 # Ensures support for async and includes bson
 passlib[bcrypt]
 pydantic[email]
 requests
+httpx  # For Dex OAuth async HTTP client
+PyJWT  # For Dex OAuth JWT token handling
 python-dotenv
 dateutils
 slowapi

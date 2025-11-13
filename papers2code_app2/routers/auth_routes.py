@@ -30,8 +30,19 @@ router = APIRouter(
 )
 
 auth_service = AuthService()
-github_oauth_service = GitHubOAuthService()
-google_oauth_service = GoogleOAuthService()
+
+# Initialize OAuth services based on configuration
+# If USE_DEX_OAUTH is True, use Dex for both GitHub and Google OAuth
+# Otherwise, use real GitHub and Google OAuth services
+if config_settings.USE_DEX_OAUTH:
+    from ..services.dex_oauth_service import dex_oauth_service
+    github_oauth_service = dex_oauth_service
+    google_oauth_service = dex_oauth_service
+    logger.info("Using Dex OAuth service for development (USE_DEX_OAUTH=true)")
+else:
+    github_oauth_service = GitHubOAuthService()
+    google_oauth_service = GoogleOAuthService()
+    logger.info("Using real GitHub and Google OAuth services (USE_DEX_OAUTH=false)")
 
 @router.get("/csrf-token", response_model=CsrfToken)
 async def get_csrf_token(request: Request, response: Response):

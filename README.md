@@ -6,7 +6,25 @@ A web application for organizing research papers and tracking their implementati
 
 ## 🚀 Quick Start
 
-### Development Setup
+### Docker Development (Recommended)
+Complete isolated environment with test data:
+```bash
+# 1. Setup environment
+cp .env.example .env.dev
+# Edit MONGO_URI_DEV in .env.dev
+
+# 2. Initialize database (copies structure + 500 sample papers)
+./scripts/init_dev_db.sh
+
+# 3. Start everything
+docker-compose -f docker-compose.dev.yml up -d
+```
+
+Visit `http://localhost:5173` - login with test users (no real OAuth needed!)
+
+**See [DOCKER-DEV-SETUP.md](DOCKER-DEV-SETUP.md) for complete guide**
+
+### Local Development (Alternative)
 ```bash
 # Backend (FastAPI)
 uv sync
@@ -19,8 +37,6 @@ pnpm run dev
 ```
 
 **Note**: This project uses `pnpm` for frontend package management (faster, more efficient than npm).
-
-Visit `http://localhost:5173` for the frontend and `http://localhost:5000` for the API.
 
 ### Production Deployment
 See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed production deployment instructions.
