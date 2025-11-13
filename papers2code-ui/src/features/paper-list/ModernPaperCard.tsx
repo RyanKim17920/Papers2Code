@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Link } from 'react-router-dom';
+import { useNavigate } from 'react-router-dom';
 import { ThumbsUp, ExternalLink, FileDown, Code } from 'lucide-react';
 import { Paper } from '@/shared/types/paper';
 import { Card, CardContent } from '@/shared/ui/card';
@@ -16,6 +16,7 @@ interface ModernPaperCardProps {
 }
 
 const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, className = '' }) => {
+  const navigate = useNavigate();
   const [isVoting, setIsVoting] = useState(false);
   const [voteError, setVoteError] = useState<string | null>(null);
 
@@ -91,9 +92,18 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
   const domainTags = getDomainTags(paper);
   const formattedAuthors = formatAuthors(paper.authors);
 
+  const handleCardClick = (e: React.MouseEvent) => {
+    // Don't navigate if clicking on interactive elements
+    const target = e.target as HTMLElement;
+    if (target.closest('a') || target.closest('button')) {
+      return;
+    }
+    navigate(`/paper/${paper.id}`);
+  };
+
   return (
-    <Link to={`/paper/${paper.id}`} className="block h-full group">
-      <Card className={`hover:shadow-md transition-shadow cursor-pointer h-full flex flex-col ${className}`.trim()}>
+    <div onClick={handleCardClick} className="block h-full group cursor-pointer">
+      <Card className={`hover:shadow-md transition-shadow h-full flex flex-col ${className}`.trim()}>
         <CardContent className="px-3 py-3 sm:px-4 sm:py-4 h-full flex flex-col">
           {/* Title - Responsive height */}
           <h3 className="text-[13px] sm:text-base font-semibold text-foreground group-hover:text-primary transition-colors line-clamp-2 leading-tight mb-1 sm:mb-2" style={{ minHeight: 'calc(1.2em * 2.2)' }}>
@@ -184,7 +194,7 @@ const ModernPaperCard: React.FC<ModernPaperCardProps> = ({ paper, onVote, classN
           )}
         </CardContent>
       </Card>
-    </Link>
+    </div>
   );
 };
 
