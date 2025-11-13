@@ -46,6 +46,7 @@
 
 * [ ] Deal with the old code about isOwner, isAdmin, etc... probably flesh that out 
 * [ ] Company log ins?
+* [ ] Top contributors, markings for stuff, etc.
 
 3.1 Extremely very difficult fix:
 * [ ] automatic filtering to difficulty of implementing paper --> easier papers tailored more for beginners for example
