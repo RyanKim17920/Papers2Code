@@ -47,10 +47,27 @@ class GitHubOAuthSettings(BaseSettings):
         super().__init__(**data)
         logger.info(f"DEBUG: GitHubOAuthSettings __init__ called with data: {data}")
         logger.info(f"DEBUG: After super().__init__, TEMPLATE_REPO is: '{self.TEMPLATE_REPO}'")
+        
+        # Auto-select credentials based on ENV_TYPE
+        env_type = os.getenv("ENV_TYPE", "DEV").strip().lower()
+        is_dev = env_type in ("dev", "development")
+        
         if self.CLIENT_ID is None:
-            self.CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
+            if is_dev:
+                # Use dev credentials in development
+                self.CLIENT_ID = os.getenv("GITHUB_CLIENT_ID_DEV") or os.getenv("GITHUB_CLIENT_ID")
+                logger.info("Using GITHUB_CLIENT_ID_DEV for development")
+            else:
+                self.CLIENT_ID = os.getenv("GITHUB_CLIENT_ID")
+                
         if self.CLIENT_SECRET is None:
-            self.CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
+            if is_dev:
+                # Use dev credentials in development
+                self.CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET_DEV") or os.getenv("GITHUB_CLIENT_SECRET")
+                logger.info("Using GITHUB_CLIENT_SECRET_DEV for development")
+            else:
+                self.CLIENT_SECRET = os.getenv("GITHUB_CLIENT_SECRET")
+                
         logger.info(f"DEBUG: After __init__, TEMPLATE_REPO is: '{self.TEMPLATE_REPO}'")
 
 class GoogleOAuthSettings(BaseSettings):
