@@ -143,18 +143,18 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-background">
-      <div className="flex">
-  {/* Left Sidebar - Navigation & Profile */}
-  <div className="w-72 min-h-screen column-left border-r border-border/60 flex flex-col">
+      <div className="flex flex-col lg:flex-row">
+        {/* Left Sidebar - Navigation & Profile */}
+        <div className="w-full lg:w-72 lg:min-h-screen column-left border-b lg:border-b-0 lg:border-r border-border/60 flex flex-col">
           
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-3 sm:p-4">
             <ModernUserProfile
               user={currentUser}
               onLogout={handleLogout}
               onNewContribution={handleNewContribution}
             />
             
-            <div className="mt-6">
+            <div className="mt-6 hidden lg:block">
               <ModernSidebarTabs
                 trendingPapers={[]}
                 recentlyViewed={data?.recentlyViewed || []}
@@ -166,15 +166,15 @@ const Dashboard: React.FC = () => {
         </div>
 
         {/* Main Content Area */}
-        <div className="flex-1 flex relative">
+        <div className="flex-1 flex flex-col lg:flex-row relative">
           {/* Center - Feed */}
           <div
             className={cn(
               'flex-1 transition-all duration-300',
-              isUpdatesCollapsed ? 'max-w-5xl xl:max-w-6xl 2xl:max-w-7xl' : 'max-w-3xl'
+              isUpdatesCollapsed ? 'max-w-full lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl' : 'max-w-full lg:max-w-3xl'
             )}
           >
-            <div className="pt-3 pb-6 px-4 lg:px-6">
+            <div className="pt-3 pb-6 px-3 sm:px-4 lg:px-6">
               <ModernFeedTabs
                 trendingPapers={data?.trendingPapers || []}
                 recentPapers={data?.trendingPapers || []}
@@ -190,8 +190,8 @@ const Dashboard: React.FC = () => {
 
           {/* Right Sidebar - Updates / News */}
           {!isUpdatesCollapsed ? (
-            <div className="w-80 min-h-screen column-right border-l border-border/60">
-              <div className="pt-3 pb-6 px-4">
+            <div className="w-full lg:w-80 lg:min-h-screen column-right border-t lg:border-t-0 lg:border-l border-border/60">
+              <div className="pt-3 pb-6 px-3 sm:px-4">
                 <SiteUpdates
                   collapsed={isUpdatesCollapsed}
                   onCollapsedChange={setIsUpdatesCollapsed}
@@ -202,7 +202,7 @@ const Dashboard: React.FC = () => {
             <button
               type="button"
               onClick={() => setIsUpdatesCollapsed(false)}
-              className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2 rounded-md shadow-sm transition-colors absolute top-4 right-4"
+              className="flex items-center gap-2 text-xs font-medium text-muted-foreground hover:text-foreground border border-border/60 bg-card/80 backdrop-blur-sm px-3 py-2 rounded-md shadow-sm transition-colors fixed lg:absolute bottom-4 right-4 lg:top-4"
               aria-label="Show updates panel"
             >
               <Megaphone className="w-4 h-4" />

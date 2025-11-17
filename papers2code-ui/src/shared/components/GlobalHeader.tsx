@@ -1,6 +1,6 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
-import { Search, Command, User, LogOut, ChevronDown, Github } from 'lucide-react';
+import { Search, Command, User, LogOut, ChevronDown, Github, Menu, X, BookOpen } from 'lucide-react';
 import logo from '../../assets/images/papers2codelogo.png';
 import type { UserProfile } from '@/shared/types/user';
 import { Button } from '../ui/button';
@@ -15,7 +15,6 @@ import {
 } from '../ui/dropdown-menu';
 import { UserAvatar } from '@/shared/components';
 import { redirectToGitHubLogin } from '@/shared/services/auth';
-import { ThemeToggle } from './ThemeToggle';
 
 interface GlobalHeaderProps {
   showSearch?: boolean;
@@ -31,6 +30,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   handleLogout
 }) => {
   const [searchQuery, setSearchQuery] = useState('');
+  const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const navigate = useNavigate();
   const searchInputRef = useRef<HTMLInputElement>(null);
 
@@ -61,11 +61,11 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
   return (
     <header className="sticky top-0 z-50 w-full border-b bg-background/95 backdrop-blur supports-[backdrop-filter]:bg-background/60">
       <div className="container mx-auto px-4">
-        <div className="flex h-16 items-center justify-between">
+        <div className="flex h-16 items-center justify-between gap-4">
           {/* Logo */}
           <Link 
             to={currentUser ? "/dashboard" : "/"} 
-            className="flex items-center space-x-2"
+            className="flex items-center space-x-2 shrink-0"
           >
             <img 
               src={logo} 
@@ -74,10 +74,10 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             />
           </Link>
           
-          {/* Search Bar */}
+          {/* Search Bar - Hidden on mobile */}
           {showSearch && (
-            <div className="flex-1 max-w-2xl mx-8">
-              <form onSubmit={handleSearchSubmit} className="relative">
+            <div className="hidden md:flex flex-1 max-w-2xl mx-8">
+              <form onSubmit={handleSearchSubmit} className="relative w-full">
                 <div className="relative flex items-center">
                   <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
                   <Input
@@ -105,14 +105,25 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             </div>
           )}
           
-          {/* Auth Section */}
-          <div className="flex items-center space-x-4">
+          {/* Mobile Menu Button */}
+          <button
+            onClick={() => setMobileMenuOpen(!mobileMenuOpen)}
+            className="md:hidden p-2 text-foreground hover:bg-accent rounded-md"
+            aria-label="Toggle menu"
+          >
+            {mobileMenuOpen ? <X className="h-5 w-5" /> : <Menu className="h-5 w-5" />}
+          </button>
+
+          {/* Auth Section - Desktop */}
+          <div className="hidden md:flex items-center space-x-4">
             {currentUser ? (
               <div className="flex items-center gap-3">
-                <Link to="/papers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                  Papers
+                <Link to="/papers">
+                  <Button variant="default" size="sm" className="h-9 px-3 flex items-center gap-2">
+                    <BookOpen className="w-4 h-4" />
+                    <span>Browse Papers</span>
+                  </Button>
                 </Link>
-                <ThemeToggle variant="ghost" />
                 <DropdownMenu>
                   <DropdownMenuTrigger asChild>
                     <Button variant="ghost" className="flex items-center gap-2 h-9 px-3">
@@ -156,10 +167,12 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
               // If a custom authSection is provided by parent, render it.
               authSection ?? (
                 <div className="flex items-center gap-3">
-                  <Link to="/papers" className="text-sm text-muted-foreground hover:text-foreground transition-colors">
-                    Papers
+                  <Link to="/papers">
+                    <Button variant="default" size="sm" className="h-9 px-3 flex items-center gap-2">
+                      <BookOpen className="w-4 h-4" />
+                      <span>Browse Papers</span>
+                    </Button>
                   </Link>
-                  <ThemeToggle variant="ghost" />
                   <Link to="/login">
                     <Button
                       variant="default"
@@ -173,6 +186,74 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             )}
           </div>
         </div>
+
+        {/* Mobile Menu */}
+        {mobileMenuOpen && (
+          <div className="md:hidden border-t bg-background py-4 space-y-4">
+            {/* Mobile Search */}
+            {showSearch && (
+              <form onSubmit={handleSearchSubmit} className="px-2">
+                <div className="relative flex items-center">
+                  <Search className="absolute left-3 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    type="search"
+                    placeholder="Search papers..."
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                    className="w-full pl-10 pr-4 h-10 bg-muted/50"
+                  />
+                </div>
+              </form>
+            )}
+
+            {/* Mobile Navigation */}
+            <div className="space-y-2 px-2">
+              <Link 
+                to="/papers" 
+                onClick={() => setMobileMenuOpen(false)}
+                className="block mx-auto max-w-[280px] mt-1"
+              >
+                <Button 
+                  variant="default" 
+                  className="w-full h-10 gap-2 justify-center"
+                >
+                  <BookOpen className="w-4 h-4" />
+                  <span>Browse Papers</span>
+                </Button>
+              </Link>
+              
+              {currentUser ? (
+                <>
+                  <Link 
+                    to={`/user/${currentUser.username}`}
+                    className="flex items-center gap-2 px-3 py-2 text-sm hover:bg-accent rounded-md"
+                    onClick={() => setMobileMenuOpen(false)}
+                  >
+                    <User className="h-4 w-4" />
+                    Profile
+                  </Link>
+                  <button
+                    onClick={() => {
+                      setMobileMenuOpen(false);
+                      handleLogout?.();
+                    }}
+                    className="w-full flex items-center gap-2 px-3 py-2 text-sm text-destructive hover:bg-accent rounded-md"
+                  >
+                    <LogOut className="h-4 w-4" />
+                    Sign out
+                  </button>
+                </>
+              ) : (
+                <Link 
+                  to="/login"
+                  onClick={() => setMobileMenuOpen(false)}
+                >
+                  <Button className="w-full">Sign in</Button>
+                </Link>
+              )}
+            </div>
+          </div>
+        )}
       </div>
     </header>
   );
