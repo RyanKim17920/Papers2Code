@@ -147,7 +147,7 @@ const Dashboard: React.FC = () => {
         {/* Left Sidebar - Navigation & Profile */}
         <div className="w-full lg:w-72 lg:min-h-screen column-left border-b lg:border-b-0 lg:border-r border-border/60 flex flex-col">
           
-          <div className="flex-1 p-4">
+          <div className="flex-1 p-3 sm:p-4">
             <ModernUserProfile
               user={currentUser}
               onLogout={handleLogout}
@@ -174,7 +174,7 @@ const Dashboard: React.FC = () => {
               isUpdatesCollapsed ? 'max-w-full lg:max-w-5xl xl:max-w-6xl 2xl:max-w-7xl' : 'max-w-full lg:max-w-3xl'
             )}
           >
-            <div className="pt-3 pb-6 px-4 lg:px-6">
+            <div className="pt-3 pb-6 px-3 sm:px-4 lg:px-6">
               <ModernFeedTabs
                 trendingPapers={data?.trendingPapers || []}
                 recentPapers={data?.trendingPapers || []}
@@ -191,7 +191,7 @@ const Dashboard: React.FC = () => {
           {/* Right Sidebar - Updates / News */}
           {!isUpdatesCollapsed ? (
             <div className="w-full lg:w-80 lg:min-h-screen column-right border-t lg:border-t-0 lg:border-l border-border/60">
-              <div className="pt-3 pb-6 px-4">
+              <div className="pt-3 pb-6 px-3 sm:px-4">
                 <SiteUpdates
                   collapsed={isUpdatesCollapsed}
                   onCollapsedChange={setIsUpdatesCollapsed}

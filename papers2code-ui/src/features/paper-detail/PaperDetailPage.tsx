@@ -199,19 +199,19 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
             
             {/* Compact Header - Reduced z-index to allow tooltips to appear above */}
             <div className="bg-card/40 backdrop-blur border-b border-border/60 sticky top-0 z-30">
-                <div className="max-w-7xl mx-auto px-6 py-2">
+                <div className="max-w-7xl mx-auto px-3 sm:px-6 py-2">
                     <Link 
                         to="/papers" 
-                        className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-sm"
+                        className="inline-flex items-center gap-1 text-muted-foreground hover:text-foreground transition-colors text-xs sm:text-sm"
                     >
                         <ArrowLeft size={14} />
-                        Back to Papers
+                        <span>Back to Papers</span>
                     </Link>
                 </div>
             </div>
 
             {/* Ultra Dense Main Content */}
-            <div className="max-w-7xl mx-auto px-6 py-2">
+            <div className="max-w-7xl mx-auto px-3 sm:px-4 lg:px-6 py-2 sm:py-4">
                 {/* Error Message */}
                 {updateError && (
                     <Card className="border-destructive/20 bg-destructive/5 mb-2">

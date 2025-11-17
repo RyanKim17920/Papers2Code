@@ -174,38 +174,38 @@ const ProfilePage: React.FC = () => {
                 <Award size={20} />
                 Recent Activity
               </h3>
-              <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
+              <div className="grid grid-cols-1 lg:grid-cols-2 gap-4 sm:gap-6">
                 <div>
-                  <h4 className="font-medium mb-4 flex items-center gap-2 text-sm">
+                  <h4 className="font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm">
                     <ThumbsUp size={16} />
                     Recent Upvotes
                   </h4>
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {upvotedPapers.slice(0, 3).map(paper => (
-                      <div key={paper.id} className="flex items-center justify-between p-3 bg-background rounded-md border border-border/50 hover:border-border transition-colors">
+                      <div key={paper.id} className="flex flex-col sm:flex-row items-start sm:items-center justify-between p-2 sm:p-3 bg-background rounded-md border border-border/50 hover:border-border transition-colors gap-2">
                         <Link 
                           to={`/paper/${paper.id}`} 
-                          className="text-sm font-medium text-primary hover:underline flex-1 truncate mr-3"
+                          className="text-xs sm:text-sm font-medium text-primary hover:underline flex-1 line-clamp-2 sm:truncate sm:mr-3"
                         >
                           {paper.title}
                         </Link>
-                        <span className={`px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap border ${getStatusColorClasses(paper.status)}`}>
+                        <span className={`px-2 py-1 text-xs rounded-full font-medium whitespace-nowrap border self-start sm:self-auto ${getStatusColorClasses(paper.status)}`}>
                           {paper.status}
                         </span>
                       </div>
                     ))}
                     {upvotedPapers.length === 0 && (
-                          <p className="text-muted-foreground text-sm italic text-center py-4">No papers upvoted yet</p>
-                        )}
+                      <p className="text-muted-foreground text-xs sm:text-sm italic text-center py-4">No papers upvoted yet</p>
+                    )}
                   </div>
                 </div>
                 
                 <div>
-                  <h4 className="font-medium mb-4 flex items-center gap-2 text-sm">
+                  <h4 className="font-medium mb-3 sm:mb-4 flex items-center gap-2 text-sm">
                     <Rocket size={16} />
                     Active Contributions
                   </h4>
-                  <div className="space-y-3">
+                  <div className="space-y-2 sm:space-y-3">
                     {contributedPapers.slice(0, 3).map(paper => (
                       <div key={paper.id} className="flex items-center justify-between p-3 bg-background rounded-md border border-border/50 hover:border-border transition-colors">
                         <Link 
@@ -324,37 +324,37 @@ const ProfilePage: React.FC = () => {
     <div className="min-h-screen bg-background">
       {/* Header Section with Avatar and Basic Info */}
       <div className="bg-gradient-to-br from-card via-card to-background border-b border-border">
-        <div className="container mx-auto px-6 py-16">
-          <div className="flex flex-col md:flex-row items-center gap-8">
+        <div className="container mx-auto px-3 sm:px-6 py-8 sm:py-16">
+          <div className="flex flex-col md:flex-row items-center gap-6 sm:gap-8">
             {/* Avatar with Glow Effect */}
             <div className="relative">
               <div className="absolute inset-0 bg-primary/20 rounded-full blur-md scale-110"></div>
               <UserAvatar 
                 avatarUrl={userDetails.avatarUrl}
                 username={userDetails.username}
-                className="relative w-32 h-32 border-4 border-primary/30 shadow-2xl"
+                className="relative w-24 h-24 sm:w-32 sm:h-32 border-4 border-primary/30 shadow-2xl"
               />
             </div>
             
             {/* User Info */}
-            <div className="text-center md:text-left space-y-4">
+            <div className="text-center md:text-left space-y-3 sm:space-y-4">
               <div>
-                <p className="text-muted-foreground text-sm mb-1">@{userDetails.username}</p>
-                <h1 className="text-4xl font-bold text-foreground mb-2">
+                <p className="text-muted-foreground text-xs sm:text-sm mb-1">@{userDetails.username}</p>
+                <h1 className="text-2xl sm:text-4xl font-bold text-foreground mb-2">
                   {userDetails.name || userDetails.username}
                 </h1>
-                <div className="flex items-center gap-4 text-sm text-muted-foreground justify-center md:justify-start">
+                <div className="flex items-center gap-2 sm:gap-4 text-xs sm:text-sm text-muted-foreground justify-center md:justify-start flex-wrap">
                   <div className="flex items-center gap-1">
                     <Calendar size={14} />
                     <span>{formatJoinedDate(userDetails.createdAt)}</span>
                   </div>
-                  <span>•</span>
-                  <span>{formatLastSeen(userDetails.lastLoginAt)}</span>
+                  <span className="hidden sm:inline">•</span>
+                  <span className="w-full sm:w-auto">{formatLastSeen(userDetails.lastLoginAt)}</span>
                 </div>
               </div>
               
               {/* Badges */}
-              <div className="flex gap-2 justify-center md:justify-start">
+              <div className="flex gap-2 justify-center md:justify-start flex-wrap">
                 {userDetails.isOwner && (
                   <span className="px-2 py-1 bg-green-500 text-white text-xs rounded-full font-medium">
                     OWNER

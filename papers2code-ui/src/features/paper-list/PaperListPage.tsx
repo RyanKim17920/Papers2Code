@@ -753,7 +753,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
           </div>
           {isLoading ? (
             <>
-              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                 <PaperListSkeleton count={showSidebar ? 9 : 12} />
               </div>
               <div className="mt-6 sm:mt-8">
@@ -766,7 +766,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
             </div>
           ) : papers.length > 0 ? (
             <>
-              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4'}`}>
+              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
                 {papers.map((paper) => (
                   <ModernPaperCard
                     key={paper.id}
