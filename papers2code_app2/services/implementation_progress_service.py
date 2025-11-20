@@ -161,16 +161,9 @@ class ImplementationProgressService:
             try:
                 result = await progress_collection.insert_one(progress_to_insert)
 
-                # Update the paper's status to 'Started' and reset implementability if needed
-                update_fields = {"status": "Started"}
-                
-                # If paper was marked as "Not Implementable", reset it to "Voting" or "Admin Implementable"
-                if paper.get("status") == "Not Implementable":
-                    update_fields["implementabilityStatus"] = "Admin Implementable"
-                    logger.info(f"Resetting implementability status for paper {paper_id} from 'Not Implementable' to 'Admin Implementable' as implementation has started.")
-                
+                # Update the paper's status to 'Started'
                 await papers_collection.update_one(
-                    {"_id": paper_obj_id}, {"$set": update_fields}
+                    {"_id": paper_obj_id}, {"$set": {"status": "Started"}}
                 )
 
                 # Update paper status in cache instead of clearing all

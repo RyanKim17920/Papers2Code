@@ -7,7 +7,7 @@ from pymongo.database import Database as SyncDatabase # Alias for clarity
 from pymongo.database import Database as AsyncDatabase # For type hinting with AsyncMongoClient
 from pymongo.collection import Collection as AsyncCollection # For type hinting with AsyncMongoClient
 
-from .shared import config_settings, get_mongo_uri
+from .shared import config_settings, get_mongo_uri, get_mongo_db_name
 
 logger = logging.getLogger(__name__)
 
@@ -37,7 +37,7 @@ db_popular_papers_recent_async: Optional[AsyncCollection] = None
 def get_mongo_uri_and_db_name() -> Tuple[str, str]:
     """Get MongoDB URI and database name. URI selection based on ENV_TYPE."""
     uri = get_mongo_uri()  # Use the centralized function from shared.py
-    db_name = "papers2code"  # Default DB name
+    db_name = get_mongo_db_name(uri)
     
     logger.info(f"Using Database: {db_name} for ENV_TYPE: {config_settings.ENV_TYPE}")
     return uri, db_name

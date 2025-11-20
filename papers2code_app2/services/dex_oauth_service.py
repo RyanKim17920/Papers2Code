@@ -45,9 +45,13 @@ class DexOAuthService:
     
     def __init__(self):
         self.users_collection = None
-        self.dex_issuer = getattr(config_settings, 'DEX_ISSUER_URL', 'http://localhost:5556/dex')
-        self.client_id = getattr(config_settings, 'DEX_CLIENT_ID', 'papers2code-backend')
-        self.client_secret = getattr(config_settings, 'DEX_CLIENT_SECRET', 'dev-client-secret')
+        # Use more robust fallbacks: if the config attribute exists but is None/empty
+        # we explicitly fall back to sensible development defaults. `getattr` alone
+        # only applies the default when the attribute is missing which does not
+        # cover the common case where the attribute exists but was left unset.
+        self.dex_issuer = getattr(config_settings, 'DEX_ISSUER_URL', None) or 'http://localhost:5556/dex'
+        self.client_id = getattr(config_settings, 'DEX_CLIENT_ID', None) or 'papers2code-backend'
+        self.client_secret = getattr(config_settings, 'DEX_CLIENT_SECRET', None) or 'dev-client-secret'
         
         # OIDC endpoints
         self.authorize_url = f"{self.dex_issuer}/auth"

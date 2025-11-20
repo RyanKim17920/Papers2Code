@@ -14,11 +14,11 @@ if ! docker info > /dev/null 2>&1; then
     exit 1
 fi
 
-# Check if .env.dev exists
-if [ ! -f .env.dev ]; then
-    echo "Creating .env.dev from template..."
-    cp .env.dev .env.dev
-    echo "Created .env.dev - review and customize as needed"
+# Check if .env exists
+if [ ! -f .env ]; then
+    echo "Creating .env from template..."
+    cp .env.example .env
+    echo "Created .env - review and customize as needed"
 fi
 
 # Build and start containers
