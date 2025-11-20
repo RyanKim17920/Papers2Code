@@ -13,23 +13,23 @@ echo "=========================================="
 echo ""
 
 # Load environment variables
-if [ -f "$PROJECT_ROOT/.env.dev" ]; then
-    export $(cat "$PROJECT_ROOT/.env.dev" | grep -v '^#' | xargs)
-    echo "✓ Loaded .env.dev"
+if [ -f "$PROJECT_ROOT/.env" ]; then
+    export $(cat "$PROJECT_ROOT/.env" | grep -v '^#' | xargs)
+    echo "✓ Loaded .env"
 else
-    echo "ERROR: .env.dev not found!"
-    echo "Run: cp .env.example .env.dev"
+    echo "ERROR: .env not found!"
+    echo "Run: cp .env.example .env"
     exit 1
 fi
 
 # Check required variables
 if [ -z "$MONGO_URI_PROD" ]; then
-    echo "ERROR: MONGO_URI_PROD not set in .env.dev"
+    echo "ERROR: MONGO_URI_PROD not set in .env"
     exit 1
 fi
 
 if [ -z "$MONGO_URI_DEV" ]; then
-    echo "ERROR: MONGO_URI_DEV not set in .env.dev"
+    echo "ERROR: MONGO_URI_DEV not set in .env"
     exit 1
 fi
 

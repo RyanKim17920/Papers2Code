@@ -10,14 +10,20 @@ A web application for organizing research papers and tracking their implementati
 Complete isolated environment with test data:
 ```bash
 # 1. Setup environment
-cp .env.example .env.dev
-# Edit MONGO_URI_DEV in .env.dev
+cp .env.example .env
+# Edit MONGO_URI_DEV in .env
 
 # 2. Initialize database (copies structure + 500 sample papers)
 ./scripts/init_dev_db.sh
 
 # 3. Start everything
 docker-compose -f docker-compose.dev.yml up -d
+
+# 4. (Optional) Refresh dev data with new papers later
+# If you see SSL certificate errors on macOS, run the system's
+# "Install Certificates.command" for your Python version or append
+#   --allow-invalid-cert (only if you trust the cluster).
+uv run python scripts/sample_prod_to_dev.py --size 100
 ```
 
 Visit `http://localhost:5173` - login with test users (no real OAuth needed!)
