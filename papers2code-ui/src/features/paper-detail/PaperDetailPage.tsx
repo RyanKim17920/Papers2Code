@@ -82,6 +82,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         }
     }, [paperId, paper, trackPaperView, location.state]);
 
+    // Generate SEO metadata and structured data
+    useEffect(() => {
+        if (paper) {
+            const structuredData = generatePaperStructuredData(paper);
+            injectStructuredData(structuredData);
+        }
+    }, [paper]);
+
     const handleSetActiveTab = (tab: string) => {
         setActiveTab(tab as ActiveTabType);
     };
@@ -149,15 +157,6 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
     const isCurrentUserContributor = paper.implementationProgress?.contributors?.some(
         (contributorId) => contributorId === currentUser?.id
     );
-
-    // Generate SEO metadata and structured data
-    useEffect(() => {
-        if (paper) {
-            // Generate and inject structured data for the paper
-            const structuredData = generatePaperStructuredData(paper);
-            injectStructuredData(structuredData);
-        }
-    }, [paper]);
 
     // Prepare SEO data
     const paperAuthors = paper.authors?.filter(Boolean).join(', ') || 'Unknown authors';
