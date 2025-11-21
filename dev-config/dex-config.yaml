@@ -86,5 +86,4 @@ logger:
 frontend:
   issuer: Papers2Code Dev
   logoURL: https://via.placeholder.com/150?text=P2C
-  dir: /web
   theme: light

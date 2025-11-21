@@ -7,6 +7,7 @@ Matches the same interface as GitHubOAuthService and GoogleOAuthService for drop
 import httpx
 import uuid
 import logging
+import hashlib
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict, Any
 from urllib.parse import urlencode
@@ -323,14 +324,22 @@ class DexOAuthService:
             "email": user_info.get("email"),
             "name": user_info.get("name"),
             "email_verified": user_info.get("email_verified", True),
+            "preferred_username": user_info.get("preferred_username"),
         }
         
         # Add provider-specific fields
         if provider == "github":
             # Mimic GitHub user structure
-            username = user_info.get("preferred_username") or user_info.get("email", "").split("@")[0]
+            username = (
+                user_info.get("preferred_username")
+                or (user_info.get("email") or "").split("@")[0]
+                or "dev_user"
+            )
+            github_numeric_id = self._generate_mock_github_id(user_info.get("sub"), username)
             formatted.update({
                 "login": username,
+                "username": username,
+                "github_numeric_id": github_numeric_id,
                 "avatar_url": user_info.get("picture", "https://via.placeholder.com/150?text=Dev"),
                 "html_url": f"https://github.com/{username}",  # Fake URL for consistency
             })
@@ -342,14 +351,23 @@ class DexOAuthService:
             })
         
         return formatted
+
+    @staticmethod
+    def _generate_mock_github_id(sub: Optional[str], username: str) -> int:
+        """Generate a deterministic integer GitHub ID so Pydantic validations pass."""
+        source = sub or username or str(uuid.uuid4())
+        digest = hashlib.sha256(source.encode("utf-8")).hexdigest()
+        # Use first 12 hex chars (~48 bits) to stay within typical GitHub ID range
+        return int(digest[:12], 16)
     
     async def _create_or_update_user(self, user_data: Dict[str, Any], provider: str) -> Dict[str, Any]:
         """Create or update user in database"""
         email = user_data.get("email")
         
         if provider == "github":
-            github_id = user_data.get("id")
+            github_id = user_data.get("github_numeric_id")
             github_username = user_data.get("login")
+            primary_username = user_data.get("username") or github_username
             
             # Try to find existing user by GitHub ID or email
             existing_user = await self.users_collection.find_one({
@@ -364,8 +382,11 @@ class DexOAuthService:
                 update_fields = {
                     "githubUsername": github_username,
                     "githubId": github_id,
+                    "username": existing_user.get("username") or primary_username,
                     "displayName": user_data.get("name", github_username),
                     "avatarUrl": user_data.get("avatar_url"),
+                    "githubAvatarUrl": user_data.get("avatar_url"),
+                    "preferredAvatarSource": existing_user.get("preferredAvatarSource", "github"),
                     "email": email,
                 }
                 
@@ -380,12 +401,17 @@ class DexOAuthService:
                 new_user = {
                     "githubId": github_id,
                     "githubUsername": github_username,
+                    "username": primary_username,
                     "email": email,
                     "displayName": user_data.get("name", github_username),
                     "avatarUrl": user_data.get("avatar_url"),
+                    "githubAvatarUrl": user_data.get("avatar_url"),
+                    "preferredAvatarSource": "github",
                     "bio": None,
                     "createdAt": datetime.utcnow(),
                     "isAdmin": False,
+                    "showEmail": True,
+                    "showGithub": True,
                 }
                 
                 result = await self.users_collection.insert_one(new_user)

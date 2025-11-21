@@ -14,7 +14,6 @@ services:
       - "5556:5556"
     volumes:
       - ./dev-config/dex-config.yaml:/etc/dex/config.yaml:ro
-      - ./dev-config/dex-web:/web:ro
     command: ["dex", "serve", "/etc/dex/config.yaml"]
     networks:
       - papers2code_dev
@@ -59,9 +58,6 @@ services:
     networks:
       - papers2code_dev
     command: npm run dev -- --host 0.0.0.0
-
-volumes:
-  # No local volumes needed - using external MongoDB Atlas
 
 networks:
   papers2code_dev:

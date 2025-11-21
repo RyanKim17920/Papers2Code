@@ -16,6 +16,7 @@ from ..services.exceptions import NotFoundException
 from ..auth import get_current_user 
 from ..schemas.minimal import UserSchema as UserInDBMinimalSchema
 from ..database import get_users_collection_async
+from ..shared import config_settings
 
 logger = logging.getLogger(__name__) 
 
@@ -132,6 +133,7 @@ async def create_github_repository_for_paper(
         raise HTTPException(status_code=status.HTTP_401_UNAUTHORIZED, detail="Authentication required.")
     
     try:
+        use_mock_github = bool(getattr(config_settings, "USE_DEX_OAUTH", False))
         # Get user's GitHub access token from database
         users_collection = await get_users_collection_async()
         user_doc = await users_collection.find_one({"_id": current_user.id})
@@ -141,10 +143,19 @@ async def create_github_repository_for_paper(
         
         github_token = user_doc.get("githubAccessToken")
         if not github_token:
-            raise HTTPException(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                detail="GitHub access token not found. Please re-authenticate with GitHub."
-            )
+            if use_mock_github:
+                github_token = "dex-mock-token"
+            else:
+                raise HTTPException(
+                    status_code=status.HTTP_400_BAD_REQUEST,
+                    detail="GitHub access token not found. Please re-authenticate with GitHub."
+                )
+        mock_owner_login = (
+            current_user.github_username
+            or getattr(current_user, "username", None)
+            or user_doc.get("githubUsername")
+            or user_doc.get("username")
+        )
         
         # Get paper details from database to extract metadata
         from ..database import get_papers_collection_async
@@ -160,7 +171,8 @@ async def create_github_repository_for_paper(
         repo_data = await github_service.create_repository_from_paper(
             access_token=github_token,
             paper_data=paper,
-            paper_id=paper_id
+            paper_id=paper_id,
+            mock_owner_login=mock_owner_login if use_mock_github else None,
         )
         
         # Automatically link the repository to the implementation progress

@@ -215,6 +215,22 @@ uv run run_app2.py
 uv run uvicorn papers2code_app2.main:app --reload --port 5000
 ```
 
+### Combined Dev Runner 🚀
+Prefer a single command that bootstraps Dex (Docker), the FastAPI backend, and the React frontend? Use the orchestrator script:
+
+```bash
+uv run docker_run.py
+```
+
+- `--skip-dex`, `--skip-backend`, or `--skip-frontend` let you opt out of individual services.
+- `--stop-dex` stops the Dex container when you exit.
+- `uv run docker_run.py stop` is a shortcut to stop just the Dex container.
+
+The script streams logs for the backend/frontend processes and keeps them alive until you press `Ctrl+C`.
+
+#### Dex mock GitHub/Google mode
+When `USE_DEX_OAUTH=true` (default in dev), the backend automatically bypasses network calls to GitHub and Google-only APIs. Creating an implementation-progress repository now returns a deterministic mock repo (with template files, links, etc.) without hitting GitHub, and any Google-specific flows are treated as successful no-ops. This keeps the entire stack running offline with Dex while still exercising the same code paths the UI expects.
+
 ### Frontend Development  
 ```bash
 cd papers2code-ui

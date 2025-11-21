@@ -1,12 +1,20 @@
 """Service for creating and managing GitHub repositories via API."""
 import logging
+import uuid
 import httpx
 import asyncio
 import re
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 from ..shared import config_settings
 
 logger = logging.getLogger(__name__)
+
+TEMPLATE_FILE_PATHS = [
+    "README.md",
+    "setup.py",
+    "src/__init__.py",
+    "src/model.py",
+]
 
 class GitHubRepoService:
     """Service to interact with GitHub API for repository management."""
@@ -32,7 +40,8 @@ class GitHubRepoService:
         self,
         access_token: str,
         paper_data: Dict[str, Any],
-        paper_id: str
+        paper_id: str,
+        mock_owner_login: Optional[str] = None,
     ) -> dict:
         """
         Create a GitHub repository from template, pre-populated with paper metadata.
@@ -48,12 +57,6 @@ class GitHubRepoService:
         Raises:
             httpx.HTTPStatusError: If the GitHub API request fails
         """
-        headers = {
-            "Authorization": f"token {access_token}",
-            "Accept": "application/vnd.github.v3+json",
-            "User-Agent": "Papers2Code"
-        }
-        
         # Extract paper metadata
         title = paper_data.get("title", "Untitled Paper")
         abstract = paper_data.get("abstract", "No abstract available")
@@ -64,6 +67,21 @@ class GitHubRepoService:
         
         # Generate repository name from paper title
         repo_name = self._sanitize_repo_name(title)
+
+        if self._should_mock_github():
+            return self._mock_repository_response(
+                repo_name=repo_name,
+                owner_login=mock_owner_login,
+                title=title,
+                paper_id=paper_id,
+                authors=authors,
+            )
+        
+        headers = {
+            "Authorization": f"token {access_token}",
+            "Accept": "application/vnd.github.v3+json",
+            "User-Agent": "Papers2Code"
+        }
         
         # Create description with paper info (use full title)
         author_list = ", ".join(authors[:3]) + (f" et al." if len(authors) > 3 else "")
@@ -229,17 +247,10 @@ class GitHubRepoService:
         }
         
         # Files to update with placeholders
-        files_to_update = [
-            'README.md',
-            'setup.py',
-            'src/__init__.py',
-            'src/model.py',
-        ]
-        
         # First, collect all file updates
         file_updates = {}  # {file_path: (updated_content, sha)}
         
-        for file_path in files_to_update:
+        for file_path in TEMPLATE_FILE_PATHS:
             try:
                 file_data = await self._get_file_with_retry(
                     client=client,
@@ -275,6 +286,47 @@ class GitHubRepoService:
             return updated_files
         
         return []
+
+    def _should_mock_github(self) -> bool:
+        """Return True when Dex mock OAuth is active and external GitHub calls should be skipped."""
+        return bool(getattr(config_settings, "USE_DEX_OAUTH", False))
+
+    def _mock_repository_response(
+        self,
+        repo_name: str,
+        owner_login: Optional[str],
+        title: str,
+        paper_id: str,
+        authors: list,
+    ) -> dict:
+        """Return a deterministic mock repository payload when GitHub APIs are unavailable."""
+        suffix = uuid.uuid4().hex[:6]
+        owner = owner_login or "dex-dev"
+        repo_slug = f"{repo_name}-{suffix}"
+        full_name = f"{owner}/{repo_slug}"
+        logger.info(
+            "Dex mock mode active – skipping GitHub API calls for paper %s and returning stub repo %s",
+            paper_id,
+            full_name,
+        )
+        safe_authors: List[str] = [str(a) for a in (authors or [])]
+        author_list = ", ".join(safe_authors[:3])
+        if len(safe_authors) > 3:
+            author_list += " et al."
+        return {
+            "full_name": full_name,
+            "html_url": f"https://github.com/{full_name}",
+            "clone_url": f"https://github.com/{full_name}.git",
+            "ssh_url": f"git@github.com:{full_name}.git",
+            "name": repo_slug,
+            "owner": owner,
+            "description": f"Mock implementation of '{title}' {('by ' + author_list) if author_list else ''}".strip(),
+            "created_from_template": True,
+            "files_updated": list(TEMPLATE_FILE_PATHS),
+            "readme_updated": True,
+            "mocked": True,
+            "mock_reason": "Dex mock OAuth mode",
+        }
     
     async def _get_file_with_retry(
         self,
