@@ -121,6 +121,7 @@ class DexOAuthService:
                 "response_type": "code",
                 "scope": "openid email profile groups",
                 "state": state_value,
+                "connector_id": "mock-idp", # Skip Dex selection screen and go straight to Mock IDP
             }
             
             auth_url = f"{self.authorize_url}?{urlencode(auth_params)}"

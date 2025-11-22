@@ -138,7 +138,6 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
             "/api/auth/github/callback",
             "/api/auth/google/login",
             "/api/auth/google/callback",
-            "/docs",
             "/redoc",
             "/openapi.json",
         ]
@@ -146,6 +145,7 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
         # Exempt patterns for read-only or tracking endpoints
         exempt_patterns = [
             "/api/activity/track",  # Activity tracking (analytics, read-only intent)
+            "/mock-idp",  # Exempt all Mock IDP endpoints
         ]
         
         # Check if path matches any exempt pattern
@@ -447,7 +447,12 @@ api_router.include_router(dashboard_router.router)
 # Include the auth_routes router into the api_router
 api_router.include_router(auth_routes.router)
 # Include the api_router into the main app
+# Include the api_router into the main app
 app.include_router(api_router)
+
+# Include Mock IDP router (mounted at root /mock-idp)
+from .routers import mock_idp_routes
+app.include_router(mock_idp_routes.router)
 
 # app.include_router(auth_routes.router) # COMMENTED OUT: Moved to api_router
 
