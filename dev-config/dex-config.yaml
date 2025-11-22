@@ -14,17 +14,18 @@ web:
 # Enable the password connector for simple dev users
 # This creates a mock "static" provider with predefined users
 connectors:
-  # Mock GitHub connector using static users
-  - type: mockCallback
-    id: mock-github
-    name: GitHub (Dev Mock)
-    config: {}
-    
-  # Mock Google connector using static users  
-  - type: mockCallback
-    id: mock-google
-    name: Google (Dev Mock)
-    config: {}
+  # Mock IDP (Internal Backend Service)
+  - type: oidc
+    id: mock-idp
+    name: Mock Identity Provider
+    config:
+      issuer: http://papers2code_dev_backend:5000/mock-idp
+      clientID: mock-client
+      clientSecret: mock-secret
+      redirectURI: http://localhost:5556/dex/callback
+      getUserInfo: true
+      insecureSkipEmailVerified: true
+      insecureEnableGroups: true
 
 # OAuth2 clients - your backend will register as a client
 oauth2:

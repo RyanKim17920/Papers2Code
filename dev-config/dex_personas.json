@@ -1,0 +1,66 @@
+{
+  "personas": [
+    {
+      "id": "gh-alice",
+      "provider": "github",
+      "email": "alice.dev@test.local",
+      "username": "alice-gh",
+      "displayName": "Alice Dev",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/110001?v=4",
+      "numericId": 110001,
+      "bio": "Infra-focused OSS tinkerer",
+      "role": "admin",
+      "linkedPersonaId": "gg-alice"
+    },
+    {
+      "id": "gg-alice",
+      "provider": "google",
+      "email": "alice.dev@test.local",
+      "username": "alice.google",
+      "displayName": "Alice Dev",
+      "avatarUrl": "https://www.gravatar.com/avatar/00000000000000000000000000000000?d=identicon",
+      "googleSub": "gg-alice-sub",
+      "linkedPersonaId": "gh-alice"
+    },
+    {
+      "id": "gh-bob",
+      "provider": "github",
+      "email": "bob.builder@test.local",
+      "username": "bob-gh",
+      "displayName": "Bob Builder",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/110002?v=4",
+      "numericId": 110002,
+      "bio": "Full-stack generalist",
+      "linkedPersonaId": "gg-bob"
+    },
+    {
+      "id": "gg-bob",
+      "provider": "google",
+      "email": "bob.builder@test.local",
+      "username": "bob.google",
+      "displayName": "Bob Builder",
+      "avatarUrl": "https://www.gravatar.com/avatar/ffffffffffffffffffffffffffffffff?d=identicon",
+      "googleSub": "gg-bob-sub",
+      "linkedPersonaId": "gh-bob"
+    },
+    {
+      "id": "gh-charlie",
+      "provider": "github",
+      "email": "charlie.ops@test.local",
+      "username": "charlie-gh",
+      "displayName": "Charlie Ops",
+      "avatarUrl": "https://avatars.githubusercontent.com/u/110003?v=4",
+      "numericId": 110003,
+      "bio": "Site reliability explorer"
+    },
+    {
+      "id": "gg-dana",
+      "provider": "google",
+      "email": "dana.ml@test.local",
+      "username": "dana.google",
+      "displayName": "Dana ML",
+      "avatarUrl": "https://www.gravatar.com/avatar/eeeeeeeeeeeeeeeeeeeeeeeeeeeeeeee?d=identicon",
+      "googleSub": "gg-dana-sub"
+    }
+  ]
+}

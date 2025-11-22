@@ -196,6 +196,7 @@ class AppSettings(BaseSettings):    # Core settings
     OWNER_GITHUB_USERNAME: Optional[str] = None
     APP_LOG_LEVEL: str = "INFO"
     FRONTEND_URL: str = "http://localhost:5173"
+    API_URL: str = "http://localhost:5000"
     
     # Dex OAuth Configuration (for development/testing)
     USE_DEX_OAUTH: bool = Field(False, env="USE_DEX_OAUTH")

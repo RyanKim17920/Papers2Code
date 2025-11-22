@@ -23,6 +23,18 @@ docker-compose -f docker-compose.dev.yml up -d
 # - API Docs: http://localhost:5000/docs
 ```
 
+## Hybrid Workflow (Dex in Docker, app locally)
+
+If you prefer running the FastAPI & Vite dev servers locally (for hot reload speed) while still using Dex from Docker, use the helper script:
+
+```bash
+uv run docker_run.py               # Starts Dex + backend + frontend
+uv run docker_run.py --skip-frontend   # Just Dex + backend
+uv run docker_run.py stop          # Stop only the Dex container
+```
+
+The script ensures Dex is up through Docker Compose and streams the logs of the locally run backend/frontend processes until you press `Ctrl+C`.
+
 ## What Gets Created
 
 The initialization script (`init_dev_db.sh`):
@@ -86,6 +98,9 @@ No real GitHub/Google accounts needed!
 - `dev_github_user1@test.local`
 - `dev_google_user1@gmail.test`
 - `admin_dev@test.local` (has admin privileges)
+
+### Mock GitHub & Google behavior
+With `ENV_TYPE=DEV` (or `USE_DEX_OAUTH=true`), the backend short-circuits all GitHub repository creation and Google-only API calls. Implementation progress actions still return realistic repository metadata (names, clone URLs, README edits, etc.) but nothing ever hits the real GitHub/Google APIs. This keeps Dex logins fully self-contained inside Docker while allowing the UI to exercise the full workflow.
 
 ## Common Commands
 
