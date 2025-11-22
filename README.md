@@ -1,4 +1,4 @@
-# Papers-2-Code
+# Papers2Code
 
 A web application for organizing research papers and tracking their implementation progress with community voting, author contact, and progress tracking.
 
@@ -63,7 +63,7 @@ See [DEPLOYMENT.md](docs/deployment/DEPLOYMENT.md) for detailed production deplo
 ## 📁 Project Structure
 
 ```
-Papers-2-code/
+Papers2code/
 ├── papers2code_app2/          # FastAPI Backend
 │   ├── schemas/               # Pydantic models & validation
 │   ├── routers/              # API route handlers
