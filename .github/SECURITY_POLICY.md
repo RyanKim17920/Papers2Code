@@ -36,7 +36,7 @@ Please report:
 Instead:
 
 1. **Private Disclosure**: Email security contact (check repository for current email)
-2. **GitHub Security Advisories**: Use GitHub's [private vulnerability reporting](https://github.com/RyanKim17920/Papers-2-code/security/advisories/new)
+2. **GitHub Security Advisories**: Use GitHub's [private vulnerability reporting](https://github.com/RyanKim17920/Papers2code/security/advisories/new)
 
 ### Include in Your Report
 

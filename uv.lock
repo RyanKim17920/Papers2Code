@@ -1086,7 +1086,7 @@ wheels = [
 ]
 
 [[package]]
-name = "papers-2-code"
+name = "papers2code"
 version = "0.1.0"
 source = { virtual = "." }
 dependencies = [
