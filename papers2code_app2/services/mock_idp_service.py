@@ -99,7 +99,9 @@ class MockIDPService:
     def get_discovery_doc(self) -> Dict[str, Any]:
         """Return OIDC Discovery Document"""
 
-        # We hardcode these for the dev environment as they are specific to the docker-compose setup
+        # We hardcode these for the dev environment as they are specific to the docker-compose setup.
+        # 'internal_host' is used for server-to-server communication within the Docker network.
+        # 'external_host' is used for browser redirects.
         internal_host = "http://papers2code_dev_backend:5000"
         external_host = "http://localhost:5000"
         

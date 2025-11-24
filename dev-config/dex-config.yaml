@@ -19,7 +19,7 @@ connectors:
     id: mock-idp
     name: Mock Identity Provider
     config:
-      issuer: http://host.docker.internal:8000/mock-idp
+      issuer: http://host.docker.internal:5000/mock-idp
       clientID: mock-client
       clientSecret: mock-secret
       redirectURI: http://localhost:5556/dex/callback
@@ -36,8 +36,8 @@ staticClients:
   # Papers2Code Backend Client
   - id: papers2code-backend
     redirectURIs:
-      - 'http://localhost:8000/api/auth/github/callback'
-      - 'http://localhost:8000/api/auth/google/callback'
+      - 'http://localhost:5000/api/auth/github/callback'
+      - 'http://localhost:5000/api/auth/google/callback'
       - 'http://localhost:5173/auth/callback'  # Direct frontend callback for testing
     name: 'Papers2Code Development'
     secret: dev-client-secret-change-in-production
