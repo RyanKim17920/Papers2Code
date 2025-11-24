@@ -255,138 +255,21 @@ async def link_accounts(request: Request, response: Response):
                 status_code=status.HTTP_400_BAD_REQUEST,
                 content={"detail": "Missing pending_token"}
             )
+            
+        # Delegate logic to service
+        result = await auth_service.link_accounts(pending_token, response)
+        return JSONResponse(content=result)
         
-        # Decode the pending token
-        try:
-            from jose import jwt, JWTError
-            from datetime import datetime, timezone
-            pending_data = jwt.decode(pending_token, config_settings.FLASK_SECRET_KEY, algorithms=[config_settings.ALGORITHM])
-            
-            # Check expiration
-            if pending_data.get("exp") and datetime.now(timezone.utc).timestamp() > pending_data.get("exp"):
-                return JSONResponse(
-                    status_code=status.HTTP_400_BAD_REQUEST,
-                    content={"detail": "Link token expired. Please log in again."}
-                )
-        except JWTError:
-            return JSONResponse(
-                status_code=status.HTTP_400_BAD_REQUEST,
-                content={"detail": "Invalid link token"}
-            )
-        
-        # Perform the account linking based on which provider initiated
-        from ..database import get_users_collection_async
-        from bson import ObjectId
-        from ..auth.token_utils import create_access_token, create_refresh_token
-        from ..constants import ACCESS_TOKEN_COOKIE_NAME, REFRESH_TOKEN_COOKIE_NAME
-        from datetime import timedelta
-        from pymongo import ReturnDocument
-        
-        users_collection = await get_users_collection_async()
-        existing_user_id = ObjectId(pending_data["existing_user_id"])
-        current_time = datetime.now(timezone.utc)
-        
-        # Determine which account is being linked
-        if "google_id" in pending_data:
-            # Linking Google to existing GitHub account
-            google_id = pending_data["google_id"]
-            google_avatar = pending_data["google_avatar"]
-            google_email = pending_data["google_email"]
-            
-            # Get existing user's avatar
-            existing_user = await users_collection.find_one({"_id": existing_user_id})
-            github_avatar = existing_user.get("githubAvatarUrl")
-            
-            update_payload = {
-                "googleId": google_id,
-                "googleAvatarUrl": google_avatar,
-                "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
-                "preferredAvatarSource": "github",
-                "email": google_email,
-                "updatedAt": current_time,
-                "lastLoginAt": current_time,
-            }
-            
-            user_document = await users_collection.find_one_and_update(
-                {"_id": existing_user_id},
-                {"$set": update_payload},
-                return_document=ReturnDocument.AFTER
-            )
-            
-            # Create tokens
-            access_token_payload = {
-                "sub": str(user_document["_id"]),
-                "username": user_document["username"],
-                "googleId": google_id,
-            }
-        else:
-            # Linking GitHub to existing Google account
-            github_id = pending_data["github_id"]
-            github_avatar = pending_data["github_avatar"]
-            github_username = pending_data["github_username"]
-            github_token = pending_data["github_token"]
-            github_email = pending_data["github_email"]
-            github_name = pending_data["github_name"]
-            
-            # Get existing user's avatar
-            existing_user = await users_collection.find_one({"_id": existing_user_id})
-            google_avatar = existing_user.get("googleAvatarUrl")
-            
-            update_payload = {
-                "githubId": github_id,
-                "githubAvatarUrl": github_avatar,
-                "githubAccessToken": github_token,
-                "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
-                "preferredAvatarSource": "github",
-                "username": github_username,  # Update to GitHub username
-                "name": github_name,
-                "email": github_email,
-                "updatedAt": current_time,
-                "lastLoginAt": current_time,
-            }
-            
-            user_document = await users_collection.find_one_and_update(
-                {"_id": existing_user_id},
-                {"$set": update_payload},
-                return_document=ReturnDocument.AFTER
-            )
-            
-            # Create tokens
-            access_token_payload = {
-                "sub": str(user_document["_id"]),
-                "username": user_document["username"],
-                "githubId": github_id,
-            }
-        
-        access_token = create_access_token(data=access_token_payload)
-        refresh_token_payload = {"sub": str(user_document["_id"])}
-        refresh_token = create_refresh_token(data=refresh_token_payload, expires_delta=timedelta(minutes=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES))
-        
-        # Set cookies
-        is_production = config_settings.ENV_TYPE == "production"
-        samesite_setting = "none" if is_production else "lax"
-        json_response = JSONResponse(content={"detail": "Accounts linked successfully"})
-        json_response.set_cookie(
-            key=ACCESS_TOKEN_COOKIE_NAME,
-            value=access_token,
-            httponly=True,
-            samesite=samesite_setting,
-            secure=True if is_production else False,
-            path="/",
-            max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+    except InvalidTokenException as e:
+        return JSONResponse(
+            status_code=status.HTTP_400_BAD_REQUEST,
+            content={"detail": e.message}
         )
-        json_response.set_cookie(
-            key=REFRESH_TOKEN_COOKIE_NAME,
-            value=refresh_token,
-            httponly=True,
-            samesite=samesite_setting,
-            secure=True if is_production else False,
-            path="/",
-            max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+    except UserNotFoundException as e:
+        return JSONResponse(
+            status_code=status.HTTP_404_NOT_FOUND,
+            content={"detail": e.message}
         )
-        
-        return json_response
-        
     except Exception as e:
         logger.error(f"Error linking accounts: {e}", exc_info=True)
         return JSONResponse(

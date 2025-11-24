@@ -59,10 +59,19 @@ class DexOAuthService:
         self.token_url = f"{self.dex_issuer}/token"
         self.userinfo_url = f"{self.dex_issuer}/userinfo"
         
-    async def _init_collections(self):
-        """Initialize database collections"""
+    async def _init_collections(self) -> None:
+        """Initialize database collections asynchronously."""
         if self.users_collection is None:
             self.users_collection = await get_users_collection_async()
+
+    def _get_callback_url(self, request: Request, provider: str) -> str:
+        """Helper to generate callback URL based on provider."""
+        endpoint = f"{provider}_callback_endpoint"
+        try:
+            return str(request.url_for(endpoint))
+        except Exception:
+            base_url = str(request.base_url).rstrip('/')
+            return f"{base_url}/api/auth/{provider}/callback"
     
     def prepare_github_login_redirect(self, request: Request) -> RedirectResponse:
         """
@@ -97,22 +106,11 @@ class DexOAuthService:
             )
             
             # Determine callback URL based on provider
-            if provider == "github":
-                try:
-                    callback_url = str(request.url_for("github_callback_endpoint"))
-                except Exception:
-                    base_url = str(request.base_url).rstrip('/')
-                    callback_url = f"{base_url}/api/auth/github/callback"
-                oauth_state_cookie_path = "/api/auth/github/callback"
-            elif provider == "google":
-                try:
-                    callback_url = str(request.url_for("google_callback_endpoint"))
-                except Exception:
-                    base_url = str(request.base_url).rstrip('/')
-                    callback_url = f"{base_url}/api/auth/google/callback"
-                oauth_state_cookie_path = "/api/auth/google/callback"
-            else:
-                raise OAuthException(f"Unknown provider: {provider}")
+            if provider not in ["github", "google"]:
+                 raise OAuthException(f"Unknown provider: {provider}")
+
+            callback_url = self._get_callback_url(request, provider)
+            oauth_state_cookie_path = f"/api/auth/{provider}/callback"
             
             # Build Dex authorization URL
             auth_params = {
@@ -282,10 +280,7 @@ class DexOAuthService:
     
     async def _exchange_code_for_token(self, code: str, request: Request, provider: str) -> Dict[str, Any]:
         """Exchange authorization code for access token"""
-        if provider == "github":
-            callback_url = str(request.url_for("github_callback_endpoint"))
-        else:
-            callback_url = str(request.url_for("google_callback_endpoint"))
+        callback_url = self._get_callback_url(request, provider)
         
         token_params = {
             "client_id": self.client_id,

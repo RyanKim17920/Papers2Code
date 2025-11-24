@@ -86,21 +86,43 @@ class AuthService:
             new_access_token = create_access_token(data=new_access_token_payload)
             
             is_production = config_settings.ENV_TYPE == "production"
-            response.set_cookie(
-                key=ACCESS_TOKEN_COOKIE_NAME,
-                value=new_access_token,
-                httponly=True,
-                samesite="none" if is_production else "lax",
-                max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60,
-                path="/",
-                secure=True if is_production else False
-            )
+            
+            # Use helper to set cookies
+            self.set_auth_cookies(response, new_access_token)
             return {"access_token": new_access_token, "token_type": "bearer"} # Corresponds to TokenResponse
 
         except JWTError as jwt_exc:
             raise InvalidTokenException(detail=f"Refresh token validation error: {jwt_exc}")
         # Catching generic Exception here might be too broad for a service, 
         # but if specific database errors are expected, they could be caught and re-raised as ServiceException subtypes.
+
+
+    def set_auth_cookies(self, response: Response, access_token: str, refresh_token: str = None):
+        """Sets authentication cookies (access_token, refresh_token) on the response."""
+        is_production = config_settings.ENV_TYPE == "production"
+        cookie_secure_flag = True if is_production else False
+        cookie_samesite_policy = "none" if is_production else "lax"
+
+        response.set_cookie(
+            key=ACCESS_TOKEN_COOKIE_NAME,
+            value=access_token,
+            httponly=True,
+            samesite=cookie_samesite_policy,
+            secure=cookie_secure_flag,
+            path="/",
+            max_age=config_settings.ACCESS_TOKEN_EXPIRE_MINUTES * 60
+        )
+
+        if refresh_token:
+            response.set_cookie(
+                key=REFRESH_TOKEN_COOKIE_NAME,
+                value=refresh_token,
+                httponly=True,
+                samesite=cookie_samesite_policy,
+                secure=cookie_secure_flag,
+                path="/", # Changed to "/" to match clear_auth_cookies and general usage, or keep specific if needed
+                max_age=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES * 60
+            )
 
     def clear_auth_cookies(self, response: Response):
         """Clears all authentication-related cookies."""
@@ -117,7 +139,7 @@ class AuthService:
         )
         response.delete_cookie(
             REFRESH_TOKEN_COOKIE_NAME, 
-            path="/api/auth", # Path where refresh token is set and used
+            path="/", # Updated to match set_auth_cookies
             secure=cookie_secure_flag, 
             httponly=True, 
             samesite=cookie_samesite_policy
@@ -129,16 +151,6 @@ class AuthService:
             httponly=False, # CSRF token is not httponly
             samesite=cookie_samesite_policy
         )
-        # OAUTH_STATE_COOKIE_NAME is typically cleared specifically in the OAuth flow
-        # but can be included here for a more aggressive clear if needed, ensuring path matches.
-        # response.delete_cookie(
-        #     OAUTH_STATE_COOKIE_NAME,
-        #     path="/api/auth/github/callback", # Path where it was set
-        #     secure=cookie_secure_flag,
-        #     httponly=True,
-        #     samesite=cookie_samesite_policy
-        # )
-        #logger.info("Cleared auth cookies (access, refresh, csrf).")
 
 
     async def logout_user(self, request: Request, response: Response) -> dict: # Made async
@@ -208,6 +220,120 @@ class AuthService:
         except Exception as e:
             logger.error(f"Error updating user profile for user_id {user_id}: {e}", exc_info=True)
             raise DatabaseOperationException(f"Failed to update user profile: {e}")
+
+    async def link_accounts(self, pending_token: str, response: Response) -> dict:
+        """
+        Links two accounts (GitHub and Google) based on the pending token.
+        """
+        try:
+            # Decode the pending token
+            pending_data = jwt.decode(pending_token, config_settings.FLASK_SECRET_KEY, algorithms=[config_settings.ALGORITHM])
+            
+            # Check expiration
+            exp = pending_data.get("exp")
+            if exp is not None and datetime.now(timezone.utc).timestamp() > exp:
+                raise InvalidTokenException("Link token expired. Please log in again.")
+                
+        except JWTError:
+            raise InvalidTokenException("Invalid link token")
+
+        users_collection = await get_users_collection_async()
+        try:
+            existing_user_id = ObjectId(pending_data["existing_user_id"])
+        except InvalidId:
+             raise InvalidTokenException("Invalid existing user ID in token")
+
+        current_time = datetime.now(timezone.utc)
+        
+        # Determine which account is being linked
+        if "google_id" in pending_data:
+            # Linking Google to existing GitHub account
+            google_id = pending_data["google_id"]
+            google_avatar = pending_data["google_avatar"]
+            google_email = pending_data["google_email"]
+            
+            # Get existing user's avatar
+            existing_user = await users_collection.find_one({"_id": existing_user_id})
+            if not existing_user:
+                raise UserNotFoundException("Existing user not found")
+
+            github_avatar = existing_user.get("githubAvatarUrl")
+            
+            update_payload = {
+                "googleId": google_id,
+                "googleAvatarUrl": google_avatar,
+                "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
+                "preferredAvatarSource": "github",
+                "email": google_email,
+                "updatedAt": current_time,
+                "lastLoginAt": current_time,
+            }
+            
+            user_document = await users_collection.find_one_and_update(
+                {"_id": existing_user_id},
+                {"$set": update_payload},
+                return_document=ReturnDocument.AFTER
+            )
+            
+            # Create tokens
+            access_token_payload = {
+                "sub": str(user_document["_id"]),
+                "username": user_document["username"],
+                "googleId": google_id,
+            }
+        else:
+            # Linking GitHub to existing Google account
+            github_id = pending_data["github_id"]
+            github_avatar = pending_data["github_avatar"]
+            github_username = pending_data["github_username"]
+            github_token = pending_data["github_token"]
+            github_email = pending_data["github_email"]
+            github_name = pending_data["github_name"]
+            
+            # Get existing user's avatar
+            existing_user = await users_collection.find_one({"_id": existing_user_id})
+            if not existing_user:
+                raise UserNotFoundException("Existing user not found")
+
+            google_avatar = existing_user.get("googleAvatarUrl")
+            
+            update_payload = {
+                "githubId": github_id,
+                "githubAvatarUrl": github_avatar,
+                "githubAccessToken": github_token,
+                "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
+                "preferredAvatarSource": "github",
+                "username": github_username,  # Update to GitHub username
+                "name": github_name,
+                "email": github_email,
+                "updatedAt": current_time,
+                "lastLoginAt": current_time,
+            }
+            
+            user_document = await users_collection.find_one_and_update(
+                {"_id": existing_user_id},
+                {"$set": update_payload},
+                return_document=ReturnDocument.AFTER
+            )
+            
+            # Create tokens
+            access_token_payload = {
+                "sub": str(user_document["_id"]),
+                "username": user_document["username"],
+                "githubId": github_id,
+            }
+        
+        if not user_document:
+             raise DatabaseOperationException("Failed to update user document")
+
+        access_token = create_access_token(data=access_token_payload)
+        refresh_token_payload = {"sub": str(user_document["_id"])}
+        refresh_token = create_refresh_token(data=refresh_token_payload, expires_delta=timedelta(minutes=config_settings.REFRESH_TOKEN_EXPIRE_MINUTES))
+        
+        # Set cookies using helper
+        self.set_auth_cookies(response, access_token, refresh_token)
+        
+        return {"detail": "Accounts linked successfully"}
 
 
 # Helper function (can be outside the class or static if preferred)
