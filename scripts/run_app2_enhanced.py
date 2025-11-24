@@ -146,7 +146,7 @@ class ApplicationRunner:
             base_config = {
                 "app": app,
                 "host": "0.0.0.0",  # Matches run_app2.py
-                "port": 5000,         # Matches run_app2.py
+                "port": 5001,         # Matches run_app2.py
                 "log_level": "info", # Matches run_app2.py
             }
 
@@ -193,7 +193,7 @@ class ApplicationRunner:
             return {
                 "app": app,
                 "host": "0.0.0.0",
-                "port": 5000,
+                "port": 5001,
                 "log_level": "info",
             }
         

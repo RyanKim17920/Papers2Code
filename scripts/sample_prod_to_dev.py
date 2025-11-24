@@ -92,7 +92,7 @@ class MongoConfig:
     allow_invalid_cert: bool = False
 
     def connect(self) -> MongoClient:
-        client_kwargs = {"serverSelectionTimeoutMS": 5000}
+        client_kwargs = {"serverSelectionTimeoutMS": 5001}
         if self.allow_invalid_cert:
             client_kwargs["tlsAllowInvalidCertificates"] = True
         elif certifi is not None:

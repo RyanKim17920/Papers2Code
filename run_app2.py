@@ -23,7 +23,7 @@ if __name__ == "__main__":
         print("The application uses FastAPI lifespan events for startup/shutdown handling")
         print("Press Ctrl+C to stop the server and trigger shutdown events")
         # The log_level here controls Uvicorn's server logs, not the application logger defined in main.py
-        uvicorn.run(main.app, host="0.0.0.0", port=5000, log_level="info")
+        uvicorn.run(main.app, host="0.0.0.0", port=5001, log_level="info")
     except Exception as e:
         logging.error(f"Failed to start application: {e}", exc_info=True)
         sys.exit(1)

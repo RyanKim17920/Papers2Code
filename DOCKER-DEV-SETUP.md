@@ -19,8 +19,8 @@ docker-compose -f docker-compose.dev.yml up -d
 
 # Access at:
 # - Frontend: http://localhost:5173
-# - Backend: http://localhost:5000
-# - API Docs: http://localhost:5000/docs
+# - Backend: http://localhost:5001
+# - API Docs: http://localhost:5001/docs
 ```
 
 ## Hybrid Workflow (Dex in Docker, app locally)
@@ -130,7 +130,7 @@ Quick smoke-tests to ensure every container is healthy:
 docker compose -f docker-compose.dev.yml ps
 
 # 2. Backend FastAPI healthy?
-curl -sf http://localhost:5000/health
+curl -sf http://localhost:5001/health
 
 # 3. Dex OIDC metadata reachable?
 curl -sf http://localhost:5556/dex/.well-known/openid-configuration | jq '.issuer'
@@ -162,7 +162,7 @@ If any command fails, restart just the impacted service (e.g., `docker compose -
 ```
 Docker Compose Stack:
 ├── Dex (Mock OAuth) - Port 5556
-├── Backend (FastAPI) - Port 5000
+├── Backend (FastAPI) - Port 5001
 │   └── Connects to MongoDB Atlas (external)
 └── Frontend (React) - Port 5173
 

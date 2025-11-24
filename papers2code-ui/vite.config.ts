@@ -33,7 +33,7 @@ export default defineConfig({
       // Proxy API requests to the FastAPI backend
       // Adjust the target if your FastAPI server runs on a different port
       '/api': {
-        target: 'http://localhost:5000', // Your FastAPI backend URL
+        target: 'http://localhost:5001', // Your FastAPI backend URL
         changeOrigin: true, // Needed for virtual hosted sites
         rewrite: (path) => path.replace(/^\/api/, ''), // Rewrite the path: remove /api prefix
       },

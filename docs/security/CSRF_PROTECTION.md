@@ -139,7 +139,7 @@ api.interceptors.request.use(async (config) => {
 ## Cross-Domain Configuration
 
 ### Development (Same-Domain)
-- **Backend**: `http://localhost:5000`
+- **Backend**: `http://localhost:5001`
 - **Frontend**: `http://localhost:5173`
 - **Cookie Settings**: `SameSite=lax, Secure=false`
 - **Works because**: Same top-level domain (localhost)

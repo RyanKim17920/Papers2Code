@@ -22,7 +22,7 @@ async def test_csrf_protection():
     """Test CSRF protection with various scenarios."""
     
     # Base URL - use localhost for local testing
-    base_url = "http://localhost:5000"
+    base_url = "http://localhost:5001"
     
     print("🧪 Testing CSRF Protection\n")
     print("=" * 60)

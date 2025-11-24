@@ -99,11 +99,12 @@ class MockIDPService:
     def get_discovery_doc(self) -> Dict[str, Any]:
         """Return OIDC Discovery Document"""
 
-        # We hardcode these for the dev environment as they are specific to the docker-compose setup.
-        # 'internal_host' is used for server-to-server communication within the Docker network.
-        # 'external_host' is used for browser redirects.
-        internal_host = "http://papers2code_dev_backend:5000"
-        external_host = "http://localhost:5000"
+        # In Docker, the internal host for server-to-server (Dex -> Backend) communication
+        # must match what is configured in dex-config.yaml
+        internal_host = "http://host.docker.internal:5001"
+        
+        # External host is for browser redirects (User -> Backend)
+        external_host = config_settings.API_URL
         
         issuer = f"{internal_host}/mock-idp"
         
@@ -150,7 +151,7 @@ class MockIDPService:
         now = datetime.utcnow()
         
         # Issuer must match the discovery doc issuer (internal host)
-        internal_host = "http://papers2code_dev_backend:5000"
+        internal_host = "http://host.docker.internal:5001"
         issuer = f"{internal_host}/mock-idp"
         
         id_token_payload = {

@@ -143,11 +143,11 @@ class ApplicationRunner:
     def get_uvicorn_config(self) -> dict:
         """Get environment-specific uvicorn configuration with error handling."""
         try:
-            # Simple configuration that always works on port 5000 for Render
+            # Simple configuration that always works on port 5001 for Render
             base_config = {
                 "app": app,
                 "host": "0.0.0.0",
-                "port": 5000,
+                "port": 5001,
                 "log_level": "info",
                 "access_log": True,
             }
@@ -163,7 +163,7 @@ class ApplicationRunner:
                 self._log("info", "Using development configuration with hot reload")
             else:
                 # Production or any other environment - simple single-worker setup
-                self._log("info", "Using production configuration on port 5000")
+                self._log("info", "Using production configuration on port 5001")
 
             return base_config
 
@@ -173,7 +173,7 @@ class ApplicationRunner:
             return {
                 "app": app,
                 "host": "0.0.0.0",
-                "port": 5000,
+                "port": 5001,
                 "log_level": "info",
             }
         
