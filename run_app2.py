@@ -18,7 +18,7 @@ if __name__ == "__main__":
     
     try:
         print("Starting Papers2Code FastAPI application...")
-        print("API documentation will be available at http://localhost:5000/docs")
+        print("API documentation will be available at http://localhost:/docs")
         print(f"Application log level set by run_app2.py to: {os.getenv('APP_LOG_LEVEL')}") # Confirm APP_LOG_LEVEL
         print("The application uses FastAPI lifespan events for startup/shutdown handling")
         print("Press Ctrl+C to stop the server and trigger shutdown events")
