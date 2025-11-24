@@ -7,8 +7,8 @@ from fastapi import Request
 @pytest.fixture
 def mock_request():
     request = Mock(spec=Request)
-    request.url_for = Mock(return_value="http://localhost:5000/api/auth/github/callback")
-    request.base_url = Mock(return_value="http://localhost:5000")
+    request.url_for = Mock(return_value="http://localhost:5001/api/auth/github/callback")
+    request.base_url = Mock(return_value="http://localhost:5001")
     request.url = Mock()
     request.url.path = "/api/auth/github/callback"
     request.cookies = {}

@@ -95,7 +95,7 @@ MONGO_CONNECTION_STRING=mongodb+srv://...
 
 # Application
 ENV_TYPE=production
-PORT=5000 
+PORT=5001 
 FRONTEND_URL=https://your-vercel-domain.com
 
 # Authentication

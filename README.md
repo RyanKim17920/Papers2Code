@@ -135,9 +135,9 @@ Papers2code/
 ## 📖 API Documentation
 
 When running locally, visit:
-- **Interactive Docs**: `http://localhost:5000/docs`
-- **ReDoc**: `http://localhost:5000/redoc` 
-- **OpenAPI Schema**: `http://localhost:5000/openapi.json`
+- **Interactive Docs**: `http://localhost:5001/docs`
+- **ReDoc**: `http://localhost:5001/redoc` 
+- **OpenAPI Schema**: `http://localhost:5001/openapi.json`
 
 ### Key API Endpoints
 
@@ -212,7 +212,7 @@ uv sync
 uv run run_app2.py
 
 # Run with auto-reload
-uv run uvicorn papers2code_app2.main:app --reload --port 5000
+uv run uvicorn papers2code_app2.main:app --reload --port 5001
 ```
 
 ### Combined Dev Runner 🚀

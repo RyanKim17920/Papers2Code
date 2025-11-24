@@ -16,59 +16,219 @@ router = APIRouter(prefix="/mock-idp", tags=["mock-idp"])
 # Simple HTML template for the login page
 LOGIN_TEMPLATE = """
 <!DOCTYPE html>
-<html>
+<html lang="en">
 <head>
-    <title>Choose Persona - Mock IDP</title>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Papers2Code Dev Login</title>
     <style>
-        body { font-family: sans-serif; max-width: 800px; margin: 0 auto; padding: 20px; }
-        .persona-card { 
-            border: 1px solid #ddd; 
-            padding: 15px; 
-            margin: 10px 0; 
-            border-radius: 8px;
+        :root {
+            --primary: #2563eb;
+            --primary-hover: #1d4ed8;
+            --bg: #f8fafc;
+            --card-bg: #ffffff;
+            --text: #0f172a;
+            --text-muted: #64748b;
+            --border: #e2e8f0;
+        }
+        
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 20px;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+        }
+        
+        .container {
+            background: var(--card-bg);
+            width: 100%;
+            max-width: 480px;
+            border-radius: 16px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+            padding: 32px;
+        }
+        
+        h1 {
+            font-size: 24px;
+            font-weight: 700;
+            margin: 0 0 8px 0;
+            text-align: center;
+        }
+        
+        p.subtitle {
+            color: var(--text-muted);
+            text-align: center;
+            margin: 0 0 32px 0;
+            font-size: 14px;
+        }
+        
+        .persona-list {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+            margin-bottom: 32px;
+            max-height: 400px;
+            overflow-y: auto;
+        }
+        
+        .persona-card {
             display: flex;
             align-items: center;
+            padding: 12px;
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            cursor: pointer;
+            transition: all 0.2s ease;
+            background: #fff;
+        }
+        
+        .persona-card:hover {
+            border-color: var(--primary);
+            background-color: #eff6ff;
+            transform: translateY(-1px);
+            box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+        }
+        
+        .avatar {
+            width: 48px;
+            height: 48px;
+            border-radius: 50%;
+            margin-right: 16px;
+            object-fit: cover;
+            border: 2px solid #fff;
+            box-shadow: 0 0 0 1px var(--border);
+        }
+        
+        .info {
+            flex: 1;
+            min-width: 0;
+        }
+        
+        .name {
+            font-weight: 600;
+            font-size: 15px;
+            margin-bottom: 2px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .meta {
+            font-size: 13px;
+            color: var(--text-muted);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+        
+        .provider-badge {
+            font-size: 11px;
+            padding: 2px 8px;
+            border-radius: 12px;
+            background: #f1f5f9;
+            color: var(--text-muted);
+            margin-left: auto;
+            font-weight: 500;
+        }
+        
+        .divider {
+            height: 1px;
+            background: var(--border);
+            margin: 0 0 24px 0;
+            position: relative;
+        }
+        
+        .divider span {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: var(--card-bg);
+            padding: 0 12px;
+            color: var(--text-muted);
+            font-size: 12px;
+        }
+        
+        .new-persona-form {
+            display: flex;
+            flex-direction: column;
+            gap: 12px;
+        }
+        
+        input, select {
+            padding: 10px 12px;
+            border: 1px solid var(--border);
+            border-radius: 8px;
+            font-size: 14px;
+            transition: border-color 0.2s;
+            width: 100%;
+            box-sizing: border-box;
+        }
+        
+        input:focus, select:focus {
+            outline: none;
+            border-color: var(--primary);
+            box-shadow: 0 0 0 3px rgba(37, 99, 235, 0.1);
+        }
+        
+        button.create-btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px;
+            border-radius: 8px;
+            font-weight: 600;
             cursor: pointer;
             transition: background 0.2s;
         }
-        .persona-card:hover { background: #f5f5f5; }
-        .avatar { width: 50px; height: 50px; border-radius: 50%; margin-right: 15px; }
-        .info { flex-grow: 1; }
-        .name { font-weight: bold; }
-        .meta { color: #666; font-size: 0.9em; }
-        .new-persona { margin-top: 30px; border-top: 1px solid #eee; padding-top: 20px; }
-        input { padding: 8px; margin: 5px; width: 200px; }
-        button { padding: 8px 15px; cursor: pointer; }
+        
+        button.create-btn:hover {
+            background: var(--primary-hover);
+        }
+        
+        .github-icon { color: #24292f; }
+        .google-icon { color: #ea4335; }
+        
     </style>
 </head>
 <body>
-    <h1>Choose a Persona</h1>
-    <p>Select a user to simulate login:</p>
-    
-    <div id="persona-list">
-        {% for persona in personas %}
-        <div class="persona-card" onclick="login('{{ persona.id }}')">
-            <img src="{{ persona.avatarUrl }}" class="avatar" onerror="this.src='https://via.placeholder.com/50'">
-            <div class="info">
-                <div class="name">{{ persona.displayName }}</div>
-                <div class="meta">{{ persona.username }} | {{ persona.email }}</div>
-                <div class="meta" style="font-size: 0.8em; color: #888;">Provider: {{ persona.provider }}</div>
+    <div class="container">
+        <h1>Development Login</h1>
+        <p class="subtitle">Select a persona to simulate authentication</p>
+        
+        <div class="persona-list">
+            {% for persona in personas %}
+            <div class="persona-card" onclick="login('{{ persona.id }}')">
+                <img src="{{ persona.avatarUrl }}" class="avatar" onerror="this.src='https://ui-avatars.com/api/?name={{ persona.displayName }}'">
+                <div class="info">
+                    <div class="name">{{ persona.displayName }}</div>
+                    <div class="meta">{{ persona.email }}</div>
+                </div>
+                <span class="provider-badge">{{ persona.provider }}</span>
             </div>
+            {% endfor %}
         </div>
-        {% endfor %}
-    </div>
 
-    <div class="new-persona">
-        <h3>Create New Persona</h3>
-        <form action="/mock-idp/personas" method="post" onsubmit="return createPersona(event)">
-            <input type="text" name="username" placeholder="Username" required>
-            <input type="email" name="email" placeholder="Email" required>
+        <div class="divider">
+            <span>OR CREATE NEW</span>
+        </div>
+
+        <form class="new-persona-form" onsubmit="return createPersona(event)">
+            <div style="display: flex; gap: 12px;">
+                <input type="text" name="username" placeholder="Username" required style="flex: 1;">
+                <select name="provider" style="width: 100px;">
+                    <option value="github">GitHub</option>
+                    <option value="google">Google</option>
+                </select>
+            </div>
+            <input type="email" name="email" placeholder="Email Address" required>
             <input type="text" name="displayName" placeholder="Display Name">
-            <select name="provider">
-                <option value="github">GitHub</option>
-                <option value="google">Google</option>
-            </select>
-            <button type="submit">Create & Login</button>
+            <button type="submit" class="create-btn">Create & Login</button>
         </form>
     </div>
 
@@ -89,12 +249,18 @@ LOGIN_TEMPLATE = """
         async function createPersona(e) {
             e.preventDefault();
             const form = e.target;
+            const btn = form.querySelector('button');
+            const originalText = btn.innerText;
+            btn.disabled = true;
+            btn.innerText = 'Creating...';
+            
             const formData = new FormData(form);
             const data = Object.fromEntries(formData.entries());
             
-            // Add some defaults
-            data.avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName || data.username)}`;
-            data.id = (data.provider === 'github' ? 'gh-' : 'gg-') + data.username;
+            // Add defaults
+            if (!data.displayName) data.displayName = data.username;
+            data.avatarUrl = `https://ui-avatars.com/api/?name=${encodeURIComponent(data.displayName)}&background=random`;
+            data.id = (data.provider === 'github' ? 'gh-' : 'gg-') + data.username + '-' + Math.floor(Math.random() * 1000);
             
             try {
                 const res = await fetch('/mock-idp/api/personas', {
@@ -108,10 +274,14 @@ LOGIN_TEMPLATE = """
                     login(newPersona.id);
                 } else {
                     alert('Failed to create persona');
+                    btn.disabled = false;
+                    btn.innerText = originalText;
                 }
             } catch (err) {
                 console.error(err);
                 alert('Error creating persona');
+                btn.disabled = false;
+                btn.innerText = originalText;
             }
             return false;
         }

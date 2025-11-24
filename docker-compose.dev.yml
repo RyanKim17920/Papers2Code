@@ -3,7 +3,7 @@ version: '3.8'
 services:
   # Note: MongoDB is now external (MongoDB Atlas or remote server)
   # The local mongodb service has been removed - using MONGO_URI_DEV from .env
-  
+
   # Dex OIDC provider for development OAuth
 
   # Dex - OpenID Connect Provider (Mock OAuth)
@@ -14,7 +14,7 @@ services:
       - "5556:5556"
     volumes:
       - ./dev-config/dex-config.yaml:/etc/dex/config.yaml:ro
-    command: ["dex", "serve", "/etc/dex/config.yaml"]
+    command: [ "dex", "serve", "/etc/dex/config.yaml" ]
     networks:
       - papers2code_dev
 
@@ -25,7 +25,7 @@ services:
       dockerfile: Dockerfile.dev
     container_name: papers2code_dev_backend
     ports:
-      - "5000:5000"
+      - "5001:5001"
     volumes:
       - ./papers2code_app2:/app/papers2code_app2
       - ./scripts:/app/scripts
@@ -36,11 +36,17 @@ services:
       - DEX_CLIENT_ID=papers2code-backend
       - DEX_CLIENT_SECRET=dev-client-secret-change-in-production
       # MONGO_URI_DEV loaded from .env - auto-selected based on ENV_TYPE
-    depends_on:
-      - dex
+      # depends_on:
+      #   - dex
     networks:
       - papers2code_dev
-    command: uvicorn papers2code_app2.main:app --host 0.0.0.0 --port 5000 --reload
+    command: uvicorn papers2code_app2.main:app --host 0.0.0.0 --port 5001 --reload
+    healthcheck:
+      test: [ "CMD", "curl", "-f", "http://localhost:5001/" ]
+      interval: 5s
+      timeout: 5s
+      retries: 5
+      start_period: 5s
 
   # Frontend
   frontend:
@@ -54,7 +60,7 @@ services:
       - ./papers2code-ui/src:/app/src
       - ./papers2code-ui/public:/app/public
     environment:
-      - VITE_API_URL=http://localhost:5000
+      - VITE_API_URL=http://localhost:5001
     networks:
       - papers2code_dev
     command: npm run dev -- --host 0.0.0.0

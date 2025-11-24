@@ -10,3 +10,5 @@ PyJWT  # For Dex OAuth JWT token handling
 python-dotenv
 dateutils
 slowapi
+pydantic-settings
+python-multipart

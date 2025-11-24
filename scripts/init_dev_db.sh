@@ -78,13 +78,13 @@ print("🔗 Connecting to databases...")
 
 try:
     # Connect to production (read-only)
-    prod_client = MongoClient(MONGO_URI_PROD, serverSelectionTimeoutMS=5000)
+    prod_client = MongoClient(MONGO_URI_PROD, serverSelectionTimeoutMS=5001)
     prod_db = prod_client.get_database()
     prod_client.admin.command('ping')
     print(f"  ✓ Connected to production: {prod_db.name}")
     
     # Connect to development
-    dev_client = MongoClient(MONGO_URI_DEV, serverSelectionTimeoutMS=5000)
+    dev_client = MongoClient(MONGO_URI_DEV, serverSelectionTimeoutMS=5001)
     dev_db = dev_client.get_database()
     dev_client.admin.command('ping')
     print(f"  ✓ Connected to development: {dev_db.name}")

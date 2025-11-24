@@ -62,8 +62,8 @@ async def initialize_async_db():
             maxPoolSize=config_settings.MONGO_MAX_POOL_SIZE,  # Configurable pool size
             minPoolSize=config_settings.MONGO_MIN_POOL_SIZE,   # Configurable minimum connections
             maxIdleTimeMS=30000,  # 30 seconds idle timeout
-            waitQueueTimeoutMS=5000,  # 5 seconds wait timeout
-            serverSelectionTimeoutMS=5000,  # 5 seconds server selection timeout
+            waitQueueTimeoutMS=5001,  # 5 seconds wait timeout
+            serverSelectionTimeoutMS=5001,  # 5 seconds server selection timeout
             connectTimeoutMS=10000,  # 10 seconds connection timeout
             socketTimeoutMS=20000,   # 20 seconds socket timeout
             retryWrites=True,
