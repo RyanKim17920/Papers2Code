@@ -106,6 +106,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
         }
     }, [paper]);
 
+    // Generate SEO metadata and structured data
+    useEffect(() => {
+        if (paper) {
+            const structuredData = generatePaperStructuredData(paper);
+            injectStructuredData(structuredData);
+        }
+    }, [paper]);
+
     const handleSetActiveTab = (tab: string) => {
         setActiveTab(tab as ActiveTabType);
     };
