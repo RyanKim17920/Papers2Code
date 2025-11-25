@@ -25,7 +25,18 @@ import time
 from pathlib import Path
 from typing import List, Optional
 
-ROOT_DIR = Path(__file__).resolve().parent
+# Load .env file early so ENV_TYPE and other settings are available
+try:
+    from dotenv import load_dotenv
+    ROOT_DIR = Path(__file__).resolve().parent
+    env_file = ROOT_DIR / ".env"
+    if env_file.exists():
+        load_dotenv(env_file)
+        print(f"[docker_run] Loaded environment from {env_file}")
+except ImportError:
+    ROOT_DIR = Path(__file__).resolve().parent
+    print("[docker_run] Warning: python-dotenv not installed, .env file not loaded")
+
 UI_DIR = ROOT_DIR / "papers2code-ui"
 DEFAULT_COMPOSE_FILE = ROOT_DIR / "docker-compose.dev.yml"
 DEFAULT_BACKEND_CMD = "uv run run.py"

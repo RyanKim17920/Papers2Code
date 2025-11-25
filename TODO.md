@@ -10,6 +10,8 @@
 * [x] Secondary confirmation modal if trying to say no code posted if less than 4 weeks (from ghost or they said no)
 * [x] Immediate redirect to landing page if on dashboard without logged in
 * [x] Small SEO improvements like the metadata image when searching, etc.
+* [ ] Google login broken
+
 
 1.2 More difficult Fixes 
 * [ ] Fix peer reviewing so that other users can finalize code
