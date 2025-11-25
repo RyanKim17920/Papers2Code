@@ -32,13 +32,13 @@ router = APIRouter(
 auth_service = AuthService()
 
 # Initialize OAuth services based on configuration
-# If USE_DEX_OAUTH is True, use Dex for both GitHub and Google OAuth
-# Otherwise, use real GitHub and Google OAuth services
+# If USE_DEX_OAUTH is True, use Keycloak for both GitHub and Google OAuth (development)
+# Otherwise, use real GitHub and Google OAuth services (production)
 if config_settings.USE_DEX_OAUTH:
-    from ..services.dex_oauth_service import dex_oauth_service
-    github_oauth_service = dex_oauth_service
-    google_oauth_service = dex_oauth_service
-    logger.info("Using Dex OAuth service for development (USE_DEX_OAUTH=true)")
+    from ..services.keycloak_oauth_service import keycloak_oauth_service
+    github_oauth_service = keycloak_oauth_service
+    google_oauth_service = keycloak_oauth_service
+    logger.info("Using Keycloak OAuth service for development (USE_DEX_OAUTH=true)")
 else:
     github_oauth_service = GitHubOAuthService()
     google_oauth_service = GoogleOAuthService()

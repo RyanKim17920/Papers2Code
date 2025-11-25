@@ -21,19 +21,20 @@ docker-compose -f docker-compose.dev.yml up -d
 # - Frontend: http://localhost:5173
 # - Backend: http://localhost:5001
 # - API Docs: http://localhost:5001/docs
+# - Keycloak Admin: http://localhost:8080 (admin/admin)
 ```
 
-## Hybrid Workflow (Dex in Docker, app locally)
+## Hybrid Workflow (Keycloak in Docker, app locally)
 
-If you prefer running the FastAPI & Vite dev servers locally (for hot reload speed) while still using Dex from Docker, use the helper script:
+If you prefer running the FastAPI & Vite dev servers locally (for hot reload speed) while still using Keycloak from Docker, use the helper script:
 
 ```bash
-uv run docker_run.py               # Starts Dex + backend + frontend
-uv run docker_run.py --skip-frontend   # Just Dex + backend
-uv run docker_run.py stop          # Stop only the Dex container
+uv run docker_run.py               # Starts Keycloak + backend + frontend
+uv run docker_run.py --skip-frontend   # Just Keycloak + backend
+uv run docker_run.py stop          # Stop only the Keycloak container
 ```
 
-The script ensures Dex is up through Docker Compose and streams the logs of the locally run backend/frontend processes until you press `Ctrl+C`.
+The script ensures Keycloak is up through Docker Compose and streams the logs of the locally run backend/frontend processes until you press `Ctrl+C`.
 
 ## What Gets Created
 
@@ -50,7 +51,7 @@ The initialization script (`init_dev_db.sh`):
 
 ```bash
 # .env
-ENV_TYPE=DEV  # Development mode (uses Dex mock OAuth)
+ENV_TYPE=DEV  # Development mode (uses Keycloak mock OAuth)
 
 # Same .env file for other modes
 ENV_TYPE=PRODUCTION  # Production mode (uses real GitHub/Google OAuth)
@@ -58,7 +59,7 @@ ENV_TYPE=PRODUCTION  # Production mode (uses real GitHub/Google OAuth)
 
 When `ENV_TYPE=DEV`:
 - ✅ Uses `MONGO_URI_DEV`
-- ✅ Dex mock OAuth (no real GitHub/Google needed)
+- ✅ Keycloak mock OAuth (no real GitHub/Google needed)
 - ✅ Debug logging
 - ✅ Detailed errors
 
@@ -90,17 +91,42 @@ MONGO_URI_DEV=mongodb+srv://user:pass@cluster.mongodb.net/papers2code_dev
 MONGO_URI_DEV=mongodb://localhost:27017/papers2code_dev
 ```
 
-## Test OAuth with Dex
+## Test OAuth with Keycloak
 
-No real GitHub/Google accounts needed!
+### Key Features
+- ✅ **Self-registration**: Create unlimited test accounts
+- ✅ **Separate realms**: Mock GitHub and Mock Google act as independent providers
+- ✅ **Real OAuth flows**: Full OAuth2/OIDC protocol support
+- ✅ **Account linking testing**: Test same-email-different-provider scenarios
 
-**Test users (password: `password`):**
-- `dev_github_user1@test.local`
-- `dev_google_user1@gmail.test`
-- `admin_dev@test.local` (has admin privileges)
+### Creating Test Accounts
+
+1. Click "Login with GitHub" or "Login with Google"
+2. On the Keycloak login page, click "Register"
+3. Fill in the registration form (username, email, password)
+4. Your account is created and you're logged in!
+
+### Testing Account Linking
+
+1. Register a "GitHub" account with email `test@example.com`
+2. Log out
+3. Register a "Google" account with the same email `test@example.com`
+4. The app will prompt you to link the accounts!
+
+### Keycloak Admin Console
+
+Access the admin console at http://localhost:8080:
+- Username: `admin`
+- Password: `admin`
+
+From here you can:
+- View all registered users
+- Create users manually
+- Reset passwords
+- Configure realms
 
 ### Mock GitHub & Google behavior
-With `ENV_TYPE=DEV` (or `USE_DEX_OAUTH=true`), the backend short-circuits all GitHub repository creation and Google-only API calls. Implementation progress actions still return realistic repository metadata (names, clone URLs, README edits, etc.) but nothing ever hits the real GitHub/Google APIs. This keeps Dex logins fully self-contained inside Docker while allowing the UI to exercise the full workflow.
+With `ENV_TYPE=DEV` (or `USE_DEX_OAUTH=true`), the backend short-circuits all GitHub repository creation and Google-only API calls. Implementation progress actions still return realistic repository metadata (names, clone URLs, README edits, etc.) but nothing ever hits the real GitHub/Google APIs. This keeps Keycloak logins fully self-contained inside Docker while allowing the UI to exercise the full workflow.
 
 ## Common Commands
 
@@ -132,8 +158,9 @@ docker compose -f docker-compose.dev.yml ps
 # 2. Backend FastAPI healthy?
 curl -sf http://localhost:5001/health
 
-# 3. Dex OIDC metadata reachable?
-curl -sf http://localhost:5556/dex/.well-known/openid-configuration | jq '.issuer'
+# 3. Keycloak healthy and realms loaded?
+curl -sf http://localhost:8080/realms/mock-github/.well-known/openid-configuration | jq '.issuer'
+curl -sf http://localhost:8080/realms/mock-google/.well-known/openid-configuration | jq '.issuer'
 
 # 4. Frontend dev server responding?
 curl -I http://localhost:5173
@@ -150,18 +177,25 @@ If any command fails, restart just the impacted service (e.g., `docker compose -
 - Test connection: `mongosh "your-connection-string"`
 
 **"OAuth callback fails"**
-- Check Dex is running: `curl http://localhost:5556/dex/.well-known/openid-configuration`
+- Check Keycloak is running: `curl http://localhost:8080/realms/mock-github`
+- Check Keycloak health: `curl http://localhost:8080/health/ready`
 - Restart backend: `docker-compose -f docker-compose.dev.yml restart backend`
 
 **"No papers in database"**
 - Run init script: `./scripts/init_dev_db.sh`
 - Check logs: `docker-compose -f docker-compose.dev.yml logs backend`
 
+**"Keycloak realm not found"**
+- Wait for Keycloak to fully start (can take 30-60 seconds)
+- Check realm import: `docker-compose -f docker-compose.dev.yml logs keycloak`
+
 ## Architecture
 
 ```
 Docker Compose Stack:
-├── Dex (Mock OAuth) - Port 5556
+├── Keycloak (Mock OAuth) - Port 8080
+│   ├── mock-github realm
+│   └── mock-google realm
 ├── Backend (FastAPI) - Port 5001
 │   └── Connects to MongoDB Atlas (external)
 └── Frontend (React) - Port 5173
