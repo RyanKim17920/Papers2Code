@@ -1,14 +1,14 @@
 #!/usr/bin/env python3
 """Convenient orchestrator for local Papers2Code development services.
 
-This utility makes it simple to spin up the Dex mock OAuth server (via Docker
+This utility makes it simple to spin up the Keycloak mock OAuth server (via Docker
 Compose) and run the backend & frontend dev servers with a single command.
 
 Example usage:
 
-    uv run docker_run.py                # Start Dex, backend, and frontend
+    uv run docker_run.py                # Start Keycloak, backend, and frontend
     uv run docker_run.py --skip-frontend
-    uv run docker_run.py stop           # Stop only the Dex container
+    uv run docker_run.py stop           # Stop only the Keycloak container
 
 """
 from __future__ import annotations
@@ -173,9 +173,12 @@ class DevEnvironmentOrchestrator:
 
     def start(self) -> None:
         if not self.args.skip_dex:
-            print_header("Ensuring Dex container is up (docker compose)...")
-            self.compose.up_detached(["dex"], rebuild=self.args.rebuild_dex)
-            print_header("Dex is running on http://localhost:5556/dex")
+            print_header("Ensuring Keycloak container is up (docker compose)...")
+            self.compose.up_detached(["keycloak"], rebuild=self.args.rebuild_dex)
+            print_header("Keycloak is running on http://localhost:8080")
+            print_header("  - Mock GitHub: http://localhost:8080/realms/mock-github")
+            print_header("  - Mock Google: http://localhost:8080/realms/mock-google")
+            print_header("  - Admin Console: http://localhost:8080 (admin/admin)")
 
         if not self.args.skip_backend:
             backend_cmd = shlex.split(self.args.backend_command)
@@ -241,19 +244,19 @@ class DevEnvironmentOrchestrator:
         for proc in self.processes:
             proc.stop()
         if self.args.stop_dex and not self.args.skip_dex:
-            print_header("Stopping Dex container...")
-            self.compose.stop(["dex"])
+            print_header("Stopping Keycloak container...")
+            self.compose.stop(["keycloak"])
         print_header("All services stopped.")
 
     def stop_only(self) -> None:
-        print_header("Stopping Dex service via docker compose...")
-        self.compose.stop(["dex"])
-        print_header("Dex stopped. Manually terminate any local dev servers if needed.")
+        print_header("Stopping Keycloak service via docker compose...")
+        self.compose.stop(["keycloak"])
+        print_header("Keycloak stopped. Manually terminate any local dev servers if needed.")
 
 
 def parse_args() -> argparse.Namespace:
     parser = argparse.ArgumentParser(
-        description="Start Dex (Docker) plus backend & frontend dev servers with one command.",
+        description="Start Keycloak (Docker) plus backend & frontend dev servers with one command.",
         formatter_class=argparse.ArgumentDefaultsHelpFormatter,
     )
     parser.add_argument(
@@ -261,12 +264,12 @@ def parse_args() -> argparse.Namespace:
         nargs="?",
         choices=["start", "stop"],
         default="start",
-        help="What to do: start everything or just stop Dex.",
+        help="What to do: start everything or just stop Keycloak.",
     )
     parser.add_argument(
         "--compose-file",
         default=str(DEFAULT_COMPOSE_FILE),
-        help="Path to docker compose file used for Dex.",
+        help="Path to docker compose file used for Keycloak.",
     )
     parser.add_argument(
         "--backend-command",
@@ -281,7 +284,7 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--skip-dex",
         action="store_true",
-        help="Do not manage the Dex Docker container.",
+        help="Do not manage the Keycloak Docker container.",
     )
     parser.add_argument(
         "--skip-backend",
@@ -296,12 +299,12 @@ def parse_args() -> argparse.Namespace:
     parser.add_argument(
         "--rebuild-dex",
         action="store_true",
-        help="Rebuild the Dex image before starting it (docker compose build).",
+        help="Rebuild the Keycloak image before starting it (docker compose build).",
     )
     parser.add_argument(
         "--stop-dex",
         action="store_true",
-        help="Stop the Dex container when shutting down.",
+        help="Stop the Keycloak container when shutting down.",
     )
     return parser.parse_args()
 

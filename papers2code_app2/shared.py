@@ -198,8 +198,23 @@ class AppSettings(BaseSettings):    # Core settings
     FRONTEND_URL: str = "http://localhost:5173"
     API_URL: str = "http://localhost:5001"
     
-    # Dex OAuth Configuration (for development/testing)
-    USE_DEX_OAUTH: bool = Field(False, env="USE_DEX_OAUTH")
+    # Mock OAuth Configuration (for development/testing with Keycloak)
+    USE_DEX_OAUTH: bool = Field(False, env="USE_DEX_OAUTH")  # Enables Keycloak mock OAuth
+    
+    # Keycloak Mock GitHub OAuth
+    KEYCLOAK_GITHUB_ISSUER_URL: Optional[str] = Field(None, env="KEYCLOAK_GITHUB_ISSUER_URL")
+    KEYCLOAK_GITHUB_CLIENT_ID: Optional[str] = Field(None, env="KEYCLOAK_GITHUB_CLIENT_ID")
+    KEYCLOAK_GITHUB_CLIENT_SECRET: Optional[str] = Field(None, env="KEYCLOAK_GITHUB_CLIENT_SECRET")
+    
+    # Keycloak Mock Google OAuth
+    KEYCLOAK_GOOGLE_ISSUER_URL: Optional[str] = Field(None, env="KEYCLOAK_GOOGLE_ISSUER_URL")
+    KEYCLOAK_GOOGLE_CLIENT_ID: Optional[str] = Field(None, env="KEYCLOAK_GOOGLE_CLIENT_ID")
+    KEYCLOAK_GOOGLE_CLIENT_SECRET: Optional[str] = Field(None, env="KEYCLOAK_GOOGLE_CLIENT_SECRET")
+    
+    # Keycloak External URL (for browser redirects)
+    KEYCLOAK_EXTERNAL_URL: Optional[str] = Field("http://localhost:8080", env="KEYCLOAK_EXTERNAL_URL")
+    
+    # Legacy Dex settings (deprecated, kept for backward compatibility)
     DEX_ISSUER_URL: Optional[str] = Field(None, env="DEX_ISSUER_URL")
     DEX_CLIENT_ID: Optional[str] = Field(None, env="DEX_CLIENT_ID")
     DEX_CLIENT_SECRET: Optional[str] = Field(None, env="DEX_CLIENT_SECRET")
