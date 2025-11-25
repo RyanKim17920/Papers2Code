@@ -4,6 +4,7 @@ import { fetchPapersFromApi, voteOnPaperInApi, AdvancedPaperFilters, Authenticat
 import { Paper } from '../types/paper';
 import useDebounce from './useDebounce';
 import { useModal } from '@/shared/contexts/ModalContext';
+import type { UserProfile } from '@/shared/types/user';
 
 const DEBOUNCE_DELAY = 500;
 const ITEMS_PER_PAGE = 12;
@@ -23,7 +24,7 @@ const initialAdvancedFilters: AdvancedPaperFilters = {
   tags: [],
 };
 
-export function usePaperList(authLoading?: boolean) {
+export function usePaperList(authLoading?: boolean, currentUser?: UserProfile | null) {
   const [searchParams, setSearchParams] = useSearchParams();
   const prevSearchParamsRef = useRef(searchParams.toString());
   const [papers, setPapers] = useState<Paper[]>([]);
@@ -288,6 +289,12 @@ export function usePaperList(authLoading?: boolean) {
   }, [currentPage, totalPages, searchParams, setSearchParams]);
 
   const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
+    // Check if user is logged in before attempting to vote
+    if (!currentUser) {
+      showLoginPrompt("Please sign in to upvote papers.");
+      return;
+    }
+    
     try {
       const updatedPaper = await voteOnPaperInApi(paperId, voteType);
       setPapers(prevPapers =>
@@ -296,7 +303,7 @@ export function usePaperList(authLoading?: boolean) {
     } catch (error: unknown) {
       console.error('Voting error:', error);
       if (error instanceof AuthenticationError || error instanceof CsrfError) {
-        showLoginPrompt();
+        showLoginPrompt("Please sign in to upvote papers.");
       } else if (error instanceof Error) {
         setError(error.message || 'Failed to vote. Please try again.');
       } else {

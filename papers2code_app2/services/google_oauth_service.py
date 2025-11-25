@@ -345,4 +345,11 @@ class GoogleOAuthService:
                 secure=True if is_production else False
             )
             logger.info(f"Successfully authenticated user {username}. Redirecting to frontend. Cookies being set: Access, Refresh, CSRF.")
-            return redirect_response
+            
+            # Add login_success query param to notify frontend of successful login
+            success_redirect = RedirectResponse(url=f"{frontend_url}/dashboard?login_success=true", status_code=307)
+            # Copy all cookies from redirect_response to success_redirect
+            for key, value in redirect_response.headers.items():
+                if key.lower() == 'set-cookie':
+                    success_redirect.headers.append(key, value)
+            return success_redirect

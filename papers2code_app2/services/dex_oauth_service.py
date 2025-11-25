@@ -235,8 +235,8 @@ class DexOAuthService:
         # Generate CSRF token
         csrf_token = self._generate_csrf_token()
         
-        # Create success response
-        response = RedirectResponse(url=frontend_url, status_code=307)
+        # Create success response - redirect to dashboard with login_success flag
+        response = RedirectResponse(url=f"{frontend_url}/dashboard?login_success=true", status_code=307)
         
         is_production = config_settings.ENV_TYPE == "production"
         

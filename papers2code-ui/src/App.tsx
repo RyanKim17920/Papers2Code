@@ -38,10 +38,20 @@ function App() {
   const navigate = useNavigate();
   const { toast } = useToast();
 
-  // Check for pending_link query parameter and show modal
+  // Check for pending_link or login_success query parameter
   useEffect(() => {
     const params = new URLSearchParams(location.search);
     const pendingToken = params.get('pending_link');
+    const loginSuccess = params.get('login_success');
+    
+    // Handle successful OAuth login redirect - clean up URL
+    if (loginSuccess === 'true') {
+      // Clean up URL (user fetch is handled in initializeApp)
+      params.delete('login_success');
+      const newSearch = params.toString();
+      navigate(location.pathname + (newSearch ? `?${newSearch}` : ''), { replace: true });
+      return; // Exit early, initializeApp will handle the user fetch
+    }
     
     if (pendingToken) {
       // Decode the JWT token to get account information
@@ -155,14 +165,23 @@ function App() {
     const initializeApp = async () => {
       setAuthLoading(true);
       await fetchAndStoreCsrfToken();
+      
+      // Check if this is a login success redirect (force check user even without has_session)
+      const params = new URLSearchParams(location.search);
+      const loginSuccess = params.get('login_success') === 'true';
+      
       try {
-        const user = await checkCurrentUser();
+        // Force check if login_success param is present (OAuth callback just completed)
+        const user = await checkCurrentUser(loginSuccess);
         if (user) {
           setCurrentUser(user);
           localStorage.setItem('has_session', 'true');
         } else {
           setCurrentUser(null);
-          localStorage.removeItem('has_session');
+          // Only remove has_session if we weren't just redirected from OAuth
+          if (!loginSuccess) {
+            localStorage.removeItem('has_session');
+          }
         }
       } catch (error) {
         if (error instanceof AuthenticationError) {
@@ -176,7 +195,7 @@ function App() {
       }
     };
     initializeApp();
-  }, [location.pathname]);
+  }, [location.pathname, location.search]);
 
   // No dropdown in App; handled in GlobalHeader
 

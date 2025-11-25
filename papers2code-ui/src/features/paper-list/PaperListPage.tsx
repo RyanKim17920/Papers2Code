@@ -67,7 +67,7 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
     handleApplyAdvancedFilters,
     handleClearAdvancedFilters,
     isSearchActive,
-  } = usePaperList(authLoading);
+  } = usePaperList(authLoading, currentUser);
 
   const [availableTags, setAvailableTags] = useState<string[]>([]);
 

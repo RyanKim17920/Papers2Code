@@ -19,12 +19,14 @@ export const redirectToGoogleLogin = () => {
 };
 
 // Function to check current user status
-export const checkCurrentUser = async (): Promise<UserProfile | null> => {
+// forceCheck: if true, always make the API call regardless of has_session flag
+// This is needed after OAuth callback where cookies are set but localStorage is not yet updated
+export const checkCurrentUser = async (forceCheck: boolean = false): Promise<UserProfile | null> => {
     // Check if user has ever logged in (localStorage flag)
     const hasSession = localStorage.getItem('has_session') === 'true';
     
-    // If no session flag exists, skip the API call to avoid 401 errors in console
-    if (!hasSession) {
+    // If no session flag exists and we're not forcing a check, skip the API call to avoid 401 errors in console
+    if (!hasSession && !forceCheck) {
         return null;
     }
     

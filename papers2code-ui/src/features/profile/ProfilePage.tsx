@@ -2,12 +2,13 @@ import React, { useState, useEffect } from 'react';
 import { useParams, Link } from 'react-router-dom';
 import { Globe, Twitter, Linkedin, Calendar, Users, ThumbsUp, Rocket, Award, ExternalLink, Settings, Github, Cloud, FileText } from 'lucide-react';
 import { UserAvatar, LoadingSpinner } from '@/shared/components';
-import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi, getUserProfileSettings } from '@/shared/services/api';
+import { fetchUserProfileFromApi, UserProfileResponse, voteOnPaperInApi, getUserProfileSettings, AuthenticationError, CsrfError } from '@/shared/services/api';
 import { Paper } from '@/shared/types/paper';
 import ModernPaperCard from '@/features/paper-list/ModernPaperCard';
 import { formatJoinedDate, formatLastSeen } from '@/shared/utils/dateUtils';
 import { ProfileSettingsTab } from '@/features/profile/ProfileSettingsTab';
 import { getStatusColorClasses } from '@/shared/utils/statusUtils';
+import { useModal } from '@/shared/contexts/ModalContext';
 
 type TabType = 'overview' | 'upvoted' | 'contributing' | 'settings';
 
@@ -18,6 +19,7 @@ const ProfilePage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<TabType>('overview');
   const [isLoading, setIsLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  const { showLoginPrompt } = useModal();
 
   // Helper function to update a paper in the profile data
   const updatePaperInProfileData = (updatedPaper: Paper) => {
@@ -40,12 +42,20 @@ const ProfilePage: React.FC = () => {
 
   // Vote handler for paper cards
   const handleVote = async (paperId: string, voteType: 'up' | 'none') => {
+    // Check if user is logged in before attempting to vote
+    if (!currentUserData) {
+      showLoginPrompt("Please sign in to upvote papers.");
+      return;
+    }
+    
     try {
       const updatedPaper = await voteOnPaperInApi(paperId, voteType);
       updatePaperInProfileData(updatedPaper);
     } catch (error) {
       console.error('Failed to vote on paper:', error);
-      // Optionally show an error message to the user
+      if (error instanceof AuthenticationError || error instanceof CsrfError) {
+        showLoginPrompt("Please sign in to upvote papers.");
+      }
     }
   };
 

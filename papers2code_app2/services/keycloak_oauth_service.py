@@ -290,8 +290,8 @@ class KeycloakOAuthService:
         # Generate CSRF token
         csrf_token = secrets.token_urlsafe(32)
         
-        # Create success response
-        response = RedirectResponse(url=frontend_url, status_code=307)
+        # Create success response - redirect to dashboard with login_success flag
+        response = RedirectResponse(url=f"{frontend_url}/dashboard?login_success=true", status_code=307)
         
         is_production = config_settings.ENV_TYPE == "production"
         samesite_setting = "none" if is_production else "lax"
