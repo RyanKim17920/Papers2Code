@@ -75,6 +75,8 @@ class GitHubOAuthService:
             logger.error(f"Error constructing redirect_uri for GitHub OAuth: {e}")
             raise OAuthException(detail="Error preparing authentication request to GitHub.")
 
+        logger.info(f"GitHub OAuth: API_URL={config_settings.API_URL}, redirect_uri={redirect_uri}")
+
         auth_url = (
             f"{github_authorize_url}?"
             f"client_id={github_client_id}&"
@@ -82,6 +84,8 @@ class GitHubOAuthService:
             f"scope={github_scope}&"
             f"state={state_value}"
         )
+
+        logger.info(f"GitHub OAuth: auth_url being used for GitHub redirect")
 
         response = RedirectResponse(url=auth_url)
         is_production = config_settings.ENV_TYPE == "production"
@@ -156,6 +160,8 @@ class GitHubOAuthService:
             base_url = str(request.base_url).rstrip('/')
             actual_redirect_uri = f"{base_url}/api/auth/github/callback"
 
+        logger.info(f"GitHub callback: API_URL={config_settings.API_URL}, actual_redirect_uri={actual_redirect_uri}")
+
         async with httpx.AsyncClient() as client:
             token_exchange_params = {
                 "client_id": github_client_id,
@@ -163,6 +169,7 @@ class GitHubOAuthService:
                 "code": code,
                 "redirect_uri": actual_redirect_uri,
             }
+            logger.info(f"GitHub token exchange: redirect_uri being sent to GitHub={actual_redirect_uri}")
             headers = {"Accept": "application/json"}
             try:
                 token_response = await client.post(github_access_token_url, params=token_exchange_params, headers=headers)
