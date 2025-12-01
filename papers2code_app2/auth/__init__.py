@@ -14,6 +14,9 @@ from .token_utils import create_token
 
 logger = logging.getLogger(__name__)
 
+# Environment check for secure logging
+_is_development = config_settings.ENV_TYPE.lower() not in ("production", "prod")
+
 # This would be your actual secret key and algorithm
 SECRET_KEY = config_settings.FLASK_SECRET_KEY  # DO NOT CORRECT THIS IT IS SET AS FLASK SECRET KEY IN .env
 ALGORITHM = config_settings.ALGORITHM
@@ -54,35 +57,41 @@ async def get_current_user(token: Optional[str] = Depends(get_token_from_cookie)
         )
 
     if not token:
-        logger.warning("get_current_user: No access token found in cookies (expected in '%s'). Raising 401.", ACCESS_TOKEN_COOKIE_NAME)
+        logger.warning("get_current_user: No access token found in cookies. Raising 401.")
         raise credentials_exception
     
-    logger.debug(f"get_current_user: Attempting to validate token (first 20 chars): {token[:20]}...")
+    if _is_development:
+        logger.debug("get_current_user: Attempting to validate token...")
 
     try:
         payload = jwt.decode(token, SECRET_KEY, algorithms=[ALGORITHM])
-        logger.debug(f"get_current_user: Token payload decoded successfully: {payload}")
+        if _is_development:
+            logger.debug("get_current_user: Token payload decoded successfully")
 
         user_id_from_token: Optional[str] = payload.get("sub")
         username_from_token: Optional[str] = payload.get("username") # Often included for quick reference
         token_type: Optional[str] = payload.get("token_type")
 
         if token_type != "access":
-            logger.warning(f"get_current_user: Invalid token type. Expected 'access', got '{token_type}'. Payload: {payload}")
+            logger.warning(f"get_current_user: Invalid token type. Expected 'access', got '{token_type}'")
             raise credentials_exception
 
         if user_id_from_token is None:
-            logger.warning(f"get_current_user: Token payload missing 'sub' (user_id). Payload: {payload}")
+            logger.warning("get_current_user: Token payload missing 'sub' (user_id)")
             raise credentials_exception
         
         # Optionally log username if present, but 'sub' is the critical identifier for DB lookup
-        if username_from_token:
-            logger.debug(f"get_current_user: Extracted user_id: '{user_id_from_token}', username: '{username_from_token}' from token.")
-        else:
-            logger.debug(f"get_current_user: Extracted user_id: '{user_id_from_token}' from token (username not in payload).")
+        if _is_development:
+            if username_from_token:
+                logger.debug(f"get_current_user: Extracted user_id: '{user_id_from_token}', username: '{username_from_token}' from token.")
+            else:
+                logger.debug(f"get_current_user: Extracted user_id: '{user_id_from_token}' from token (username not in payload).")
 
     except JWTError as e:
-        logger.warning(f"get_current_user: JWTError during token decoding: {str(e)}. Token (first 20 chars): {token[:20]}...")
+        if _is_development:
+            logger.warning(f"get_current_user: JWTError during token decoding: {str(e)}")
+        else:
+            logger.warning("get_current_user: JWTError during token decoding")
         raise credentials_exception
     except Exception as e: 
         logger.error(f"get_current_user: Unexpected error during token processing: {str(e)}", exc_info=True)
@@ -109,12 +118,16 @@ async def get_current_user(token: Optional[str] = Depends(get_token_from_cookie)
 
     try:
         # Ensure all required fields for UserSchema are present in user_dict or handled by defaults in UserSchema
-        # The previous error was `githubId` missing. Let's log the dict before parsing.
-        logger.debug(f"get_current_user: User document found in DB: {user_dict}")
+        if _is_development:
+            logger.debug("get_current_user: User document found in DB")
         user = UserSchema(**user_dict)
-        logger.info(f"get_current_user: Successfully authenticated user: {user.username} (ID: {user.id}, GitHub ID: {user.github_id})")
+        if _is_development:
+            logger.info(f"get_current_user: Successfully authenticated user: {user.username}")
     except Exception as e:
-        logger.error(f"get_current_user: Error creating UserSchema instance from DB doc. User Dict: {user_dict}. Error: {e}", exc_info=True)
+        if _is_development:
+            logger.error(f"get_current_user: Error creating UserSchema instance from DB doc. Error: {e}", exc_info=True)
+        else:
+            logger.error("get_current_user: Error creating UserSchema instance from DB doc")
         raise credentials_exception
         
     return user

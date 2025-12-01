@@ -44,6 +44,9 @@ from .exceptions import (
 
 logger = logging.getLogger(__name__)
 
+# Environment check for secure logging
+_is_development = config_settings.ENV_TYPE.lower() not in ("production", "prod")
+
 
 class KeycloakOAuthService:
     """
@@ -256,9 +259,13 @@ class KeycloakOAuthService:
         # Get user info from Keycloak
         try:
             user_info = await self._get_user_info(token_data["access_token"], config)
-            logger.info(f"Keycloak user info for {provider}: {user_info}")
+            if _is_development:
+                logger.info(f"Keycloak user info retrieved for {provider}")
         except Exception as e:
-            logger.error(f"Failed to get user info: {e}")
+            if _is_development:
+                logger.error(f"Failed to get user info: {e}")
+            else:
+                logger.error("Failed to get user info from Keycloak")
             response = RedirectResponse(url=f"{frontend_url}/?login_error=user_info_failed", status_code=307)
             response.delete_cookie(OAUTH_STATE_COOKIE_NAME, path=oauth_state_cookie_path)
             return response

@@ -28,6 +28,9 @@ from ..constants import (
 
 logger = logging.getLogger(__name__)
 
+# Environment check for secure logging
+_is_development = config_settings.ENV_TYPE.lower() not in ("production", "prod")
+
 
 class AuthService:
     def generate_csrf_token(self) -> str:
@@ -347,25 +350,27 @@ async def get_current_user_optional(request: Request) -> UserMinimal | None: # M
         username: str = payload.get("username")
 
         if user_id is None or username is None:
-            logger.warning(f"Token payload missing sub or username. Payload: {payload}")
+            if _is_development:
+                logger.warning("Token payload missing sub or username")
             return None  # Or raise specific error if strict validation needed
 
         users_collection = await get_users_collection_async()  # Changed to async
         try:
             user_obj_id = ObjectId(user_id)
         except InvalidId:
-            logger.error(f"Invalid ObjectId format for user_id: {user_id} from token.")
+            if _is_development:
+                logger.error(f"Invalid ObjectId format for user_id from token.")
             return None # Invalid ID format
 
         user_doc = await users_collection.find_one({"_id": user_obj_id}) # Changed to async
         if user_doc is None:
-            logger.warning(f"User with ID {user_id} from token not found in DB.")
+            if _is_development:
+                logger.warning("User from token not found in DB.")
             return None
         
         # Determine if the user is the owner
         owner_username = config_settings.OWNER_GITHUB_USERNAME
         is_owner = owner_username is not None and user_doc.get("username") == owner_username
-        #logger.debug(f"Current user {user_doc.get('username')} is_owner status: {is_owner} (checked in get_current_user_optional)"
 
 
         return UserMinimal(
@@ -377,8 +382,10 @@ async def get_current_user_optional(request: Request) -> UserMinimal | None: # M
             is_admin=user_doc.get("is_admin", False)
         )
     except JWTError as e:
-        logger.error(f"JWTError during optional user retrieval: {e}")
+        if _is_development:
+            logger.error(f"JWTError during optional user retrieval: {e}")
         return None
     except Exception as e: # Catch broader exceptions during DB access or UserMinimal instantiation
-        logger.error(f"Unexpected error in get_current_user_optional: {e}")
+        if _is_development:
+            logger.error(f"Unexpected error in get_current_user_optional: {e}")
         return None

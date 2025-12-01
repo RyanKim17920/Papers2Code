@@ -28,6 +28,9 @@ from ..constants import (
 
 logger = logging.getLogger(__name__)
 
+# Environment check for secure logging
+_is_development = config_settings.ENV_TYPE.lower() not in ("production", "prod")
+
 class GoogleOAuthService:
     def __init__(self):
         self.users_collection = None
@@ -154,7 +157,7 @@ class GoogleOAuthService:
                 token_data = token_response.json()
                 google_token = token_data.get("access_token")
                 if not google_token:
-                    logger.error(f"Failed to retrieve access_token from Google. Response: {token_data}")
+                    logger.error("Failed to retrieve access_token from Google. Token exchange succeeded but no access_token in response.")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=google_token_exchange_failed", status_code=307)
             except httpx.HTTPStatusError as http_err:
                 logger.error(f"Google token exchange HTTP error: {http_err.response.status_code} - {http_err.response.text}")

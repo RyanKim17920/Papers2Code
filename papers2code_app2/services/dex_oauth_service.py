@@ -36,6 +36,9 @@ from .exceptions import (
 
 logger = logging.getLogger(__name__)
 
+# Environment check for secure logging
+_is_development = config_settings.ENV_TYPE.lower() not in ("production", "prod")
+
 
 class DexOAuthService:
     """
