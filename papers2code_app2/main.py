@@ -165,20 +165,21 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
         csrf_token_cookie = request.cookies.get(CSRF_TOKEN_COOKIE_NAME)
         csrf_token_header = request.headers.get(CSRF_TOKEN_HEADER_NAME)
 
-        logger.debug(
-            f"🔒 CSRF Validation: {request.method} {request.url.path}"
-        )
-        logger.debug(
-            f"   Cookie: {csrf_token_cookie[:10] + '...' if csrf_token_cookie else 'None'}"
-        )
-        logger.debug(
-            f"   Header: {csrf_token_header[:10] + '...' if csrf_token_header else 'None'}"
-        )
+        if config_settings.ENV_TYPE != "production":
+            logger.debug(
+                f"CSRF Validation: {request.method} {request.url.path}"
+            )
+            logger.debug(
+                f"   Cookie: {csrf_token_cookie[:10] + '...' if csrf_token_cookie else 'None'}"
+            )
+            logger.debug(
+                f"   Header: {csrf_token_header[:10] + '...' if csrf_token_header else 'None'}"
+            )
 
         # Validate that both token sources exist and match
         if not csrf_token_header:
             logger.warning(
-                f"❌ CSRF validation failed: Missing header. "
+                f"CSRF validation failed: Missing header. "
                 f"Path: {request.method} {request.url.path}, "
                 f"Origin: {request.headers.get('origin', 'None')}"
             )
@@ -186,10 +187,10 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="CSRF token missing in request header. Please refresh the page and try again.",
             )
-            
+
         if not csrf_token_cookie:
             logger.warning(
-                f"❌ CSRF validation failed: Missing cookie. "
+                f"CSRF validation failed: Missing cookie. "
                 f"Path: {request.method} {request.url.path}, "
                 f"Origin: {request.headers.get('origin', 'None')}"
             )
@@ -197,10 +198,10 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
                 status_code=status.HTTP_403_FORBIDDEN,
                 detail="CSRF token missing in cookies. Please refresh the page and try again.",
             )
-            
+
         if csrf_token_cookie != csrf_token_header:
             logger.warning(
-                f"❌ CSRF validation failed: Token mismatch. "
+                f"CSRF validation failed: Token mismatch. "
                 f"Path: {request.method} {request.url.path}, "
                 f"Cookie: {csrf_token_cookie[:10]}..., "
                 f"Header: {csrf_token_header[:10]}..."
@@ -210,9 +211,10 @@ class CSRFProtectMiddleware(BaseHTTPMiddleware):
                 detail="CSRF token mismatch. Please refresh the page and try again.",
             )
 
-        logger.debug(
-            f"✅ CSRF validation successful: {request.method} {request.url.path}"
-        )
+        if config_settings.ENV_TYPE != "production":
+            logger.debug(
+                f"CSRF validation successful: {request.method} {request.url.path}"
+            )
         response = await call_next(request)
         return response
 
@@ -510,9 +512,19 @@ async def generic_exception_handler(request: Request, exc: Exception):
 # --- HTTP Exception Handler ---
 @app.exception_handler(HTTPException)
 async def http_exception_handler(request: Request, exc: HTTPException):
-    logger.warning(
-        f"HTTP Exception: {exc.status_code} {exc.detail} for {request.method} {request.url.path}"
+    # In production, only log actual errors (5xx) and auth/CSRF failures (403/401)
+    # Don't log client errors (4xx) like 404s, 400s as prominently
+    should_log = (
+        exc.status_code >= 500 or  # Server errors
+        exc.status_code == 403 or  # Forbidden (CSRF, auth)
+        exc.status_code == 401 or  # Unauthorized
+        config_settings.ENV_TYPE != "production"  # Always log in development
     )
+
+    if should_log:
+        logger.warning(
+            f"HTTP Exception: {exc.status_code} {exc.detail} for {request.method} {request.url.path}"
+        )
 
     response_headers = _prepare_cors_headers_for_exceptions(request, exc.headers)
 
