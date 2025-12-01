@@ -76,8 +76,8 @@ MAIN_STATUS_ABANDONED = "Abandoned"    # ADDED
 
 # --- Nested Settings Models ---
 class GitHubOAuthSettings(BaseSettings):
-    CLIENT_ID: Optional[str] = Field(None, env="GITHUB_CLIENT_ID")
-    CLIENT_SECRET: Optional[str] = Field(None, env="GITHUB_CLIENT_SECRET")
+    CLIENT_ID: Optional[str] = Field(None)  # Resolution handled in __init__, not by Pydantic
+    CLIENT_SECRET: Optional[str] = Field(None)  # Resolution handled in __init__, not by Pydantic
     AUTHORIZE_URL: str = Field("https://github.com/login/oauth/authorize", env="GITHUB_AUTHORIZE_URL")
     ACCESS_TOKEN_URL: str = Field("https://github.com/login/oauth/access_token", env="GITHUB_ACCESS_TOKEN_URL")
     API_USER_URL: str = Field("https://api.github.com/user", env="GITHUB_API_USER_URL")
