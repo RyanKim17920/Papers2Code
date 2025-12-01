@@ -54,10 +54,23 @@ class GitHubOAuthService:
             raise OAuthException(detail="Authentication service is misconfigured (GitHub Client ID not set).")
 
         try:
-            redirect_uri = str(request.url_for('github_callback_endpoint'))
-            if not redirect_uri.startswith("http"):
-                base_url = str(request.base_url).rstrip('/')
-                redirect_uri = f"{base_url}/auth/github/callback"
+            # Construct redirect_uri properly handling reverse proxies (e.g., Render)
+            # Priority: 1) API_URL from config, 2) X-Forwarded headers, 3) request.base_url
+            if config_settings.API_URL and not config_settings.API_URL.startswith("http://localhost"):
+                # Use configured API_URL for production
+                redirect_uri = f"{config_settings.API_URL.rstrip('/')}/auth/github/callback"
+            else:
+                # For development or when API_URL is localhost, try to construct from headers
+                forwarded_proto = request.headers.get("x-forwarded-proto", "https" if config_settings.ENV_TYPE == "production" else "http")
+                forwarded_host = request.headers.get("x-forwarded-host")
+
+                if forwarded_host:
+                    # Behind a reverse proxy (e.g., Render)
+                    redirect_uri = f"{forwarded_proto}://{forwarded_host}/api/auth/github/callback"
+                else:
+                    # Direct request or development
+                    base_url = str(request.base_url).rstrip('/')
+                    redirect_uri = f"{base_url}/auth/github/callback"
         except Exception as e:
             logger.error(f"Error constructing redirect_uri for GitHub OAuth: {e}")
             raise OAuthException(detail="Error preparing authentication request to GitHub.")
@@ -127,13 +140,21 @@ class GitHubOAuthService:
             return RedirectResponse(url=f"{frontend_url}/?login_error=github_no_code", status_code=307)
 
         try:
-            actual_redirect_uri = str(request.url_for('github_callback_endpoint'))
-            if not actual_redirect_uri.startswith("http"):
-                 base_url = str(request.base_url).rstrip('/')
-                 actual_redirect_uri = f"{base_url}{request.url.path}"
+            # Construct actual_redirect_uri same way as prepare_github_login_redirect
+            if config_settings.API_URL and not config_settings.API_URL.startswith("http://localhost"):
+                actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/auth/github/callback"
+            else:
+                forwarded_proto = request.headers.get("x-forwarded-proto", "https" if config_settings.ENV_TYPE == "production" else "http")
+                forwarded_host = request.headers.get("x-forwarded-host")
+
+                if forwarded_host:
+                    actual_redirect_uri = f"{forwarded_proto}://{forwarded_host}/api/auth/github/callback"
+                else:
+                    base_url = str(request.base_url).rstrip('/')
+                    actual_redirect_uri = f"{base_url}/auth/github/callback"
         except Exception:
-             base_url = str(request.base_url).rstrip('/')
-             actual_redirect_uri = f"{base_url}/api/auth/github/callback"
+            base_url = str(request.base_url).rstrip('/')
+            actual_redirect_uri = f"{base_url}/api/auth/github/callback"
 
         async with httpx.AsyncClient() as client:
             token_exchange_params = {
