@@ -56,7 +56,7 @@ class GoogleOAuthService:
         try:
             # Construct redirect_uri properly handling reverse proxies (e.g., Render)
             if config_settings.API_URL and not config_settings.API_URL.startswith("http://localhost"):
-                redirect_uri = f"{config_settings.API_URL.rstrip('/')}/auth/google/callback"
+                redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
             else:
                 forwarded_proto = request.headers.get("x-forwarded-proto", "https" if config_settings.ENV_TYPE == "production" else "http")
                 forwarded_host = request.headers.get("x-forwarded-host")
@@ -65,7 +65,7 @@ class GoogleOAuthService:
                     redirect_uri = f"{forwarded_proto}://{forwarded_host}/api/auth/google/callback"
                 else:
                     base_url = str(request.base_url).rstrip('/')
-                    redirect_uri = f"{base_url}/auth/google/callback"
+                    redirect_uri = f"{base_url}/api/auth/google/callback"
         except Exception as e:
             logger.error(f"Error constructing redirect_uri for Google OAuth: {e}")
             raise OAuthException(detail="Error preparing authentication request to Google.")
@@ -144,7 +144,7 @@ class GoogleOAuthService:
         try:
             # Construct actual_redirect_uri same way as prepare_google_login_redirect
             if config_settings.API_URL and not config_settings.API_URL.startswith("http://localhost"):
-                actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/auth/google/callback"
+                actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
             else:
                 forwarded_proto = request.headers.get("x-forwarded-proto", "https" if config_settings.ENV_TYPE == "production" else "http")
                 forwarded_host = request.headers.get("x-forwarded-host")
@@ -153,7 +153,7 @@ class GoogleOAuthService:
                     actual_redirect_uri = f"{forwarded_proto}://{forwarded_host}/api/auth/google/callback"
                 else:
                     base_url = str(request.base_url).rstrip('/')
-                    actual_redirect_uri = f"{base_url}/auth/google/callback"
+                    actual_redirect_uri = f"{base_url}/api/auth/google/callback"
         except Exception:
             base_url = str(request.base_url).rstrip('/')
             actual_redirect_uri = f"{base_url}/api/auth/google/callback"
