@@ -53,16 +53,28 @@ class GoogleOAuthService:
             logger.error("GOOGLE.CLIENT_ID is not configured.")
             raise OAuthException(detail="Authentication service is misconfigured (Google Client ID not set).")
 
-        try:
-            # Use FastAPI's request.url_for() to get the absolute callback URL
-            redirect_uri = str(request.url_for('google_callback_endpoint'))
+        # For production, use explicit environment variable
+        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+            redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
+        else:
+            try:
+                redirect_uri = str(request.url_for('google_callback_endpoint'))
+                if not redirect_uri.startswith("http"):
+                    base_url = str(request.base_url).rstrip('/')
+                    redirect_uri = f"{base_url}/api/auth/google/callback"
+            except Exception as e:
+                logger.error(f"Error constructing redirect_uri for Google OAuth: {e}")
+                raise OAuthException(detail="Error preparing authentication request to Google.")
 
-            if not redirect_uri.startswith("http"):
-                base_url = str(request.base_url).rstrip('/')
-                redirect_uri = f"{base_url}api/auth/google/callback"
-        except Exception as e:
-            logger.error(f"Error constructing redirect_uri for Google OAuth: {e}")
-            raise OAuthException(detail="Error preparing authentication request to Google.")
+        # Diagnostic logging - VERY detailed for debugging
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] redirect_uri = '{redirect_uri}'")
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] redirect_uri length = {len(redirect_uri)}")
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] redirect_uri (repr) = {repr(redirect_uri)}")
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] redirect_uri (hex) = {redirect_uri.encode('utf-8').hex()}")
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] Has trailing slash = {redirect_uri.endswith('/')}")
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] API_URL config = '{config_settings.API_URL}'")
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] ENV_TYPE = {config_settings.ENV_TYPE}")
+        logger.info(f"[GOOGLE_OAUTH_DEBUG] CLIENT_ID = {google_client_id[:10]}... (truncated)")
 
         auth_url = (
             f"{google_authorize_url}?"
@@ -135,16 +147,26 @@ class GoogleOAuthService:
             logger.warning("No authorization code received from Google.")
             return RedirectResponse(url=f"{frontend_url}/?login_error=google_no_code", status_code=307)
 
-        try:
-            # Use same method as prepare_google_login_redirect for consistency
-            actual_redirect_uri = str(request.url_for('google_callback_endpoint'))
-
-            if not actual_redirect_uri.startswith("http"):
+        # Match the same construction as prepare_google_login_redirect
+        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+            actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
+        else:
+            try:
+                actual_redirect_uri = str(request.url_for('google_callback_endpoint'))
+                if not actual_redirect_uri.startswith("http"):
+                    base_url = str(request.base_url).rstrip('/')
+                    actual_redirect_uri = f"{base_url}/api/auth/google/callback"
+            except Exception:
                 base_url = str(request.base_url).rstrip('/')
-                actual_redirect_uri = f"{base_url}api/auth/google/callback"
-        except Exception:
-            base_url = str(request.base_url).rstrip('/')
-            actual_redirect_uri = f"{base_url}api/auth/google/callback"
+                actual_redirect_uri = f"{base_url}/api/auth/google/callback"
+
+        # Diagnostic logging - VERY detailed for debugging callback
+        logger.info(f"[GOOGLE_CALLBACK_DEBUG] actual_redirect_uri = '{actual_redirect_uri}'")
+        logger.info(f"[GOOGLE_CALLBACK_DEBUG] actual_redirect_uri length = {len(actual_redirect_uri)}")
+        logger.info(f"[GOOGLE_CALLBACK_DEBUG] actual_redirect_uri (repr) = {repr(actual_redirect_uri)}")
+        logger.info(f"[GOOGLE_CALLBACK_DEBUG] actual_redirect_uri (hex) = {actual_redirect_uri.encode('utf-8').hex()}")
+        logger.info(f"[GOOGLE_CALLBACK_DEBUG] Has trailing slash = {actual_redirect_uri.endswith('/')}")
+        logger.info(f"[GOOGLE_CALLBACK_DEBUG] Authorization code received = '{code[:10]}...' (truncated)")
 
         async with httpx.AsyncClient() as client:
             token_exchange_data = {
@@ -154,6 +176,8 @@ class GoogleOAuthService:
                 "redirect_uri": actual_redirect_uri,
                 "grant_type": "authorization_code"
             }
+            logger.info(f"[GOOGLE_CALLBACK_DEBUG] Token exchange params: client_id={google_client_id[:10]}..., code={code[:10]}..., redirect_uri={actual_redirect_uri}")
+            logger.info(f"[GOOGLE_CALLBACK_DEBUG] Sending POST to {google_access_token_url}")
             headers = {"Content-Type": "application/x-www-form-urlencoded"}
             try:
                 token_response = await client.post(google_access_token_url, data=token_exchange_data, headers=headers)
@@ -164,7 +188,11 @@ class GoogleOAuthService:
                     logger.error("Failed to retrieve access_token from Google. Token exchange succeeded but no access_token in response.")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=google_token_exchange_failed", status_code=307)
             except httpx.HTTPStatusError as http_err:
-                logger.error(f"Google token exchange HTTP error: {http_err.response.status_code} - {http_err.response.text}")
+                logger.error(f"[GOOGLE_CALLBACK_ERROR] HTTP error {http_err.response.status_code}")
+                logger.error(f"[GOOGLE_CALLBACK_ERROR] Response text: {http_err.response.text}")
+                logger.error(f"[GOOGLE_CALLBACK_ERROR] Response headers: {dict(http_err.response.headers)}")
+                logger.error(f"[GOOGLE_CALLBACK_ERROR] Request URL was: {google_access_token_url}")
+                logger.error(f"[GOOGLE_CALLBACK_ERROR] Request data were: client_id={google_client_id[:10]}..., code={code[:10]}..., redirect_uri={actual_redirect_uri}")
                 return RedirectResponse(url=f"{frontend_url}/?login_error=google_token_exchange_http_error", status_code=307)
             except httpx.RequestError as req_exc:
                 logger.error(f"Google token exchange request error: {req_exc}")

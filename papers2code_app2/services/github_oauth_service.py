@@ -53,20 +53,31 @@ class GitHubOAuthService:
             logger.error("GITHUB.CLIENT_ID is not configured.")
             raise OAuthException(detail="Authentication service is misconfigured (GitHub Client ID not set).")
 
-        try:
-            # Use FastAPI's request.url_for() to get the absolute callback URL
-            # This handles routing correctly and avoids manual path construction issues
-            redirect_uri = str(request.url_for('github_callback_endpoint'))
+        # For production, use explicit environment variable
+        # For development, construct from request
+        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+            redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/github/callback"
+            logger.info(f"GitHub OAuth (production): Using explicit API_URL: {redirect_uri}")
+        else:
+            try:
+                redirect_uri = str(request.url_for('github_callback_endpoint'))
+                if not redirect_uri.startswith("http"):
+                    base_url = str(request.base_url).rstrip('/')
+                    redirect_uri = f"{base_url}/api/auth/github/callback"
+                logger.info(f"GitHub OAuth (dev): Using request.url_for: {redirect_uri}")
+            except Exception as e:
+                logger.error(f"Error constructing redirect_uri: {e}")
+                raise OAuthException(detail="Error preparing authentication request to GitHub.")
 
-            # If url_for fails or returns relative URL, fall back to manual construction
-            if not redirect_uri.startswith("http"):
-                base_url = str(request.base_url).rstrip('/')
-                redirect_uri = f"{base_url}api/auth/github/callback"
-        except Exception as e:
-            logger.error(f"Error constructing redirect_uri for GitHub OAuth: {e}")
-            raise OAuthException(detail="Error preparing authentication request to GitHub.")
-
-        logger.info(f"GitHub OAuth: API_URL={config_settings.API_URL}, redirect_uri={redirect_uri}")
+        # Diagnostic logging - VERY detailed for debugging
+        logger.info(f"[GITHUB_OAUTH_DEBUG] redirect_uri = '{redirect_uri}'")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] redirect_uri length = {len(redirect_uri)}")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] redirect_uri (repr) = {repr(redirect_uri)}")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] redirect_uri (hex) = {redirect_uri.encode('utf-8').hex()}")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] Has trailing slash = {redirect_uri.endswith('/')}")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] API_URL config = '{config_settings.API_URL}'")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] ENV_TYPE = {config_settings.ENV_TYPE}")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] CLIENT_ID = {github_client_id[:10]}... (truncated)")
 
         auth_url = (
             f"{github_authorize_url}?"
@@ -76,7 +87,7 @@ class GitHubOAuthService:
             f"state={state_value}"
         )
 
-        logger.info(f"GitHub OAuth: auth_url being used for GitHub redirect")
+        logger.info(f"[GITHUB_OAUTH_DEBUG] auth_url created (not logging full URL for security)")
 
         response = RedirectResponse(url=auth_url)
         is_production = config_settings.ENV_TYPE == "production"
@@ -134,18 +145,26 @@ class GitHubOAuthService:
             logger.warning("No authorization code received from GitHub.")
             return RedirectResponse(url=f"{frontend_url}/?login_error=github_no_code", status_code=307)
 
-        try:
-            # Use same method as prepare_github_login_redirect for consistency
-            actual_redirect_uri = str(request.url_for('github_callback_endpoint'))
-
-            if not actual_redirect_uri.startswith("http"):
+        # Match the same construction as prepare_github_login_redirect
+        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+            actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/github/callback"
+        else:
+            try:
+                actual_redirect_uri = str(request.url_for('github_callback_endpoint'))
+                if not actual_redirect_uri.startswith("http"):
+                    base_url = str(request.base_url).rstrip('/')
+                    actual_redirect_uri = f"{base_url}/api/auth/github/callback"
+            except Exception:
                 base_url = str(request.base_url).rstrip('/')
-                actual_redirect_uri = f"{base_url}api/auth/github/callback"
-        except Exception:
-            base_url = str(request.base_url).rstrip('/')
-            actual_redirect_uri = f"{base_url}api/auth/github/callback"
+                actual_redirect_uri = f"{base_url}/api/auth/github/callback"
 
-        logger.info(f"GitHub callback: API_URL={config_settings.API_URL}, actual_redirect_uri={actual_redirect_uri}")
+        # Diagnostic logging - VERY detailed for debugging callback
+        logger.info(f"[GITHUB_CALLBACK_DEBUG] actual_redirect_uri = '{actual_redirect_uri}'")
+        logger.info(f"[GITHUB_CALLBACK_DEBUG] actual_redirect_uri length = {len(actual_redirect_uri)}")
+        logger.info(f"[GITHUB_CALLBACK_DEBUG] actual_redirect_uri (repr) = {repr(actual_redirect_uri)}")
+        logger.info(f"[GITHUB_CALLBACK_DEBUG] actual_redirect_uri (hex) = {actual_redirect_uri.encode('utf-8').hex()}")
+        logger.info(f"[GITHUB_CALLBACK_DEBUG] Has trailing slash = {actual_redirect_uri.endswith('/')}")
+        logger.info(f"[GITHUB_CALLBACK_DEBUG] Authorization code received = '{code[:10]}...' (truncated)")
 
         async with httpx.AsyncClient() as client:
             token_exchange_params = {
@@ -154,7 +173,8 @@ class GitHubOAuthService:
                 "code": code,
                 "redirect_uri": actual_redirect_uri,
             }
-            logger.info(f"GitHub token exchange: redirect_uri being sent to GitHub={actual_redirect_uri}")
+            logger.info(f"[GITHUB_CALLBACK_DEBUG] Token exchange params: client_id={github_client_id[:10]}..., code={code[:10]}..., redirect_uri={actual_redirect_uri}")
+            logger.info(f"[GITHUB_CALLBACK_DEBUG] Sending POST to {github_access_token_url}")
             headers = {"Accept": "application/json"}
             try:
                 token_response = await client.post(github_access_token_url, params=token_exchange_params, headers=headers)
@@ -165,7 +185,11 @@ class GitHubOAuthService:
                     logger.error("Failed to retrieve access_token from GitHub. Token exchange succeeded but no access_token in response.")
                     return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_failed", status_code=307)
             except httpx.HTTPStatusError as http_err:
-                logger.error(f"GitHub token exchange HTTP error: {http_err.response.status_code} - {http_err.response.text}")
+                logger.error(f"[GITHUB_CALLBACK_ERROR] HTTP error {http_err.response.status_code}")
+                logger.error(f"[GITHUB_CALLBACK_ERROR] Response text: {http_err.response.text}")
+                logger.error(f"[GITHUB_CALLBACK_ERROR] Response headers: {dict(http_err.response.headers)}")
+                logger.error(f"[GITHUB_CALLBACK_ERROR] Request URL was: {github_access_token_url}")
+                logger.error(f"[GITHUB_CALLBACK_ERROR] Request params were: client_id={github_client_id[:10]}..., code={code[:10]}..., redirect_uri={actual_redirect_uri}")
                 return RedirectResponse(url=f"{frontend_url}/?login_error=github_token_exchange_http_error", status_code=307)
             except httpx.RequestError as req_exc:
                 logger.error(f"GitHub token exchange request error: {req_exc}")
