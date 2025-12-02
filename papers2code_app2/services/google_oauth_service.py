@@ -54,18 +54,12 @@ class GoogleOAuthService:
             raise OAuthException(detail="Authentication service is misconfigured (Google Client ID not set).")
 
         try:
-            # Construct redirect_uri properly handling reverse proxies (e.g., Render)
-            if config_settings.API_URL and not config_settings.API_URL.startswith("http://localhost"):
-                redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
-            else:
-                forwarded_proto = request.headers.get("x-forwarded-proto", "https" if config_settings.ENV_TYPE == "production" else "http")
-                forwarded_host = request.headers.get("x-forwarded-host")
+            # Use FastAPI's request.url_for() to get the absolute callback URL
+            redirect_uri = str(request.url_for('google_callback_endpoint'))
 
-                if forwarded_host:
-                    redirect_uri = f"{forwarded_proto}://{forwarded_host}/api/auth/google/callback"
-                else:
-                    base_url = str(request.base_url).rstrip('/')
-                    redirect_uri = f"{base_url}/api/auth/google/callback"
+            if not redirect_uri.startswith("http"):
+                base_url = str(request.base_url).rstrip('/')
+                redirect_uri = f"{base_url}api/auth/google/callback"
         except Exception as e:
             logger.error(f"Error constructing redirect_uri for Google OAuth: {e}")
             raise OAuthException(detail="Error preparing authentication request to Google.")
@@ -142,21 +136,15 @@ class GoogleOAuthService:
             return RedirectResponse(url=f"{frontend_url}/?login_error=google_no_code", status_code=307)
 
         try:
-            # Construct actual_redirect_uri same way as prepare_google_login_redirect
-            if config_settings.API_URL and not config_settings.API_URL.startswith("http://localhost"):
-                actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
-            else:
-                forwarded_proto = request.headers.get("x-forwarded-proto", "https" if config_settings.ENV_TYPE == "production" else "http")
-                forwarded_host = request.headers.get("x-forwarded-host")
+            # Use same method as prepare_google_login_redirect for consistency
+            actual_redirect_uri = str(request.url_for('google_callback_endpoint'))
 
-                if forwarded_host:
-                    actual_redirect_uri = f"{forwarded_proto}://{forwarded_host}/api/auth/google/callback"
-                else:
-                    base_url = str(request.base_url).rstrip('/')
-                    actual_redirect_uri = f"{base_url}/api/auth/google/callback"
+            if not actual_redirect_uri.startswith("http"):
+                base_url = str(request.base_url).rstrip('/')
+                actual_redirect_uri = f"{base_url}api/auth/google/callback"
         except Exception:
             base_url = str(request.base_url).rstrip('/')
-            actual_redirect_uri = f"{base_url}/api/auth/google/callback"
+            actual_redirect_uri = f"{base_url}api/auth/google/callback"
 
         async with httpx.AsyncClient() as client:
             token_exchange_data = {
