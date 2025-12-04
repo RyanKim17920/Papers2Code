@@ -31,18 +31,27 @@ router = APIRouter(
 
 auth_service = AuthService()
 
-# Initialize OAuth services based on configuration
-# If USE_DEX_OAUTH is True, use Keycloak for both GitHub and Google OAuth (development)
-# Otherwise, use real GitHub and Google OAuth services (production)
-if config_settings.USE_DEX_OAUTH:
+# Initialize OAuth services based on configuration and environment
+# In PRODUCTION, ALWAYS use real GitHub and Google OAuth regardless of USE_DEX_OAUTH
+# In DEVELOPMENT, use Keycloak only if explicitly enabled
+is_production = config_settings.ENV_TYPE == "production"
+
+if is_production:
+    # PRODUCTION: Always use real OAuth services
+    github_oauth_service = GitHubOAuthService()
+    google_oauth_service = GoogleOAuthService()
+    logger.info("PRODUCTION MODE: Using real GitHub and Google OAuth services")
+elif config_settings.USE_DEX_OAUTH:
+    # DEVELOPMENT with Keycloak: Use mock OAuth
     from ..services.keycloak_oauth_service import keycloak_oauth_service
     github_oauth_service = keycloak_oauth_service
     google_oauth_service = keycloak_oauth_service
-    logger.info("Using Keycloak OAuth service for development (USE_DEX_OAUTH=true)")
+    logger.info("DEVELOPMENT MODE: Using Keycloak OAuth service (USE_DEX_OAUTH=true)")
 else:
+    # DEVELOPMENT without Keycloak: Use real OAuth
     github_oauth_service = GitHubOAuthService()
     google_oauth_service = GoogleOAuthService()
-    logger.info("Using real GitHub and Google OAuth services (USE_DEX_OAUTH=false)")
+    logger.info("DEVELOPMENT MODE: Using real GitHub and Google OAuth services (USE_DEX_OAUTH=false)")
 
 @router.get("/csrf-token", response_model=CsrfToken)
 async def get_csrf_token(request: Request, response: Response):
