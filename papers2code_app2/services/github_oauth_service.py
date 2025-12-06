@@ -55,7 +55,9 @@ class GitHubOAuthService:
 
         # For production, use explicit environment variable
         # For development, construct from request
-        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+        is_production = config_settings.ENV_TYPE == "production"
+
+        if is_production and config_settings.API_URL and "localhost" not in config_settings.API_URL:
             redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/github/callback"
             logger.info(f"GitHub OAuth (production): Using explicit API_URL: {redirect_uri}")
         else:
@@ -64,10 +66,15 @@ class GitHubOAuthService:
                 if not redirect_uri.startswith("http"):
                     base_url = str(request.base_url).rstrip('/')
                     redirect_uri = f"{base_url}/api/auth/github/callback"
-                logger.info(f"GitHub OAuth (dev): Using request.url_for: {redirect_uri}")
+                logger.info(f"GitHub OAuth: Using request.url_for: {redirect_uri}")
             except Exception as e:
                 logger.error(f"Error constructing redirect_uri: {e}")
                 raise OAuthException(detail="Error preparing authentication request to GitHub.")
+
+        # CRITICAL: Ensure HTTPS in production (belt-and-suspenders with proxy_headers)
+        if is_production and redirect_uri.startswith("http://"):
+            redirect_uri = redirect_uri.replace("http://", "https://", 1)
+            logger.info(f"GitHub OAuth: Forced HTTPS in production: {redirect_uri}")
 
         # Diagnostic logging - VERY detailed for debugging
         logger.info(f"[GITHUB_OAUTH_DEBUG] redirect_uri = '{redirect_uri}'")
@@ -146,7 +153,9 @@ class GitHubOAuthService:
             return RedirectResponse(url=f"{frontend_url}/?login_error=github_no_code", status_code=307)
 
         # Match the same construction as prepare_github_login_redirect
-        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+        is_production = config_settings.ENV_TYPE == "production"
+
+        if is_production and config_settings.API_URL and "localhost" not in config_settings.API_URL:
             actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/github/callback"
         else:
             try:
@@ -157,6 +166,11 @@ class GitHubOAuthService:
             except Exception:
                 base_url = str(request.base_url).rstrip('/')
                 actual_redirect_uri = f"{base_url}/api/auth/github/callback"
+
+        # CRITICAL: Ensure HTTPS in production (belt-and-suspenders with proxy_headers)
+        if is_production and actual_redirect_uri.startswith("http://"):
+            actual_redirect_uri = actual_redirect_uri.replace("http://", "https://", 1)
+            logger.info(f"GitHub OAuth callback: Forced HTTPS in production: {actual_redirect_uri}")
 
         # Diagnostic logging - VERY detailed for debugging callback
         logger.info(f"[GITHUB_CALLBACK_DEBUG] actual_redirect_uri = '{actual_redirect_uri}'")

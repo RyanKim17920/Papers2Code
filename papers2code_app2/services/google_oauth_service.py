@@ -54,7 +54,9 @@ class GoogleOAuthService:
             raise OAuthException(detail="Authentication service is misconfigured (Google Client ID not set).")
 
         # For production, use explicit environment variable
-        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+        is_production = config_settings.ENV_TYPE == "production"
+
+        if is_production and config_settings.API_URL and "localhost" not in config_settings.API_URL:
             redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
         else:
             try:
@@ -65,6 +67,11 @@ class GoogleOAuthService:
             except Exception as e:
                 logger.error(f"Error constructing redirect_uri for Google OAuth: {e}")
                 raise OAuthException(detail="Error preparing authentication request to Google.")
+
+        # CRITICAL: Ensure HTTPS in production (belt-and-suspenders with proxy_headers)
+        if is_production and redirect_uri.startswith("http://"):
+            redirect_uri = redirect_uri.replace("http://", "https://", 1)
+            logger.info(f"Google OAuth: Forced HTTPS in production: {redirect_uri}")
 
         # Diagnostic logging - VERY detailed for debugging
         logger.info(f"[GOOGLE_OAUTH_DEBUG] redirect_uri = '{redirect_uri}'")
@@ -148,7 +155,9 @@ class GoogleOAuthService:
             return RedirectResponse(url=f"{frontend_url}/?login_error=google_no_code", status_code=307)
 
         # Match the same construction as prepare_google_login_redirect
-        if config_settings.ENV_TYPE == "production" and config_settings.API_URL and "localhost" not in config_settings.API_URL:
+        is_production = config_settings.ENV_TYPE == "production"
+
+        if is_production and config_settings.API_URL and "localhost" not in config_settings.API_URL:
             actual_redirect_uri = f"{config_settings.API_URL.rstrip('/')}/api/auth/google/callback"
         else:
             try:
@@ -159,6 +168,11 @@ class GoogleOAuthService:
             except Exception:
                 base_url = str(request.base_url).rstrip('/')
                 actual_redirect_uri = f"{base_url}/api/auth/google/callback"
+
+        # CRITICAL: Ensure HTTPS in production (belt-and-suspenders with proxy_headers)
+        if is_production and actual_redirect_uri.startswith("http://"):
+            actual_redirect_uri = actual_redirect_uri.replace("http://", "https://", 1)
+            logger.info(f"Google OAuth callback: Forced HTTPS in production: {actual_redirect_uri}")
 
         # Diagnostic logging - VERY detailed for debugging callback
         logger.info(f"[GOOGLE_CALLBACK_DEBUG] actual_redirect_uri = '{actual_redirect_uri}'")

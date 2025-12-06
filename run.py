@@ -162,8 +162,13 @@ class ApplicationRunner:
                 })
                 self._log("info", "Using development configuration with hot reload")
             else:
-                # Production or any other environment - simple single-worker setup
-                self._log("info", "Using production configuration on port 5001")
+                # Production: trust X-Forwarded headers from Render's reverse proxy
+                # This is CRITICAL for OAuth redirect_uri to use correct https:// scheme
+                base_config.update({
+                    "proxy_headers": True,
+                    "forwarded_allow_ips": "*",
+                })
+                self._log("info", "Using production configuration on port 5001 with proxy headers enabled")
 
             return base_config
 
