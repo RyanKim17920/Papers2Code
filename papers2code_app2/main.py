@@ -580,13 +580,17 @@ async def health_check():
             )
     except Exception as e:
         logger.error(f"Health check failed - database connection error: {e}")
+        # Only show detailed errors in development
+        error_detail = str(e) if config_settings.ENV_TYPE != "production" else "Database connection failed"
         return JSONResponse(
             status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
-            content={"status": "unhealthy", "database": "disconnected", "error": str(e)}
+            content={"status": "unhealthy", "database": "disconnected", "error": error_detail}
         )
 
     return {"status": "healthy", "database": db_status}
 
 
 if __name__ == "__main__":
-    uvicorn.run("papers2code_app2.main:app", host="0.0.0.0", port=5001, reload=True)
+    # Only enable hot-reload in development
+    is_dev = config_settings.ENV_TYPE != "production"
+    uvicorn.run("papers2code_app2.main:app", host="0.0.0.0", port=5001, reload=is_dev)

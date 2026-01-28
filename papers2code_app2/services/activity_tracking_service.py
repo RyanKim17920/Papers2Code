@@ -1,7 +1,10 @@
+import logging
 from datetime import datetime
 from typing import Optional, Dict, Any
 from papers2code_app2.database import get_paper_views_collection_async
 from bson import ObjectId
+
+logger = logging.getLogger(__name__)
 
 class ActivityTrackingService:
     """
@@ -65,7 +68,7 @@ class ActivityTrackingService:
                 return result.inserted_id is not None
             
         except Exception as e:
-            print(f"Error tracking paper view: {e}")
+            logger.error(f"Error tracking paper view: {e}")
             return False
     
     async def get_paper_view_count(self, paper_id: str) -> int:
@@ -86,7 +89,7 @@ class ActivityTrackingService:
             })
             return count
         except Exception as e:
-            print(f"Error getting paper view count: {e}")
+            logger.error(f"Error getting paper view count: {e}")
             return 0
     
     async def get_user_paper_views(self, user_id: str) -> list:
@@ -107,7 +110,7 @@ class ActivityTrackingService:
             }).sort("timestamp", -1).to_list(length=None)
             return views
         except Exception as e:
-            print(f"Error getting user paper views: {e}")
+            logger.error(f"Error getting user paper views: {e}")
             return []
 
 # Create a singleton instance

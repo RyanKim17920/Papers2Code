@@ -49,7 +49,7 @@ async def update_user_profile(
     """Update the current user's profile information."""
     try:
         updated_user = await user_service.update_user_profile(current_user.id, profile_update)
-        print(updated_user)
+        logger.debug(f"Updated user profile: {updated_user}")
         return updated_user
     except ValueError as ve:
         # Handle validation errors (like invalid LinkedIn URL format)

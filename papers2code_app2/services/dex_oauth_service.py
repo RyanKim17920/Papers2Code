@@ -46,17 +46,21 @@ class DexOAuthService:
     Dex acts as a unified OIDC provider that can federate to multiple backends.
     Drop-in replacement for GitHubOAuthService/GoogleOAuthService when USE_DEX_OAUTH=true
     """
-    
+
     def __init__(self):
         self.users_collection = None
-        # Use more robust fallbacks: if the config attribute exists but is None/empty
-        # we explicitly fall back to sensible development defaults. `getattr` alone
-        # only applies the default when the attribute is missing which does not
-        # cover the common case where the attribute exists but was left unset.
+        self.enabled = True
+
+        # Load configuration - no hardcoded fallbacks for secrets
         self.dex_issuer = getattr(config_settings, 'DEX_ISSUER_URL', None) or 'http://localhost:5556/dex'
         self.client_id = getattr(config_settings, 'DEX_CLIENT_ID', None) or 'papers2code-backend'
-        self.client_secret = getattr(config_settings, 'DEX_CLIENT_SECRET', None) or 'dev-client-secret'
-        
+        self.client_secret = getattr(config_settings, 'DEX_CLIENT_SECRET', None)
+
+        # Validate required secrets - disable if not configured
+        if not self.client_secret:
+            logger.warning("DEX_CLIENT_SECRET not configured - Dex OAuth will be disabled")
+            self.enabled = False
+
         # OIDC endpoints
         self.authorize_url = f"{self.dex_issuer}/auth"
         self.token_url = f"{self.dex_issuer}/token"
@@ -92,6 +96,9 @@ class DexOAuthService:
         """
         Internal method to prepare OAuth login redirect to Dex
         """
+        if not self.enabled:
+            raise OAuthException("Dex OAuth is disabled - DEX_CLIENT_SECRET not configured")
+
         try:
             # Generate state token for CSRF protection
             state_value = str(uuid.uuid4())

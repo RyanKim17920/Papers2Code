@@ -1,17 +1,26 @@
 """
 FastAPI Background Tasks Integration
 
-Add these endpoints to your main FastAPI app for manual testing
+Protected admin endpoints for manual triggering of background tasks.
+These endpoints require owner authentication.
+
+NOTE: These endpoints are meant to be called by:
+1. Manual admin operations
+2. External cron/monitoring services with proper authentication
+
+The actual task logic (update_email_statuses_task) is also used by
+cron scripts that run directly against the database.
 """
 
-from fastapi import APIRouter, BackgroundTasks
+from fastapi import APIRouter, Depends
 from datetime import datetime, timezone, timedelta
 from typing import Dict, Any
 import logging
 
 from papers2code_app2.database import get_implementation_progress_collection_async
 from papers2code_app2.schemas.implementation_progress import ProgressStatus, UpdateEventType
-from papers2code_app2.schemas.db_models import PyObjectId
+from papers2code_app2.schemas.minimal import UserSchema
+from papers2code_app2.auth import get_current_owner
 
 router = APIRouter(prefix="/admin/tasks", tags=["Background Tasks"])
 logger = logging.getLogger(__name__)
@@ -89,44 +98,63 @@ async def update_email_statuses_task() -> Dict[str, Any]:
         }
 
 @router.post("/email-status-update")
-async def trigger_email_status_update(background_tasks: BackgroundTasks):
-    """Manually trigger email status update (replaces Vercel cron)"""
-    
+async def trigger_email_status_update(
+    current_user: UserSchema = Depends(get_current_owner)
+):
+    """
+    Manually trigger email status update (replaces Vercel cron).
+
+    Requires owner authentication.
+    """
+    logger.info(f"Email status update triggered by owner: {current_user.username}")
+
     # Run immediately and return result
     result = await update_email_statuses_task()
-    
+
     return {
         "message": "Email status update completed",
+        "triggered_by": current_user.username,
         "result": result
     }
 
 @router.get("/test")
-async def test_endpoint():
-    """Simple test endpoint (replaces Vercel cron test)"""
+async def test_endpoint(current_user: UserSchema = Depends(get_current_owner)):
+    """
+    Simple test endpoint for admin verification.
+
+    Requires owner authentication.
+    """
     return {
         "message": "Background task endpoint working!",
         "timestamp": datetime.now(timezone.utc).isoformat(),
         "environment": "FastAPI",
-        "status": "healthy"
+        "status": "healthy",
+        "authenticated_as": current_user.username
     }
 
 @router.get("/health")
-async def health_check():
-    """Health check for background task system"""
+async def health_check(current_user: UserSchema = Depends(get_current_owner)):
+    """
+    Health check for background task system.
+
+    Requires owner authentication.
+    """
     try:
         # Test database connection
         collection = await get_implementation_progress_collection_async()
         await collection.count_documents({})
-        
+
         return {
             "status": "healthy",
             "database": "connected",
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "authenticated_as": current_user.username
         }
     except Exception as e:
         return {
             "status": "unhealthy",
             "database": "disconnected",
             "error": str(e),
-            "timestamp": datetime.now(timezone.utc).isoformat()
+            "timestamp": datetime.now(timezone.utc).isoformat(),
+            "authenticated_as": current_user.username
         }

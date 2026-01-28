@@ -62,26 +62,38 @@ class KeycloakOAuthService:
     
     def __init__(self):
         self.users_collection = None
-        
+        self.github_enabled = True
+        self.google_enabled = True
+
         # Keycloak base URL (internal Docker network URL)
         keycloak_base = os.getenv('KEYCLOAK_BASE_URL', 'http://localhost:8080')
-        
+
         # Mock GitHub realm configuration
         self.github_issuer = os.getenv(
-            'KEYCLOAK_GITHUB_ISSUER_URL', 
+            'KEYCLOAK_GITHUB_ISSUER_URL',
             f'{keycloak_base}/realms/mock-github'
         )
         self.github_client_id = os.getenv('KEYCLOAK_GITHUB_CLIENT_ID', 'papers2code-github')
-        self.github_client_secret = os.getenv('KEYCLOAK_GITHUB_CLIENT_SECRET', 'dev-github-secret')
-        
+        self.github_client_secret = os.getenv('KEYCLOAK_GITHUB_CLIENT_SECRET')
+
+        # Validate GitHub secret - disable if not configured
+        if not self.github_client_secret:
+            logger.warning("KEYCLOAK_GITHUB_CLIENT_SECRET not configured - Keycloak GitHub OAuth will be disabled")
+            self.github_enabled = False
+
         # Mock Google realm configuration
         self.google_issuer = os.getenv(
             'KEYCLOAK_GOOGLE_ISSUER_URL',
             f'{keycloak_base}/realms/mock-google'
         )
         self.google_client_id = os.getenv('KEYCLOAK_GOOGLE_CLIENT_ID', 'papers2code-google')
-        self.google_client_secret = os.getenv('KEYCLOAK_GOOGLE_CLIENT_SECRET', 'dev-google-secret')
-        
+        self.google_client_secret = os.getenv('KEYCLOAK_GOOGLE_CLIENT_SECRET')
+
+        # Validate Google secret - disable if not configured
+        if not self.google_client_secret:
+            logger.warning("KEYCLOAK_GOOGLE_CLIENT_SECRET not configured - Keycloak Google OAuth will be disabled")
+            self.google_enabled = False
+
         # External URL for browser redirects (localhost for dev)
         self.external_keycloak_base = os.getenv('KEYCLOAK_EXTERNAL_URL', 'http://localhost:8080')
         
@@ -129,12 +141,16 @@ class KeycloakOAuthService:
         """
         Prepare GitHub OAuth login redirect to Keycloak mock-github realm
         """
+        if not self.github_enabled:
+            raise OAuthException("Keycloak GitHub OAuth is disabled - KEYCLOAK_GITHUB_CLIENT_SECRET not configured")
         return self._prepare_login_redirect(request, provider="github")
-    
+
     def prepare_google_login_redirect(self, request: Request) -> RedirectResponse:
         """
         Prepare Google OAuth login redirect to Keycloak mock-google realm
         """
+        if not self.google_enabled:
+            raise OAuthException("Keycloak Google OAuth is disabled - KEYCLOAK_GOOGLE_CLIENT_SECRET not configured")
         return self._prepare_login_redirect(request, provider="google")
     
     def _prepare_login_redirect(self, request: Request, provider: str) -> RedirectResponse:
