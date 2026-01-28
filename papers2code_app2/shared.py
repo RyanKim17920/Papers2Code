@@ -441,8 +441,12 @@ def get_mongo_uri() -> str:
             "No MongoDB URI configured for development environment."
         )
 
-    logger.warning(
-        "No MongoDB URI found for ENV_TYPE=%s. Falling back to local development instance, but this should be configured explicitly.",
-        config_settings.ENV_TYPE,
+    # SECURITY: In production, fail hard if no MongoDB URI is configured
+    # Never fall back to localhost in production - this would be a critical security issue
+    error_msg = (
+        f"CRITICAL: No MongoDB URI found for ENV_TYPE={config_settings.ENV_TYPE}. "
+        "Production deployments require a properly configured MONGO_URI_PROD environment variable. "
+        "Refusing to fall back to localhost for security reasons."
     )
-    return DEFAULT_LOCAL_MONGO_URI
+    logger.critical(error_msg)
+    raise RuntimeError(error_msg)

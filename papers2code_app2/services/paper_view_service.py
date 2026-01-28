@@ -1,4 +1,5 @@
 import logging
+import re
 import shlex
 import time # Add time import for performance logging
 from typing import List, Dict, Any, Optional, Tuple
@@ -218,7 +219,8 @@ class PaperViewService:
         if tags:
             atlas_compound_filter.append({"terms": {"query": tags, "path": "tasks"}})
         if venue:
-            atlas_compound_filter.append({"regex": {"query": venue, "path": "proceeding", "allowAnalyzedField": True}})
+            escaped_venue = re.escape(venue)
+            atlas_compound_filter.append({"regex": {"query": escaped_venue, "path": "proceeding", "allowAnalyzedField": True}})
         
         # Date filters
         try:
@@ -437,12 +439,14 @@ class PaperViewService:
         if tags:
             mongo_filter_conditions.append({"tasks": {"$in": tags}})
         if venue:
-            mongo_filter_conditions.append({"proceeding": {"$regex": venue, "$options": "i"}})
+            escaped_venue = re.escape(venue)
+            mongo_filter_conditions.append({"proceeding": {"$regex": escaped_venue, "$options": "i"}})
         
         # Search query: Use regex-based text search
         if search_query:
             self.logger.debug(f"Adding regex search for: '{search_query}'")
-            search_regex = {"$regex": search_query, "$options": "i"}
+            escaped_search_query = re.escape(search_query)
+            search_regex = {"$regex": escaped_search_query, "$options": "i"}
             mongo_filter_conditions.append({
                 "$or": [
                     {"title": search_regex},
@@ -453,8 +457,9 @@ class PaperViewService:
         # Author search: Search in authors array
         if author:
             self.logger.debug(f"Adding author search for: '{author}'")
+            escaped_author = re.escape(author)
             mongo_filter_conditions.append({
-                "authors": {"$regex": author, "$options": "i"}
+                "authors": {"$regex": escaped_author, "$options": "i"}
             })
 
         # Date filters

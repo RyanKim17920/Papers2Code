@@ -25,6 +25,7 @@ from ..constants import (
     OAUTH_STATE_COOKIE_NAME,
     CSRF_TOKEN_COOKIE_NAME,
 )
+from ..utils.encryption import get_token_encryption
 
 logger = logging.getLogger(__name__)
 
@@ -299,11 +300,15 @@ class AuthService:
                 raise UserNotFoundException("Existing user not found")
 
             google_avatar = existing_user.get("googleAvatarUrl")
-            
+
+            # Encrypt the GitHub token before storing
+            token_encryption = get_token_encryption()
+            encrypted_github_token = token_encryption.encrypt_token(github_token)
+
             update_payload = {
                 "githubId": github_id,
                 "githubAvatarUrl": github_avatar,
-                "githubAccessToken": github_token,
+                "githubAccessToken": encrypted_github_token,  # Store encrypted token
                 "avatarUrl": github_avatar or google_avatar,  # Default to GitHub avatar
                 "preferredAvatarSource": "github",
                 "username": github_username,  # Update to GitHub username

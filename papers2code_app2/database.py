@@ -193,6 +193,125 @@ async def get_popular_papers_cache_collection_async() -> AsyncCollection:
         raise RuntimeError("Failed to initialize async_db.")
     return async_db["popular_papers_cache"]
 
+
+async def get_async_client():
+    """Returns the async MongoDB client, initializing if necessary."""
+    global async_client
+    if async_client is None:
+        await initialize_async_db()
+    if async_client is None:
+        raise RuntimeError("Failed to initialize async_client.")
+    return async_client
+
+
+class TransactionContext:
+    """
+    Context manager for MongoDB transactions with graceful fallback.
+
+    MongoDB Atlas shared clusters (M0/M2/M5) do not support transactions.
+    This context manager attempts to use transactions but gracefully falls back
+    to non-transactional operations if transactions aren't supported.
+
+    Usage:
+        async with TransactionContext() as ctx:
+            await collection1.update_one({...}, {...}, session=ctx.session)
+            await collection2.insert_one({...}, session=ctx.session)
+
+    Note: ctx.session will be None if transactions aren't supported,
+    and operations will proceed without transactional guarantees.
+    """
+
+    def __init__(self):
+        self.session = None
+        self._client = None
+        self._transaction_supported = True
+        self._session_context = None
+        self._transaction_context = None
+
+    async def __aenter__(self):
+        global async_client
+
+        if async_client is None:
+            await initialize_async_db()
+
+        self._client = async_client
+
+        if self._client is None:
+            logger.warning("TransactionContext: async_client not available, proceeding without transaction")
+            self._transaction_supported = False
+            return self
+
+        try:
+            # Try to start a session
+            self._session_context = await self._client.start_session()
+            self.session = await self._session_context.__aenter__()
+
+            # Try to start a transaction
+            self._transaction_context = self.session.start_transaction()
+            await self._transaction_context.__aenter__()
+
+            logger.debug("TransactionContext: Transaction started successfully")
+
+        except Exception as e:
+            # Check if this is a "transactions not supported" error
+            error_str = str(e).lower()
+            if any(msg in error_str for msg in [
+                "transaction",
+                "not supported",
+                "replica set",
+                "session",
+                "operation not supported"
+            ]):
+                logger.info(f"TransactionContext: Transactions not supported on this cluster, proceeding without transaction. Error: {e}")
+                self._transaction_supported = False
+                self.session = None
+                # Clean up any partially initialized resources
+                if self._session_context:
+                    try:
+                        await self._session_context.__aexit__(None, None, None)
+                    except Exception:
+                        pass
+                self._session_context = None
+                self._transaction_context = None
+            else:
+                # Re-raise unexpected errors
+                raise
+
+        return self
+
+    async def __aexit__(self, exc_type, exc_val, exc_tb):
+        if not self._transaction_supported or self.session is None:
+            # No transaction was started, nothing to clean up
+            return False
+
+        try:
+            if exc_type is None:
+                # No exception, commit the transaction
+                await self._transaction_context.__aexit__(None, None, None)
+                logger.debug("TransactionContext: Transaction committed successfully")
+            else:
+                # Exception occurred, abort the transaction
+                await self._transaction_context.__aexit__(exc_type, exc_val, exc_tb)
+                logger.warning(f"TransactionContext: Transaction aborted due to exception: {exc_val}")
+        except Exception as commit_error:
+            logger.error(f"TransactionContext: Error during transaction commit/abort: {commit_error}")
+            # Don't suppress the original exception
+        finally:
+            # Clean up the session
+            if self._session_context:
+                try:
+                    await self._session_context.__aexit__(exc_type, exc_val, exc_tb)
+                except Exception as session_error:
+                    logger.error(f"TransactionContext: Error closing session: {session_error}")
+
+        # Don't suppress exceptions
+        return False
+
+    @property
+    def is_transactional(self) -> bool:
+        """Returns True if operations are running within a transaction."""
+        return self._transaction_supported and self.session is not None
+
 async def ensure_db_indexes_async():
     """
     Ensures that the necessary indexes are created asynchronously in the MongoDB collections.

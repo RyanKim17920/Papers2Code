@@ -1,9 +1,9 @@
 from datetime import datetime, timedelta, timezone
 from typing import Optional, Dict
 import uuid
-import hashlib
+import secrets
 
-from jose import jwt 
+from jose import jwt
 from fastapi import Request
 
 from ..shared import config_settings
@@ -34,15 +34,12 @@ def get_session_id(request: Request) -> str:
     session_id = request.headers.get("x-session-id")
     if not session_id:
         session_id = request.cookies.get("session_id")
-    
-    # If no session ID exists, generate one based on IP and user agent
+
+    # If no session ID exists, generate a cryptographically secure random session ID
     if not session_id:
-        ip_address = request.client.host if request.client else "unknown"
-        user_agent = request.headers.get("user-agent", "unknown")
-        
-        # Create a deterministic session ID based on IP and user agent
-        session_data = f"{ip_address}:{user_agent}"
-        session_id = hashlib.md5(session_data.encode()).hexdigest()
-    
+        # Generate 32 bytes of entropy (256 bits) for secure session ID
+        # This produces a URL-safe base64-encoded string
+        session_id = secrets.token_urlsafe(32)
+
     return session_id
    

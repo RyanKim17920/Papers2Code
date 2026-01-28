@@ -19,6 +19,7 @@ from ..services.exceptions import (
     DatabaseOperationException,
 ) 
 from ..auth.token_utils import create_access_token, create_refresh_token
+from ..utils.encryption import get_token_encryption
 from ..constants import (
     ACCESS_TOKEN_COOKIE_NAME,
     REFRESH_TOKEN_COOKIE_NAME,
@@ -282,13 +283,17 @@ class GitHubOAuthService:
                     username = f"{base_username}{counter}"
                     counter += 1
                 
+                # Encrypt the GitHub token before storing
+                token_encryption = get_token_encryption()
+                encrypted_github_token = token_encryption.encrypt_token(github_token)
+
                 set_payload = {
                     "name": name,
                     "githubAvatarUrl": avatar_url,  # Store GitHub avatar separately
                     "email": email,
                     "githubId": github_user_id,
                     "githubUsername": username,  # Store provider-specific username
-                    "githubAccessToken": github_token,  # Store the token for API calls
+                    "githubAccessToken": encrypted_github_token,  # Store encrypted token for API calls
                     "updatedAt": current_time,
                     "lastLoginAt": current_time,
                 }

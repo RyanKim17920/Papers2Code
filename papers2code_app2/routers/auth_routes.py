@@ -21,6 +21,7 @@ from ..services.exceptions import (
     OAuthException,
     DatabaseOperationException # Added DatabaseOperationException
 )
+from ..dependencies import limiter
 
 logger = logging.getLogger(__name__)
 
@@ -54,6 +55,7 @@ else:
     logger.info("DEVELOPMENT MODE: Using real GitHub and Google OAuth services (USE_DEX_OAUTH=false)")
 
 @router.get("/csrf-token", response_model=CsrfToken)
+@limiter.limit("30/minute")
 async def get_csrf_token(request: Request, response: Response):
     """
     Generate and return a CSRF token.
@@ -101,6 +103,7 @@ async def get_csrf_token(request: Request, response: Response):
     return CsrfToken(csrf_token=csrf_token_value)
 
 @router.get("/github/login")
+@limiter.limit("10/minute")
 async def github_login(request: Request): # Removed unused response: Response
     try:
         # This method now returns a RedirectResponse with the cookie set on it
@@ -109,8 +112,9 @@ async def github_login(request: Request): # Removed unused response: Response
         logger.error(f"OAuth login preparation failed: {e.message}")
         # Return a JSONResponse for API-like error, or redirect to a frontend error page
         # For consistency with callback, redirecting to frontend error page
+        # SECURITY: Use generic error code, detailed error logged above
         frontend_url = config_settings.FRONTEND_URL
-        return RedirectResponse(f"{frontend_url}/?login_error=oauth_prepare_failed&detail={e.message}", status_code=307)
+        return RedirectResponse(f"{frontend_url}/?login_error=oauth_failed", status_code=307)
     except Exception as e:
         logger.error(f"Unexpected error during GitHub login initiation: {e}", exc_info=True)
         frontend_url = config_settings.FRONTEND_URL
@@ -145,13 +149,15 @@ async def github_callback(code: str, state: str, request: Request): # Removed re
 
 
 @router.get("/google/login")
+@limiter.limit("10/minute")
 async def google_login(request: Request):
     try:
         return google_oauth_service.prepare_google_login_redirect(request)
     except OAuthException as e:
         logger.error(f"OAuth login preparation failed: {e.message}")
+        # SECURITY: Use generic error code, detailed error logged above
         frontend_url = config_settings.FRONTEND_URL
-        return RedirectResponse(f"{frontend_url}/?login_error=oauth_prepare_failed&detail={e.message}", status_code=307)
+        return RedirectResponse(f"{frontend_url}/?login_error=oauth_failed", status_code=307)
     except Exception as e:
         logger.error(f"Unexpected error during Google login initiation: {e}", exc_info=True)
         frontend_url = config_settings.FRONTEND_URL
@@ -209,6 +215,7 @@ async def update_current_user_profile(
 
 
 @router.post("/refresh_token", response_model=TokenResponse)
+@limiter.limit("20/minute")
 async def refresh_access_token_route(request: Request, response: Response): # response needed to set cookie
     try:
         # AuthService.refresh_access_token now needs to set cookies on the passed 'response' object
@@ -288,6 +295,7 @@ async def link_accounts(request: Request, response: Response):
 
 
 @router.post("/logout")
+@limiter.limit("10/minute")
 async def logout_user_route(request: Request, response: Response): # response needed to clear cookies
     try:
         # This call to auth_service.logout_user internally calls auth_service.clear_auth_cookies(response),

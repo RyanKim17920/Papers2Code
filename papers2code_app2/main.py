@@ -49,11 +49,8 @@ class OriginValidationMiddleware(BaseHTTPMiddleware):
     ) -> StarletteResponse:
         # Exempt paths that need to be publicly accessible or have external redirects
         exempt_paths = [
-            "/", 
-            "/health", 
-            "/docs", 
-            "/redoc", 
-            "/openapi.json",
+            "/",
+            "/health",
         ]
 
         if request.url.path in exempt_paths:
@@ -309,21 +306,28 @@ app = FastAPI(
     description="API for Papers2Code platform.",
     version="0.2.0",
     lifespan=lifespan,
-    default_response_class=AliasJSONResponse,  # MODIFIED: Set the default response class
+    default_response_class=AliasJSONResponse,
+    docs_url=None,      # Disabled - not needed
+    redoc_url=None,     # Disabled - not needed
+    openapi_url=None,   # Disabled - not needed
 )
 
 # --- CORS Middleware ---
 # Origins that are allowed to make cross-origin requests.
 
-# Start with common development origins
-origins_set = {
-    "http://localhost:5173",  # Common Vite dev port
-    "http://127.0.0.1:5173",
-    "http://localhost:3000",  # Common port for React/Next.js dev
-    "http://127.0.0.1:3000",
-}
+# Initialize origins set
+origins_set = set()
 
-# Add the configured FRONTEND_URL from settings
+# Add localhost origins only in non-production environments
+if config_settings.ENV_TYPE != "production":
+    origins_set.update({
+        "http://localhost:5173",  # Common Vite dev port
+        "http://127.0.0.1:5173",
+        "http://localhost:3000",  # Common port for React/Next.js dev
+        "http://127.0.0.1:3000",
+    })
+
+# Add the configured FRONTEND_URL from settings (always included)
 if config_settings.FRONTEND_URL:
     origins_set.add(config_settings.FRONTEND_URL)
 
@@ -452,9 +456,14 @@ api_router.include_router(auth_routes.router)
 # Include the api_router into the main app
 app.include_router(api_router)
 
-# Include Mock IDP router (mounted at root /mock-idp)
-from .routers import mock_idp_routes
-app.include_router(mock_idp_routes.router)
+# Include Mock IDP router ONLY in non-production environments (mounted at root /mock-idp)
+# SECURITY: Mock IDP provides authentication simulation and must never be exposed in production
+if config_settings.ENV_TYPE != "production":
+    from .routers import mock_idp_routes
+    app.include_router(mock_idp_routes.router)
+    logger.info("Mock IDP routes enabled for development environment")
+else:
+    logger.info("Mock IDP routes disabled in production environment")
 
 # app.include_router(auth_routes.router) # COMMENTED OUT: Moved to api_router
 
@@ -538,6 +547,45 @@ async def http_exception_handler(request: Request, exc: HTTPException):
 @app.get("/")
 async def root():
     return {"message": "Welcome to the Papers2Code API"}
+
+
+@app.get("/health")
+async def health_check():
+    """
+    Health check endpoint for deployment monitoring (e.g., Render).
+    Returns HTTP 200 with status "healthy" when the service is running and database is accessible.
+    This endpoint is exempt from CSRF protection and origin validation.
+
+    Checks:
+    - Application is running
+    - MongoDB connection is healthy (via ping command)
+    """
+    from .database import async_client, initialize_async_db
+
+    # Check database connectivity
+    try:
+        if async_client is None:
+            await initialize_async_db()
+
+        # Ping MongoDB to verify connection is healthy
+        if async_client is not None:
+            await async_client.admin.command('ping')
+            db_status = "connected"
+        else:
+            db_status = "not_initialized"
+            # Return unhealthy if DB client couldn't be initialized
+            return JSONResponse(
+                status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+                content={"status": "unhealthy", "database": db_status, "error": "Database client not initialized"}
+            )
+    except Exception as e:
+        logger.error(f"Health check failed - database connection error: {e}")
+        return JSONResponse(
+            status_code=status.HTTP_503_SERVICE_UNAVAILABLE,
+            content={"status": "unhealthy", "database": "disconnected", "error": str(e)}
+        )
+
+    return {"status": "healthy", "database": db_status}
 
 
 if __name__ == "__main__":

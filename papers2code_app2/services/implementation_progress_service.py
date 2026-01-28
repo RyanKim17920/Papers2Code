@@ -7,6 +7,8 @@ from ..database import (
     get_implementation_progress_collection_async,
     get_papers_collection_async,
     get_users_collection_async,
+    get_user_actions_collection_async,
+    TransactionContext,
 )
 from ..cache import paper_cache
 from ..schemas.implementation_progress import (
@@ -74,6 +76,13 @@ class ImplementationProgressService:
     async def join_or_create_progress(
         self, paper_id: str, user_id: str
     ) -> ImplementationProgress:
+        """
+        Join an existing implementation progress or create a new one.
+
+        Uses MongoDB transactions when available to ensure atomicity between
+        progress collection updates, paper status updates, and user action logging.
+        Falls back gracefully on clusters that don't support transactions.
+        """
         papers_collection = await get_papers_collection_async()
         try:
             paper_obj_id = PyObjectId(paper_id)
@@ -114,30 +123,42 @@ class ImplementationProgressService:
                     details={},
                 )
 
-                # Use the actual _id from the found document
-                await progress_collection.update_one(
-                    {"_id": existing_progress_data["_id"]},
-                    {
-                        "$addToSet": {"contributors": user_obj_id},
-                        "$push": {"updates": join_event.model_dump(by_alias=True)},
-                        "$set": {
-                            "latestUpdate": current_time,
-                            "updatedAt": current_time,
+                # Use transaction for atomic progress update + action logging
+                async with TransactionContext() as ctx:
+                    session = ctx.session
+
+                    # Update the progress collection
+                    await progress_collection.update_one(
+                        {"_id": existing_progress_data["_id"]},
+                        {
+                            "$addToSet": {"contributors": user_obj_id},
+                            "$push": {"updates": join_event.model_dump(by_alias=True)},
+                            "$set": {
+                                "latestUpdate": current_time,
+                                "updatedAt": current_time,
+                            },
                         },
-                    },
-                )
-                # Log ACTION_PROJECT_JOINED
-                try:
-                    await self.paper_action_service.record_paper_related_action(
-                        paper_id=paper_id,
-                        user_id=user_id,
-                        action_type=ACTION_PROJECT_JOINED,
-                        details={"progress_id": str(existing_progress_data["_id"])},
+                        session=session,
                     )
-                except Exception as e_log:
-                    logger.error(
-                        f"Failed to log ACTION_PROJECT_JOINED for user {user_id}, paper {paper_id}, progress {existing_progress_data['_id']}: {e_log}"
-                    )
+
+                    # Log ACTION_PROJECT_JOINED within the same transaction
+                    try:
+                        user_actions_collection = await get_user_actions_collection_async()
+                        await user_actions_collection.insert_one({
+                            "userId": user_obj_id,
+                            "paperId": paper_obj_id,
+                            "actionType": ACTION_PROJECT_JOINED,
+                            "createdAt": current_time,
+                            "details": {"progress_id": str(existing_progress_data["_id"])},
+                        }, session=session)
+                    except Exception as e_log:
+                        logger.error(
+                            f"Failed to log ACTION_PROJECT_JOINED for user {user_id}, paper {paper_id}, progress {existing_progress_data['_id']}: {e_log}"
+                        )
+
+                    if ctx.is_transactional:
+                        logger.debug(f"Contributor join recorded atomically for paper {paper_id} by user {user_id}")
+
             # Re-fetch to get the potentially updated document
             updated_progress_data = await progress_collection.find_one(
                 {"_id": existing_progress_data["_id"]}
@@ -159,14 +180,37 @@ class ImplementationProgressService:
             progress_to_insert["_id"] = paper_obj_id
 
             try:
-                result = await progress_collection.insert_one(progress_to_insert)
+                # Use transaction for atomic progress creation + paper update + action logging
+                async with TransactionContext() as ctx:
+                    session = ctx.session
 
-                # Update the paper's status to 'Started'
-                await papers_collection.update_one(
-                    {"_id": paper_obj_id}, {"$set": {"status": "Started"}}
-                )
+                    result = await progress_collection.insert_one(progress_to_insert, session=session)
 
-                # Update paper status in cache instead of clearing all
+                    # Update the paper's status to 'Started'
+                    await papers_collection.update_one(
+                        {"_id": paper_obj_id}, {"$set": {"status": "Started"}},
+                        session=session
+                    )
+
+                    # Log ACTION_PROJECT_STARTED within the same transaction
+                    try:
+                        user_actions_collection = await get_user_actions_collection_async()
+                        await user_actions_collection.insert_one({
+                            "userId": user_obj_id,
+                            "paperId": paper_obj_id,
+                            "actionType": ACTION_PROJECT_STARTED,
+                            "createdAt": current_time,
+                            "details": {"progress_id": str(result.inserted_id)},
+                        }, session=session)
+                    except Exception as e_log:
+                        logger.error(
+                            f"Failed to log ACTION_PROJECT_STARTED for user {user_id}, paper {paper_id}, progress {str(result.inserted_id)}: {e_log}"
+                        )
+
+                    if ctx.is_transactional:
+                        logger.debug(f"Project started atomically for paper {paper_id} by user {user_id}")
+
+                # Update paper status in cache (outside transaction since it's external)
                 await paper_cache.update_paper_in_cache(paper_id, "Started")
 
                 created_progress_data = await progress_collection.find_one(
@@ -175,19 +219,6 @@ class ImplementationProgressService:
                 if not created_progress_data:
                     raise NotFoundException(
                         "Failed to retrieve newly created progress."
-                    )
-
-                # Log ACTION_PROJECT_STARTED
-                try:
-                    await self.paper_action_service.record_paper_related_action(
-                        paper_id=paper_id,
-                        user_id=user_id,
-                        action_type=ACTION_PROJECT_STARTED,
-                        details={"progress_id": str(result.inserted_id)},
-                    )
-                except Exception as e_log:
-                    logger.error(
-                        f"Failed to log ACTION_PROJECT_STARTED for user {user_id}, paper {paper_id}, progress {str(result.inserted_id)}: {e_log}"
                     )
 
                 return ImplementationProgress(**created_progress_data)
@@ -244,7 +275,12 @@ class ImplementationProgressService:
                 raise e
 
     async def send_author_outreach_email(self, paper_id: str, user_id: str):
-        """Fetches paper details and generates the author outreach email template."""
+        """
+        Fetches paper details and generates the author outreach email template.
+
+        Uses MongoDB transactions when available to ensure atomicity between
+        progress collection and papers collection updates.
+        """
         papers_collection = await get_papers_collection_async()
         paper = await papers_collection.find_one({"_id": ObjectId(paper_id)})
         if not paper:
@@ -278,25 +314,34 @@ class ImplementationProgressService:
             },
         )
 
-        # Update progress with email sent event (which also changes status)
-        await progress_collection.update_one(
-            {"_id": paper_obj_id},
-            {
-                "$push": {"updates": email_event.model_dump(by_alias=True)},
-                "$set": {
-                    "status": ProgressStatus.EMAIL_SENT.value,
-                    "latestUpdate": current_time,
-                    "updatedAt": current_time
+        # Use transaction for atomic progress update + paper status update
+        async with TransactionContext() as ctx:
+            session = ctx.session
+
+            # Update progress with email sent event (which also changes status)
+            await progress_collection.update_one(
+                {"_id": paper_obj_id},
+                {
+                    "$push": {"updates": email_event.model_dump(by_alias=True)},
+                    "$set": {
+                        "status": ProgressStatus.EMAIL_SENT.value,
+                        "latestUpdate": current_time,
+                        "updatedAt": current_time
+                    },
                 },
-            },
-        )
+                session=session,
+            )
 
-        # Update paper status
-        await papers_collection.update_one(
-            {"_id": paper_obj_id}, {"$set": {"status": "Waiting for Author Response"}}
-        )
+            # Update paper status
+            await papers_collection.update_one(
+                {"_id": paper_obj_id}, {"$set": {"status": "Waiting for Author Response"}},
+                session=session
+            )
 
-        # Update paper status in cache instead of clearing all
+            if ctx.is_transactional:
+                logger.debug(f"Email sent status updated atomically for paper {paper_id}")
+
+        # Update paper status in cache (outside transaction since it's external)
         await paper_cache.update_paper_in_cache(paper_id, "Waiting for Author Response")
 
         # In a real application, you would integrate with an email sending service here.
@@ -310,7 +355,12 @@ class ImplementationProgressService:
     async def update_progress_by_paper_id(
         self, paper_id: str, user_id: str, progress_update: ProgressUpdateRequest
     ) -> ImplementationProgress:
-        """Update status or GitHub repo ID for a progress by paper ID."""
+        """
+        Update status or GitHub repo ID for a progress by paper ID.
+
+        Uses MongoDB transactions when available to ensure atomicity between
+        progress collection and papers collection updates when status changes.
+        """
         logger.info(
             f"update_progress_by_paper_id called with paper_id: {paper_id}, user_id: {user_id}"
         )
@@ -353,6 +403,7 @@ class ImplementationProgressService:
         current_time = datetime.now(timezone.utc)
         update_fields = {"latestUpdate": current_time, "updatedAt": current_time}
         events_to_add = []
+        paper_status_update = None
 
         # Handle status changes
         if "status" in update_data:
@@ -373,8 +424,7 @@ class ImplementationProgressService:
                 events_to_add.append(status_event.model_dump(by_alias=True))
                 update_fields["status"] = new_status.value
 
-                # Update paper status based on progress status changes
-                paper_status_update = None
+                # Determine paper status based on progress status changes
                 if new_status == ProgressStatus.EMAIL_SENT:
                     paper_status_update = "Waiting for Author Response"
                 elif new_status == ProgressStatus.RESPONSE_RECEIVED:
@@ -399,15 +449,6 @@ class ImplementationProgressService:
                     paper_status_update = "Started"
                 elif new_status == ProgressStatus.CODE_STARTED:
                     paper_status_update = "Work in Progress"
-
-                if paper_status_update:
-                    await papers_collection.update_one(
-                        {"_id": paper_obj_id}, {"$set": {"status": paper_status_update}}
-                    )
-                    # Update paper status in cache instead of clearing all
-                    await paper_cache.update_paper_in_cache(
-                        paper_id, paper_status_update
-                    )
 
         # Handle GitHub repo changes
         if "github_repo_id" in update_data:
@@ -435,7 +476,27 @@ class ImplementationProgressService:
         if events_to_add:
             update_operations["$push"] = {"updates": {"$each": events_to_add}}
 
-        await progress_collection.update_one({"_id": actual_id}, update_operations)
+        # Use transaction for atomic progress update + paper status update
+        async with TransactionContext() as ctx:
+            session = ctx.session
+
+            await progress_collection.update_one(
+                {"_id": actual_id}, update_operations, session=session
+            )
+
+            # Update paper status if needed (within same transaction)
+            if paper_status_update:
+                await papers_collection.update_one(
+                    {"_id": paper_obj_id}, {"$set": {"status": paper_status_update}},
+                    session=session
+                )
+
+            if ctx.is_transactional:
+                logger.debug(f"Progress updated atomically for paper {paper_id}")
+
+        # Update paper status in cache (outside transaction since it's external)
+        if paper_status_update:
+            await paper_cache.update_paper_in_cache(paper_id, paper_status_update)
 
         # Re-fetch the updated progress to return
         updated_progress_data = await progress_collection.find_one({"_id": actual_id})

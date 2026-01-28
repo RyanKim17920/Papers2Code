@@ -1,7 +1,8 @@
 from ..database import (
-    get_papers_collection_async, 
-    get_user_actions_collection_async, 
-    get_users_collection_async
+    get_papers_collection_async,
+    get_user_actions_collection_async,
+    get_users_collection_async,
+    TransactionContext
 )
 from ..schemas.papers import PaperActionsSummaryResponse, PaperActionUserDetail
 from ..schemas.minimal import UserMinimal
@@ -30,12 +31,14 @@ class PaperActionService:
 
     async def record_vote(self, paper_id: str, user_id: str, vote_type: str):
         """
-        Records a user\\'s vote (upvote or none) on a paper.
+        Records a user's vote (upvote or none) on a paper.
         Returns the updated paper document (raw from DB, before transformation).
         Raises PaperNotFoundException, AlreadyVotedException, VoteProcessingException.
+
+        Uses MongoDB transactions when available to ensure atomicity between
+        user_actions and papers collection updates. Falls back gracefully
+        on clusters that don't support transactions (e.g., Atlas M0/M2/M5).
         """
-        #self.logger.info(f"Service: Async recording vote type '{vote_type}' for paper_id: {paper_id} by user_id: {user_id}")
-        
         papers_collection = await get_papers_collection_async()
         user_actions_collection = await get_user_actions_collection_async()
 
@@ -46,7 +49,7 @@ class PaperActionService:
             self.logger.warning(f"Service: Invalid ID format for paper_id '{paper_id}' or user_id '{user_id}'.")
             raise PaperNotFoundException("Invalid paper or user ID format.")
 
-        # Check if paper exists
+        # Check if paper exists (outside transaction for early validation)
         paper_doc = await papers_collection.find_one({"_id": paper_obj_id})
         if not paper_doc:
             self.logger.warning(f"Service: Paper not found with paper_id: {paper_id}")
@@ -64,22 +67,30 @@ class PaperActionService:
 
         if vote_type == "up":
             if existing_action:
-                #self.logger.info(f"Service: User {user_id} already upvoted paper {paper_id}. No action taken.")
-                return paper_doc 
-            
+                return paper_doc
+
             try:
-                await user_actions_collection.insert_one({
-                    "userId": user_obj_id,
-                    "paperId": paper_obj_id,
-                    "actionType": action_type_db,
-                    "createdAt": datetime.now(timezone.utc)
-                })
-                updated_paper = await papers_collection.find_one_and_update(
-                    {"_id": paper_obj_id},
-                    {"$inc": {"upvoteCount": 1}},
-                    return_document=ReturnDocument.AFTER
-                )
-                #self.logger.info(f"Service: Upvote recorded for paper {paper_id} by user {user_id}. New count: {updated_paper.get('upvoteCount') if updated_paper else 'N/A'}")
+                # Use transaction for atomic insert + update
+                async with TransactionContext() as ctx:
+                    session = ctx.session  # Will be None if transactions not supported
+
+                    await user_actions_collection.insert_one({
+                        "userId": user_obj_id,
+                        "paperId": paper_obj_id,
+                        "actionType": action_type_db,
+                        "createdAt": datetime.now(timezone.utc)
+                    }, session=session)
+
+                    updated_paper = await papers_collection.find_one_and_update(
+                        {"_id": paper_obj_id},
+                        {"$inc": {"upvoteCount": 1}},
+                        return_document=ReturnDocument.AFTER,
+                        session=session
+                    )
+
+                    if ctx.is_transactional:
+                        self.logger.debug(f"Service: Upvote recorded atomically for paper {paper_id} by user {user_id}")
+
             except DuplicateKeyError:
                 self.logger.warning(f"Service: DuplicateKeyError while trying to upvote paper {paper_id} by user {user_id}. User might have already upvoted.")
                 return paper_doc
@@ -89,25 +100,32 @@ class PaperActionService:
 
         elif vote_type == "none":
             if not existing_action:
-                #self.logger.info(f"Service: No existing upvote to remove for paper {paper_id} by user {user_id}.")
                 return paper_doc
 
             try:
-                delete_result = await user_actions_collection.delete_one({
-                    "userId": user_obj_id,
-                    "paperId": paper_obj_id,
-                    "actionType": action_type_db
-                })
-                if delete_result.deleted_count > 0:
-                    updated_paper = await papers_collection.find_one_and_update(
-                        {"_id": paper_obj_id},
-                        {"$inc": {"upvoteCount": -1}},
-                        return_document=ReturnDocument.AFTER
-                    )
-                    #self.logger.info(f"Service: Upvote removed for paper {paper_id} by user {user_id}. New count: {updated_paper.get('upvoteCount') if updated_paper else 'N/A'}")
-                else:
-                    self.logger.warning(f"Service: Tried to remove upvote for {paper_id} by {user_id}, but action was not found for deletion despite initial check.")
-                    updated_paper = paper_doc
+                # Use transaction for atomic delete + update
+                async with TransactionContext() as ctx:
+                    session = ctx.session  # Will be None if transactions not supported
+
+                    delete_result = await user_actions_collection.delete_one({
+                        "userId": user_obj_id,
+                        "paperId": paper_obj_id,
+                        "actionType": action_type_db
+                    }, session=session)
+
+                    if delete_result.deleted_count > 0:
+                        updated_paper = await papers_collection.find_one_and_update(
+                            {"_id": paper_obj_id},
+                            {"$inc": {"upvoteCount": -1}},
+                            return_document=ReturnDocument.AFTER,
+                            session=session
+                        )
+                        if ctx.is_transactional:
+                            self.logger.debug(f"Service: Upvote removed atomically for paper {paper_id} by user {user_id}")
+                    else:
+                        self.logger.warning(f"Service: Tried to remove upvote for {paper_id} by {user_id}, but action was not found for deletion despite initial check.")
+                        updated_paper = paper_doc
+
             except Exception as e:
                 self.logger.exception(f"Service: Error deleting upvote action or updating paper count for paper {paper_id}")
                 raise VoteProcessingException(f"Failed to remove upvote: {e}")
@@ -118,9 +136,9 @@ class PaperActionService:
         if not updated_paper:
             final_check_paper = await papers_collection.find_one({"_id": paper_obj_id})
             if not final_check_paper:
-                 raise PaperNotFoundException(f"Paper with ID {paper_id} disappeared during vote processing.")
+                raise PaperNotFoundException(f"Paper with ID {paper_id} disappeared during vote processing.")
             return final_check_paper
-            
+
         return updated_paper
 
     async def record_paper_related_action(self, paper_id: str, user_id: str, action_type: str, details: Optional[Dict[str, Any]] = None):
