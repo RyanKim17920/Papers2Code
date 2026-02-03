@@ -140,9 +140,9 @@ async def health_check(current_user: UserSchema = Depends(get_current_owner)):
     Requires owner authentication.
     """
     try:
-        # Test database connection
+        # Test database connection (use estimated count for speed)
         collection = await get_implementation_progress_collection_async()
-        await collection.count_documents({})
+        await collection.estimated_document_count()
 
         return {
             "status": "healthy",

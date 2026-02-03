@@ -33,7 +33,7 @@ class PaperViewService:
         # Or fetch it in each method if preferred for async context
         # For now, fetching in each method as per previous async patterns
 
-    async def get_paper_by_id(self, paper_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:
+    async def get_paper_by_id(self, paper_id: str, user_id: Optional[str] = None) -> Dict[str, Any]:  # noqa: ARG002 - user_id reserved for future user-specific data
         """
         Retrieves a single paper by its ID.
         Includes user-specific actions if user_id is provided and implementation progress.
@@ -64,21 +64,21 @@ class PaperViewService:
                 paper_obj_id = ObjectId(paper_id)
                 # First try with ObjectId
                 query_filter = {"_id": paper_obj_id}
-                self.logger.info(f"Service: Using ObjectId query filter: {query_filter}")
+                self.logger.debug(f"Service: Using ObjectId query filter: {query_filter}")
                 progress_document = await implementation_progress_collection.find_one(query_filter)
-                
+
                 # If not found with ObjectId, try with string (backward compatibility)
                 if not progress_document:
                     query_filter = {"_id": paper_id}
-                    self.logger.info(f"Service: Using string query filter: {query_filter}")
+                    self.logger.debug(f"Service: Using string query filter: {query_filter}")
                     progress_document = await implementation_progress_collection.find_one(query_filter)
             except Exception:
                 # If ObjectId conversion fails, just try with string
                 query_filter = {"_id": paper_id}
-                self.logger.info(f"Service: Using string query filter: {query_filter}")
+                self.logger.debug(f"Service: Using string query filter: {query_filter}")
                 progress_document = await implementation_progress_collection.find_one(query_filter)
-            
-            self.logger.info(f"Service: Result of find_one for paper_id '{paper_id}': {progress_document}")
+
+            self.logger.debug(f"Service: Result of find_one for paper_id '{paper_id}': {progress_document}")
             if progress_document:
                 # Convert the raw document to a proper ImplementationProgress model
                 # This ensures that the _id field is converted to id and all other fields are properly validated
@@ -87,9 +87,7 @@ class PaperViewService:
                 # Use model_dump(by_alias=True) to properly serialize with camelCase field names
                 # This will convert _id to id, snake_case to camelCase, etc.
                 progress_dict = progress_model.model_dump(by_alias=True, mode='json')
-                self.logger.info(f"Service: Progress model ID: {progress_model.id}")
-                self.logger.info(f"Service: Progress dict keys: {list(progress_dict.keys())}")
-                self.logger.info(f"Service: Progress dict id field: {progress_dict.get('id')}")
+                self.logger.debug(f"Service: Progress model ID: {progress_model.id}")
                 paper["implementationProgress"] = progress_dict
             else:
                 paper["implementationProgress"] = None
@@ -419,7 +417,7 @@ class PaperViewService:
 
     async def _get_papers_list_standard(
         self,
-        skip: int, limit: int, sort_by: str, sort_order: str, user_id: Optional[str],
+        skip: int, limit: int, sort_by: str, sort_order: str, user_id: Optional[str],  # noqa: ARG002 - user_id reserved for future use
         search_query: Optional[str], author: Optional[str], start_date: Optional[str],
         end_date: Optional[str], main_status: Optional[str], impl_status: Optional[str],
         tags: Optional[List[str]], has_official_impl: Optional[bool], has_code: Optional[bool],
@@ -550,7 +548,6 @@ class PaperViewService:
         else:
             sort_doc = {"publicationDate": DESCENDING}
 
-        db_call_overall_start_time = time.time()
         try:
             self.logger.info(f"Executing standard find query: {final_query} with sort: {sort_doc}, skip: {skip}, limit: {limit}")
             sort_criteria = list(sort_doc.items()) if sort_doc else None
@@ -581,29 +578,34 @@ class PaperViewService:
             cursor = papers_collection.find(final_query, list_view_projection)
             
             # Apply index hints based on query and sort criteria (if enabled)
+            # Wrapped in try/except to gracefully handle missing indexes
             if config_settings.ENABLE_QUERY_HINTS and sort_criteria:
                 sort_field = sort_criteria[0][0]
-                sort_direction = sort_criteria[0][1]
-                
-                # Use appropriate index hints for common sort patterns
-                if sort_field == "publicationDate":
-                    if main_status:
-                        cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
-                    else:
-                        cursor = cursor.hint("publicationDate_-1_papers_async")
-                elif sort_field == "upvoteCount":
-                    if main_status:
-                        cursor = cursor.hint("status_1_upvoteCount_-1_papers_async")
-                    else:
-                        cursor = cursor.hint("upvoteCount_-1_papers_async")
-                elif sort_field == "title":
-                    cursor = cursor.hint("title_1_papers_async")
-                
+                try:
+                    # Use appropriate index hints for common sort patterns
+                    if sort_field == "publicationDate":
+                        if main_status:
+                            cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
+                        else:
+                            cursor = cursor.hint("publicationDate_-1_papers_async")
+                    elif sort_field == "upvoteCount":
+                        if main_status:
+                            cursor = cursor.hint("status_1_upvoteCount_-1_papers_async")
+                        else:
+                            cursor = cursor.hint("upvoteCount_-1_papers_async")
+                    elif sort_field == "title":
+                        cursor = cursor.hint("title_1_papers_async")
+                except Exception as hint_error:
+                    self.logger.warning(f"Index hint failed, proceeding without hint: {hint_error}")
+
                 cursor = cursor.sort(sort_criteria)
             else:
                 # Default hint for unsorted queries
                 if config_settings.ENABLE_QUERY_HINTS and main_status:
-                    cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
+                    try:
+                        cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
+                    except Exception as hint_error:
+                        self.logger.warning(f"Default index hint failed: {hint_error}")
             
             cursor = cursor.skip(skip).limit(limit)
             self.logger.info(f"Standard find query construction took: {time.time() - find_call_start_time:.4f}s")

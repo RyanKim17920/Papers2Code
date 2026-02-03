@@ -26,6 +26,14 @@ class InMemoryCache:
         return None
     
     def setex(self, key: str, ttl: int, value: str):
+        # Periodic cleanup: remove expired entries when cache grows large
+        if len(self._cache) > 100:
+            now = datetime.now()
+            expired_keys = [k for k, exp in self._expiry.items() if now >= exp]
+            for k in expired_keys:
+                self._cache.pop(k, None)
+                self._expiry.pop(k, None)
+
         self._cache[key] = value
         self._expiry[key] = datetime.now() + timedelta(seconds=ttl)
     
