@@ -442,24 +442,20 @@ class PaperViewService:
             escaped_venue = re.escape(venue)
             mongo_filter_conditions.append({"proceeding": {"$regex": escaped_venue, "$options": "i"}})
         
-        # Search query: Use regex-based text search
+        # Text search: Use MongoDB text index for search_query and/or author
+        # Note: MongoDB allows only ONE $text operator per query, so we combine them
+        text_search_terms = []
         if search_query:
-            self.logger.debug(f"Adding regex search for: '{search_query}'")
-            escaped_search_query = re.escape(search_query)
-            search_regex = {"$regex": escaped_search_query, "$options": "i"}
-            mongo_filter_conditions.append({
-                "$or": [
-                    {"title": search_regex},
-                    {"abstract": search_regex}
-                ]
-            })
-        
-        # Author search: Search in authors array
+            text_search_terms.append(search_query)
         if author:
-            self.logger.debug(f"Adding author search for: '{author}'")
-            escaped_author = re.escape(author)
+            # Wrap author in quotes for phrase matching in text search
+            text_search_terms.append(f'"{author}"')
+
+        if text_search_terms:
+            combined_search = " ".join(text_search_terms)
+            self.logger.debug(f"Adding text search for: '{combined_search}'")
             mongo_filter_conditions.append({
-                "authors": {"$regex": escaped_author, "$options": "i"}
+                "$text": {"$search": combined_search}
             })
 
         # Date filters
@@ -618,28 +614,24 @@ class PaperViewService:
             
             count_start_time = time.time()
             
-            # Optimize count operation based on query complexity
+            # Optimize count operation - use bounded count for speed
+            MAX_COUNT = 10000  # Cap count for performance (UI shows "10,000+ results")
+
             if not final_query:
                 # No filters - use cached estimated count
                 total_papers = await papers_collection.estimated_document_count()
                 self.logger.info(f"Standard estimated_document_count took: {time.time() - count_start_time:.4f}s")
             else:
-                # For paginated queries where we just need to know "more than current page"
-                # we can optimize by limiting the count when skip is large
-                if config_settings.OPTIMIZE_COUNT_QUERIES and skip > 0 and limit < 100:  # Only for reasonable page sizes
-                    # Use aggregation with limit for better performance on large datasets
-                    count_pipeline = [
-                        {"$match": final_query},
-                        {"$limit": skip + limit + 1000},  # Reasonable upper bound
-                        {"$count": "total"}
-                    ]
-                    count_result = await papers_collection.aggregate(count_pipeline).to_list(length=1)
-                    total_papers = count_result[0]["total"] if count_result else 0
-                    self.logger.info(f"Standard optimized count_aggregation took: {time.time() - count_start_time:.4f}s")
-                else:
-                    # Traditional count for first page or when exact count is needed
-                    total_papers = await papers_collection.count_documents(final_query)
-                    self.logger.info(f"Standard count_documents took: {time.time() - count_start_time:.4f}s")
+                # Use bounded count aggregation - much faster than count_documents for complex queries
+                # This avoids scanning the entire collection for text search queries
+                count_pipeline = [
+                    {"$match": final_query},
+                    {"$limit": MAX_COUNT},  # Stop counting after MAX_COUNT
+                    {"$count": "total"}
+                ]
+                count_result = await papers_collection.aggregate(count_pipeline).to_list(length=1)
+                total_papers = count_result[0]["total"] if count_result else 0
+                self.logger.info(f"Standard bounded_count took: {time.time() - count_start_time:.4f}s (capped at {MAX_COUNT})")
             
             self.logger.info(f"Standard query total time: {time.time() - service_start_time:.4f}s")
             return papers_list, total_papers
@@ -655,22 +647,27 @@ class PaperViewService:
         """
         Retrieves a list of distinct tags from the papers collection.
         Optionally filters tags by a search query.
+        Uses caching (1 hour TTL) since tags change rarely.
         """
         try:
-            papers_collection = await get_papers_collection_async()
-            # Get all unique tags from the tasks field
-            all_tags = await papers_collection.distinct("tasks")
-            
-            # Filter out None values
-            all_tags = [tag for tag in all_tags if tag is not None]
-            
-            # Filter tags if search query is provided
+            # Try cache first (for full list, filtering is done in-memory)
+            cached_tags = await paper_cache.get_cached_metadata("tags")
+            if cached_tags is not None:
+                all_tags = cached_tags
+            else:
+                # Cache miss - fetch from database
+                papers_collection = await get_papers_collection_async()
+                all_tags = await papers_collection.distinct("tasks")
+                all_tags = sorted([tag for tag in all_tags if tag is not None])
+                # Cache the full list
+                await paper_cache.set_cached_metadata("tags", all_tags)
+
+            # Filter tags if search query is provided (done in-memory, fast)
             if search_query and search_query.strip():
                 search_lower = search_query.strip().lower()
-                filtered_tags = [tag for tag in all_tags if search_lower in tag.lower()]
-                return sorted(filtered_tags)
-            
-            return sorted(all_tags)
+                return [tag for tag in all_tags if search_lower in tag.lower()]
+
+            return all_tags
         except PyMongoError as e:
             self.logger.error(f"Database error fetching distinct tags: {e}", exc_info=True)
             raise DatabaseOperationException(f"Error fetching distinct tags: {e}")
@@ -678,11 +675,21 @@ class PaperViewService:
     async def get_distinct_venues(self) -> List[str]:
         """
         Retrieves a list of distinct venues from the papers collection.
+        Uses caching (1 hour TTL) since venues change rarely.
         """
         try:
+            # Try cache first
+            cached_venues = await paper_cache.get_cached_metadata("venues")
+            if cached_venues is not None:
+                return cached_venues
+
+            # Cache miss - fetch from database
             papers_collection = await get_papers_collection_async()
             venues = await papers_collection.distinct("proceeding")
-            return sorted([v for v in venues if v])  # Filter out empty strings
+            venues = sorted([v for v in venues if v])
+            # Cache the result
+            await paper_cache.set_cached_metadata("venues", venues)
+            return venues
         except PyMongoError as e:
             self.logger.error(f"Database error fetching distinct venues: {e}", exc_info=True)
             raise DatabaseOperationException(f"Error fetching distinct venues: {e}")
@@ -691,8 +698,15 @@ class PaperViewService:
         """
         Retrieves a list of distinct authors from the papers collection.
         Note: This flattens the authors array.
+        Uses caching (1 hour TTL) since author list changes rarely.
         """
         try:
+            # Try cache first
+            cached_authors = await paper_cache.get_cached_metadata("authors")
+            if cached_authors is not None:
+                return cached_authors
+
+            # Cache miss - fetch from database
             papers_collection = await get_papers_collection_async()
             # Use aggregation to unwind authors array and get distinct values
             pipeline = [
@@ -703,6 +717,8 @@ class PaperViewService:
             ]
             result = await papers_collection.aggregate(pipeline).to_list(length=1000)
             authors = [doc["_id"] for doc in result if doc.get("_id")]
+            # Cache the result
+            await paper_cache.set_cached_metadata("authors", authors)
             return authors
         except PyMongoError as e:
             self.logger.error(f"Database error fetching distinct authors: {e}", exc_info=True)

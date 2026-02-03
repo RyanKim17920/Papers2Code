@@ -99,12 +99,15 @@ class PaperSearchCache:
         """Update a specific paper's status across all cached search results"""
         try:
             updated_count = 0
-            # For Redis, iterate through all cache keys
-            if hasattr(self.redis_client, 'keys'):
+            # For Redis, iterate through all cache keys using SCAN (non-blocking)
+            if hasattr(self.redis_client, 'scan_iter'):
+                # Use scan_iter instead of keys() - SCAN is non-blocking and safe for production
                 pattern = f"{config_settings.CACHE_KEY_PREFIX}:papers_search:*"
-                keys = self.redis_client.keys(pattern)
-                
-                for key in keys:
+
+                for key in self.redis_client.scan_iter(match=pattern, count=100):
+                    # Decode key if it's bytes
+                    if isinstance(key, bytes):
+                        key = key.decode('utf-8')
                     try:
                         cached_data = self.redis_client.get(key)
                         if not cached_data:
@@ -160,6 +163,59 @@ class PaperSearchCache:
                     logger.info(f"Updated paper {paper_id} status to '{status}' in {updated_count} in-memory cache entries")
         except Exception as e:
             logger.error(f"Cache update error: {e}")
+
+    # ==================== METADATA CACHING ====================
+    # Cache for infrequently changing data: tags, venues, authors
+    # These are called on every page load but change rarely
+
+    METADATA_TTL = 3600  # 1 hour cache for metadata
+
+    def _get_metadata_cache_key(self, metadata_type: str) -> str:
+        """Generate cache key for metadata (tags, venues, authors)"""
+        return f"{config_settings.CACHE_KEY_PREFIX}:metadata:{metadata_type}"
+
+    async def get_cached_metadata(self, metadata_type: str) -> Optional[List[str]]:
+        """Get cached metadata (tags, venues, or authors)"""
+        try:
+            cache_key = self._get_metadata_cache_key(metadata_type)
+            cached_data = self.redis_client.get(cache_key)
+
+            if cached_data:
+                logger.debug(f"Cache HIT for metadata: {metadata_type}")
+                return json.loads(cached_data)
+
+            logger.debug(f"Cache MISS for metadata: {metadata_type}")
+            return None
+        except Exception as e:
+            logger.warning(f"Error getting cached metadata {metadata_type}: {e}")
+            return None
+
+    async def set_cached_metadata(self, metadata_type: str, data: List[str]) -> None:
+        """Cache metadata with 1-hour TTL"""
+        try:
+            cache_key = self._get_metadata_cache_key(metadata_type)
+            self.redis_client.setex(
+                cache_key,
+                self.METADATA_TTL,
+                json.dumps(data)
+            )
+            logger.debug(f"Cached {len(data)} {metadata_type} items for {self.METADATA_TTL}s")
+        except Exception as e:
+            logger.warning(f"Error caching metadata {metadata_type}: {e}")
+
+    async def invalidate_metadata_cache(self, metadata_type: Optional[str] = None) -> None:
+        """Invalidate metadata cache. If type is None, invalidates all metadata."""
+        try:
+            types_to_clear = [metadata_type] if metadata_type else ["tags", "venues", "authors"]
+            for mt in types_to_clear:
+                cache_key = self._get_metadata_cache_key(mt)
+                if hasattr(self.redis_client, 'delete'):
+                    self.redis_client.delete(cache_key)
+                elif hasattr(self.redis_client, '_cache'):
+                    self.redis_client._cache.pop(cache_key, None)
+            logger.info(f"Invalidated metadata cache for: {types_to_clear}")
+        except Exception as e:
+            logger.warning(f"Error invalidating metadata cache: {e}")
 
 # Global cache instance
 paper_cache = PaperSearchCache()

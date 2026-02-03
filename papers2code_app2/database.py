@@ -378,6 +378,8 @@ async def ensure_db_indexes_async():
                 ([("tasks", ASCENDING), ("publicationDate", DESCENDING)], {"name": "tasks_1_pubDate_-1_papers_async"}),
                 ([("status", ASCENDING), ("tasks", ASCENDING), ("publicationDate", DESCENDING)], {"name": "status_1_tasks_1_pubDate_-1_papers_async"}),
                 ([("hasCode", ASCENDING), ("publicationDate", DESCENDING)], {"name": "hasCode_1_pubDate_-1_papers_async"}),  # NEW: Compound index for hasCode filtering
+                # TEXT INDEX: Fast full-text search on title, abstract, and authors (replaces slow regex)
+                ([("title", "text"), ("abstract", "text"), ("authors", "text")], {"name": "title_abstract_authors_text_papers_async", "weights": {"title": 10, "abstract": 2, "authors": 5}, "default_language": "english"}),
             ]),
             (collections_to_check["users"], [
                 ([("githubId", ASCENDING)], {"name": "githubId_1_users_async", "unique": True, "sparse": True}),
