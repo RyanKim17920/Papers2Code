@@ -579,7 +579,9 @@ class PaperViewService:
             
             # Apply index hints based on query and sort criteria (if enabled)
             # Wrapped in try/except to gracefully handle missing indexes
-            if config_settings.ENABLE_QUERY_HINTS and sort_criteria:
+            # NOTE: MongoDB does not allow hint() with $text queries - skip hints when text search is active
+            uses_text_search = bool(text_search_terms)
+            if config_settings.ENABLE_QUERY_HINTS and sort_criteria and not uses_text_search:
                 sort_field = sort_criteria[0][0]
                 try:
                     # Use appropriate index hints for common sort patterns
@@ -599,9 +601,11 @@ class PaperViewService:
                     self.logger.warning(f"Index hint failed, proceeding without hint: {hint_error}")
 
                 cursor = cursor.sort(sort_criteria)
+            elif sort_criteria:
+                cursor = cursor.sort(sort_criteria)
             else:
-                # Default hint for unsorted queries
-                if config_settings.ENABLE_QUERY_HINTS and main_status:
+                # Default hint for unsorted queries (skip if text search is active)
+                if config_settings.ENABLE_QUERY_HINTS and main_status and not uses_text_search:
                     try:
                         cursor = cursor.hint("status_1_publicationDate_-1_papers_async")
                     except Exception as hint_error:
