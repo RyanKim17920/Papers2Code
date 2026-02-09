@@ -79,11 +79,13 @@ async def list_papers(
     logger.info(f"PERF: Batch transforming {len(transformed_papers)} papers took {end_time_transform - start_time_transform:.4f} seconds.")
 
     #logger.info(f"Router: Successfully fetched {len(response_papers)} papers for listing. Total matching: {total_papers}")
+    MAX_COUNT = 10000
     final_response = {
         "papers": transformed_papers,
         "total_count": total_papers,
+        "count_capped": total_papers >= MAX_COUNT,
         "page": page,
-        "page_size": limit, # FastAPI will use alias 'pageSize' due to model_config
+        "page_size": limit,
         "has_more": (skip + len(transformed_papers)) < total_papers
     }
     logger.info(f"Router: list_papers endpoint total execution time: {time.time() - router_start_time:.4f}s")

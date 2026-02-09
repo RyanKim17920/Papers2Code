@@ -82,6 +82,7 @@ class PaginatedPaperResponse(BaseModel):
     """Schema for responses that return a paginated list of papers."""
     papers: List[PaperResponse]
     total_count: int
+    count_capped: bool = False
     page: int
     page_size: int
     has_more: bool
