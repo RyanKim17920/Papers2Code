@@ -200,6 +200,16 @@ class PaperViewService:
             # Heavy title boost so title-matching papers rank first
             title_boost = config_settings.ATLAS_SEARCH_TITLE_BOOST
             atlas_compound_should.append({"text": {"query": search_query, "path": "title", "score": {"boost": {"value": title_boost}}}})
+            # Recency tiebreaker — slightly boost newer papers when relevance is close
+            # near score decays from 1→0.5 over 180 days; boost 1.5 is small vs title boost (10)
+            atlas_compound_should.append({
+                "near": {
+                    "path": "publicationDate",
+                    "origin": datetime.utcnow(),
+                    "pivot": 15552000000,  # 180 days in ms
+                    "score": {"boost": {"value": 1.5}}
+                }
+            })
 
         if author:
             atlas_compound_filter.append({"text": {"query": author, "path": "authors"}})
