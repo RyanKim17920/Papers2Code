@@ -129,7 +129,8 @@ class BackgroundTaskRunner:
                 paper_view_updates = {}
                 
                 # PyMongo async aggregation - get all results as a list first
-                cursor_results = await views_coll.aggregate(new_views_pipeline).to_list(length=None)
+                agg_cursor = await views_coll.aggregate(new_views_pipeline)
+                cursor_results = await agg_cursor.to_list(length=None)
                 
                 for view_group in cursor_results:
                     paper_id = view_group["_id"]

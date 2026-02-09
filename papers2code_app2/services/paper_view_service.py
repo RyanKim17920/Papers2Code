@@ -635,7 +635,8 @@ class PaperViewService:
                     {"$limit": MAX_COUNT},  # Stop counting after MAX_COUNT
                     {"$count": "total"}
                 ]
-                count_result = await papers_collection.aggregate(count_pipeline).to_list(length=1)
+                count_cursor = await papers_collection.aggregate(count_pipeline)
+                count_result = await count_cursor.to_list(length=1)
                 total_papers = count_result[0]["total"] if count_result else 0
                 self.logger.info(f"Standard bounded_count took: {time.time() - count_start_time:.4f}s (capped at {MAX_COUNT})")
             
@@ -721,7 +722,8 @@ class PaperViewService:
                 {"$sort": {"_id": 1}},
                 {"$limit": 1000}  # Limit to prevent huge result sets
             ]
-            result = await papers_collection.aggregate(pipeline).to_list(length=1000)
+            agg_cursor = await papers_collection.aggregate(pipeline)
+            result = await agg_cursor.to_list(length=1000)
             authors = [doc["_id"] for doc in result if doc.get("_id")]
             # Cache the result
             await paper_cache.set_cached_metadata("authors", authors)
@@ -740,7 +742,8 @@ class PaperViewService:
                 {"$group": {"_id": "$status", "count": {"$sum": 1}}},
                 {"$sort": {"_id": 1}}
             ]
-            result = await papers_collection.aggregate(pipeline).to_list(length=None)
+            agg_cursor = await papers_collection.aggregate(pipeline)
+            result = await agg_cursor.to_list(length=None)
             counts = {doc["_id"]: doc["count"] for doc in result}
             return counts
         except PyMongoError as e:

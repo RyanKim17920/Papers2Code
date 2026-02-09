@@ -27,7 +27,8 @@ class PaperAnalyticsService:
                 {"$sort": {"upvote_count": -1}},
                 {"$limit": limit}
             ]
-            results = await collection.aggregate(pipeline).to_list(length=limit)
+            agg_cursor = await collection.aggregate(pipeline)
+            results = await agg_cursor.to_list(length=limit)
             return {
                 "popular_papers": results,
                 "total_papers_with_upvotes": len(results)
