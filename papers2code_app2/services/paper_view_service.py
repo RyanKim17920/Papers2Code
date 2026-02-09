@@ -185,10 +185,10 @@ class PaperViewService:
         
         self.logger.debug(f"Atlas Search starting: search_query='{search_query}', author='{author}'")
         
-        atlas_search_index_name = "default"
+        atlas_search_index_name = config_settings.ATLAS_SEARCH_INDEX_NAME
         papers_collection = await get_papers_collection_async()
         
-        # PHASE 1: Get just IDs and scores (minimal data transfer)
+        # Build Atlas Search aggregation pipeline
         phase1_pipeline = []
         atlas_compound_must: List[Dict[str, Any]] = []
         atlas_compound_should: List[Dict[str, Any]] = []
@@ -201,10 +201,12 @@ class PaperViewService:
             except ValueError:
                 search_terms = search_query.split()
                 self.logger.warning(f"shlex split failed for search_query '{search_query}', using simple split.")
-            
+
             for term in search_terms:
                 atlas_compound_must.append({"text": {"query": term, "path": ["title", "abstract"]}})
-            atlas_compound_should.append({"text": {"query": search_query, "path": "title", "score": {"boost": {"value": 5}}}})
+            # Boost title matches significantly so title-matching papers rank first
+            title_boost = config_settings.ATLAS_SEARCH_TITLE_BOOST
+            atlas_compound_should.append({"text": {"query": search_query, "path": "title", "score": {"boost": {"value": title_boost}}}})
 
         if author:
             atlas_compound_filter.append({"text": {"query": author, "path": "authors"}})
@@ -287,125 +289,84 @@ class PaperViewService:
                 start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
             )
 
-        # Phase 1 pipeline: Get IDs only
         search_stage = {"$search": {"index": atlas_search_index_name, "compound": search_stage_compound}}
-        if search_query:
-            search_stage["$search"]["highlight"] = {"path": ["title", "abstract"]}
-        
-        phase1_pipeline.append(search_stage)
-        
-        # Add score field for ranking (no filtering to ensure results)
-        if search_query:
-            phase1_pipeline.append({"$addFields": {"score": {"$meta": "searchScore"}}})
 
-        # Minimal projection - just _id and score for sorting
-        phase1_pipeline.append({"$project": {"_id": 1, "score": 1, "publicationDate": 1, "upvoteCount": 1, "title": 1}})
-        
-        # Sorting
+        # Sorting — Atlas Search returns by relevance by default, only add $sort for non-relevance
+        needs_explicit_sort = False
         sort_doc: Dict[str, Any] = {}
         parsed_sort_order_val = DESCENDING if sort_order == "desc" else ASCENDING
-        
-        if search_query and (sort_by == "relevance" or sort_by == "newest"):
-            sort_doc = {"score": DESCENDING}
+
+        if sort_by in ("relevance", "newest") and search_query:
+            pass  # Atlas Search default relevance order is correct
         elif sort_by == "newest":
             sort_doc = {"publicationDate": DESCENDING}
+            needs_explicit_sort = True
         elif sort_by == "oldest":
             sort_doc = {"publicationDate": ASCENDING}
+            needs_explicit_sort = True
         elif sort_by == "upvotes":
             sort_doc = {"upvoteCount": parsed_sort_order_val}
+            needs_explicit_sort = True
         elif sort_by == "publication_date":
             sort_doc = {"publicationDate": parsed_sort_order_val}
+            needs_explicit_sort = True
         elif sort_by == "title":
             sort_doc = {"title": parsed_sort_order_val}
-        else:
-            sort_doc = {"score": DESCENDING} if search_query else {"publicationDate": DESCENDING}
-        
-        if sort_doc:
-            phase1_pipeline.append({"$sort": sort_doc})
+            needs_explicit_sort = True
 
-        # Get total count and paginated IDs
-        phase1_pipeline.append({
-            "$facet": {
-                "paginatedResults": [{"$skip": skip}, {"$limit": limit}],
-                "totalCount": [{"$count": "count"}]
-            }
-        })
+        # Build results pipeline: $search → $project → ($sort) → $skip → $limit
+        results_pipeline = [search_stage]
 
-        phase1_start = time.time()
-        self.logger.debug("Phase 1: Getting IDs from Atlas Search")
-        
+        list_view_fields = {
+            "_id": 1, "title": 1, "authors": 1, "publicationDate": 1,
+            "upvoteCount": 1, "status": 1, "urlGithub": 1, "urlAbs": 1,
+            "urlPdf": 1, "hasCode": 1, "abstract": 1, "venue": 1,
+            "tasks": 1, "implementabilityStatus": 1, "pwcUrl": 1, "arxivId": 1
+        }
+        results_pipeline.append({"$project": list_view_fields})
+
+        if needs_explicit_sort:
+            results_pipeline.append({"$sort": sort_doc})
+
+        results_pipeline.append({"$skip": skip})
+        results_pipeline.append({"$limit": limit})
+
+        # Build count pipeline using $searchMeta (no document processing, very fast)
+        count_pipeline = [
+            {"$searchMeta": {"index": atlas_search_index_name, "count": {"type": "total"}, "compound": search_stage_compound}}
+        ]
+
+        search_start = time.time()
+        self.logger.debug("Atlas Search: executing results + count pipelines")
+
         try:
-            agg_results_cursor = await papers_collection.aggregate(phase1_pipeline)
-            agg_results = await agg_results_cursor.to_list(length=None)
-            
-            self.logger.info(f"PHASE 1 completed in {time.time() - phase1_start:.4f}s")
-            
-            if not agg_results or not agg_results[0]:
-                self.logger.warning("Atlas Search returned no results, falling back to standard query")
+            # Run results and count in parallel
+            import asyncio as _asyncio
+            results_coro = papers_collection.aggregate(results_pipeline)
+            count_coro = papers_collection.aggregate(count_pipeline)
+            results_cursor, count_cursor = await _asyncio.gather(results_coro, count_coro)
+
+            papers_list = await results_cursor.to_list(length=limit)
+            count_results = await count_cursor.to_list(length=1)
+
+            # Extract total from $searchMeta
+            MAX_COUNT = 10000
+            total_papers = 0
+            if count_results:
+                total_papers = min(count_results[0].get("count", {}).get("total", 0), MAX_COUNT)
+
+            self.logger.info(f"Atlas Search completed in {time.time() - search_start:.4f}s")
+
+            if not papers_list and total_papers == 0:
+                self.logger.info("Atlas Search found no matches, falling back to standard query")
                 return await self._get_papers_list_standard(
                     skip, limit, sort_by, sort_order, user_id, search_query, author,
                     start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
                 )
-                
-            paginated_results = agg_results[0].get('paginatedResults', [])
-            total_count_list = agg_results[0].get('totalCount', [])
-            total_papers = total_count_list[0].get('count', 0) if total_count_list else 0
-            
-            if not paginated_results:
-                if total_papers == 0:
-                    self.logger.info("Atlas Search found no matches, falling back to standard query")
-                    return await self._get_papers_list_standard(
-                        skip, limit, sort_by, sort_order, user_id, search_query, author,
-                        start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
-                    )
-                return [], total_papers
-            
-            # PHASE 2: Get full documents for displayed items only
-            phase2_start = time.time()
-            self.logger.debug(f"Phase 2: Fetching full documents for {len(paginated_results)} items")
-            
-            # Extract IDs in the correct order
-            paper_ids = [result["_id"] for result in paginated_results]
-            
-            # OPTIMIZATION: Project only needed fields for list view (reduces network transfer)
-            list_view_projection = {
-                "_id": 1,
-                "title": 1,
-                "authors": 1,
-                "publicationDate": 1,
-                "upvoteCount": 1,
-                "status": 1,
-                "urlGithub": 1,
-                "urlAbs": 1,
-                "urlPdf": 1,
-                "hasCode": 1,
-                "abstract": 1,
-                "venue": 1,
-                "tasks": 1,
-                "implementabilityStatus": 1,
-                "pwcUrl": 1,
-                "arxivId": 1
-            }
-            
-            # Fetch documents with projection maintaining order
-            full_papers = await papers_collection.find(
-                {"_id": {"$in": paper_ids}},
-                list_view_projection
-            ).to_list(length=None)
-            
-            # Create a mapping for quick lookup
-            papers_map = {str(paper["_id"]): paper for paper in full_papers}
-            
-            # Maintain the original order from phase 1
-            ordered_papers = []
-            for paper_id in paper_ids:
-                if str(paper_id) in papers_map:
-                    ordered_papers.append(papers_map[str(paper_id)])
-            
-            self.logger.info(f"PHASE 2 completed in {time.time() - phase2_start:.4f}s")
-            self.logger.info(f"Total two-phase Atlas Search took: {time.time() - phase1_start:.4f}s")
-            
-            return ordered_papers, total_papers
+
+            self.logger.info(f"Atlas Search total: {time.time() - search_start:.4f}s, {len(papers_list)} results, {total_papers} total")
+
+            return papers_list, total_papers
             
         except PyMongoError as e:
             self.logger.error(f"Atlas Search error: {e}", exc_info=True)
