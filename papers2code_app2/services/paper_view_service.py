@@ -1,7 +1,6 @@
 import logging
 import re
-import shlex
-import time # Add time import for performance logging
+import time
 from typing import List, Dict, Any, Optional, Tuple
 from bson import ObjectId  # type: ignore
 from bson.errors import InvalidId  # type: ignore
@@ -188,23 +187,17 @@ class PaperViewService:
         atlas_search_index_name = config_settings.ATLAS_SEARCH_INDEX_NAME
         papers_collection = await get_papers_collection_async()
         
-        # Build Atlas Search aggregation pipeline
-        phase1_pipeline = []
+        # Build Atlas Search compound clauses
         atlas_compound_must: List[Dict[str, Any]] = []
         atlas_compound_should: List[Dict[str, Any]] = []
         atlas_compound_filter: List[Dict[str, Any]] = []
 
         # Build search conditions
         if search_query:
-            try:
-                search_terms = shlex.split(search_query)
-            except ValueError:
-                search_terms = search_query.split()
-                self.logger.warning(f"shlex split failed for search_query '{search_query}', using simple split.")
-
-            for term in search_terms:
-                atlas_compound_must.append({"text": {"query": term, "path": ["title", "abstract"]}})
-            # Boost title matches significantly so title-matching papers rank first
+            # Single text query — Lucene handles tokenization + BM25 scoring internally
+            # Much faster than per-term must clauses (1 query vs N queries)
+            atlas_compound_must.append({"text": {"query": search_query, "path": ["title", "abstract"]}})
+            # Heavy title boost so title-matching papers rank first
             title_boost = config_settings.ATLAS_SEARCH_TITLE_BOOST
             atlas_compound_should.append({"text": {"query": search_query, "path": "title", "score": {"boost": {"value": title_boost}}}})
 
@@ -289,7 +282,13 @@ class PaperViewService:
                 start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
             )
 
-        search_stage = {"$search": {"index": atlas_search_index_name, "compound": search_stage_compound}}
+        search_stage = {
+            "$search": {
+                "index": atlas_search_index_name,
+                "compound": search_stage_compound,
+                "count": {"type": "lowerBound", "threshold": 1000}
+            }
+        }
 
         # Sorting — Atlas Search returns by relevance by default, only add $sort for non-relevance
         needs_explicit_sort = False
@@ -314,16 +313,9 @@ class PaperViewService:
             sort_doc = {"title": parsed_sort_order_val}
             needs_explicit_sort = True
 
-        # Build results pipeline: $search → $project → ($sort) → $skip → $limit
+        # Build pipeline: $search → ($sort) → $skip → $limit → $project
+        # $skip/$limit BEFORE $project = only fetch/project the 20 docs we need
         results_pipeline = [search_stage]
-
-        list_view_fields = {
-            "_id": 1, "title": 1, "authors": 1, "publicationDate": 1,
-            "upvoteCount": 1, "status": 1, "urlGithub": 1, "urlAbs": 1,
-            "urlPdf": 1, "hasCode": 1, "abstract": 1, "venue": 1,
-            "tasks": 1, "implementabilityStatus": 1, "pwcUrl": 1, "arxivId": 1
-        }
-        results_pipeline.append({"$project": list_view_fields})
 
         if needs_explicit_sort:
             results_pipeline.append({"$sort": sort_doc})
@@ -331,40 +323,32 @@ class PaperViewService:
         results_pipeline.append({"$skip": skip})
         results_pipeline.append({"$limit": limit})
 
-        # Build count pipeline using $searchMeta (no document processing, very fast)
-        count_pipeline = [
-            {"$searchMeta": {"index": atlas_search_index_name, "count": {"type": "total"}, "compound": search_stage_compound}}
-        ]
+        list_view_fields = {
+            "_id": 1, "title": 1, "authors": 1, "publicationDate": 1,
+            "upvoteCount": 1, "status": 1, "urlGithub": 1, "urlAbs": 1,
+            "urlPdf": 1, "hasCode": 1, "abstract": 1, "venue": 1,
+            "tasks": 1, "implementabilityStatus": 1, "pwcUrl": 1, "arxivId": 1,
+            "meta": "$$SEARCH_META"
+        }
+        results_pipeline.append({"$project": list_view_fields})
 
         search_start = time.time()
-        self.logger.debug("Atlas Search: executing results + count pipelines")
 
         try:
-            # Run results and count in parallel
-            import asyncio as _asyncio
-            results_coro = papers_collection.aggregate(results_pipeline)
-            count_coro = papers_collection.aggregate(count_pipeline)
-            results_cursor, count_cursor = await _asyncio.gather(results_coro, count_coro)
-
+            # Single pipeline — count embedded via $$SEARCH_META (no separate count query)
+            results_cursor = await papers_collection.aggregate(results_pipeline)
             papers_list = await results_cursor.to_list(length=limit)
-            count_results = await count_cursor.to_list(length=1)
 
-            # Extract total from $searchMeta
+            # Extract count from $$SEARCH_META embedded in each document
             MAX_COUNT = 10000
             total_papers = 0
-            if count_results:
-                total_papers = min(count_results[0].get("count", {}).get("total", 0), MAX_COUNT)
+            if papers_list:
+                meta = papers_list[0].get("meta", {})
+                total_papers = min(meta.get("count", {}).get("lowerBound", 0), MAX_COUNT)
+                for paper in papers_list:
+                    paper.pop("meta", None)
 
-            self.logger.info(f"Atlas Search completed in {time.time() - search_start:.4f}s")
-
-            if not papers_list and total_papers == 0:
-                self.logger.info("Atlas Search found no matches, falling back to standard query")
-                return await self._get_papers_list_standard(
-                    skip, limit, sort_by, sort_order, user_id, search_query, author,
-                    start_date, end_date, main_status, impl_status, tags, has_official_impl, has_code, contributor_id, venue
-                )
-
-            self.logger.info(f"Atlas Search total: {time.time() - search_start:.4f}s, {len(papers_list)} results, {total_papers} total")
+            self.logger.info(f"Atlas Search: {time.time() - search_start:.4f}s, {len(papers_list)} results, ~{total_papers} total")
 
             return papers_list, total_papers
             
