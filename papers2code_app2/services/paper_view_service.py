@@ -286,7 +286,8 @@ class PaperViewService:
             "$search": {
                 "index": atlas_search_index_name,
                 "compound": search_stage_compound,
-                "count": {"type": "lowerBound", "threshold": 1000}
+                "count": {"type": "lowerBound", "threshold": 1000},
+                "returnStoredSource": True  # Return fields from index, skip collection fetch
             }
         }
 
@@ -313,8 +314,8 @@ class PaperViewService:
             sort_doc = {"title": parsed_sort_order_val}
             needs_explicit_sort = True
 
-        # Build pipeline: $search → ($sort) → $skip → $limit → $project
-        # $skip/$limit BEFORE $project = only fetch/project the 20 docs we need
+        # Build pipeline: $search (returnStoredSource) → ($sort) → $skip → $limit → $addFields
+        # storedSource returns fields directly from the index — no collection fetch needed
         results_pipeline = [search_stage]
 
         if needs_explicit_sort:
@@ -322,15 +323,7 @@ class PaperViewService:
 
         results_pipeline.append({"$skip": skip})
         results_pipeline.append({"$limit": limit})
-
-        list_view_fields = {
-            "_id": 1, "title": 1, "authors": 1, "publicationDate": 1,
-            "upvoteCount": 1, "status": 1, "urlGithub": 1, "urlAbs": 1,
-            "urlPdf": 1, "hasCode": 1, "abstract": 1, "venue": 1,
-            "tasks": 1, "implementabilityStatus": 1, "pwcUrl": 1, "arxivId": 1,
-            "meta": "$$SEARCH_META"
-        }
-        results_pipeline.append({"$project": list_view_fields})
+        results_pipeline.append({"$addFields": {"meta": "$$SEARCH_META"}})
 
         search_start = time.time()
 
