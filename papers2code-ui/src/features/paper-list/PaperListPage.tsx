@@ -1,18 +1,16 @@
 import React, { useState, useEffect } from 'react';
-import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight, Tags, Briefcase } from 'lucide-react';
+import { Search, Calendar, User, X, RotateCcw, Tags, Briefcase, ChevronDown, Code2, Grid2X2, List } from 'lucide-react';
 import { usePaperList, SortPreference } from '@/shared/hooks/usePaperList';
 import { LoadingSpinner } from '@/shared/components';
 import { SEO } from '@/shared/components/SEO';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
-import { Card, CardContent } from '@/shared/ui/card';
-import { Separator } from '@/shared/ui/separator';
 import { Badge } from '@/shared/ui/badge';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/shared/ui/select';
 import { Checkbox } from '@/shared/ui/checkbox';
 import { MultiSelect } from '@/shared/ui/multi-select';
-import { Tabs, TabsList, TabsTrigger, TabsContent } from '@/shared/ui/tabs';
+import { Popover, PopoverContent, PopoverTrigger } from '@/shared/ui/popover';
 import { fetchTagsFromApi } from '@/shared/services/api';
 import type { UserProfile } from '@/shared/types/user';
 import ModernPaperCard from '@/features/paper-list/ModernPaperCard';
@@ -25,25 +23,11 @@ interface PaperListPageProps {
   currentUser: UserProfile | null;
 }
 
-const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser }) => {
-  const [showSidebar, setShowSidebar] = useState<boolean>(() => {
-    try {
-      const saved = localStorage.getItem('paperListShowSidebar');
-      return saved ? saved === 'true' : true;
-    } catch {
-      return true;
-    }
-  });
+const ITEMS_PER_PAGE = 20;
 
-  // Persist sidebar state
-  useEffect(() => {
-    try {
-      localStorage.setItem('paperListShowSidebar', String(showSidebar));
-    } catch {
-      // ignore storage errors
-    }
-  }, [showSidebar]);
-  
+const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser }) => {
+  const [showFilters, setShowFilters] = useState(false);
+
   const {
     papers,
     isLoading,
@@ -53,7 +37,8 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
     activeSortDisplay,
     currentPage,
     totalPages,
-  totalCount,
+    totalCount,
+    countCapped,
     handleSearchChange,
     handleSortChange,
     handlePageChange,
@@ -106,21 +91,77 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
     handleSearchChange('');
   };
 
+  // Count active filters
+  const activeFilterCount = [
+    advancedFilters.startDate,
+    advancedFilters.endDate,
+    advancedFilters.searchAuthors,
+    advancedFilters.tags?.length,
+    advancedFilters.hasCode !== undefined,
+    advancedFilters.contributorId,
+  ].filter(Boolean).length;
+
+  // Check if any filters are active
+  const hasActiveFilters = activeFilterCount > 0 || debouncedSearchTerm;
+
+  // Remove a specific filter
+  const removeFilter = (filterType: string, value?: string) => {
+    switch (filterType) {
+      case 'search':
+        clearSearchTerm();
+        break;
+      case 'startDate':
+        handleAdvancedFilterChange('startDate', '');
+        break;
+      case 'endDate':
+        handleAdvancedFilterChange('endDate', '');
+        break;
+      case 'author':
+        handleAdvancedFilterChange('searchAuthors', '');
+        break;
+      case 'tag':
+        if (value && advancedFilters.tags) {
+          handleAdvancedFilterChange('tags', advancedFilters.tags.filter(t => t !== value));
+        }
+        break;
+      case 'hasCode':
+        handleAdvancedFilterChange('hasCode', undefined);
+        break;
+      case 'myPapers':
+        handleAdvancedFilterChange('contributorId', '');
+        break;
+    }
+  };
+
   // Build dynamic SEO title and description based on filters
   const buildSEOTitle = () => {
     if (searchTerm) {
       return `"${searchTerm}" Research Papers`;
     }
-    
     return 'Browse AI & ML Research Papers';
   };
 
   const buildSEODescription = () => {
     if (searchTerm) {
-      return `Discover ${totalCount} AI and machine learning research papers related to "${searchTerm}". Find implementations, collaborate with researchers, and transform papers into production code.`;
+      return `Discover ${formatCount(totalCount, countCapped)} AI and machine learning research papers related to "${searchTerm}". Find implementations, collaborate with researchers, and transform papers into production code.`;
     }
-    
-    return `Browse ${totalCount} cutting-edge AI and machine learning research papers. Find implementations, track progress, and collaborate with the community to bring research to production.`;
+    return `Browse ${formatCount(totalCount, countCapped)} cutting-edge AI and machine learning research papers. Find implementations, track progress, and collaborate with the community to bring research to production.`;
+  };
+
+  // Calculate result range for display
+  const startResult = (currentPage - 1) * ITEMS_PER_PAGE + 1;
+  const endResult = Math.min(currentPage * ITEMS_PER_PAGE, totalCount);
+
+  // Format total count for display
+  const formatCount = (count: number, capped?: boolean) => {
+    const suffix = capped ? '+' : '';
+    if (count >= 1000000) {
+      return `${(count / 1000000).toFixed(1)}M${suffix}`;
+    }
+    if (count >= 1000) {
+      return `${(count / 1000).toFixed(1)}K${suffix}`;
+    }
+    return `${count}${suffix}`;
   };
 
   return (
@@ -131,273 +172,149 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
         keywords="AI research papers, machine learning papers, arXiv papers, research implementation, ML code, deep learning, computer vision, NLP, research collaboration"
         url={`https://papers2code.com/papers${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`}
       />
-      
-      {/* Header when sidebar is closed */}
-      {!showSidebar && (
-  <div className="border-b border-border bg-card">
-          <div className="max-w-7xl mx-auto flex items-center justify-between p-6 pb-4">
-            <div className="flex items-center gap-4 flex-wrap">
-              <Button
-                variant="outline"
-                size="sm"
-                onClick={() => setShowSidebar(true)}
-                className="flex items-center gap-2"
-              >
-                <ChevronRight className="w-4 h-4" />
-                <span>Filters</span>
-              </Button>
-              <div className="flex items-center gap-2">
-                <h1 className="text-lg font-semibold">
-                  {totalCount} {totalCount === 1 ? 'Paper' : 'Papers'}
-                </h1>
-              </div>
-              {/* Active Filters Display */}
-              <div className="flex items-center gap-2 flex-wrap">
-                {debouncedSearchTerm && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    <Search className="w-3 h-3" />
-                    "{debouncedSearchTerm.length > 20 ? debouncedSearchTerm.substring(0, 20) + '...' : debouncedSearchTerm}"
-                  </Badge>
-                )}
-                {advancedFilters.startDate && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    From: {advancedFilters.startDate}
-                  </Badge>
-                )}
-                {advancedFilters.endDate && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    <Calendar className="w-3 h-3" />
-                    To: {advancedFilters.endDate}
-                  </Badge>
-                )}
-                {advancedFilters.searchAuthors && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    <User className="w-3 h-3" />
-                    {advancedFilters.searchAuthors}
-                  </Badge>
-                )}
-                {advancedFilters.tags && advancedFilters.tags.length > 0 && advancedFilters.tags.map((tag, index) => (
-                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1">
-                    <Tags className="w-3 h-3" />
-                    {tag}
-                  </Badge>
-                ))}
-                {advancedFilters.hasCode !== undefined && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    {advancedFilters.hasCode ? 'With Code' : 'Without Code'}
-                  </Badge>
-                )}
-                {advancedFilters.contributorId && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
-                    <Briefcase className="w-3 h-3" />
-                    My Papers
-                  </Badge>
-                )}
-              </div>
-            </div>
+
+      {/* Main Content Container */}
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 pt-16">
+
+        {/* Header Section */}
+        <div className="pb-12">
+          {/* Page Title */}
+          <div className="text-center mb-8">
+            <h1 className="text-3xl sm:text-4xl font-semibold tracking-tight text-foreground mb-3">
+              Research Papers
+            </h1>
+            <p className="text-muted-foreground text-lg max-w-2xl mx-auto">
+              Explore {formatCount(totalCount, countCapped)} papers from arXiv, discover implementations, and contribute to open science.
+            </p>
           </div>
-        </div>
-      )}
-      
-      <div className="flex">
-        {/* Left Sidebar - Filters - Fixed position */}
-        {showSidebar && (
-          <div className="w-96 lg:w-96 md:w-80 sm:w-72 border-r border-border bg-card hidden sm:block fixed left-0 top-16 h-[calc(100vh-4rem)] overflow-y-auto z-10">
-            <div className="p-6">
-              {/* Header */}
-              <div className="flex items-center justify-between mb-6">
-                <div>
-                  <h1 className="text-xl font-semibold mb-1">Research Papers</h1>
-                  <p className="text-sm text-muted-foreground">
-                    {totalCount} {totalCount === 1 ? 'paper' : 'papers'} found
-                  </p>
-                </div>
+
+          {/* Search Bar - Prominent and Centered */}
+          <div className="max-w-2xl mx-auto mb-8">
+            <div className="relative">
+              <Search className="absolute left-4 top-1/2 transform -translate-y-1/2 text-muted-foreground w-5 h-5" />
+              <Input
+                placeholder="Search papers by title, abstract, or keywords..."
+                value={searchTerm}
+                onChange={(e) => handleSearchChange(e.target.value)}
+                className="pl-12 pr-12 h-14 text-base rounded-xl border-border/60 bg-card shadow-sm focus:ring-2 focus:ring-primary/20 focus:border-primary"
+              />
+              {searchTerm && (
                 <Button
                   variant="ghost"
                   size="sm"
-                  onClick={() => setShowSidebar(false)}
-                  className="p-1"
-                  aria-label="Hide filters"
+                  onClick={clearSearchTerm}
+                  className="absolute right-3 top-1/2 transform -translate-y-1/2 h-8 w-8 p-0 hover:bg-muted rounded-full"
                 >
-                  <ChevronLeft className="w-4 h-4" />
+                  <X className="w-4 h-4" />
                 </Button>
-              </div>
+              )}
+            </div>
+          </div>
 
-              {/* Search */}
-              <div className="space-y-2 mb-3">
-                <Label className="text-sm font-medium">Search Papers</Label>
-                <div className="relative">
-                  <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
-                  <Input
-                    placeholder="Title, abstract, keywords..."
-                    value={searchTerm}
-                    onChange={(e) => handleSearchChange(e.target.value)}
-                    className="pl-10 pr-8"
-                  />
-                  {searchTerm && (
-                    <Button
-                      variant="ghost"
-                      size="sm"
-                      onClick={clearSearchTerm}
-                      className="absolute right-1 top-1/2 transform -translate-y-1/2 h-7 w-7 p-0 hover:bg-muted"
-                    >
-                      <X className="w-4 h-4" />
-                    </Button>
-                  )}
-                </div>
-                {debouncedSearchTerm && (
-                  <div className="flex items-center gap-2 mt-2">
-                    <Badge variant="outline" className="text-xs">
-                      Searching: "{debouncedSearchTerm}"
-                    </Badge>
-                  </div>
-                )}
-              </div>
-
-              <Separator className="mb-3" />
-
-              {/* Sort */}
-              <div className="space-y-2 mb-3">
-                <Label className="text-sm font-medium">Sort by</Label>
-                <Select 
-                  value={activeSortDisplay} 
-                  onValueChange={(value) => handleSortChange({ target: { value } } as any)} 
-                  disabled={isSearchActive}
-                >
-                  <SelectTrigger>
-                    <SelectValue />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {isSearchActive && (
-                      <SelectItem value="relevance">Relevance</SelectItem>
+          {/* Filter/Sort Toolbar */}
+          <div className="flex flex-col sm:flex-row items-start sm:items-center justify-between gap-4 pb-4 border-b border-border">
+            {/* Left: Filter Controls */}
+            <div className="flex items-center gap-3 flex-wrap">
+              {/* Filters Popover */}
+              <Popover open={showFilters} onOpenChange={setShowFilters}>
+                <PopoverTrigger asChild>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    className="h-9 px-4 gap-2 rounded-lg"
+                  >
+                    <ChevronDown className={`w-4 h-4 transition-transform ${showFilters ? 'rotate-180' : ''}`} />
+                    <span>Filters</span>
+                    {activeFilterCount > 0 && (
+                      <Badge variant="secondary" className="ml-1 h-5 px-1.5 min-w-[20px] text-xs">
+                        {activeFilterCount}
+                      </Badge>
                     )}
-                    {!isSearchActive && (
-                      <>
-                        <SelectItem value="newest">Newest First</SelectItem>
-                        <SelectItem value="oldest">Oldest First</SelectItem>
-                        <SelectItem value="upvotes">Most Upvoted</SelectItem>
-                      </>
-                    )}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <Separator className="mb-3" />
-
-              {/* Advanced Filters */}
-              <div className="flex items-center justify-between mb-3">
-                <Label className="text-sm font-medium">Advanced Filters</Label>
-                {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
-                  <Badge variant="outline" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">
-                    !
-                  </Badge>
-                )}
-              </div>
-
-              <Tabs defaultValue="content" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 mb-4">
-                  <TabsTrigger value="content" className="text-sm">
-                    <Tags className="w-3 h-3 mr-1" />
-                    Content
-                  </TabsTrigger>
-                  <TabsTrigger value="publication" className="text-sm">
-                    <Calendar className="w-3 h-3 mr-1" />
-                    Publication
-                  </TabsTrigger>
-                  <TabsTrigger value="options" className="text-sm">
-                    <Filter className="w-3 h-3 mr-1" />
-                    Filters
-                  </TabsTrigger>
-                </TabsList>
-
-                {/* Content Tab: Tags */}
-                <TabsContent value="content" className="space-y-4">
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                      <Tags className="w-3 h-3" />
-                      Tags
-                    </Label>
-                    <MultiSelect
-                      options={availableTags}
-                      selected={advancedFilters.tags || []}
-                      onChange={(tags) => handleAdvancedFilterChange('tags', tags)}
-                      placeholder="Type to search tags..."
-                      emptyMessage="No tags found"
-                      onSearch={handleTagsSearch}
-                    />
-                  </div>
-                </TabsContent>
-
-                {/* Publication Tab: Date Range, Authors */}
-                <TabsContent value="publication" className="space-y-4">
-                  {/* Date Range */}
-                  <div className="space-y-3">
-                    <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                      <Calendar className="w-3 h-3" />
-                      Publication Date
-                    </Label>
+                  </Button>
+                </PopoverTrigger>
+                <PopoverContent className="w-80 p-4" align="start">
+                  <div className="space-y-4">
+                    {/* Tags */}
                     <div className="space-y-2">
-                      <div>
-                        <Label className="text-sm text-foreground/80">From</Label>
-                        <Input
-                          type="date"
-                          value={formatDateForInput(advancedFilters.startDate)}
-                          onChange={(e) => handleDateChange('startDate', e.target.value)}
-                          className="mt-1"
-                        />
-                      </div>
-                      <div>
-                        <Label className="text-sm text-foreground/80">To</Label>
-                        <Input
-                          type="date"
-                          value={formatDateForInput(advancedFilters.endDate)}
-                          onChange={(e) => handleDateChange('endDate', e.target.value)}
-                          className="mt-1"
-                        />
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Tags className="w-4 h-4" />
+                        Tags
+                      </Label>
+                      <MultiSelect
+                        options={availableTags}
+                        selected={advancedFilters.tags || []}
+                        onChange={(tags) => handleAdvancedFilterChange('tags', tags)}
+                        placeholder="Search tags..."
+                        emptyMessage="No tags found"
+                        onSearch={handleTagsSearch}
+                      />
+                    </div>
+
+                    {/* Date Range */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Calendar className="w-4 h-4" />
+                        Publication Date
+                      </Label>
+                      <div className="grid grid-cols-2 gap-2">
+                        <div>
+                          <Label className="text-xs text-muted-foreground">From</Label>
+                          <Input
+                            type="date"
+                            value={formatDateForInput(advancedFilters.startDate)}
+                            onChange={(e) => handleDateChange('startDate', e.target.value)}
+                            className="mt-1 h-9"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-xs text-muted-foreground">To</Label>
+                          <Input
+                            type="date"
+                            value={formatDateForInput(advancedFilters.endDate)}
+                            onChange={(e) => handleDateChange('endDate', e.target.value)}
+                            className="mt-1 h-9"
+                          />
+                        </div>
                       </div>
                     </div>
-                  </div>
 
-                  {/* Authors */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                      <User className="w-3 h-3" />
-                      Authors
-                    </Label>
-                    <Input
-                      placeholder="e.g., Hinton, LeCun"
-                      value={advancedFilters.searchAuthors || ''}
-                      onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
-                    />
-                  </div>
-                </TabsContent>
-
-                {/* Filter Options Tab: Code Availability, My Papers */}
-                <TabsContent value="options" className="space-y-4">
-                  {/* Has Code Filter */}
-                  <div className="space-y-2">
-                    <Label className="text-sm font-medium text-foreground/80">
-                      Code Availability
-                    </Label>
-                    <Select
-                      value={advancedFilters.hasCode === undefined ? 'all' : advancedFilters.hasCode ? 'true' : 'false'}
-                      onValueChange={(value) => handleAdvancedFilterChange('hasCode', value === 'all' ? undefined : value === 'true')}
-                    >
-                      <SelectTrigger>
-                        <SelectValue />
-                      </SelectTrigger>
-                      <SelectContent>
-                        <SelectItem value="all">All Papers</SelectItem>
-                        <SelectItem value="true">With Code</SelectItem>
-                        <SelectItem value="false">Without Code</SelectItem>
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  {/* My Papers Filter - Only shown when logged in */}
-                  {currentUser && (
+                    {/* Authors */}
                     <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <User className="w-4 h-4" />
+                        Authors
+                      </Label>
+                      <Input
+                        placeholder="e.g., Hinton, LeCun"
+                        value={advancedFilters.searchAuthors || ''}
+                        onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
+                        className="h-9"
+                      />
+                    </div>
+
+                    {/* Code Availability */}
+                    <div className="space-y-2">
+                      <Label className="text-sm font-medium flex items-center gap-2">
+                        <Code2 className="w-4 h-4" />
+                        Code Availability
+                      </Label>
+                      <Select
+                        value={advancedFilters.hasCode === undefined ? 'all' : advancedFilters.hasCode ? 'true' : 'false'}
+                        onValueChange={(value) => handleAdvancedFilterChange('hasCode', value === 'all' ? undefined : value === 'true')}
+                      >
+                        <SelectTrigger className="h-9">
+                          <SelectValue />
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="all">All Papers</SelectItem>
+                          <SelectItem value="true">With Code</SelectItem>
+                          <SelectItem value="false">Without Code</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </div>
+
+                    {/* My Papers - Only shown when logged in */}
+                    {currentUser && (
                       <div className="flex items-center space-x-2">
                         <Checkbox
                           id="myPapers"
@@ -408,365 +325,172 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                         />
                         <Label
                           htmlFor="myPapers"
-                          className="text-sm font-medium text-foreground/80 flex items-center gap-2 cursor-pointer"
+                          className="text-sm font-medium flex items-center gap-2 cursor-pointer"
                         >
-                          <Briefcase className="w-3 h-3" />
+                          <Briefcase className="w-4 h-4" />
                           Papers I've worked on
                         </Label>
                       </div>
-                    </div>
-                  )}
-                </TabsContent>
-              </Tabs>
+                    )}
 
-              {/* Clear Filters Button */}
-              <div className="flex gap-2 pt-3">
-                <Button 
-                  variant="outline" 
-                  size="sm"
-                  onClick={handleClearAdvancedFilters}
-                  className="flex items-center gap-1 w-full"
-                >
-                  <RotateCcw className="w-3 h-3" />
-                  Clear Filters
-                </Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Mobile Fullscreen Search & Filters */}
-        {showSidebar && (
-          <div className="sm:hidden fixed inset-0 z-50 bg-background">
-            <div className="flex flex-col h-full animate-slide-in-right">
-              {/* Header */}
-              <div className="flex items-center justify-between p-4 border-b border-border">
-                <div>
-                  <h2 className="text-sm font-semibold">Filters</h2>
-                  <p className="text-[11px] text-muted-foreground">
-                    {totalCount} {totalCount === 1 ? 'paper' : 'papers'} found
-                  </p>
-                </div>
-                <Button variant="ghost" size="sm" onClick={() => setShowSidebar(false)} aria-label="Close search">
-                  <X className="w-5 h-5" />
-                </Button>
-              </div>
-
-              {/* Content */}
-              <div className="flex-1 overflow-y-auto p-4 space-y-6">
-                {/* Search */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Search</Label>
-                  <div className="relative">
-                    <Search className="absolute left-2.5 top-1/2 -translate-y-1/2 text-muted-foreground w-3.5 h-3.5" />
-                    <Input
-                      placeholder="Title, abstract, keywords..."
-                      value={searchTerm}
-                      onChange={(e) => handleSearchChange(e.target.value)}
-                      className="pl-9 h-9 text-sm"
-                    />
-                    {searchTerm && (
+                    {/* Clear All */}
+                    {activeFilterCount > 0 && (
                       <Button
                         variant="ghost"
                         size="sm"
-                        onClick={clearSearchTerm}
-                        className="absolute right-2 top-1/2 -translate-y-1/2 h-6 w-6 p-0"
-                        aria-label="Clear search"
+                        onClick={handleClearAdvancedFilters}
+                        className="w-full text-muted-foreground hover:text-foreground gap-2"
                       >
-                        <X className="w-3 h-3" />
+                        <RotateCcw className="w-4 h-4" />
+                        Clear all filters
                       </Button>
                     )}
                   </div>
-                  {debouncedSearchTerm && (
-                    <div className="flex items-center gap-2 mt-2">
-                      <Badge variant="outline" className="text-xs">
-                        Searching: "{debouncedSearchTerm}"
-                      </Badge>
-                    </div>
-                  )}
-                </div>
+                </PopoverContent>
+              </Popover>
 
-                <Separator />
-
-                {/* Sort */}
-                <div className="space-y-2">
-                  <Label className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Sort by</Label>
-                  <Select 
-                    value={activeSortDisplay} 
-                    onValueChange={(value) => handleSortChange({ target: { value } } as any)} 
-                    disabled={isSearchActive}
-                  >
-                    <SelectTrigger>
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {isSearchActive && (
-                        <SelectItem value="relevance">Relevance</SelectItem>
-                      )}
-                      {!isSearchActive && (
-                        <>
-                          <SelectItem value="newest">Newest First</SelectItem>
-                          <SelectItem value="oldest">Oldest First</SelectItem>
-                          <SelectItem value="upvotes">Most Upvoted</SelectItem>
-                        </>
-                      )}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <Separator />
-
-                {/* Advanced Filters */}
-                <div>
-                  <div className="flex items-center justify-between mb-3">
-                    <Label className="text-sm font-semibold uppercase tracking-wide text-foreground/70">Advanced Filters</Label>
-                    {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
-                      <Badge variant="outline" className="h-5 w-5 p-0 text-xs rounded-full flex items-center justify-center">!</Badge>
-                    )}
-                  </div>
-
-                  <Tabs defaultValue="content" className="w-full">
-                    <TabsList className="grid w-full grid-cols-3 mb-3">
-                      <TabsTrigger value="content" className="text-xs">
-                        <Tags className="w-3 h-3 mr-1" />
-                        Content
-                      </TabsTrigger>
-                      <TabsTrigger value="publication" className="text-xs">
-                        <Calendar className="w-3 h-3 mr-1" />
-                        Publication
-                      </TabsTrigger>
-                      <TabsTrigger value="options" className="text-xs">
-                        <Filter className="w-3 h-3 mr-1" />
-                        Filters
-                      </TabsTrigger>
-                    </TabsList>
-
-                    {/* Content Tab: Tags */}
-                    <TabsContent value="content" className="space-y-4">
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                          <Tags className="w-3 h-3" />
-                          Tags
-                        </Label>
-                        <MultiSelect
-                          options={availableTags}
-                          selected={advancedFilters.tags || []}
-                          onChange={(tags) => handleAdvancedFilterChange('tags', tags)}
-                          placeholder="Type to search tags..."
-                          emptyMessage="No tags found"
-                          onSearch={handleTagsSearch}
-                        />
-                      </div>
-                    </TabsContent>
-
-                    {/* Publication Tab: Date Range, Authors */}
-                    <TabsContent value="publication" className="space-y-4">
-                      {/* Date Range */}
-                      <div className="space-y-3">
-                        <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                          <Calendar className="w-3 h-3" />
-                          Publication Date
-                        </Label>
-                        <div className="space-y-2">
-                          <div>
-                            <Label className="text-sm text-foreground/80">From</Label>
-                            <Input
-                              type="date"
-                              value={formatDateForInput(advancedFilters.startDate)}
-                              onChange={(e) => handleDateChange('startDate', e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                          <div>
-                            <Label className="text-sm text-foreground/80">To</Label>
-                            <Input
-                              type="date"
-                              value={formatDateForInput(advancedFilters.endDate)}
-                              onChange={(e) => handleDateChange('endDate', e.target.value)}
-                              className="mt-1"
-                            />
-                          </div>
-                        </div>
-                      </div>
-
-                      {/* Authors */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-foreground/80 flex items-center gap-2">
-                          <User className="w-3 h-3" />
-                          Authors
-                        </Label>
-                        <Input
-                          placeholder="e.g., Hinton, LeCun"
-                          value={advancedFilters.searchAuthors || ''}
-                          onChange={(e) => handleAdvancedFilterChange('searchAuthors', e.target.value)}
-                        />
-                      </div>
-                    </TabsContent>
-
-                    {/* Filter Options Tab: Code Availability, My Papers */}
-                    <TabsContent value="options" className="space-y-4">
-                      {/* Has Code Filter */}
-                      <div className="space-y-2">
-                        <Label className="text-sm font-medium text-foreground/80">
-                          Code Availability
-                        </Label>
-                        <Select
-                          value={advancedFilters.hasCode === undefined ? 'all' : advancedFilters.hasCode ? 'true' : 'false'}
-                          onValueChange={(value) => handleAdvancedFilterChange('hasCode', value === 'all' ? undefined : value === 'true')}
-                        >
-                          <SelectTrigger>
-                            <SelectValue />
-                          </SelectTrigger>
-                          <SelectContent>
-                            <SelectItem value="all">All Papers</SelectItem>
-                            <SelectItem value="true">With Code</SelectItem>
-                            <SelectItem value="false">Without Code</SelectItem>
-                          </SelectContent>
-                        </Select>
-                      </div>
-
-                      {/* My Papers Filter - Only shown when logged in */}
-                      {currentUser && (
-                        <div className="space-y-2">
-                          <div className="flex items-center space-x-2">
-                            <Checkbox
-                              id="myPapersMobile"
-                              checked={advancedFilters.contributorId === currentUser.id}
-                              onCheckedChange={(checked) => {
-                                handleAdvancedFilterChange('contributorId', checked ? currentUser.id : '')
-                              }}
-                            />
-                            <Label
-                              htmlFor="myPapersMobile"
-                              className="text-sm font-medium text-foreground/80 flex items-center gap-2 cursor-pointer"
-                            >
-                              <Briefcase className="w-3 h-3" />
-                              Papers I've worked on
-                            </Label>
-                          </div>
-                        </div>
-                      )}
-                    </TabsContent>
-                  </Tabs>
-
-                  {/* Clear Filters Button */}
-                  <div className="flex gap-2 pt-3">
-                    <Button 
-                      variant="outline" 
-                      size="sm"
-                      onClick={handleClearAdvancedFilters}
-                      className="flex items-center gap-1 w-full"
-                      aria-label="Clear filters"
-                    >
-                      <RotateCcw className="w-3 h-3" />
-                      Clear Filters
-                    </Button>
-                  </div>
-                </div>
-              </div>
-
-              {/* Footer */}
-              <div className="p-4 border-t border-border">
-                <Button className="w-full" onClick={() => setShowSidebar(false)}>Show Results</Button>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {/* Right Content Area */}
-        <div className={`${showSidebar ? 'sm:ml-72 md:ml-80 lg:ml-96 flex-1' : 'w-full'} px-4 py-3 sm:p-6 max-w-[1600px]`}>
-          {/* Unified top spacing & section header */}
-          <div className="mb-4 sm:mb-6 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div className="flex flex-col sm:flex-row sm:items-center gap-2 sm:gap-4 w-full">
-              <div className="flex items-center justify-between sm:justify-start w-full sm:w-auto gap-2">
-                <h2 className="text-lg sm:text-xl font-semibold tracking-tight">Search Papers</h2>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowSidebar(true)}
-                  className="sm:hidden h-8 px-3 gap-1.5 text-xs"
-                >
-                  <Filter className="w-3.5 h-3.5" />
-                  <span>Filters</span>
-                  {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
-                    <span className="inline-flex h-2 w-2 rounded-full bg-primary" aria-hidden="true" />
-                  )}
-                </Button>
-              </div>
-              
-              {/* Active Filters Display */}
-              <div className="flex items-center gap-2 flex-wrap flex-1">
+              {/* Quick Filter Pills for Active Filters */}
+              <div className="flex items-center gap-2 flex-wrap">
                 {debouncedSearchTerm && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="pl-2 pr-1 py-1 h-7 gap-1 cursor-pointer hover:bg-muted"
+                    onClick={() => removeFilter('search')}
+                  >
                     <Search className="w-3 h-3" />
-                    "{debouncedSearchTerm.length > 20 ? debouncedSearchTerm.substring(0, 20) + '...' : debouncedSearchTerm}"
+                    <span className="max-w-[120px] truncate">"{debouncedSearchTerm}"</span>
+                    <X className="w-3 h-3 ml-1" />
                   </Badge>
                 )}
                 {advancedFilters.startDate && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="pl-2 pr-1 py-1 h-7 gap-1 cursor-pointer hover:bg-muted"
+                    onClick={() => removeFilter('startDate')}
+                  >
                     <Calendar className="w-3 h-3" />
                     From: {advancedFilters.startDate}
+                    <X className="w-3 h-3 ml-1" />
                   </Badge>
                 )}
                 {advancedFilters.endDate && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="pl-2 pr-1 py-1 h-7 gap-1 cursor-pointer hover:bg-muted"
+                    onClick={() => removeFilter('endDate')}
+                  >
                     <Calendar className="w-3 h-3" />
                     To: {advancedFilters.endDate}
+                    <X className="w-3 h-3 ml-1" />
                   </Badge>
                 )}
                 {advancedFilters.searchAuthors && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="pl-2 pr-1 py-1 h-7 gap-1 cursor-pointer hover:bg-muted"
+                    onClick={() => removeFilter('author')}
+                  >
                     <User className="w-3 h-3" />
                     {advancedFilters.searchAuthors}
+                    <X className="w-3 h-3 ml-1" />
                   </Badge>
                 )}
-                {advancedFilters.tags && advancedFilters.tags.length > 0 && advancedFilters.tags.map((tag, index) => (
-                  <Badge key={index} variant="outline" className="text-xs flex items-center gap-1">
+                {advancedFilters.tags && advancedFilters.tags.map((tag) => (
+                  <Badge
+                    key={tag}
+                    variant="secondary"
+                    className="pl-2 pr-1 py-1 h-7 gap-1 cursor-pointer hover:bg-muted"
+                    onClick={() => removeFilter('tag', tag)}
+                  >
                     <Tags className="w-3 h-3" />
                     {tag}
+                    <X className="w-3 h-3 ml-1" />
                   </Badge>
                 ))}
                 {advancedFilters.hasCode !== undefined && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="pl-2 pr-1 py-1 h-7 gap-1 cursor-pointer hover:bg-muted"
+                    onClick={() => removeFilter('hasCode')}
+                  >
+                    <Code2 className="w-3 h-3" />
                     {advancedFilters.hasCode ? 'With Code' : 'Without Code'}
+                    <X className="w-3 h-3 ml-1" />
                   </Badge>
                 )}
                 {advancedFilters.contributorId && (
-                  <Badge variant="outline" className="text-xs flex items-center gap-1">
+                  <Badge
+                    variant="secondary"
+                    className="pl-2 pr-1 py-1 h-7 gap-1 cursor-pointer hover:bg-muted"
+                    onClick={() => removeFilter('myPapers')}
+                  >
                     <Briefcase className="w-3 h-3" />
                     My Papers
+                    <X className="w-3 h-3 ml-1" />
                   </Badge>
                 )}
-              </div>
-              
-              <div
-                className={
-                  `hidden sm:inline-flex items-center gap-2 px-3 py-1 rounded-md border text-sm font-medium ${showSidebar ? 'bg-primary/5 border-primary/20 text-primary' : 'bg-muted/50 border-border text-muted-foreground'}`
-                }
-              >
-                <span>Filters</span>
-                {(advancedFilters.startDate || advancedFilters.endDate || advancedFilters.searchAuthors || advancedFilters.tags?.length || advancedFilters.hasCode !== undefined || advancedFilters.contributorId) && (
-                  <Badge variant="outline" className="h-5 px-1.5 text-[10px] font-semibold rounded-full">•</Badge>
+                {hasActiveFilters && (
+                  <Button
+                    variant="ghost"
+                    size="sm"
+                    onClick={() => {
+                      handleClearAdvancedFilters();
+                      clearSearchTerm();
+                    }}
+                    className="h-7 px-2 text-xs text-muted-foreground hover:text-foreground"
+                  >
+                    Clear all
+                  </Button>
                 )}
               </div>
             </div>
+
+            {/* Right: Sort Control */}
+            <div className="flex items-center gap-3">
+              <Select
+                value={activeSortDisplay}
+                onValueChange={(value) => handleSortChange({ target: { value } } as any)}
+                disabled={isSearchActive}
+              >
+                <SelectTrigger className="w-[160px] h-9">
+                  <SelectValue placeholder="Sort by" />
+                </SelectTrigger>
+                <SelectContent>
+                  {isSearchActive && (
+                    <SelectItem value="relevance">Relevance</SelectItem>
+                  )}
+                  {!isSearchActive && (
+                    <>
+                      <SelectItem value="newest">Newest First</SelectItem>
+                      <SelectItem value="oldest">Oldest First</SelectItem>
+                      <SelectItem value="upvotes">Most Upvoted</SelectItem>
+                    </>
+                  )}
+                </SelectContent>
+              </Select>
+            </div>
           </div>
+        </div>
+
+        {/* Results Section */}
+        <div className="pb-12">
           {isLoading ? (
             <>
-              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
-                <PaperListSkeleton count={showSidebar ? 9 : 12} />
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <PaperListSkeleton count={8} />
               </div>
-              <div className="mt-6 sm:mt-8">
+              <div className="mt-12">
                 <PaginationSkeleton />
               </div>
             </>
           ) : error ? (
-            <div className="text-center py-16 mt-6">
+            <div className="text-center py-20">
               <p className="text-destructive text-lg font-medium">{error}</p>
             </div>
           ) : papers.length > 0 ? (
             <>
-              <div className={`grid gap-3 sm:gap-4 mt-4 sm:mt-6 ${showSidebar ? 'grid-cols-1 lg:grid-cols-2 2xl:grid-cols-3' : 'grid-cols-1 sm:grid-cols-2 lg:grid-cols-3'}`}>
+              {/* Paper Grid - 2 columns on desktop, 1 on mobile */}
+              <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
                 {papers.map((paper) => (
                   <ModernPaperCard
                     key={paper.id}
@@ -776,9 +500,19 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                   />
                 ))}
               </div>
-              
-              {totalPages > 1 && (
-                <div className="mt-6 sm:mt-8">
+
+              {/* Pagination Section */}
+              <div className="mt-12 pt-8 border-t border-border">
+                {/* Result Count */}
+                <div className="text-center mb-6">
+                  <p className="text-sm text-muted-foreground">
+                    Showing <span className="font-medium text-foreground">{startResult}-{endResult}</span> of{' '}
+                    <span className="font-medium text-foreground">{formatCount(totalCount, countCapped)}</span> papers
+                  </p>
+                </div>
+
+                {/* Pagination Controls */}
+                {totalPages > 1 && (
                   <ModernPaginationControls
                     currentPage={currentPage}
                     totalPages={totalPages}
@@ -786,28 +520,34 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
                     onPrev={handlePrev}
                     onNext={handleNext}
                   />
-                </div>
-              )}
+                )}
+              </div>
             </>
           ) : (
-            <div className="text-center py-16 mt-6">
+            <div className="text-center py-20">
               <div className="max-w-md mx-auto">
-                <Search className="w-12 h-12 text-muted-foreground mx-auto mb-4" />
-                <h3 className="text-lg font-semibold mb-2">
+                <div className="w-16 h-16 rounded-2xl bg-muted/50 flex items-center justify-center mx-auto mb-6">
+                  <Search className="w-8 h-8 text-muted-foreground" />
+                </div>
+                <h3 className="text-xl font-medium tracking-tight mb-3">
                   {debouncedSearchTerm ? 'No papers found' : 'No papers available'}
                 </h3>
-                <p className="text-muted-foreground">
-                  {debouncedSearchTerm 
-                    ? `Try adjusting your search terms or filters.`
+                <p className="text-muted-foreground mb-6">
+                  {debouncedSearchTerm
+                    ? 'Try adjusting your search terms or filters to find what you\'re looking for.'
                     : 'Check back later for new research papers.'}
                 </p>
-                {debouncedSearchTerm && (
+                {hasActiveFilters && (
                   <Button
                     variant="outline"
-                    onClick={clearSearchTerm}
-                    className="mt-4"
+                    onClick={() => {
+                      handleClearAdvancedFilters();
+                      clearSearchTerm();
+                    }}
+                    className="rounded-lg"
                   >
-                    Clear search
+                    <RotateCcw className="w-4 h-4 mr-2" />
+                    Clear all filters
                   </Button>
                 )}
               </div>
@@ -815,6 +555,14 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
           )}
         </div>
       </div>
+
+      {/* Mobile Filter Sheet Overlay */}
+      {showFilters && (
+        <div
+          className="fixed inset-0 bg-background/80 backdrop-blur-sm z-40 sm:hidden"
+          onClick={() => setShowFilters(false)}
+        />
+      )}
     </div>
   );
 };

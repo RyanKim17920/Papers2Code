@@ -79,7 +79,7 @@ export const fetchPapersFromApi = async (
   sort?: 'newest' | 'oldest' | 'upvotes',
   advancedFilters?: AdvancedPaperFilters,
   signal?: AbortSignal // <-- NEW: Add AbortSignal parameter
-): Promise<{ papers: Paper[]; totalPages: number; totalCount: number; page: number; pageSize: number; hasMore: boolean }> => {
+): Promise<{ papers: Paper[]; totalPages: number; totalCount: number; countCapped: boolean; page: number; pageSize: number; hasMore: boolean }> => {
   const params = new URLSearchParams();
   params.append('limit', String(limit));
   params.append('page', String(page));
@@ -131,7 +131,7 @@ export const fetchPapersFromApi = async (
   
   const response = await api.get(url, { signal }); // <-- MODIFIED: Pass signal to fetch
   // MODIFIED: Use handleApiResponse with correct camelCase types for pageSize and hasMore from the backend's PaginatedPaperResponse
-  const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; page: number; pageSize: number; hasMore: boolean}>(response, true);
+  const data = await handleApiResponse<{ papers: Paper[]; totalCount: number; countCapped: boolean; page: number; pageSize: number; hasMore: boolean}>(response, true);
   // MODIFIED: Check for camelCase properties from the backend's PaginatedPaperResponse
   if (!data || !Array.isArray(data.papers) || typeof data.totalCount !== 'number' || typeof data.page !== 'number' || typeof data.pageSize !== 'number' || typeof data.hasMore !== 'boolean') {
     console.error("Unexpected API response structure after handleApiResponse:", data);
@@ -139,7 +139,7 @@ export const fetchPapersFromApi = async (
   }
   const totalPages = Math.ceil(data.totalCount / limit);
   // MODIFIED: Access camelCase properties from data, matching the backend's PaginatedPaperResponse schema (which uses alias_generator=to_camel)
-  return { papers: data.papers, totalPages: totalPages, totalCount: data.totalCount, page: data.page, pageSize: data.pageSize, hasMore: data.hasMore };
+  return { papers: data.papers, totalPages: totalPages, totalCount: data.totalCount, countCapped: data.countCapped ?? false, page: data.page, pageSize: data.pageSize, hasMore: data.hasMore };
 };
 
 // --- fetchPaperByIdFromApi ---

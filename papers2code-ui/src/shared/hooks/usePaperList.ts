@@ -41,6 +41,7 @@ export function usePaperList(authLoading?: boolean, currentUser?: UserProfile | 
   );
   const [totalPages, setTotalPages] = useState(1);
   const [totalCount, setTotalCount] = useState<number>(0);
+  const [countCapped, setCountCapped] = useState<boolean>(false);
   const { showLoginPrompt } = useModal();
   const [advancedFilters, setAdvancedFilters] = useState<AdvancedPaperFilters>(() => ({
     startDate: searchParams.get('startDate') || '',
@@ -166,6 +167,7 @@ export function usePaperList(authLoading?: boolean, currentUser?: UserProfile | 
           setPapers(response.papers);
           setTotalPages(response.totalPages);
           setTotalCount(response.totalCount);
+          setCountCapped(response.countCapped);
         }
       } catch (err: unknown) {
         if (err instanceof Error && err.name !== 'AbortError' && !abortController.signal.aborted) {
@@ -180,6 +182,7 @@ export function usePaperList(authLoading?: boolean, currentUser?: UserProfile | 
           setPapers([]);
           setTotalPages(1);
           setTotalCount(0);
+          setCountCapped(false);
         }
       } finally {
         if (!abortController.signal.aborted) {
@@ -357,6 +360,7 @@ export function usePaperList(authLoading?: boolean, currentUser?: UserProfile | 
     currentPage,
     totalPages,
   totalCount,
+    countCapped,
     showAdvancedSearch,
     advancedFilters,
     appliedAdvancedFilters,
