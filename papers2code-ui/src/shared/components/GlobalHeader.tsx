@@ -70,7 +70,7 @@ const GlobalHeader: React.FC<GlobalHeaderProps> = ({
             <img 
               src={logo} 
               alt="Papers2Code" 
-              className="h-8 w-auto" 
+              className="h-8 w-auto dark:invert dark:hue-rotate-180"
             />
           </Link>
           

@@ -26,7 +26,7 @@ const LoginPage: React.FC = () => {
           <img 
             src={logo} 
             alt="Papers2Code" 
-            className="h-20 w-auto mb-8" 
+            className="h-20 w-auto mb-8 dark:invert dark:hue-rotate-180"
           />
           <p className="text-lg text-muted-foreground text-center max-w-md">
             Bridging the gap between research papers and production-ready code
