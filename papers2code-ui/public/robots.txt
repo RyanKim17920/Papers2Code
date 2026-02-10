@@ -6,6 +6,7 @@ Allow: /
 
 # Disallow private endpoints
 Disallow: /api/
+Allow: /api/seo/
 Disallow: /login/callback
 Disallow: /dashboard
 
@@ -26,4 +27,4 @@ User-agent: anthropic-ai
 Disallow: /
 
 # Sitemap location
-Sitemap: https://papers2code.com/sitemap.xml
+Sitemap: https://papers2code.com/api/seo/sitemap.xml

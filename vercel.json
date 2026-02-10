@@ -3,6 +3,10 @@
   "outputDirectory": "papers2code-ui/dist",
   "rewrites": [
     {
+      "source": "/api/seo/:path*",
+      "destination": "https://papers2code-api.onrender.com/api/seo/:path*"
+    },
+    {
       "source": "/((?!.*\\.).+)",
       "destination": "/index.html"
     }

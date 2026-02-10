@@ -27,6 +27,12 @@
     
     <!-- Canonical URL -->
     <link rel="canonical" href="https://papers2code.com/" />
+
+    <!-- Sitemap -->
+    <link rel="sitemap" href="/api/seo/sitemap.xml" type="application/xml" />
+
+    <!-- OpenSearch for browser search bar integration -->
+    <link rel="search" type="application/opensearchdescription+xml" href="/opensearch.xml" title="Papers2Code Search" />
     
     <!-- Open Graph / Facebook -->
     <meta property="og:type" content="website" />
@@ -61,6 +67,10 @@
     <!-- Preconnect to external domains for performance -->
     <link rel="preconnect" href="https://fonts.googleapis.com" />
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+
+    <!-- DNS-prefetch and preconnect for API backend -->
+    <link rel="dns-prefetch" href="https://papers2code-api.onrender.com" />
+    <link rel="preconnect" href="https://papers2code-api.onrender.com" />
     
     <!-- JSON-LD Structured Data -->
     <script type="application/ld+json">
@@ -130,16 +140,33 @@
       "applicationCategory": "DeveloperApplication",
       "operatingSystem": "Web",
       "description": "Open-source platform for discovering, implementing, and collaborating on AI and machine learning research papers",
+      "image": "https://papers2code.com/og-image.png",
+      "screenshot": "https://papers2code.com/og-image.png",
       "offers": {
         "@type": "Offer",
         "price": "0",
         "priceCurrency": "USD"
+      },
+      "author": {
+        "@type": "Organization",
+        "name": "Papers2Code Team",
+        "url": "https://papers2code.com"
       }
     }
     </script>
   </head>
   <body>
-    <noscript>Papers2Code requires JavaScript. Please enable JavaScript to use this application.</noscript>
+    <noscript>
+      <h1>Papers2Code — AI Research to Code</h1>
+      <p>Papers2Code is the open-source community platform for discovering, implementing, and collaborating on machine learning and AI research papers. Browse 500K+ paper implementations from arXiv, NeurIPS, ICML, ICLR, and more. Find working code for papers2code, paper2code, and paper to code implementations.</p>
+      <nav>
+        <ul>
+          <li><a href="/papers">Browse Papers</a></li>
+          <li><a href="/login">Sign In</a></li>
+        </ul>
+      </nav>
+      <p>For full functionality, please enable JavaScript or use a modern web browser.</p>
+    </noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

@@ -34,6 +34,7 @@ from .routers import (
     activity_router,
     background_tasks_router,
     dashboard_router,
+    seo_router,
 )
 
 
@@ -450,6 +451,7 @@ api_router.include_router(user_router.router)
 api_router.include_router(activity_router.router)
 api_router.include_router(background_tasks_router.router)
 api_router.include_router(dashboard_router.router)
+api_router.include_router(seo_router.router)
 # Include the auth_routes router into the api_router
 api_router.include_router(auth_routes.router)
 # Include the api_router into the main app
