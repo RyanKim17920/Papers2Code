@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { Search, SlidersHorizontal, Calendar, User, Filter, X, RotateCcw, ChevronLeft, ChevronRight, Tags, Briefcase } from 'lucide-react';
 import { usePaperList, SortPreference } from '@/shared/hooks/usePaperList';
 import { LoadingSpinner } from '@/shared/components';
-import { SEO } from '@/shared/components/SEO';
+import { SEO, generateBreadcrumbs } from '@/shared/components/SEO';
 import { Button } from '@/shared/ui/button';
 import { Input } from '@/shared/ui/input';
 import { Label } from '@/shared/ui/label';
@@ -138,6 +138,10 @@ const PaperListPage: React.FC<PaperListPageProps> = ({ authLoading, currentUser 
         description={buildSEODescription()}
         keywords="AI research papers, machine learning papers, arXiv papers, research implementation, ML code, deep learning, computer vision, NLP, research collaboration"
         url={`https://papers2code.com/papers${searchTerm ? `?search=${encodeURIComponent(searchTerm)}` : ''}`}
+        structuredData={generateBreadcrumbs([
+          { name: 'Home', url: 'https://papers2code.com/' },
+          { name: 'Papers', url: 'https://papers2code.com/papers' },
+        ])}
       />
       
       {/* Header when sidebar is closed */}

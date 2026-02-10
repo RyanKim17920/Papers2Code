@@ -9,7 +9,7 @@ import type { UserProfile } from '@/shared/types/user';
 import type { ImplementationProgress } from '@/shared/types/implementation';
 
 import { LoadingSpinner } from '@/shared/components';
-import { SEO, generatePaperStructuredData, injectStructuredData } from '@/shared/components/SEO';
+import { SEO, generatePaperStructuredData, generateBreadcrumbs, injectStructuredData } from '@/shared/components/SEO';
 import ConfirmationModal from '@/shared/components/ConfirmationModal';
 import { Card, CardContent } from '@/shared/ui/card';
 import { Button } from '@/shared/ui/button';
@@ -196,6 +196,14 @@ const PaperDetailPage: React.FC<PaperDetailPageProps> = ({ currentUser }) => {
                 type="article"
                 author={paperAuthors}
                 publishedTime={paper.publicationDate}
+                structuredData={[
+                  generatePaperStructuredData(paper),
+                  generateBreadcrumbs([
+                    { name: 'Home', url: 'https://papers2code.com/' },
+                    { name: 'Papers', url: 'https://papers2code.com/papers' },
+                    { name: paper.title || 'Paper', url: `https://papers2code.com/paper/${paper.id}` },
+                  ]),
+                ]}
             />
             
             {/* Compact Header - Reduced z-index to allow tooltips to appear above */}
