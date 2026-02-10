@@ -9,6 +9,7 @@ import { formatJoinedDate, formatLastSeen } from '@/shared/utils/dateUtils';
 import { ProfileSettingsTab } from '@/features/profile/ProfileSettingsTab';
 import { getStatusColorClasses } from '@/shared/utils/statusUtils';
 import { useModal } from '@/shared/contexts/ModalContext';
+import { SEO } from '@/shared/components/SEO';
 
 type TabType = 'overview' | 'upvoted' | 'contributing' | 'settings';
 
@@ -332,6 +333,18 @@ const ProfilePage: React.FC = () => {
   
   return (
     <div className="min-h-screen bg-background">
+      <SEO
+        title={`${userDetails.name || userDetails.username}'s Profile`}
+        description={`View ${userDetails.name || userDetails.username}'s contributions and upvoted papers on Papers2Code.`}
+        url={`https://papers2code.com/user/${userDetails.username}`}
+        type="profile"
+        structuredData={{
+          '@context': 'https://schema.org',
+          '@type': 'Person',
+          name: userDetails.name || userDetails.username,
+          url: `https://papers2code.com/user/${userDetails.username}`,
+        }}
+      />
       {/* Header Section with Avatar and Basic Info */}
       <div className="bg-gradient-to-br from-card via-card to-background border-b border-border">
         <div className="container mx-auto px-3 sm:px-6 py-8 sm:py-16">

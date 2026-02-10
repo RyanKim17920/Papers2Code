@@ -1,4 +1,4 @@
-import { useEffect } from 'react';
+import { useEffect, useRef } from 'react';
 
 interface SEOProps {
   title?: string;
@@ -10,11 +10,17 @@ interface SEOProps {
   author?: string;
   publishedTime?: string;
   modifiedTime?: string;
+  noindex?: boolean;
+  structuredData?: object | object[];
 }
 
+const BASE_TITLE = 'Papers2Code';
+const BASE_URL = 'https://papers2code.com';
+
 /**
- * SEO component for dynamically updating page metadata
- * Use this on individual pages to customize SEO tags
+ * SEO component for dynamically updating page metadata.
+ * Restores original values on unmount so navigating between pages
+ * doesn't leave stale meta tags behind.
  */
 export const SEO: React.FC<SEOProps> = ({
   title,
@@ -26,58 +32,60 @@ export const SEO: React.FC<SEOProps> = ({
   author,
   publishedTime,
   modifiedTime,
+  noindex,
+  structuredData,
 }) => {
-  useEffect(() => {
-    // Update title
-    if (title) {
-      document.title = `${title} | Papers2Code`;
-    }
+  const originalValues = useRef<Map<string, string | null>>(new Map());
+  const originalTitle = useRef<string>(document.title);
 
-    // Update or create meta tags
-    const updateMetaTag = (property: string, content: string, isName = false) => {
+  useEffect(() => {
+    const changed = new Map<string, string | null>();
+
+    const setMeta = (property: string, content: string, isName = false) => {
       const attribute = isName ? 'name' : 'property';
-      let element = document.querySelector(`meta[${attribute}="${property}"]`);
-      
-      if (!element) {
-        element = document.createElement('meta');
-        element.setAttribute(attribute, property);
-        document.head.appendChild(element);
+      let el = document.querySelector(`meta[${attribute}="${property}"]`);
+
+      // Store original value for cleanup
+      if (!changed.has(`${attribute}:${property}`)) {
+        changed.set(`${attribute}:${property}`, el?.getAttribute('content') ?? null);
       }
-      
-      element.setAttribute('content', content);
+
+      if (!el) {
+        el = document.createElement('meta');
+        el.setAttribute(attribute, property);
+        document.head.appendChild(el);
+      }
+      el.setAttribute('content', content);
     };
+
+    // Title
+    if (title) {
+      document.title = `${title} | ${BASE_TITLE}`;
+    }
 
     // Basic meta tags
     if (description) {
-      updateMetaTag('description', description, true);
-      updateMetaTag('og:description', description);
-      updateMetaTag('twitter:description', description);
+      setMeta('description', description, true);
+      setMeta('og:description', description);
+      setMeta('twitter:description', description);
     }
+    if (keywords) setMeta('keywords', keywords, true);
+    if (author) setMeta('author', author, true);
+    if (noindex) setMeta('robots', 'noindex, nofollow', true);
 
-    if (keywords) {
-      updateMetaTag('keywords', keywords, true);
-    }
-
-    if (author) {
-      updateMetaTag('author', author, true);
-    }
-
-    // Open Graph tags
+    // Open Graph
     if (title) {
-      updateMetaTag('og:title', `${title} | Papers2Code`);
-      updateMetaTag('twitter:title', `${title} | Papers2Code`);
+      setMeta('og:title', `${title} | ${BASE_TITLE}`);
+      setMeta('twitter:title', `${title} | ${BASE_TITLE}`);
     }
-
     if (image) {
-      updateMetaTag('og:image', image);
-      updateMetaTag('twitter:image', image);
+      setMeta('og:image', image);
+      setMeta('twitter:image', image);
     }
-
     if (url) {
-      updateMetaTag('og:url', url);
-      updateMetaTag('twitter:url', url);
-      
-      // Update canonical link
+      setMeta('og:url', url);
+      setMeta('twitter:url', url);
+      // Update canonical
       let canonical = document.querySelector('link[rel="canonical"]');
       if (!canonical) {
         canonical = document.createElement('link');
@@ -86,26 +94,53 @@ export const SEO: React.FC<SEOProps> = ({
       }
       canonical.setAttribute('href', url);
     }
+    if (type) setMeta('og:type', type);
+    if (publishedTime) setMeta('article:published_time', publishedTime);
+    if (modifiedTime) setMeta('article:modified_time', modifiedTime);
 
-    if (type) {
-      updateMetaTag('og:type', type);
+    // Structured data
+    if (structuredData) {
+      const items = Array.isArray(structuredData) ? structuredData : [structuredData];
+      items.forEach((data, i) => {
+        const script = document.createElement('script');
+        script.type = 'application/ld+json';
+        script.setAttribute('data-dynamic', 'true');
+        script.setAttribute('data-seo-idx', String(i));
+        script.textContent = JSON.stringify(data);
+        document.head.appendChild(script);
+      });
     }
 
-    // Article-specific tags
-    if (publishedTime) {
-      updateMetaTag('article:published_time', publishedTime);
-    }
+    // Store for cleanup
+    originalValues.current = changed;
 
-    if (modifiedTime) {
-      updateMetaTag('article:modified_time', modifiedTime);
-    }
-  }, [title, description, keywords, image, url, type, author, publishedTime, modifiedTime]);
+    return () => {
+      // Restore title
+      document.title = originalTitle.current;
+
+      // Restore meta tags
+      changed.forEach((originalContent, key) => {
+        const [attribute, property] = key.split(':');
+        const el = document.querySelector(`meta[${attribute}="${property}"]`);
+        if (el) {
+          if (originalContent === null) {
+            el.remove();
+          } else {
+            el.setAttribute('content', originalContent);
+          }
+        }
+      });
+
+      // Remove dynamic structured data
+      document.querySelectorAll('script[data-dynamic="true"]').forEach(el => el.remove());
+    };
+  }, [title, description, keywords, image, url, type, author, publishedTime, modifiedTime, noindex, structuredData]);
 
   return null;
 };
 
 /**
- * Generate structured data for a research paper
+ * Generate structured data for a research paper (ScholarlyArticle)
  */
 export const generatePaperStructuredData = (paper: {
   id: string;
@@ -123,36 +158,51 @@ export const generatePaperStructuredData = (paper: {
     name: paper.title || 'Research Paper',
     headline: paper.title || 'Research Paper',
     abstract: paper.abstract,
-    author: paper.authors?.map(author => ({
-      '@type': 'Person',
-      name: author,
-    })),
+    author: paper.authors?.map(a => ({ '@type': 'Person', name: a })),
     datePublished: paper.publicationDate,
     identifier: paper.arxivId,
-    url: paper.urlAbs || `https://papers2code.com/paper/${paper.id}`,
+    url: paper.urlAbs || `${BASE_URL}/paper/${paper.id}`,
     ...(paper.urlPdf && { encodingFormat: 'application/pdf', contentUrl: paper.urlPdf }),
     publisher: {
       '@type': 'Organization',
       name: 'arXiv',
       url: 'https://arxiv.org',
     },
+    isPartOf: {
+      '@type': 'WebSite',
+      name: BASE_TITLE,
+      url: BASE_URL,
+    },
   };
 };
 
 /**
- * Inject structured data into the page
+ * Generate BreadcrumbList structured data
+ */
+export const generateBreadcrumbs = (
+  items: Array<{ name: string; url: string }>
+) => ({
+  '@context': 'https://schema.org',
+  '@type': 'BreadcrumbList',
+  itemListElement: items.map((item, i) => ({
+    '@type': 'ListItem',
+    position: i + 1,
+    name: item.name,
+    item: item.url,
+  })),
+});
+
+/**
+ * Inject structured data into the page (for components that manage their own lifecycle)
  */
 export const injectStructuredData = (data: object) => {
   const script = document.createElement('script');
   script.type = 'application/ld+json';
   script.textContent = JSON.stringify(data);
-  
-  // Remove existing structured data for the same type if present
+
   const existing = document.querySelector('script[type="application/ld+json"][data-dynamic="true"]');
-  if (existing) {
-    existing.remove();
-  }
-  
+  if (existing) existing.remove();
+
   script.setAttribute('data-dynamic', 'true');
   document.head.appendChild(script);
 };

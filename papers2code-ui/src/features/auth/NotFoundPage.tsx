@@ -1,6 +1,7 @@
 import { useLocation, useNavigate } from "react-router-dom";
 import { useEffect } from "react";
 import { Home, Search, ArrowLeft } from "lucide-react";
+import { SEO } from '@/shared/components/SEO';
 
 const NotFoundPage = () => {
   const location = useLocation();
@@ -15,6 +16,11 @@ const NotFoundPage = () => {
 
   return (
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-background via-background to-muted/30">
+      <SEO
+        title="Page Not Found"
+        description="The page you're looking for doesn't exist on Papers2Code."
+        noindex={true}
+      />
       <div className="text-center max-w-md mx-auto px-6">
         {/* Animated 404 number */}
         <div className="relative mb-8">

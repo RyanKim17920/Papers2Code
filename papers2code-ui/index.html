@@ -4,19 +4,21 @@
     <meta charset="UTF-8" />
     
     <!-- Favicons - Multiple sizes for better compatibility -->
+    <link rel="icon" type="image/svg+xml" href="/favicon.svg" />
     <link rel="icon" type="image/png" sizes="32x32" href="/web-icon.png" />
     <link rel="icon" type="image/png" sizes="16x16" href="/web-icon.png" />
     <link rel="apple-touch-icon" sizes="180x180" href="/web-icon.png" />
     <link rel="manifest" href="/site.webmanifest" />
-    
+
     <meta name="viewport" content="width=device-width, initial-scale=1.0" />
     <meta name="theme-color" content="#3b82f6" />
+    <meta name="theme-color" content="#09090b" media="(prefers-color-scheme: dark)" />
     
     <!-- Primary Meta Tags -->
-    <title>Papers2Code - Transform AI Research Papers into Production Code</title>
-    <meta name="title" content="Papers2Code - Transform AI Research Papers into Production Code" />
-    <meta name="description" content="Discover, implement, and collaborate on cutting-edge machine learning and AI research papers. Bridge the gap between academic research and production-ready code with our open-source community platform." />
-    <meta name="keywords" content="machine learning, AI research, research papers, arXiv, code implementation, ML papers, deep learning, neural networks, computer vision, NLP, research to code, paper implementation, AI community, open source ML, collaborative coding, research collaboration" />
+    <title>Papers2Code — The Open-Source Platform for ML Research Paper Implementations</title>
+    <meta name="title" content="Papers2Code — The Open-Source Platform for ML Research Paper Implementations" />
+    <meta name="description" content="Papers2Code is the community platform where researchers find and share working code for 500K+ ML and AI research papers. Browse implementations from arXiv, NeurIPS, ICML, and ICLR. Free and open source." />
+    <meta name="keywords" content="papers2code, paper2code, paper to code, machine learning implementations, AI research papers, arXiv code, code implementation, ML papers, deep learning, neural networks, computer vision, NLP, research to code, paper implementation, AI community, open source ML, collaborative coding, research reproducibility" />
     <meta name="author" content="Papers2Code Team" />
     <meta name="robots" content="index, follow, max-image-preview:large, max-snippet:-1, max-video-preview:-1" />
     <meta name="language" content="English" />
@@ -30,8 +32,8 @@
     <meta property="og:type" content="website" />
     <meta property="og:url" content="https://papers2code.com/" />
     <meta property="og:site_name" content="Papers2Code" />
-    <meta property="og:title" content="Papers2Code - Transform AI Research Papers into Production Code" />
-    <meta property="og:description" content="Discover, implement, and collaborate on cutting-edge machine learning and AI research papers. Bridge the gap between academic research and production-ready code." />
+    <meta property="og:title" content="Papers2Code — The Open-Source Platform for ML Paper Implementations" />
+    <meta property="og:description" content="Papers2Code is where researchers find and share working code for 500K+ ML research papers. Browse implementations, contribute code, and make research reproducible." />
     <meta property="og:image" content="https://papers2code.com/og-image.png" />
     <meta property="og:image:alt" content="Papers2Code - AI Research to Production Code" />
     <meta property="og:image:width" content="1200" />
@@ -43,8 +45,8 @@
     <meta name="twitter:site" content="@papers2code" />
     <meta name="twitter:creator" content="@papers2code" />
     <meta name="twitter:url" content="https://papers2code.com/" />
-    <meta name="twitter:title" content="Papers2Code - Transform AI Research Papers into Production Code" />
-    <meta name="twitter:description" content="Discover, implement, and collaborate on cutting-edge machine learning and AI research papers. Bridge the gap between academic research and production-ready code." />
+    <meta name="twitter:title" content="Papers2Code — The Open-Source Platform for ML Paper Implementations" />
+    <meta name="twitter:description" content="Papers2Code is where researchers find and share working code for 500K+ ML research papers. Browse implementations, contribute code, and make research reproducible." />
     <meta name="twitter:image" content="https://papers2code.com/og-image.png" />
     <meta name="twitter:image:alt" content="Papers2Code Platform" />
     
@@ -67,7 +69,8 @@
       "@type": "WebSite",
       "name": "Papers2Code",
       "url": "https://papers2code.com",
-      "description": "Platform for discovering, implementing, and collaborating on AI and machine learning research papers",
+      "description": "Papers2Code is the open-source community platform for finding and sharing working code implementations of 500K+ ML and AI research papers",
+      "alternateName": ["Papers2Code Platform", "Paper2Code"],
       "potentialAction": {
         "@type": "SearchAction",
         "target": "https://papers2code.com/papers?search={search_term_string}",
@@ -83,6 +86,14 @@
         },
         "sameAs": [
           "https://github.com/RyanKim17920/Papers2Code"
+        ],
+        "knowsAbout": [
+          "Machine Learning",
+          "Artificial Intelligence",
+          "Research Paper Implementation",
+          "Deep Learning",
+          "Computer Vision",
+          "Natural Language Processing"
         ]
       }
     }
@@ -95,11 +106,13 @@
       "name": "Papers2Code",
       "url": "https://papers2code.com",
       "logo": "https://papers2code.com/web-icon.png",
-      "description": "Open-source platform connecting AI researchers and developers to transform research papers into production-ready code",
+      "alternateName": "Paper2Code",
+      "description": "Papers2Code is the open-source community platform connecting AI researchers and developers to find, share, and build working code implementations of machine learning research papers",
       "foundingDate": "2024",
       "sameAs": [
         "https://github.com/RyanKim17920/Papers2Code"
       ],
+      "knowsAbout": ["Machine Learning", "AI Research", "Code Implementation", "Deep Learning", "arXiv Papers"],
       "contactPoint": {
         "@type": "ContactPoint",
         "contactType": "Community Support",
@@ -107,8 +120,26 @@
       }
     }
     </script>
+
+    <script type="application/ld+json">
+    {
+      "@context": "https://schema.org",
+      "@type": "SoftwareApplication",
+      "name": "Papers2Code",
+      "url": "https://papers2code.com",
+      "applicationCategory": "DeveloperApplication",
+      "operatingSystem": "Web",
+      "description": "Open-source platform for discovering, implementing, and collaborating on AI and machine learning research papers",
+      "offers": {
+        "@type": "Offer",
+        "price": "0",
+        "priceCurrency": "USD"
+      }
+    }
+    </script>
   </head>
   <body>
+    <noscript>Papers2Code requires JavaScript. Please enable JavaScript to use this application.</noscript>
     <div id="root"></div>
     <script type="module" src="/src/main.tsx"></script>
   </body>

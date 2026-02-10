@@ -1,0 +1,128 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=1200" />
+  <title>Papers2Code OG Image</title>
+  <style>
+    * {
+      margin: 0;
+      padding: 0;
+      box-sizing: border-box;
+    }
+
+    body {
+      width: 1200px;
+      height: 630px;
+      overflow: hidden;
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, 'Helvetica Neue', Arial, sans-serif;
+    }
+
+    .card {
+      width: 1200px;
+      height: 630px;
+      background: #09090b;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      position: relative;
+    }
+
+    /* Subtle radial glow behind logo */
+    .card::before {
+      content: '';
+      position: absolute;
+      width: 600px;
+      height: 600px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(59, 130, 246, 0.08) 0%, transparent 70%);
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      pointer-events: none;
+    }
+
+    .logo-mark {
+      margin-bottom: 32px;
+    }
+
+    .logo-text {
+      font-size: 72px;
+      font-weight: 800;
+      letter-spacing: -2px;
+      line-height: 1;
+      margin-bottom: 24px;
+      position: relative;
+    }
+
+    .logo-text .papers {
+      color: #ffffff;
+    }
+
+    .logo-text .two {
+      color: #3b82f6;
+    }
+
+    .logo-text .code {
+      color: #ffffff;
+    }
+
+    .subtitle {
+      font-size: 24px;
+      font-weight: 400;
+      color: #a1a1aa;
+      letter-spacing: -0.2px;
+      position: relative;
+    }
+
+    /* Top and bottom border accents */
+    .border-accent {
+      position: absolute;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 200px;
+      height: 2px;
+      background: linear-gradient(90deg, transparent, #3b82f6, transparent);
+    }
+
+    .border-accent.top {
+      top: 40px;
+    }
+
+    .border-accent.bottom {
+      bottom: 40px;
+    }
+  </style>
+</head>
+<body>
+  <div class="card">
+    <div class="border-accent top"></div>
+
+    <!-- Inline SVG logo mark -->
+    <div class="logo-mark">
+      <svg xmlns="http://www.w3.org/2000/svg" width="80" height="80" viewBox="0 0 32 32">
+        <path stroke="#e2e8f0" fill="none" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"
+              d="M6 3 h13 l5 5 v14 h-18 z" />
+        <path stroke="#e2e8f0" fill="none" stroke-width="1.5" stroke-linejoin="round"
+              d="M19 3 v5 h5" />
+        <line x1="10" y1="12" x2="18" y2="12" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" />
+        <line x1="10" y1="16" x2="15" y2="16" stroke="#e2e8f0" stroke-width="2" stroke-linecap="round" />
+        <polyline stroke="#60a5fa" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="11,23 6,26.5 11,30" />
+        <line x1="17" y1="22" x2="14" y2="31" stroke="#60a5fa" fill="none" stroke-width="2" stroke-linecap="round" />
+        <polyline stroke="#60a5fa" fill="none" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"
+                  points="20,23 25,26.5 20,30" />
+      </svg>
+    </div>
+
+    <div class="logo-text">
+      <span class="papers">Papers</span><span class="two">2</span><span class="code">Code</span>
+    </div>
+
+    <div class="subtitle">Transform AI Research Papers into Production Code</div>
+
+    <div class="border-accent bottom"></div>
+  </div>
+</body>
+</html>
