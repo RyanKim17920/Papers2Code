@@ -51,7 +51,7 @@ const LandingPage = () => {
         ]}
       />
       {/* Hero Header - Logo, search, overview - takes full screen */}
-      <HeroHeader faqItems={FAQ_ITEMS} />
+      <HeroHeader />
     </div>
   );
 };
